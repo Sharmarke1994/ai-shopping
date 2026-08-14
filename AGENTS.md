@@ -6,7 +6,7 @@ Build a consumer shopping intelligence product that turns natural, incomplete, a
 
 ## Current phase
 
-The approved product and architecture knowledge base exists. Application scaffolding, dependencies, credentials, and implementation are separate bounded tasks. Do not broaden a task because later work is documented.
+The approved product and architecture knowledge base and V0-01 runnable application foundation exist. V0-02 is the next bounded task: a fixture-driven product shell. External credentials and live integrations remain separate later tasks. Do not broaden a task because later work is documented.
 
 ## Hard invariants
 
@@ -46,8 +46,29 @@ The approved product and architecture knowledge base exists. Application scaffol
 9. Use a targeted read-only independent review when its expected value is material.
 10. Update the relevant durable doc in the same change when behaviour or architecture changes.
 
+## Commands
+
+- `pnpm dev`: run the local Next.js application.
+- `pnpm format:check`: verify repository formatting.
+- `pnpm lint`: run ESLint with warnings treated as failures.
+- `pnpm typecheck`: generate Next.js route types and run strict TypeScript checks.
+- `pnpm test`: run deterministic unit and component tests.
+- `pnpm build`: create the production application build.
+- `pnpm test:e2e`: run browser smoke tests using installed Chrome on macOS or Playwright-managed Chromium elsewhere.
+- `pnpm check`: run the non-browser quality gate.
+
 ## Definition of done
 
 A task is not complete because code exists. Its acceptance criteria must pass; relevant deterministic tests/evals must pass; external failures must preserve authoritative state; UI work must be browser-verified; accepted review findings must be resolved; and durable documentation must still match reality.
 
 Architect for validated learning, not completeness or arbitrary deadlines.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
