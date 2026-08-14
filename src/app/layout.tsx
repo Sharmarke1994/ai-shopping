@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import "@fontsource-variable/inter";
+import "@fontsource-variable/newsreader";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "AI Shopping",
-  description: "Evidence-aware product discovery for confident decisions.",
+  title: "Consider — shopping, with judgement",
+  description:
+    "A fixture-driven preview of evidence-aware shopping and clearer product decisions.",
 };
 
 type RootLayoutProps = Readonly<{

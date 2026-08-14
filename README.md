@@ -3,9 +3,14 @@
 An AI-first consumer shopping product that turns incomplete, evolving intent
 into evidence-aware product discovery and confident decisions.
 
-The repository is currently at the V0-01 application-foundation checkpoint.
-The durable product, semantic, retrieval, and delivery decisions live in
-[`docs/`](docs/), with the working invariants in [`AGENTS.md`](AGENTS.md).
+The repository is currently at the V0-02 fixture-driven consumer-shell review
+checkpoint. The durable product, semantic, retrieval, and delivery decisions
+live in [`docs/`](docs/), with the working invariants in
+[`AGENTS.md`](AGENTS.md).
+
+The UI is deliberately powered by prepared, fictional fixture journeys. Use
+the landing examples or a direct `?fixture=` URL; it does not call live AI,
+retailers, search providers, or persistence.
 
 ## Local setup
 
@@ -32,6 +37,10 @@ pnpm test:e2e
 ```
 
 `pnpm check` runs all non-browser checks in sequence.
+
+With the local app running on port 3100, `pnpm screenshots:v0-02` regenerates
+the desktop, laptop, and mobile review matrix in
+[`docs/reviews/v0-02/screenshots`](docs/reviews/v0-02/screenshots/).
 
 Browser tests use installed Google Chrome on macOS. Linux and CI use the
 Playwright-managed Chromium runtime; install it with

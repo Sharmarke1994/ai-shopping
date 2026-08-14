@@ -2,13 +2,55 @@
 
 :root {
   color-scheme: light;
-  background: #f7f5ef;
-  color: #1c1917;
+  --canvas: #f3efe5;
+  --paper: #faf8f2;
+  --ink: #171a17;
+  --ink-soft: #333731;
+  --muted: #66675f;
+  --muted-light: #696b62;
+  --forest: #1f4a35;
+  --sage: #e4ebe1;
+  --line: #ded9cd;
+  --line-strong: #cbc5b8;
+  --font-sans: "Inter Variable", Inter, Arial, sans-serif;
+  --font-display: "Newsreader Variable", Georgia, serif;
+  background: var(--canvas);
+  color: var(--ink);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  background: var(--canvas);
 }
 
 body {
   margin: 0;
   min-width: 320px;
-  background: #f7f5ef;
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--canvas);
+  font-family: var(--font-sans);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+textarea {
+  font-family: inherit;
+}
+
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+summary:focus-visible {
+  outline: 2px solid var(--forest);
+  outline-offset: 3px;
+}
+
+::selection {
+  background: #cad9ca;
+  color: var(--ink);
 }
