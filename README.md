@@ -9,7 +9,7 @@ The durable product, semantic, retrieval, and delivery decisions live in
 
 ## Local setup
 
-Requirements: Node.js 22 and pnpm 11.
+Requirements: Node.js 22.18.0 and pnpm 11.
 
 ```bash
 cp .env.example .env.local

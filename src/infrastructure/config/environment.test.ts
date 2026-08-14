@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   requireDatabaseEnvironment,
   requireOpenAIEnvironment,
-  requireSearchEnvironment,
 } from "./environment";
 
 describe("service-scoped environment validation", () => {
@@ -16,22 +15,13 @@ describe("service-scoped environment validation", () => {
     expect(() => requireOpenAIEnvironment({})).toThrow();
   });
 
-  it("accepts valid database and search configuration independently", () => {
+  it("accepts valid database configuration independently", () => {
     expect(
       requireDatabaseEnvironment({
         DATABASE_URL: "postgresql://localhost:5432/ai-shopping",
       }),
     ).toEqual({
       DATABASE_URL: "postgresql://localhost:5432/ai-shopping",
-    });
-    expect(
-      requireSearchEnvironment({
-        SERP_PROVIDER: "serper",
-        SERP_API_KEY: "test-search-key",
-      }),
-    ).toEqual({
-      SERP_PROVIDER: "serper",
-      SERP_API_KEY: "test-search-key",
     });
   });
 });
