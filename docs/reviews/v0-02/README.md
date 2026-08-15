@@ -1,6 +1,6 @@
 # V0-02 Visual Review Evidence
 
-**Captured:** 2026-08-14
+**Captured:** 2026-08-15
 
 **Scope:** fixture-driven consumer shell only
 
@@ -8,13 +8,14 @@
 
 ## Matrix
 
-`pnpm screenshots:v0-02` captures the six decision states below at wide
+`pnpm screenshots:v0-02` captures the seven decision states below at wide
 desktop (1440 × 1000), laptop (1024 × 768), and mobile (390 × 844):
 
 | State | Review purpose |
 | --- | --- |
 | Landing | Promise, request dominance, examples, and trust framing |
-| Question | Post-result clarification without replacing the shortlist |
+| Pre-result question | Useful clarification before any candidates exist, without implying a cleared shortlist |
+| Question | Post-result clarification without replacing the shortlist; skip and answer both dismiss it in place |
 | Results | Product prominence, decision copy, and mutable brief |
 | Refined | Visible brief delta and changed ordering |
 | Degraded | Partial evidence, missing imagery, and retry |
@@ -55,3 +56,7 @@ All candidate and merchant identities are fictional. The images are generated
 fixture assets, not product evidence. This review introduced no live AI,
 persistence, retrieval, provider integration, authentication, comparison, or
 semantic-engine contracts.
+
+**Consider** is a working prototype wordmark used to make the shell feel
+coherent during review. It is not an approved product name or a durable naming
+decision.

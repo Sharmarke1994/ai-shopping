@@ -45,14 +45,19 @@ export function ShoppingPreview({ initialView }: ShoppingPreviewProps) {
   const [viewKey, setViewKey] = useState(initialView);
   const [requestInput, setRequestInput] = useState("");
   const [refinementInput, setRefinementInput] = useState("");
+  const [refinementNotice, setRefinementNotice] = useState<string | null>(null);
   const [formNotice, setFormNotice] = useState<string | null>(null);
   const [savedIds, setSavedIds] = useState<ReadonlySet<string>>(new Set());
   const [rejectedIds, setRejectedIds] = useState<ReadonlySet<string>>(
     new Set(),
   );
-  const [lastRejected, setLastRejected] = useState<FixtureCandidateCard | null>(
-    null,
-  );
+  const [lastRejected, setLastRejected] = useState<Readonly<{
+    candidate: FixtureCandidateCard;
+    wasSaved: boolean;
+  }> | null>(null);
+  const [resolvedQuestionKeys, setResolvedQuestionKeys] = useState<
+    ReadonlySet<FixtureViewKey>
+  >(new Set());
   const [hiddenBriefIds, setHiddenBriefIds] = useState<ReadonlySet<string>>(
     new Set(),
   );
@@ -93,6 +98,7 @@ export function ShoppingPreview({ initialView }: ShoppingPreviewProps) {
     setViewKey(nextView);
     setAppliedChange(change);
     setFormNotice(null);
+    setRefinementNotice(null);
     setRetailerNotice(null);
     setSnapshotChangeDismissed(false);
     updateUrl(nextView);
@@ -103,15 +109,18 @@ export function ShoppingPreview({ initialView }: ShoppingPreviewProps) {
     setViewKey("landing");
     setRequestInput("");
     setRefinementInput("");
+    setRefinementNotice(null);
     setFormNotice(null);
     setSavedIds(new Set());
     setRejectedIds(new Set());
     setLastRejected(null);
+    setResolvedQuestionKeys(new Set());
     setHiddenBriefIds(new Set());
     setLastHiddenBrief(null);
     setAppliedChange(null);
     setSnapshotChangeDismissed(false);
     setRetailerNotice(null);
+    setBriefOpenOverride(null);
     updateUrl("landing");
     window.scrollTo({ top: 0, behavior: "auto" });
   }
@@ -148,18 +157,35 @@ export function ShoppingPreview({ initialView }: ShoppingPreviewProps) {
   }
 
   function rejectCandidate(candidate: FixtureCandidateCard) {
+    const wasSaved = savedIds.has(candidate.id);
     setRejectedIds((current) => new Set(current).add(candidate.id));
-    setLastRejected(candidate);
+    setSavedIds((current) => {
+      const next = new Set(current);
+      next.delete(candidate.id);
+      return next;
+    });
+    setLastRejected({ candidate, wasSaved });
   }
 
   function undoRejection() {
     if (!lastRejected) return;
     setRejectedIds((current) => {
       const next = new Set(current);
-      next.delete(lastRejected.id);
+      next.delete(lastRejected.candidate.id);
       return next;
     });
+    if (lastRejected.wasSaved) {
+      setSavedIds((current) => new Set(current).add(lastRejected.candidate.id));
+    }
     setLastRejected(null);
+  }
+
+  function resolveQuestion(
+    nextView: FixtureViewKey,
+    change: string | null = null,
+  ) {
+    setResolvedQuestionKeys((current) => new Set(current).add(viewKey));
+    moveTo(nextView, change);
   }
 
   function hideBriefLine(id: string, text: string) {
@@ -180,6 +206,18 @@ export function ShoppingPreview({ initialView }: ShoppingPreviewProps) {
   function submitRefinement(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!snapshot?.refinement || !refinementInput.trim()) return;
+    const normalizedInput = normalizeRequest(refinementInput);
+    const isPreparedInput = snapshot.refinement.preparedInputs.some(
+      (preparedInput) => normalizeRequest(preparedInput) === normalizedInput,
+    );
+
+    if (!isPreparedInput) {
+      setRefinementNotice(
+        "This prototype can only apply the prepared comfort-with-glasses refinement. Your wording has not changed the shortlist.",
+      );
+      return;
+    }
+
     setRefinementInput("");
     moveTo(snapshot.refinement.target, snapshot.refinement.appliedChange);
   }
@@ -281,6 +319,10 @@ export function ShoppingPreview({ initialView }: ShoppingPreviewProps) {
   const currentAppliedChange =
     appliedChange ??
     (isSnapshotChangeDismissed ? null : snapshot.appliedChange);
+  const allCandidatesRejected =
+    snapshot.candidates.length > 0 &&
+    visibleCandidates.length === 0 &&
+    snapshot.candidates.every((candidate) => rejectedIds.has(candidate.id));
 
   return (
     <div className={styles.shell} data-fixture-view={viewKey}>
@@ -375,11 +417,13 @@ export function ShoppingPreview({ initialView }: ShoppingPreviewProps) {
               </div>
             ) : null}
 
-            {snapshot.question ? (
+            {snapshot.question && !resolvedQuestionKeys.has(viewKey) ? (
               <QuestionPanel
                 question={snapshot.question}
-                onChoose={(target, change) => moveTo(target, change)}
-                onSkip={() => moveTo(snapshot.question?.skipTarget ?? viewKey)}
+                onChoose={(target, change) => resolveQuestion(target, change)}
+                onSkip={() =>
+                  resolveQuestion(snapshot.question?.skipTarget ?? viewKey)
+                }
               />
             ) : null}
 
@@ -405,12 +449,7 @@ export function ShoppingPreview({ initialView }: ShoppingPreviewProps) {
             {snapshot.emptyState ? (
               <NoMatches
                 emptyState={snapshot.emptyState}
-                onRelax={() =>
-                  moveTo(
-                    "shelving-results",
-                    "Changed: budget widened to around £40, flexible for a better fit.",
-                  )
-                }
+                onRelax={() => moveTo("no-matches-budget-relaxed")}
               />
             ) : (
               <>
@@ -432,11 +471,15 @@ export function ShoppingPreview({ initialView }: ShoppingPreviewProps) {
                   ))}
                 </div>
 
-                {visibleCandidates.length === 0 ? (
+                {allCandidatesRejected ? (
                   <div className={styles.allRejected}>
                     <p className={styles.eyebrow}>Shortlist cleared</p>
                     <h3>You’ve set every current option aside.</h3>
-                    <p>Undo the last rejection or refine what you want next.</p>
+                    <p>
+                      {snapshot.refinement
+                        ? "Undo the last rejection or use the refinement below."
+                        : "Undo the last rejection or start a new search."}
+                    </p>
                   </div>
                 ) : null}
               </>
@@ -445,8 +488,8 @@ export function ShoppingPreview({ initialView }: ShoppingPreviewProps) {
             {lastRejected ? (
               <div className={styles.undoToast} role="status">
                 <p>
-                  <strong>{lastRejected.name}</strong> set aside for this
-                  search.
+                  <strong>{lastRejected.candidate.name}</strong> set aside for
+                  this search.
                 </p>
                 <button type="button" onClick={undoRejection}>
                   Undo
@@ -473,7 +516,10 @@ export function ShoppingPreview({ initialView }: ShoppingPreviewProps) {
                   <input
                     id="refinement"
                     value={refinementInput}
-                    onChange={(event) => setRefinementInput(event.target.value)}
+                    onChange={(event) => {
+                      setRefinementInput(event.target.value);
+                      setRefinementNotice(null);
+                    }}
                     placeholder={snapshot.refinement.placeholder}
                   />
                   <button type="submit">
@@ -481,6 +527,11 @@ export function ShoppingPreview({ initialView }: ShoppingPreviewProps) {
                   </button>
                 </div>
                 <p>{snapshot.refinement.helper}</p>
+                {refinementNotice ? (
+                  <p className={styles.formNotice} role="status">
+                    {refinementNotice}
+                  </p>
+                ) : null}
               </form>
             ) : null}
           </section>
@@ -497,7 +548,12 @@ function SiteHeader({
 }: Readonly<{ savedCount: number; onNewSearch: () => void }>) {
   return (
     <header className={styles.siteHeader}>
-      <button className={styles.wordmark} type="button" onClick={onNewSearch}>
+      <button
+        aria-label="Consider working prototype home"
+        className={styles.wordmark}
+        type="button"
+        onClick={onNewSearch}
+      >
         consider<span>.</span>
       </button>
       <nav aria-label="Shopping task">
@@ -659,8 +715,8 @@ function NoMatches({
         </div>
         {showClosestDimensions ? (
           <p className={styles.dimensionNote} role="status">
-            The closest credible unit is 54 × 28 cm—12 cm wider and 8 cm deeper
-            than your limit.
+            The closest option under £25 was 54 × 28 cm. The first credible
+            options inside 42 × 20 cm start at £36.
           </p>
         ) : null}
       </div>
@@ -671,7 +727,9 @@ function NoMatches({
 function PrototypeFooter() {
   return (
     <footer className={styles.prototypeFooter}>
-      <p>Fixture prototype · fictional products and prepared journeys</p>
+      <p>
+        Working fixture prototype · fictional products and prepared journeys
+      </p>
       <p>GB / GBP</p>
     </footer>
   );

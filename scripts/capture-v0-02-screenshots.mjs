@@ -13,6 +13,7 @@ const viewports = [
 
 const states = [
   { name: "landing", path: "/" },
+  { name: "pre-result-question", path: "/?fixture=cap-question" },
   { name: "question", path: "/?fixture=headphones-results" },
   { name: "results", path: "/?fixture=shelving-results" },
   { name: "refined", path: "/?fixture=headphones-refined" },

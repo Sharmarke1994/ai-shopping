@@ -2,12 +2,15 @@ export type FixtureViewKey =
   | "landing"
   | "cap-question"
   | "cap-results"
+  | "cap-results-structure"
+  | "cap-results-heat"
   | "shelving-results"
   | "headphones-results"
   | "headphones-refined"
   | "exact-results"
   | "degraded-results"
-  | "no-matches";
+  | "no-matches"
+  | "no-matches-budget-relaxed";
 
 export type FixtureBriefLine = Readonly<{
   id: string;
@@ -51,6 +54,7 @@ type FixtureEmptyState = Readonly<{
 type FixtureRefinement = Readonly<{
   placeholder: string;
   helper: string;
+  preparedInputs: readonly string[];
   target: FixtureViewKey;
   appliedChange: string;
 }>;
@@ -195,18 +199,55 @@ const headphoneCandidates = [
   },
 ] as const satisfies readonly FixtureCandidateCard[];
 
-const capBrief: readonly FixtureBriefLine[] = [
+const narrowShelvingCandidates = [
+  {
+    id: "shelf-narrowline-four",
+    name: "Narrowline Four",
+    maker: "Harth",
+    merchant: "Harth & Home",
+    observedPrice: "£36",
+    image: "/fixtures/products/shelf-walnut.jpg",
+    imageAlt: "Narrow dark walnut open shelving unit in a pale room",
+    mayFit:
+      "Listed at 40 × 18 cm and described as freestanding, with a dark open frame.",
+    worthKnowing:
+      "The available listing does not document its maximum load or long-term stability.",
+  },
+  {
+    id: "shelf-pinrail-three",
+    name: "Pinrail Three",
+    maker: "Lowform Living",
+    merchant: "Nook Supply",
+    observedPrice: "£39",
+    image: "/fixtures/products/shelf-black.jpg",
+    imageAlt: "Slim black metal open shelving unit in a pale room",
+    mayFit:
+      "Its listed 42 × 19 cm footprint stays inside the size limit, and the black frame is freestanding and open.",
+    worthKnowing:
+      "It sits at the width limit, and assembly tolerance is not documented.",
+  },
+] as const satisfies readonly FixtureCandidateCard[];
+
+const capBaseBrief: readonly FixtureBriefLine[] = [
   { id: "cap-light", text: "Very lightweight and minimal", tone: "positive" },
   { id: "cap-breathable", text: "Breathable in hot weather", tone: "positive" },
+];
+
+const capStructureBrief: readonly FixtureBriefLine[] = [
+  ...capBaseBrief,
   {
     id: "cap-structure",
     text: "Avoid a thick or structured crown",
     tone: "negative",
   },
+];
+
+const capHeatBrief: readonly FixtureBriefLine[] = [
+  ...capBaseBrief,
   {
-    id: "cap-brand",
-    text: "Nike preferred, others welcome",
-    tone: "neutral",
+    id: "cap-heat-priority",
+    text: "Ventilation matters most in hot weather",
+    tone: "positive",
   },
 ];
 
@@ -251,11 +292,6 @@ const headphoneBrief: readonly FixtureBriefLine[] = [
     text: "Good noise cancellation matters",
     tone: "positive",
   },
-  {
-    id: "headphones-brand",
-    text: "Open on brand",
-    tone: "neutral",
-  },
 ];
 
 export const fixtureSnapshots: Readonly<
@@ -267,7 +303,7 @@ export const fixtureSnapshots: Readonly<
     heading: "Before we look, what does lightweight mean to you?",
     intro:
       "This answer could change both the shape of cap we look for and what we treat as a good result.",
-    brief: capBrief.slice(0, 2),
+    brief: capBaseBrief,
     candidates: [],
     question: {
       eyebrow: "Worth asking",
@@ -276,12 +312,12 @@ export const fixtureSnapshots: Readonly<
       choices: [
         {
           label: "They feel too thick and substantial",
-          target: "cap-results",
+          target: "cap-results-structure",
           appliedChange: "Added: soft, minimal construction; no bulky crown.",
         },
         {
           label: "They trap too much heat",
-          target: "cap-results",
+          target: "cap-results-heat",
           appliedChange: "Added: ventilation matters more than coverage.",
         },
       ],
@@ -297,8 +333,36 @@ export const fixtureSnapshots: Readonly<
     kicker: "A considered shortlist",
     heading: "Three caps that look genuinely light—not just labelled that way",
     intro:
-      "We favoured soft construction and visible ventilation. Exact fabric weight remains unknown where it is not published.",
-    brief: capBrief,
+      "We looked for visible ventilation and signs of low bulk. Exact fabric weight remains unknown where it is not published.",
+    brief: capBaseBrief,
+    candidates: capCandidates,
+    question: null,
+    notice: null,
+    appliedChange: null,
+    refinement: null,
+    emptyState: null,
+  },
+  "cap-results-structure": {
+    request: "I need a light breathable cap for running in this heat.",
+    kicker: "A considered shortlist",
+    heading: "Three caps with less of the structure you want to avoid",
+    intro:
+      "Soft or collapsible construction now leads the shortlist. Exact fabric weight remains unknown where it is not published.",
+    brief: capStructureBrief,
+    candidates: capCandidates,
+    question: null,
+    notice: null,
+    appliedChange: null,
+    refinement: null,
+    emptyState: null,
+  },
+  "cap-results-heat": {
+    request: "I need a light breathable cap for running in this heat.",
+    kicker: "A considered shortlist",
+    heading: "Three caps with ventilation brought to the front",
+    intro:
+      "Visible airflow now leads the shortlist. Coverage and exact fabric weight remain unknown where they are not published.",
+    brief: capHeatBrief,
     candidates: capCandidates,
     question: null,
     notice: null,
@@ -307,7 +371,8 @@ export const fixtureSnapshots: Readonly<
     emptyState: null,
   },
   "shelving-results": {
-    request: "I need a slim open shelving unit for this corner, around £30.",
+    request:
+      "I need dark, open shelving—nothing white—up to 60 × 30 cm. Around £30, but I can stretch for something visually light.",
     kicker: "Options that fit the space",
     heading: "Slim shelving without the visual weight",
     intro:
@@ -322,7 +387,7 @@ export const fixtureSnapshots: Readonly<
   },
   "headphones-results": {
     request:
-      "I need wireless over-ear headphones for commuting, around £150. I wear glasses and hate strong clamping.",
+      "Wireless over-ear headphones for commuting, around £150. I wear glasses, hate strong clamp, and care about noise cancellation.",
     kicker: "A useful distinction",
     heading: "Comfort-led options, with one priority still worth settling",
     intro:
@@ -354,7 +419,12 @@ export const fixtureSnapshots: Readonly<
     appliedChange: null,
     refinement: {
       placeholder: "Try: comfort with glasses matters most",
-      helper: "Say what changed. We’ll update the order without starting over.",
+      helper:
+        "This prototype recognizes the prepared comfort phrase above and updates the order without starting over.",
+      preparedInputs: [
+        "comfort with glasses matters most",
+        "comfort matters more than maximum noise cancellation",
+      ],
       target: "headphones-refined",
       appliedChange:
         "Changed: comfort with glasses now matters more than maximum noise cancellation.",
@@ -363,7 +433,7 @@ export const fixtureSnapshots: Readonly<
   },
   "headphones-refined": {
     request:
-      "I need wireless over-ear headphones for commuting, around £150. I wear glasses and hate strong clamping.",
+      "Wireless over-ear headphones for commuting, around £150. I wear glasses, hate strong clamp, and care about noise cancellation.",
     kicker: "Shortlist updated",
     heading: "Comfort now leads; maximum noise cancellation comes second",
     intro:
@@ -426,12 +496,13 @@ export const fixtureSnapshots: Readonly<
     emptyState: null,
   },
   "degraded-results": {
-    request: "I need wireless over-ear headphones for commuting, around £150.",
+    request:
+      "Wireless over-ear headphones for commuting, around £150. I wear glasses, hate strong clamp, and care about noise cancellation.",
     kicker: "Partial results",
     heading: "Useful options, with some evidence still unavailable",
     intro:
       "Two sources loaded cleanly. One image and several comfort details did not, so the cards stay factual instead of filling the gaps.",
-    brief: headphoneBrief.slice(0, 4),
+    brief: headphoneBrief,
     candidates: [
       headphoneCandidates[0],
       headphoneCandidates[2],
@@ -499,6 +570,43 @@ export const fixtureSnapshots: Readonly<
       conflict: "£25 ceiling  ·  42 × 20 cm  ·  freestanding  ·  dark and open",
     },
   },
+  "no-matches-budget-relaxed": {
+    request:
+      "I need dark open shelving under £40, no wider than 42 cm or deeper than 20 cm, with no wall fixing.",
+    kicker: "Two credible options",
+    heading: "The same narrow brief works once the budget reaches £40",
+    intro:
+      "Only the budget changed. Both prepared options stay within the stated footprint and retain the dark, open, freestanding requirement.",
+    brief: [
+      {
+        id: "no-match-budget",
+        text: "Maximum £40",
+        tone: "positive",
+      },
+      {
+        id: "no-match-size",
+        text: "Maximum 42 × 20 cm footprint",
+        tone: "positive",
+      },
+      {
+        id: "no-match-colour",
+        text: "Avoid white; dark and open",
+        tone: "negative",
+      },
+      {
+        id: "no-match-fixing",
+        text: "Freestanding; avoid wall fixing",
+        tone: "negative",
+      },
+    ],
+    candidates: narrowShelvingCandidates,
+    question: null,
+    notice: null,
+    appliedChange:
+      "Budget ceiling changed from £25 to £40. Size, finish, and fixing requirements stayed the same.",
+    refinement: null,
+    emptyState: null,
+  },
 };
 
 export const landingExamples = [
@@ -511,14 +619,15 @@ export const landingExamples = [
   {
     id: "shelving",
     label: "Make a small corner work",
-    prompt: "I need a slim open shelving unit for this corner, around £30.",
+    prompt:
+      "I need dark, open shelving—nothing white—up to 60 × 30 cm. Around £30, but I can stretch for something visually light.",
     target: "shelving-results" as const,
   },
   {
     id: "headphones",
     label: "Commute in comfort",
     prompt:
-      "I need wireless over-ear headphones for commuting, around £150. I wear glasses and hate strong clamping.",
+      "Wireless over-ear headphones for commuting, around £150. I wear glasses, hate strong clamp, and care about noise cancellation.",
     target: "headphones-results" as const,
   },
 ] as const;

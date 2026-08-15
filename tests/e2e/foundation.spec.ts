@@ -10,7 +10,7 @@ test("moves from the consumer landing into a prepared question and results", asy
       name: "Find the thing that fits your life—not just your search.",
     }),
   ).toBeVisible();
-  await expect(page).toHaveTitle("Consider — shopping, with judgement");
+  await expect(page).toHaveTitle("Consider — working shopping prototype");
 
   await page
     .getByRole("button", { name: /running, without the bulk/i })
@@ -49,6 +49,39 @@ test("supports direct zero-question and honest no-match states", async ({
   await expect(
     page.getByRole("button", { name: "Stretch the budget to £40" }),
   ).toBeVisible();
+
+  await page.getByRole("button", { name: "Stretch the budget to £40" }).click();
+  await expect(
+    page.getByRole("heading", {
+      name: "The same narrow brief works once the budget reaches £40",
+    }),
+  ).toBeVisible();
+  await expect(page.getByText("Maximum 42 × 20 cm footprint")).toBeVisible();
+  await expect(page.getByText("Freestanding; avoid wall fixing")).toBeVisible();
+  await expect(page.getByRole("article")).toHaveCount(2);
+});
+
+test("resolves a post-result question even when the view key stays the same", async ({
+  page,
+}) => {
+  const question = page.getByRole("heading", {
+    name: "Which compromise would bother you more on a long commute?",
+  });
+
+  await page.goto("/?fixture=headphones-results");
+  await page.getByRole("button", { name: "Show me options now" }).click();
+  await expect(question).toHaveCount(0);
+  await expect(page.getByRole("article")).toHaveCount(3);
+
+  await page.goto("/?fixture=headphones-results");
+  await page.getByRole("button", { name: "Hearing more of the train" }).click();
+  await expect(question).toHaveCount(0);
+  await expect(
+    page.getByText(
+      "Kept: stronger noise cancellation remains the lead preference.",
+    ),
+  ).toBeVisible();
+  await expect(page.getByRole("article")).toHaveCount(3);
 });
 
 test("preserves a save through refinement and keeps rejection reversible", async ({

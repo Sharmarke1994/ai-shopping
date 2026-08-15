@@ -12,6 +12,9 @@ The UI is deliberately powered by prepared, fictional fixture journeys. Use
 the landing examples or a direct `?fixture=` URL; it does not call live AI,
 retailers, search providers, or persistence.
 
+The **Consider** wordmark is a working prototype label, not an approved product
+name or durable brand decision.
+
 ## Local setup
 
 Requirements: Node.js 22.18.0 and pnpm 11.

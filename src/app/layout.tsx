@@ -5,7 +5,7 @@ import "@fontsource-variable/newsreader";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Consider — shopping, with judgement",
+  title: "Consider — working shopping prototype",
   description:
     "A fixture-driven preview of evidence-aware shopping and clearer product decisions.",
 };

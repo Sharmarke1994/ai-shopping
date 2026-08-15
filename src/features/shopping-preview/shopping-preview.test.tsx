@@ -19,6 +19,8 @@ describe("ShoppingPreview", () => {
   it("allows a worthwhile question to be skipped without inventing an answer", () => {
     render(<ShoppingPreview initialView="cap-question" />);
 
+    expect(screen.queryByText("Shortlist cleared")).not.toBeInTheDocument();
+
     fireEvent.click(
       screen.getByRole("button", { name: "Show me options now" }),
     );
@@ -29,6 +31,37 @@ describe("ShoppingPreview", () => {
       }),
     ).toBeInTheDocument();
     expect(screen.queryByText(/added:/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Avoid a thick or structured crown"),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/nike preferred/i)).not.toBeInTheDocument();
+  });
+
+  it("adds only the cap preference the shopper explicitly answers", () => {
+    const { rerender } = render(<ShoppingPreview initialView="cap-question" />);
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "They feel too thick and substantial",
+      }),
+    );
+    expect(
+      screen.getByText("Avoid a thick or structured crown"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Ventilation matters most in hot weather"),
+    ).not.toBeInTheDocument();
+
+    rerender(<ShoppingPreview initialView="cap-question" key="heat-path" />);
+    fireEvent.click(
+      screen.getByRole("button", { name: "They trap too much heat" }),
+    );
+    expect(
+      screen.getByText("Ventilation matters most in hot weather"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Avoid a thick or structured crown"),
+    ).not.toBeInTheDocument();
   });
 
   it("supports a zero-question exact lookup", () => {
@@ -55,6 +88,7 @@ describe("ShoppingPreview", () => {
     fireEvent.click(
       within(firstCard).getByRole("button", { name: "Not for me" }),
     );
+    expect(screen.getByText("Saved 0")).toBeInTheDocument();
     const status = screen.getByRole("status");
     expect(status).toHaveTextContent(
       "Nookline Three Tier set aside for this search.",
@@ -64,6 +98,12 @@ describe("ShoppingPreview", () => {
     expect(
       screen.getByRole("article", { name: "Nookline Three Tier" }),
     ).toBeInTheDocument();
+    expect(screen.getByText("Saved 1")).toBeInTheDocument();
+    expect(
+      within(
+        screen.getByRole("article", { name: "Nookline Three Tier" }),
+      ).getByRole("button", { name: "Saved" }),
+    ).toHaveAttribute("aria-pressed", "true");
   });
 
   it("shows an intentional no-credible-match state with a refinement path", () => {
@@ -80,7 +120,7 @@ describe("ShoppingPreview", () => {
       screen.getByRole("button", { name: "Show closest dimensions" }),
     );
     expect(screen.getByRole("status")).toHaveTextContent(
-      "The closest credible unit is 54 × 28 cm—12 cm wider and 8 cm deeper than your limit.",
+      "The closest option under £25 was 54 × 28 cm. The first credible options inside 42 × 20 cm start at £36.",
     );
 
     fireEvent.click(
@@ -88,7 +128,89 @@ describe("ShoppingPreview", () => {
     );
     expect(
       screen.getByRole("heading", {
-        name: "Slim shelving without the visual weight",
+        name: "The same narrow brief works once the budget reaches £40",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", {
+        name: /dark open shelving under £40.*42 cm.*20 cm.*no wall fixing/i,
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Maximum £40")).toBeInTheDocument();
+    expect(
+      screen.getByText("Maximum 42 × 20 cm footprint"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Freestanding; avoid wall fixing"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Maximum £25")).not.toBeInTheDocument();
+    expect(screen.getAllByRole("article")).toHaveLength(2);
+  });
+
+  it("dismisses a post-result question when skipped without hiding products", () => {
+    render(<ShoppingPreview initialView="headphones-results" />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Show me options now" }),
+    );
+
+    expect(
+      screen.queryByRole("heading", {
+        name: /which compromise would bother you more/i,
+      }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/changed:|kept:/i)).not.toBeInTheDocument();
+    expect(screen.getAllByRole("article")).toHaveLength(3);
+  });
+
+  it("dismisses a same-view post-result answer and shows its explicit effect", () => {
+    render(<ShoppingPreview initialView="headphones-results" />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Hearing more of the train" }),
+    );
+
+    expect(
+      screen.queryByRole("heading", {
+        name: /which compromise would bother you more/i,
+      }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Kept: stronger noise cancellation remains the lead preference.",
+    );
+    expect(screen.getAllByRole("article")).toHaveLength(3);
+  });
+
+  it("does not pretend unrelated refinement text changed the shortlist", () => {
+    render(<ShoppingPreview initialView="headphones-results" />);
+
+    fireEvent.change(screen.getByLabelText("Refine this shortlist"), {
+      target: { value: "Only show me blue headphones" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /^update/i }));
+
+    expect(screen.getByRole("status")).toHaveTextContent(
+      /can only apply the prepared comfort-with-glasses refinement/i,
+    );
+    expect(
+      screen.getByRole("heading", {
+        name: /comfort-led options, with one priority still worth settling/i,
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole("article")).toHaveLength(3);
+  });
+
+  it("applies the one declared free-text refinement", () => {
+    render(<ShoppingPreview initialView="headphones-results" />);
+
+    fireEvent.change(screen.getByLabelText("Refine this shortlist"), {
+      target: { value: "comfort with glasses matters most" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /^update/i }));
+
+    expect(
+      screen.getByRole("heading", {
+        name: /comfort now leads; maximum noise cancellation comes second/i,
       }),
     ).toBeInTheDocument();
   });
@@ -153,5 +275,27 @@ describe("ShoppingPreview", () => {
       }),
     );
     expect(screen.getByText("No more than 60 cm wide")).toBeInTheDocument();
+  });
+
+  it("resets a manual brief disclosure choice for a new search", () => {
+    render(<ShoppingPreview initialView="shelving-results" />);
+
+    const brief = screen.getByText("What matters").closest("details");
+    expect(brief).not.toBeNull();
+    expect(brief).toHaveAttribute("open");
+
+    if (!brief) return;
+    brief.open = false;
+    fireEvent(brief, new Event("toggle", { bubbles: true }));
+    expect(brief).not.toHaveAttribute("open");
+
+    fireEvent.click(screen.getByRole("button", { name: "New search" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /make a small corner work/i }),
+    );
+
+    expect(screen.getByText("What matters").closest("details")).toHaveAttribute(
+      "open",
+    );
   });
 });
