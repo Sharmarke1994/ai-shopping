@@ -61,7 +61,7 @@ test("supports direct zero-question and honest no-match states", async ({
   await expect(page.getByRole("article")).toHaveCount(2);
 });
 
-test("resolves a post-result question even when the view key stays the same", async ({
+test("resolves a post-result question through skip and explicit priority", async ({
   page,
 }) => {
   const question = page.getByRole("heading", {
@@ -78,8 +78,13 @@ test("resolves a post-result question even when the view key stays the same", as
   await expect(question).toHaveCount(0);
   await expect(
     page.getByText(
-      "Kept: stronger noise cancellation remains the lead preference.",
+      "Changed: noise cancellation now leads comfort with glasses.",
     ),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", {
+      name: "Noise cancellation now leads; glasses comfort stays important",
+    }),
   ).toBeVisible();
   await expect(page.getByRole("article")).toHaveCount(3);
 });

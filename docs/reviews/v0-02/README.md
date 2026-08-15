@@ -21,7 +21,8 @@ desktop (1440 × 1000), laptop (1024 × 768), and mobile (390 × 844):
 | Degraded | Partial evidence, missing imagery, and retry |
 | No matches | Successful zero-recommendation outcome and recovery choices |
 
-The capture script fails if any state has horizontal document overflow. These
+The capture script fails if any state has horizontal document overflow or if
+an expected product image still has no pixels after one reload. These
 screenshots are review evidence, not a pixel-perfect regression suite.
 
 ## Review outcome

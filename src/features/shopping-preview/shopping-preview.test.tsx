@@ -31,6 +31,8 @@ describe("ShoppingPreview", () => {
       }),
     ).toBeInTheDocument();
     expect(screen.queryByText(/added:/i)).not.toBeInTheDocument();
+    expect(screen.getByText("Lightweight")).toBeInTheDocument();
+    expect(screen.queryByText(/minimal/i)).not.toBeInTheDocument();
     expect(
       screen.queryByText("Avoid a thick or structured crown"),
     ).not.toBeInTheDocument();
@@ -62,6 +64,9 @@ describe("ShoppingPreview", () => {
     expect(
       screen.queryByText("Avoid a thick or structured crown"),
     ).not.toBeInTheDocument();
+    expect(screen.getAllByRole("article")[0]).toHaveAccessibleName(
+      "Kestrel Mesh Runner",
+    );
   });
 
   it("supports a zero-question exact lookup", () => {
@@ -163,7 +168,7 @@ describe("ShoppingPreview", () => {
     expect(screen.getAllByRole("article")).toHaveLength(3);
   });
 
-  it("dismisses a same-view post-result answer and shows its explicit effect", () => {
+  it("moves a post-result answer into its explicit prepared priority", () => {
     render(<ShoppingPreview initialView="headphones-results" />);
 
     fireEvent.click(
@@ -176,8 +181,13 @@ describe("ShoppingPreview", () => {
       }),
     ).not.toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Kept: stronger noise cancellation remains the lead preference.",
+      "Changed: noise cancellation now leads comfort with glasses.",
     );
+    expect(
+      screen.getByRole("heading", {
+        name: "Noise cancellation now leads; glasses comfort stays important",
+      }),
+    ).toBeInTheDocument();
     expect(screen.getAllByRole("article")).toHaveLength(3);
   });
 
@@ -194,7 +204,7 @@ describe("ShoppingPreview", () => {
     );
     expect(
       screen.getByRole("heading", {
-        name: /comfort-led options, with one priority still worth settling/i,
+        name: /three commuter options, with one priority still worth settling/i,
       }),
     ).toBeInTheDocument();
     expect(screen.getAllByRole("article")).toHaveLength(3);
@@ -252,7 +262,7 @@ describe("ShoppingPreview", () => {
     fireEvent.click(screen.getByRole("button", { name: "Retry" }));
     expect(
       screen.getByRole("heading", {
-        name: /comfort-led options, with one priority still worth settling/i,
+        name: /three commuter options, with one priority still worth settling/i,
       }),
     ).toBeInTheDocument();
   });

@@ -21,6 +21,28 @@ const states = [
   { name: "no-matches", path: "/?fixture=no-matches" },
 ];
 
+async function waitForImages(page) {
+  await page.locator("img").evaluateAll(async (images) => {
+    await Promise.all(
+      images.map(async (image) => {
+        if (image.complete) return;
+        await new Promise((resolve) => {
+          image.addEventListener("load", resolve, { once: true });
+          image.addEventListener("error", resolve, { once: true });
+        });
+      }),
+    );
+  });
+
+  return page
+    .locator("img")
+    .evaluateAll((images) =>
+      images
+        .filter((image) => !image.complete || image.naturalWidth === 0)
+        .map((image) => image.currentSrc || image.src),
+    );
+}
+
 await mkdir(outputDirectory, { recursive: true });
 
 const browser = await chromium.launch(
@@ -35,17 +57,17 @@ try {
     for (const state of states) {
       await page.goto(`${baseUrl}${state.path}`, { waitUntil: "load" });
       await page.locator("[data-fixture-view]").waitFor();
-      await page.locator("img").evaluateAll(async (images) => {
-        await Promise.all(
-          images.map(async (image) => {
-            if (image.complete) return;
-            await new Promise((resolve) => {
-              image.addEventListener("load", resolve, { once: true });
-              image.addEventListener("error", resolve, { once: true });
-            });
-          }),
+      let failedImages = await waitForImages(page);
+      if (failedImages.length > 0) {
+        await page.reload({ waitUntil: "load" });
+        await page.locator("[data-fixture-view]").waitFor();
+        failedImages = await waitForImages(page);
+      }
+      if (failedImages.length > 0) {
+        throw new Error(
+          `Images failed in ${state.name} at ${viewport.width}px: ${failedImages.join(", ")}`,
         );
-      });
+      }
       await page.waitForTimeout(500);
 
       const hasHorizontalOverflow = await page.evaluate(

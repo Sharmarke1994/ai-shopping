@@ -6,6 +6,7 @@ export type FixtureViewKey =
   | "cap-results-heat"
   | "shelving-results"
   | "headphones-results"
+  | "headphones-anc-led"
   | "headphones-refined"
   | "exact-results"
   | "degraded-results"
@@ -83,7 +84,7 @@ const capCandidates = [
     image: "/fixtures/products/cap-forest.jpg",
     imageAlt: "Unstructured deep green running cap on a warm stone backdrop",
     mayFit:
-      "The soft five-panel crown and thin fabric look closest to the barely-there feel you described.",
+      "The soft five-panel crown and thin fabric provide strong visual cues of a lightweight build.",
     worthKnowing:
       "The retailer calls it ultralight, but does not publish an exact weight.",
   },
@@ -111,7 +112,7 @@ const capCandidates = [
     mayFit:
       "Large mesh panels make this the strongest ventilation option in the fixture shortlist.",
     worthKnowing:
-      "The flatter brim may feel a little more substantial than your old race cap.",
+      "The flatter brim may feel more substantial; exact brim stiffness is not stated.",
   },
 ] as const satisfies readonly FixtureCandidateCard[];
 
@@ -127,7 +128,7 @@ const shelvingCandidates = [
     mayFit:
       "Listed at 58 × 29 cm, with an open frame that should keep the corner visually light.",
     worthKnowing:
-      "It is £4 above your target, although still inside the flexible stretch you gave us.",
+      "It is £4 above your target; it stays here because the open frame may help the corner feel visually light.",
   },
   {
     id: "shelf-column-four",
@@ -229,7 +230,7 @@ const narrowShelvingCandidates = [
 ] as const satisfies readonly FixtureCandidateCard[];
 
 const capBaseBrief: readonly FixtureBriefLine[] = [
-  { id: "cap-light", text: "Very lightweight and minimal", tone: "positive" },
+  { id: "cap-light", text: "Lightweight", tone: "positive" },
   { id: "cap-breathable", text: "Breathable in hot weather", tone: "positive" },
 ];
 
@@ -256,7 +257,7 @@ const shelvingBrief: readonly FixtureBriefLine[] = [
   { id: "shelf-depth", text: "No more than 30 cm deep", tone: "positive" },
   {
     id: "shelf-budget",
-    text: "Around £30, flexible for a better-looking option",
+    text: "Around £30; stretch only for a visually light option",
     tone: "neutral",
   },
   {
@@ -266,7 +267,7 @@ const shelvingBrief: readonly FixtureBriefLine[] = [
   },
   {
     id: "shelf-weight",
-    text: "Open and visually light, not bulky",
+    text: "Open and visually light",
     tone: "positive",
   },
 ];
@@ -333,7 +334,7 @@ export const fixtureSnapshots: Readonly<
     kicker: "A considered shortlist",
     heading: "Three caps that look genuinely light—not just labelled that way",
     intro:
-      "We looked for visible ventilation and signs of low bulk. Exact fabric weight remains unknown where it is not published.",
+      "We looked for visible ventilation and retailer descriptions of low weight. Exact fabric weight remains unknown where it is not published.",
     brief: capBaseBrief,
     candidates: capCandidates,
     question: null,
@@ -363,7 +364,7 @@ export const fixtureSnapshots: Readonly<
     intro:
       "Visible airflow now leads the shortlist. Coverage and exact fabric weight remain unknown where they are not published.",
     brief: capHeatBrief,
-    candidates: capCandidates,
+    candidates: [capCandidates[2], capCandidates[1], capCandidates[0]],
     question: null,
     notice: null,
     appliedChange: null,
@@ -376,7 +377,7 @@ export const fixtureSnapshots: Readonly<
     kicker: "Options that fit the space",
     heading: "Slim shelving without the visual weight",
     intro:
-      "These stay within your stated footprint. We kept slightly better-looking stretch options in view because your budget is flexible.",
+      "These stay within your stated footprint. We kept options above £30 only where their open form plausibly supports the visually light preference.",
     brief: shelvingBrief,
     candidates: shelvingCandidates,
     question: null,
@@ -389,7 +390,7 @@ export const fixtureSnapshots: Readonly<
     request:
       "Wireless over-ear headphones for commuting, around £150. I wear glasses, hate strong clamp, and care about noise cancellation.",
     kicker: "A useful distinction",
-    heading: "Comfort-led options, with one priority still worth settling",
+    heading: "Three commuter options, with one priority still worth settling",
     intro:
       "The current shortlist stays visible while you decide whether comfort or maximum noise cancellation should lead.",
     brief: headphoneBrief,
@@ -398,7 +399,7 @@ export const fixtureSnapshots: Readonly<
       eyebrow: "Refine without starting over",
       title: "Which compromise would bother you more on a long commute?",
       detail:
-        "We’ll use this to reorder the shortlist, not turn it into a must-have.",
+        "Your answer will set which preference leads, without turning either into a must-have.",
       choices: [
         {
           label: "Pressure around my glasses",
@@ -408,9 +409,9 @@ export const fixtureSnapshots: Readonly<
         },
         {
           label: "Hearing more of the train",
-          target: "headphones-results",
+          target: "headphones-anc-led",
           appliedChange:
-            "Kept: stronger noise cancellation remains the lead preference.",
+            "Changed: noise cancellation now leads comfort with glasses.",
         },
       ],
       skipTarget: "headphones-results",
@@ -429,6 +430,28 @@ export const fixtureSnapshots: Readonly<
       appliedChange:
         "Changed: comfort with glasses now matters more than maximum noise cancellation.",
     },
+    emptyState: null,
+  },
+  "headphones-anc-led": {
+    request:
+      "Wireless over-ear headphones for commuting, around £150. I wear glasses, hate strong clamp, and care about noise cancellation.",
+    kicker: "Priority made explicit",
+    heading: "Noise cancellation now leads; glasses comfort stays important",
+    intro:
+      "The existing order already puts the strongest stated noise-cancellation option first, so the products stay in place while the priority becomes explicit.",
+    brief: [
+      ...headphoneBrief.filter((line) => line.id !== "headphones-anc"),
+      {
+        id: "headphones-anc-refined",
+        text: "Noise cancellation leads comfort with glasses",
+        tone: "positive",
+      },
+    ],
+    candidates: headphoneCandidates,
+    question: null,
+    notice: null,
+    appliedChange: null,
+    refinement: null,
     emptyState: null,
   },
   "headphones-refined": {
