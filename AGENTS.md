@@ -7,10 +7,11 @@ Build a consumer shopping intelligence product that turns natural, incomplete, a
 ## Current phase
 
 The approved product and architecture knowledge base, V0-01 runnable foundation,
-and V0-02 fixture-driven consumer shell exist. V0-02 is the current review
-checkpoint; do not begin Gate 2 semantic-engine work until this product
-hypothesis is accepted. External credentials and live integrations remain
-separate later tasks. Do not broaden a task because later work is documented.
+and accepted V0-02 fixture-driven consumer shell exist. Gate 1 is closed. Gate
+2 semantic-engine work is next, but begin it only through an explicitly bounded
+instruction; do not start V0-03 automatically. External credentials and live
+integrations remain separate later tasks. Do not broaden a task because later
+work is documented.
 
 ## Hard invariants
 
