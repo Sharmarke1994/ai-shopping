@@ -678,7 +678,7 @@ describe("V0-04 deterministic state transitions", () => {
     incompleteDelta.entries.splice(omittedIndex, 1);
     await connection.client`
       UPDATE shopping_private.state_change_applications
-      SET applied_delta = ${connection.client.json(incompleteDelta)}
+      SET applied_delta = ${JSON.stringify(incompleteDelta)}::jsonb
       WHERE id = ${applied.application.id}
     `;
 
@@ -779,7 +779,7 @@ describe("V0-04 deterministic state transitions", () => {
     replacement.before = snapshotCriterion(colourCriterion);
     await connection.client`
       UPDATE shopping_private.state_change_applications
-      SET applied_delta = ${connection.client.json(incoherentDelta)}
+      SET applied_delta = ${JSON.stringify(incoherentDelta)}::jsonb
       WHERE id = ${replaced.application.id}
     `;
 
@@ -873,7 +873,7 @@ describe("V0-04 deterministic state transitions", () => {
       await connection.client`
         UPDATE shopping_private.state_change_applications
         SET undoes_application_id = ${targetApplicationId},
-            applied_delta = ${connection.client.json(delta)}
+            applied_delta = ${JSON.stringify(delta)}::jsonb
         WHERE id = ${undone.application.id}
       `;
     };
