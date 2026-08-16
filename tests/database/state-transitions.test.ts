@@ -532,4 +532,134 @@ describe("V0-04 deterministic state transitions", () => {
       applyStatePatch(connection.db, command),
     ).rejects.toBeInstanceOf(PersistedDataCorruptionError);
   });
+
+  it("versions replace, relax, and tighten without mutating meaning in place, then undoes the latest", async () => {
+    const task = await createShoppingTask(connection.db);
+    const addInput = await input(connection, task.id, "version-add", 0n);
+    const added = await applyStatePatch(
+      connection.db,
+      explicitCommand({
+        taskId: task.id,
+        inputId: addInput.input.id,
+        expectedRevision: 0n,
+        patch: createAndAddPatch(),
+      }),
+    );
+    let currentId = added.brief.items[0]!.criterionId;
+
+    const transition = async (
+      key: string,
+      revision: bigint,
+      op: "replace_target" | "relax" | "tighten",
+      strength: "preference" | "strong_preference",
+    ) => {
+      const source = await input(connection, task.id, key, revision);
+      const result = await applyStatePatch(
+        connection.db,
+        explicitCommand({
+          taskId: task.id,
+          inputId: source.input.id,
+          expectedRevision: revision,
+          patch: {
+            schemaVersion: 1,
+            outcome: "change",
+            operations: [
+              {
+                op,
+                targetCriterionId: currentId,
+                result: {
+                  strength,
+                  targetSemantics: "categorical",
+                  semanticValue: {
+                    schemaVersion: 1,
+                    kind: "categorical",
+                    operator: "prefer",
+                    values: ["Nike"],
+                  },
+                },
+              },
+            ],
+          },
+        }),
+      );
+      currentId = result.brief.items[0]!.criterionId;
+      return result;
+    };
+
+    await transition(
+      "version-replace",
+      1n,
+      "replace_target",
+      "strong_preference",
+    );
+    await transition("version-relax", 2n, "relax", "preference");
+    const tightened = await transition(
+      "version-tighten",
+      3n,
+      "tighten",
+      "strong_preference",
+    );
+    const undoInput = await input(connection, task.id, "version-undo", 4n);
+    const undone = await undoStateChange(connection.db, {
+      applicationSchemaVersion: 1,
+      applicationKind: "undo",
+      taskId: task.id,
+      expectedRevision: 4n,
+      source: { kind: "user_explicit", inputId: undoInput.input.id },
+      targetApplicationId: tightened.application.id,
+    });
+    expect(undone.brief.items[0]?.strength).toBe("preference");
+    const rows = await connection.db
+      .select()
+      .from(decisionCriteria)
+      .where(eq(decisionCriteria.taskId, task.id));
+    expect(rows).toHaveLength(5);
+    expect(rows.filter((row) => row.lifecycle === "active")).toHaveLength(1);
+    expect(new Set(rows.map((row) => row.lineageId)).size).toBe(1);
+  });
+
+  it("allows a later no-change receipt before undoing the latest meaningful patch", async () => {
+    const task = await createShoppingTask(connection.db);
+    const addInput = await input(connection, task.id, "no-change-undo-add", 0n);
+    const added = await applyStatePatch(
+      connection.db,
+      explicitCommand({
+        taskId: task.id,
+        inputId: addInput.input.id,
+        expectedRevision: 0n,
+        patch: createAndAddPatch(),
+      }),
+    );
+    const noChangeInput = await input(
+      connection,
+      task.id,
+      "no-change-before-undo",
+      1n,
+    );
+    await applyStatePatch(
+      connection.db,
+      explicitCommand({
+        taskId: task.id,
+        inputId: noChangeInput.input.id,
+        expectedRevision: 1n,
+        patch: { schemaVersion: 1, outcome: "no_change" },
+      }),
+    );
+    const undoInput = await input(
+      connection,
+      task.id,
+      "no-change-undo-action",
+      1n,
+    );
+    const undone = await undoStateChange(connection.db, {
+      applicationSchemaVersion: 1,
+      applicationKind: "undo",
+      taskId: task.id,
+      expectedRevision: 1n,
+      source: { kind: "user_explicit", inputId: undoInput.input.id },
+      targetApplicationId: added.application.id,
+    });
+    expect(undone.application.resultingRevision).toBe(2n);
+    expect(undone.brief.items).toEqual([]);
+  });
 });
