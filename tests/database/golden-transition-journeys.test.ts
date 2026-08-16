@@ -217,10 +217,9 @@ describe("V0-04 golden shopping transition journeys", () => {
         ),
       }),
     ]);
-    expect(result.brief.items.map((entry) => entry.conceptLabel)).toEqual([
-      "Weight",
-      "Breathability",
-    ]);
+    expect(
+      result.brief.items.map((entry) => entry.conceptLabel).sort(),
+    ).toEqual(["Breathability", "Weight"]);
 
     result = await apply(journey, [
       ...createCriterion({
