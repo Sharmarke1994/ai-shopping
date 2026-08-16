@@ -1006,6 +1006,7 @@ async function returnExisting(
   receipt: StateChangeApplication,
   requestFingerprint: string,
 ): Promise<StateApplicationResult> {
+  const brief = await validateHistoricalReceipt(tx, receipt);
   if (
     receipt.fingerprintVersion !== STATE_APPLICATION_FINGERPRINT_VERSION ||
     receipt.requestFingerprint !== requestFingerprint
@@ -1016,7 +1017,7 @@ async function returnExisting(
   }
   return {
     application: receipt,
-    brief: await validateHistoricalReceipt(tx, receipt),
+    brief,
   };
 }
 
@@ -1540,18 +1541,18 @@ export async function undoStateChange(
       .limit(1);
     if (taskRow === undefined) throw new TaskNotFoundError(command.taskId);
     const task = mapShoppingTask(taskRow);
-    const targetData = await loadUndoTarget({
-      tx,
-      taskId: command.taskId,
-      targetApplicationId: command.targetApplicationId,
-      currentRevision: task.currentRevision,
-    });
     if (task.currentRevision !== command.expectedRevision)
       throw new StaleTaskRevisionError(
         task.id,
         command.expectedRevision,
         task.currentRevision,
       );
+    const targetData = await loadUndoTarget({
+      tx,
+      taskId: command.taskId,
+      targetApplicationId: command.targetApplicationId,
+      currentRevision: task.currentRevision,
+    });
     const state = await loadCurrentShoppingState(tx, command.taskId);
     const undoInput = inputs.get(command.source.inputId)!;
     const compiled = compileUndo({

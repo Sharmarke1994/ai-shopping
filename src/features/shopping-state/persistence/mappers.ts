@@ -1,3 +1,4 @@
+import { isDeepStrictEqual } from "node:util";
 import { PersistedDataCorruptionError } from "../../../domain/shopping-state/errors";
 import {
   type ConceptDefinition,
@@ -189,6 +190,14 @@ export function mapStateChangeApplication(row: {
   return parsePersisted({
     recordType: "StateChangeApplication",
     recordId: row.id,
-    parse: () => stateChangeApplicationSchema.parse(row),
+    parse: () => {
+      const application = stateChangeApplicationSchema.parse(row);
+      if (!isDeepStrictEqual(row.appliedDelta, application.appliedDelta)) {
+        throw new Error(
+          "Persisted applied delta is not in its exact canonical representation",
+        );
+      }
+      return application;
+    },
   });
 }

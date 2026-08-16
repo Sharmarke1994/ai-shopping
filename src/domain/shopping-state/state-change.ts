@@ -227,6 +227,55 @@ export const stateChangeApplicationSchema = z
         message: "Undo cannot be a no-change receipt",
       });
     }
+    const forwardKinds = new Set<AppliedDeltaEntryV1["kind"]>([
+      "concept_created",
+      "criterion_added",
+      "criterion_replaced",
+      "criterion_relaxed",
+      "criterion_tightened",
+      "criterion_removed",
+      "concept_marked_indifferent",
+    ]);
+    const undoKinds = new Set<AppliedDeltaEntryV1["kind"]>([
+      "criterion_restored_by_undo",
+      "criterion_ended_by_undo",
+    ]);
+    const allowedKinds =
+      application.applicationKind === "patch" ? forwardKinds : undoKinds;
+    if (
+      application.appliedDelta.entries.some(
+        (entry) => !allowedKinds.has(entry.kind),
+      )
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "Receipt kind and delta entry kinds must agree",
+      });
+    }
+    if (
+      application.applicationKind === "undo" &&
+      application.undoesApplicationId !== null
+    ) {
+      if (application.undoesApplicationId === application.id) {
+        context.addIssue({
+          code: "custom",
+          message: "An undo receipt cannot target itself",
+        });
+      }
+      if (
+        application.appliedDelta.entries.some(
+          (entry) =>
+            (entry.kind === "criterion_restored_by_undo" ||
+              entry.kind === "criterion_ended_by_undo") &&
+            entry.targetApplicationId !== application.undoesApplicationId,
+        )
+      ) {
+        context.addIssue({
+          code: "custom",
+          message: "Every undo delta entry must identify the receipt target",
+        });
+      }
+    }
   });
 
 export type StateChangeApplication = z.infer<

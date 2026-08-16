@@ -2,9 +2,13 @@ import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
+  ConceptTaskMismatchError,
+  CriterionTaskMismatchError,
   PersistedDataCorruptionError,
+  SourceInputTaskMismatchError,
   StaleTaskRevisionError,
   StateApplicationIdempotencyConflictError,
+  UndoTargetUnavailableError,
 } from "../../src/domain/shopping-state/errors";
 import { recordTaskInput } from "../../src/features/shopping-state/persistence/inputs-and-messages";
 import { loadCurrentShoppingState } from "../../src/features/shopping-state/persistence/state-loaders";
@@ -15,13 +19,24 @@ import {
 import { createShoppingTask } from "../../src/features/shopping-state/persistence/tasks";
 import {
   decisionCriteria,
+  shoppingTasks,
   stateChangeApplications,
+  taskInputs,
 } from "../../src/infrastructure/database/schema";
 import {
   createTestDatabaseConnection,
   resetShoppingState,
   type TestDatabaseConnection,
+  waitForDatabaseLock,
 } from "./helpers";
+
+function deferred() {
+  let resolve!: () => void;
+  const promise = new Promise<void>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
+}
 
 async function input(
   connection: TestDatabaseConnection,
@@ -126,7 +141,7 @@ describe("V0-04 deterministic state transitions", () => {
     expect(state.activeCriteria).toHaveLength(1);
   });
 
-  it("serializes concurrent same-source applications onto one exact receipt", async () => {
+  it("rechecks the receipt after deterministic same-source lock contention", async () => {
     const task = await createShoppingTask(connection.db);
     const source = await input(connection, task.id, "same-source-race", 0n);
     const command = explicitCommand({
@@ -135,18 +150,43 @@ describe("V0-04 deterministic state transitions", () => {
       expectedRevision: 0n,
       patch: createAndAddPatch(),
     });
-    const [left, right] = await Promise.all([
-      applyStatePatch(connection.db, command),
-      applyStatePatch(connection.db, command),
-    ]);
-    expect(left).toEqual(right);
-    expect(
-      await connection.db.select().from(stateChangeApplications),
-    ).toHaveLength(1);
-    expect(
-      (await loadCurrentShoppingState(connection.db, task.id)).task
-        .currentRevision,
-    ).toBe(1n);
+    const leftConnection = createTestDatabaseConnection("same_source_left");
+    const rightConnection = createTestDatabaseConnection("same_source_right");
+    const locked = deferred();
+    const release = deferred();
+    const blocker = connection.db.transaction(async (tx) => {
+      await tx
+        .select()
+        .from(taskInputs)
+        .where(eq(taskInputs.id, source.input.id))
+        .for("update");
+      locked.resolve();
+      await release.promise;
+    });
+    try {
+      await locked.promise;
+      const leftPromise = applyStatePatch(leftConnection.db, command);
+      const rightPromise = applyStatePatch(rightConnection.db, command);
+      await waitForDatabaseLock({
+        observer: connection,
+        applicationNames: ["same_source_left", "same_source_right"],
+      });
+      release.resolve();
+      await blocker;
+      const [left, right] = await Promise.all([leftPromise, rightPromise]);
+      expect(left).toEqual(right);
+      expect(
+        await connection.db.select().from(stateChangeApplications),
+      ).toHaveLength(1);
+      expect(
+        (await loadCurrentShoppingState(connection.db, task.id)).task
+          .currentRevision,
+      ).toBe(1n);
+    } finally {
+      release.resolve();
+      await blocker;
+      await Promise.all([leftConnection.close(), rightConnection.close()]);
+    }
   });
 
   it("stores no-change once without advancing and conflicts on identity reuse", async () => {
@@ -201,40 +241,65 @@ describe("V0-04 deterministic state transitions", () => {
     );
   });
 
-  it("allows one revision winner and leaves the stale writer with no receipt", async () => {
+  it("allows one task-CAS winner after deterministic different-source contention", async () => {
     const task = await createShoppingTask(connection.db);
     const left = await input(connection, task.id, "left", 0n);
     const right = await input(connection, task.id, "right", 0n);
-    const results = await Promise.allSettled([
-      applyStatePatch(
-        connection.db,
+    const leftConnection = createTestDatabaseConnection("task_cas_left");
+    const rightConnection = createTestDatabaseConnection("task_cas_right");
+    const locked = deferred();
+    const release = deferred();
+    const blocker = connection.db.transaction(async (tx) => {
+      await tx
+        .select()
+        .from(shoppingTasks)
+        .where(eq(shoppingTasks.id, task.id))
+        .for("update");
+      locked.resolve();
+      await release.promise;
+    });
+    try {
+      await locked.promise;
+      const leftPromise = applyStatePatch(
+        leftConnection.db,
         explicitCommand({
           taskId: task.id,
           inputId: left.input.id,
           expectedRevision: 0n,
           patch: createAndAddPatch("Brand", "Nike"),
         }),
-      ),
-      applyStatePatch(
-        connection.db,
+      );
+      const rightPromise = applyStatePatch(
+        rightConnection.db,
         explicitCommand({
           taskId: task.id,
           inputId: right.input.id,
           expectedRevision: 0n,
           patch: createAndAddPatch("Colour", "Black"),
         }),
-      ),
-    ]);
-    expect(
-      results.filter((result) => result.status === "fulfilled"),
-    ).toHaveLength(1);
-    const rejected = results.find((result) => result.status === "rejected");
-    expect(rejected?.status === "rejected" && rejected.reason).toBeInstanceOf(
-      StaleTaskRevisionError,
-    );
-    expect(
-      await connection.db.select().from(stateChangeApplications),
-    ).toHaveLength(1);
+      );
+      await waitForDatabaseLock({
+        observer: connection,
+        applicationNames: ["task_cas_left", "task_cas_right"],
+      });
+      release.resolve();
+      await blocker;
+      const results = await Promise.allSettled([leftPromise, rightPromise]);
+      expect(
+        results.filter((result) => result.status === "fulfilled"),
+      ).toHaveLength(1);
+      const rejected = results.find((result) => result.status === "rejected");
+      expect(rejected?.status === "rejected" && rejected.reason).toBeInstanceOf(
+        StaleTaskRevisionError,
+      );
+      expect(
+        await connection.db.select().from(stateChangeApplications),
+      ).toHaveLength(1);
+    } finally {
+      release.resolve();
+      await blocker;
+      await Promise.all([leftConnection.close(), rightConnection.close()]);
+    }
   });
 
   it("reconstructs historical briefs through A to B to removed and detects immutable drift", async () => {
@@ -319,6 +384,12 @@ describe("V0-04 deterministic state transitions", () => {
       .where(eq(decisionCriteria.id, criterionA));
     await expect(
       applyStatePatch(connection.db, addCommand),
+    ).rejects.toBeInstanceOf(PersistedDataCorruptionError);
+    await expect(
+      applyStatePatch(connection.db, {
+        ...addCommand,
+        patch: createAndAddPatch("Different label", "Adidas"),
+      }),
     ).rejects.toBeInstanceOf(PersistedDataCorruptionError);
   });
 
@@ -519,6 +590,24 @@ describe("V0-04 deterministic state transitions", () => {
       patch: createAndAddPatch(),
     });
     const result = await applyStatePatch(connection.db, command);
+    const whitespaceDelta = structuredClone(result.application.appliedDelta);
+    const addedEntry = whitespaceDelta.entries.find(
+      (entry) => entry.kind === "criterion_added",
+    );
+    if (
+      addedEntry === undefined ||
+      addedEntry.kind !== "criterion_added" ||
+      addedEntry.after.semanticValue.kind !== "categorical"
+    )
+      throw new Error("Expected categorical added delta");
+    addedEntry.after.semanticValue.values[0] = " Nike ";
+    await connection.db
+      .update(stateChangeApplications)
+      .set({ appliedDelta: whitespaceDelta })
+      .where(eq(stateChangeApplications.id, result.application.id));
+    await expect(
+      applyStatePatch(connection.db, command),
+    ).rejects.toBeInstanceOf(PersistedDataCorruptionError);
     await connection.db
       .update(stateChangeApplications)
       .set({
@@ -661,5 +750,261 @@ describe("V0-04 deterministic state transitions", () => {
     });
     expect(undone.application.resultingRevision).toBe(2n);
     expect(undone.brief.items).toEqual([]);
+  });
+
+  it("serializes undo against a forward patch at the same revision", async () => {
+    const task = await createShoppingTask(connection.db);
+    const addInput = await input(connection, task.id, "undo-race-add", 0n);
+    const added = await applyStatePatch(
+      connection.db,
+      explicitCommand({
+        taskId: task.id,
+        inputId: addInput.input.id,
+        expectedRevision: 0n,
+        patch: createAndAddPatch(),
+      }),
+    );
+    const undoInput = await input(connection, task.id, "undo-race-undo", 1n);
+    const forwardInput = await input(
+      connection,
+      task.id,
+      "undo-race-forward",
+      1n,
+    );
+    const undoConnection = createTestDatabaseConnection("undo_race_undo");
+    const forwardConnection = createTestDatabaseConnection("undo_race_forward");
+    const locked = deferred();
+    const release = deferred();
+    const blocker = connection.db.transaction(async (tx) => {
+      await tx
+        .select()
+        .from(shoppingTasks)
+        .where(eq(shoppingTasks.id, task.id))
+        .for("update");
+      locked.resolve();
+      await release.promise;
+    });
+    try {
+      await locked.promise;
+      const undoPromise = undoStateChange(undoConnection.db, {
+        applicationSchemaVersion: 1,
+        applicationKind: "undo",
+        taskId: task.id,
+        expectedRevision: 1n,
+        source: { kind: "user_explicit", inputId: undoInput.input.id },
+        targetApplicationId: added.application.id,
+      });
+      const forwardPromise = applyStatePatch(
+        forwardConnection.db,
+        explicitCommand({
+          taskId: task.id,
+          inputId: forwardInput.input.id,
+          expectedRevision: 1n,
+          patch: createAndAddPatch("Colour", "Black"),
+        }),
+      );
+      await waitForDatabaseLock({
+        observer: connection,
+        applicationNames: ["undo_race_undo", "undo_race_forward"],
+      });
+      release.resolve();
+      await blocker;
+      const results = await Promise.allSettled([undoPromise, forwardPromise]);
+      expect(
+        results.filter((result) => result.status === "fulfilled"),
+      ).toHaveLength(1);
+      const rejected = results.find((result) => result.status === "rejected");
+      expect(rejected?.status === "rejected" && rejected.reason).toBeInstanceOf(
+        StaleTaskRevisionError,
+      );
+      expect(
+        (await loadCurrentShoppingState(connection.db, task.id)).task
+          .currentRevision,
+      ).toBe(2n);
+      expect(
+        await connection.db.select().from(stateChangeApplications),
+      ).toHaveLength(2);
+    } finally {
+      release.resolve();
+      await blocker;
+      await Promise.all([undoConnection.close(), forwardConnection.close()]);
+    }
+  });
+
+  it("rejects cross-task source, concept, criterion, and undo targets without mutation", async () => {
+    const sourceTask = await createShoppingTask(connection.db);
+    const sourceInput = await input(
+      connection,
+      sourceTask.id,
+      "foreign-state",
+      0n,
+    );
+    const sourceResult = await applyStatePatch(
+      connection.db,
+      explicitCommand({
+        taskId: sourceTask.id,
+        inputId: sourceInput.input.id,
+        expectedRevision: 0n,
+        patch: createAndAddPatch(),
+      }),
+    );
+    const foreignItem = sourceResult.brief.items[0]!;
+    const targetTask = await createShoppingTask(connection.db);
+
+    await expect(
+      applyStatePatch(
+        connection.db,
+        explicitCommand({
+          taskId: targetTask.id,
+          inputId: sourceInput.input.id,
+          expectedRevision: 0n,
+          patch: { schemaVersion: 1, outcome: "no_change" },
+        }),
+      ),
+    ).rejects.toBeInstanceOf(SourceInputTaskMismatchError);
+
+    const conceptInput = await input(
+      connection,
+      targetTask.id,
+      "foreign-concept",
+      0n,
+    );
+    await expect(
+      applyStatePatch(
+        connection.db,
+        explicitCommand({
+          taskId: targetTask.id,
+          inputId: conceptInput.input.id,
+          expectedRevision: 0n,
+          patch: {
+            schemaVersion: 1,
+            outcome: "change",
+            operations: [
+              {
+                op: "add_criterion",
+                concept: {
+                  kind: "existing",
+                  conceptId: foreignItem.conceptId,
+                },
+                target: {
+                  strength: "preference",
+                  targetSemantics: "categorical",
+                  semanticValue: {
+                    schemaVersion: 1,
+                    kind: "categorical",
+                    operator: "prefer",
+                    values: ["Nike"],
+                  },
+                },
+              },
+            ],
+          },
+        }),
+      ),
+    ).rejects.toBeInstanceOf(ConceptTaskMismatchError);
+
+    const criterionInput = await input(
+      connection,
+      targetTask.id,
+      "foreign-criterion",
+      0n,
+    );
+    await expect(
+      applyStatePatch(
+        connection.db,
+        explicitCommand({
+          taskId: targetTask.id,
+          inputId: criterionInput.input.id,
+          expectedRevision: 0n,
+          patch: {
+            schemaVersion: 1,
+            outcome: "change",
+            operations: [
+              { op: "remove", targetCriterionId: foreignItem.criterionId },
+            ],
+          },
+        }),
+      ),
+    ).rejects.toBeInstanceOf(CriterionTaskMismatchError);
+
+    const undoInput = await input(
+      connection,
+      targetTask.id,
+      "foreign-undo",
+      0n,
+    );
+    await expect(
+      undoStateChange(connection.db, {
+        applicationSchemaVersion: 1,
+        applicationKind: "undo",
+        taskId: targetTask.id,
+        expectedRevision: 0n,
+        source: { kind: "user_explicit", inputId: undoInput.input.id },
+        targetApplicationId: sourceResult.application.id,
+      }),
+    ).rejects.toBeInstanceOf(UndoTargetUnavailableError);
+
+    const targetState = await loadCurrentShoppingState(
+      connection.db,
+      targetTask.id,
+    );
+    expect(targetState.task.currentRevision).toBe(0n);
+    expect(targetState.concepts).toEqual([]);
+    expect(targetState.activeCriteria).toEqual([]);
+    expect(
+      await connection.db
+        .select()
+        .from(stateChangeApplications)
+        .where(eq(stateChangeApplications.taskId, targetTask.id)),
+    ).toEqual([]);
+  });
+
+  it("reports stale undo before target availability after a later meaningful transition", async () => {
+    const task = await createShoppingTask(connection.db);
+    const addInput = await input(connection, task.id, "stale-undo-add", 0n);
+    const added = await applyStatePatch(
+      connection.db,
+      explicitCommand({
+        taskId: task.id,
+        inputId: addInput.input.id,
+        expectedRevision: 0n,
+        patch: createAndAddPatch(),
+      }),
+    );
+    const staleUndoInput = await input(
+      connection,
+      task.id,
+      "stale-undo-action",
+      1n,
+    );
+    const laterInput = await input(
+      connection,
+      task.id,
+      "stale-undo-later-change",
+      1n,
+    );
+    await applyStatePatch(
+      connection.db,
+      explicitCommand({
+        taskId: task.id,
+        inputId: laterInput.input.id,
+        expectedRevision: 1n,
+        patch: createAndAddPatch("Colour", "Black"),
+      }),
+    );
+    await expect(
+      undoStateChange(connection.db, {
+        applicationSchemaVersion: 1,
+        applicationKind: "undo",
+        taskId: task.id,
+        expectedRevision: 1n,
+        source: { kind: "user_explicit", inputId: staleUndoInput.input.id },
+        targetApplicationId: added.application.id,
+      }),
+    ).rejects.toBeInstanceOf(StaleTaskRevisionError);
+    expect(
+      (await loadCurrentShoppingState(connection.db, task.id)).task
+        .currentRevision,
+    ).toBe(2n);
   });
 });
