@@ -912,10 +912,90 @@ function entryRevisionsAreCoherent(
   }
 }
 
+function claimedMutationFootprint(delta: AppliedStateDeltaV1) {
+  const conceptIds: string[] = [];
+  const createdCriterionIds: string[] = [];
+  const endedCriterionIds: string[] = [];
+  for (const entry of delta.entries) {
+    switch (entry.kind) {
+      case "concept_created":
+        conceptIds.push(entry.concept.id);
+        break;
+      case "criterion_added":
+        createdCriterionIds.push(entry.after.id);
+        break;
+      case "criterion_replaced":
+      case "criterion_relaxed":
+      case "criterion_tightened":
+        endedCriterionIds.push(entry.ended.id);
+        createdCriterionIds.push(entry.after.id);
+        break;
+      case "criterion_removed":
+        endedCriterionIds.push(entry.after.id);
+        break;
+      case "concept_marked_indifferent":
+        endedCriterionIds.push(...entry.ended.map((snapshot) => snapshot.id));
+        createdCriterionIds.push(entry.after.id);
+        break;
+      case "criterion_restored_by_undo":
+        createdCriterionIds.push(entry.after.id);
+        break;
+      case "criterion_ended_by_undo":
+        endedCriterionIds.push(entry.after.id);
+        break;
+    }
+  }
+  return {
+    conceptIds: conceptIds.sort(),
+    createdCriterionIds: createdCriterionIds.sort(),
+    endedCriterionIds: endedCriterionIds.sort(),
+  };
+}
+
+async function validateUndoReceiptTarget(
+  tx: Tx,
+  receipt: StateChangeApplication,
+) {
+  if (receipt.applicationKind !== "undo") return;
+  const [row] = await tx
+    .select()
+    .from(stateChangeApplications)
+    .where(
+      and(
+        eq(stateChangeApplications.taskId, receipt.taskId),
+        eq(stateChangeApplications.id, receipt.undoesApplicationId!),
+      ),
+    )
+    .limit(1);
+  if (row === undefined) {
+    throw new PersistedDataCorruptionError({
+      recordType: "StateChangeApplication",
+      recordId: receipt.id,
+      cause: new Error("Undo receipt target is missing from its task"),
+    });
+  }
+  const target = mapStateChangeApplication(row);
+  if (
+    target.applicationKind !== "patch" ||
+    target.outcome !== "applied" ||
+    target.resultingRevision !== receipt.baseRevision
+  ) {
+    throw new PersistedDataCorruptionError({
+      recordType: "StateChangeApplication",
+      recordId: receipt.id,
+      cause: new Error(
+        "Undo receipt target must be the applied forward patch at its base revision",
+      ),
+    });
+  }
+  await validateHistoricalReceipt(tx, target);
+}
+
 async function validateHistoricalReceipt(
   tx: Tx,
   receipt: StateChangeApplication,
 ) {
+  await validateUndoReceiptTarget(tx, receipt);
   const history = await loadShoppingStateAtRevision(
     tx,
     receipt.taskId,
@@ -925,6 +1005,37 @@ async function validateHistoricalReceipt(
   const criteria = new Map(
     all.map(({ criterion }) => [criterion.id, criterion] as const),
   );
+  if (receipt.outcome === "applied") {
+    const revision = receipt.resultingRevision;
+    const materialized = {
+      conceptIds: history.concepts
+        .filter((concept) => concept.createdRevision === revision)
+        .map((concept) => concept.id)
+        .sort(),
+      createdCriterionIds: all
+        .filter(({ criterion }) => criterion.createdRevision === revision)
+        .map(({ criterion }) => criterion.id)
+        .sort(),
+      endedCriterionIds: all
+        .filter(({ criterion }) => criterion.endedRevision === revision)
+        .map(({ criterion }) => criterion.id)
+        .sort(),
+    };
+    if (
+      !isDeepStrictEqual(
+        claimedMutationFootprint(receipt.appliedDelta),
+        materialized,
+      )
+    ) {
+      throw new PersistedDataCorruptionError({
+        recordType: "StateChangeApplication",
+        recordId: receipt.id,
+        cause: new Error(
+          "Applied delta does not exactly describe the materialized revision footprint",
+        ),
+      });
+    }
+  }
   for (const entry of receipt.appliedDelta.entries) {
     if (!entryRevisionsAreCoherent(entry, receipt)) {
       throw new PersistedDataCorruptionError({

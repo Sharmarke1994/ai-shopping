@@ -18,6 +18,10 @@ import {
 } from "../../src/features/shopping-state/persistence/state-transitions";
 import { createShoppingTask } from "../../src/features/shopping-state/persistence/tasks";
 import {
+  snapshotCriterion,
+  type StateChangeApplication,
+} from "../../src/domain/shopping-state/state-change";
+import {
   decisionCriteria,
   shoppingTasks,
   stateChangeApplications,
@@ -98,6 +102,38 @@ function createAndAddPatch(label = "Brand", value = "Nike") {
             kind: "categorical",
             operator: "prefer",
             values: [value],
+          },
+        },
+      },
+    ],
+  };
+}
+
+function createTwoCriteriaPatch() {
+  return {
+    schemaVersion: 1,
+    outcome: "change",
+    operations: [
+      ...createAndAddPatch("Brand", "Nike").operations,
+      {
+        op: "create_concept",
+        localRef: "concept_colour",
+        label: "Colour",
+        definition: "Preferred colour",
+        valueFamily: "categorical",
+        canonicalUnit: null,
+      },
+      {
+        op: "add_criterion",
+        concept: { kind: "created", localRef: "concept_colour" },
+        target: {
+          strength: "preference",
+          targetSemantics: "categorical",
+          semanticValue: {
+            schemaVersion: 1,
+            kind: "categorical",
+            operator: "prefer",
+            values: ["Black"],
           },
         },
       },
@@ -620,6 +656,246 @@ describe("V0-04 deterministic state transitions", () => {
     await expect(
       applyStatePatch(connection.db, command),
     ).rejects.toBeInstanceOf(PersistedDataCorruptionError);
+  });
+
+  it("rejects a structurally valid receipt that omits part of its materialized mutation footprint", async () => {
+    const task = await createShoppingTask(connection.db);
+    const source = await input(connection, task.id, "incomplete-delta", 0n);
+    const command = explicitCommand({
+      taskId: task.id,
+      inputId: source.input.id,
+      expectedRevision: 0n,
+      patch: createTwoCriteriaPatch(),
+    });
+    const applied = await applyStatePatch(connection.db, command);
+    expect(applied.brief.items).toHaveLength(2);
+
+    const incompleteDelta = structuredClone(applied.application.appliedDelta);
+    const omittedIndex = incompleteDelta.entries.findIndex(
+      (entry) => entry.kind === "criterion_added",
+    );
+    if (omittedIndex < 0) throw new Error("Expected an added criterion delta");
+    incompleteDelta.entries.splice(omittedIndex, 1);
+    await connection.client`
+      UPDATE shopping_private.state_change_applications
+      SET applied_delta = ${connection.client.json(incompleteDelta)}
+      WHERE id = ${applied.application.id}
+    `;
+
+    await expect(
+      applyStatePatch(connection.db, command),
+    ).rejects.toBeInstanceOf(PersistedDataCorruptionError);
+    const undoInput = await input(
+      connection,
+      task.id,
+      "incomplete-delta-undo",
+      1n,
+    );
+    await expect(
+      undoStateChange(connection.db, {
+        applicationSchemaVersion: 1,
+        applicationKind: "undo",
+        taskId: task.id,
+        expectedRevision: 1n,
+        source: { kind: "user_explicit", inputId: undoInput.input.id },
+        targetApplicationId: applied.application.id,
+      }),
+    ).rejects.toBeInstanceOf(PersistedDataCorruptionError);
+
+    const state = await loadCurrentShoppingState(connection.db, task.id);
+    expect(state.task.currentRevision).toBe(1n);
+    expect(state.activeCriteria).toHaveLength(2);
+    expect(
+      await connection.db
+        .select()
+        .from(stateChangeApplications)
+        .where(eq(stateChangeApplications.taskId, task.id)),
+    ).toHaveLength(1);
+  });
+
+  it("rejects relationally incoherent before and terminal snapshots", async () => {
+    const task = await createShoppingTask(connection.db);
+    const addInput = await input(connection, task.id, "mixed-snapshot-add", 0n);
+    const added = await applyStatePatch(
+      connection.db,
+      explicitCommand({
+        taskId: task.id,
+        inputId: addInput.input.id,
+        expectedRevision: 0n,
+        patch: createTwoCriteriaPatch(),
+      }),
+    );
+    const brand = added.brief.items.find(
+      (entry) => entry.conceptLabel === "Brand",
+    )!;
+    const colour = added.brief.items.find(
+      (entry) => entry.conceptLabel === "Colour",
+    )!;
+    const beforeReplace = await loadCurrentShoppingState(
+      connection.db,
+      task.id,
+    );
+    const colourCriterion = beforeReplace.activeCriteria.find(
+      ({ criterion }) => criterion.id === colour.criterionId,
+    )!.criterion;
+    const replaceInput = await input(
+      connection,
+      task.id,
+      "mixed-snapshot-replace",
+      1n,
+    );
+    const replaceCommand = explicitCommand({
+      taskId: task.id,
+      inputId: replaceInput.input.id,
+      expectedRevision: 1n,
+      patch: {
+        schemaVersion: 1,
+        outcome: "change",
+        operations: [
+          {
+            op: "replace_target",
+            targetCriterionId: brand.criterionId,
+            result: {
+              strength: "strong_preference",
+              targetSemantics: "categorical",
+              semanticValue: {
+                schemaVersion: 1,
+                kind: "categorical",
+                operator: "prefer",
+                values: ["Nike"],
+              },
+            },
+          },
+        ],
+      },
+    });
+    const replaced = await applyStatePatch(connection.db, replaceCommand);
+    const incoherentDelta = structuredClone(replaced.application.appliedDelta);
+    const replacement = incoherentDelta.entries.find(
+      (entry) => entry.kind === "criterion_replaced",
+    );
+    if (replacement === undefined || replacement.kind !== "criterion_replaced")
+      throw new Error("Expected a replacement delta");
+    replacement.before = snapshotCriterion(colourCriterion);
+    await connection.client`
+      UPDATE shopping_private.state_change_applications
+      SET applied_delta = ${connection.client.json(incoherentDelta)}
+      WHERE id = ${replaced.application.id}
+    `;
+
+    await expect(
+      applyStatePatch(connection.db, replaceCommand),
+    ).rejects.toBeInstanceOf(PersistedDataCorruptionError);
+    const state = await loadCurrentShoppingState(connection.db, task.id);
+    expect(state.task.currentRevision).toBe(2n);
+    expect(state.activeCriteria).toHaveLength(2);
+  });
+
+  it("validates the applied forward target claimed by an existing undo receipt", async () => {
+    const task = await createShoppingTask(connection.db);
+    const addInput = await input(connection, task.id, "undo-target-add", 0n);
+    const added = await applyStatePatch(
+      connection.db,
+      explicitCommand({
+        taskId: task.id,
+        inputId: addInput.input.id,
+        expectedRevision: 0n,
+        patch: createAndAddPatch(),
+      }),
+    );
+    const removeInput = await input(
+      connection,
+      task.id,
+      "undo-target-remove",
+      1n,
+    );
+    const removed = await applyStatePatch(
+      connection.db,
+      explicitCommand({
+        taskId: task.id,
+        inputId: removeInput.input.id,
+        expectedRevision: 1n,
+        patch: {
+          schemaVersion: 1,
+          outcome: "change",
+          operations: [
+            {
+              op: "remove",
+              targetCriterionId: added.brief.items[0]!.criterionId,
+            },
+          ],
+        },
+      }),
+    );
+    const noChangeInput = await input(
+      connection,
+      task.id,
+      "undo-target-no-change",
+      2n,
+    );
+    const noChange = await applyStatePatch(
+      connection.db,
+      explicitCommand({
+        taskId: task.id,
+        inputId: noChangeInput.input.id,
+        expectedRevision: 2n,
+        patch: { schemaVersion: 1, outcome: "no_change" },
+      }),
+    );
+    const undoInput = await input(
+      connection,
+      task.id,
+      "undo-target-action",
+      2n,
+    );
+    const undoCommand = {
+      applicationSchemaVersion: 1,
+      applicationKind: "undo",
+      taskId: task.id,
+      expectedRevision: 2n,
+      source: { kind: "user_explicit", inputId: undoInput.input.id },
+      targetApplicationId: removed.application.id,
+    };
+    const undone = await undoStateChange(connection.db, undoCommand);
+
+    const repoint = async (
+      targetApplicationId: StateChangeApplication["id"],
+    ) => {
+      const delta = structuredClone(undone.application.appliedDelta);
+      for (const entry of delta.entries) {
+        if (
+          entry.kind === "criterion_restored_by_undo" ||
+          entry.kind === "criterion_ended_by_undo"
+        ) {
+          entry.targetApplicationId = targetApplicationId;
+        }
+      }
+      await connection.client`
+        UPDATE shopping_private.state_change_applications
+        SET undoes_application_id = ${targetApplicationId},
+            applied_delta = ${connection.client.json(delta)}
+        WHERE id = ${undone.application.id}
+      `;
+    };
+
+    await repoint(noChange.application.id);
+    await expect(
+      undoStateChange(connection.db, undoCommand),
+    ).rejects.toBeInstanceOf(PersistedDataCorruptionError);
+    await repoint(added.application.id);
+    await expect(
+      undoStateChange(connection.db, undoCommand),
+    ).rejects.toBeInstanceOf(PersistedDataCorruptionError);
+
+    const state = await loadCurrentShoppingState(connection.db, task.id);
+    expect(state.task.currentRevision).toBe(3n);
+    expect(state.activeCriteria).toHaveLength(1);
+    expect(
+      await connection.db
+        .select()
+        .from(stateChangeApplications)
+        .where(eq(stateChangeApplications.taskId, task.id)),
+    ).toHaveLength(4);
   });
 
   it("versions replace, relax, and tighten without mutating meaning in place, then undoes the latest", async () => {
