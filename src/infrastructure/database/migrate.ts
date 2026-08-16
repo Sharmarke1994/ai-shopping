@@ -6,7 +6,11 @@ export async function migrateDatabase(options: {
   url: string;
   migrationsFolder?: string;
 }) {
-  const client = postgres(options.url, { max: 1, prepare: false });
+  const client = postgres(options.url, {
+    max: 1,
+    onnotice: () => undefined,
+    prepare: false,
+  });
   const db = drizzle(client);
 
   try {

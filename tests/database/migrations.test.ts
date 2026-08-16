@@ -20,7 +20,7 @@ describe("V0-03 migration shape", () => {
     const [version] = await connection.client.unsafe<
       { server_version: string }[]
     >("show server_version");
-    expect(version?.server_version).toMatch(/^17\.6(?:\.|$)/);
+    expect(version?.server_version).toMatch(/^17\.6(?:[.\s]|$)/);
 
     const tables = await connection.client.unsafe<{ table_name: string }[]>(`
       select table_name
