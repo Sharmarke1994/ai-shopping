@@ -5,7 +5,7 @@ import {
   type TestDatabaseConnection,
 } from "./helpers";
 
-describe("V0-03 migration shape", () => {
+describe("V0-04 migration shape", () => {
   let connection: TestDatabaseConnection;
 
   beforeAll(() => {
@@ -33,6 +33,7 @@ describe("V0-03 migration shape", () => {
       "criterion_sources",
       "decision_criteria",
       "shopping_tasks",
+      "state_change_applications",
       "task_inputs",
       "user_messages",
     ]);
@@ -51,8 +52,42 @@ describe("V0-03 migration shape", () => {
       'select count(*)::integer as count from "drizzle"."migrations"',
     );
     const after = afterRows[0]?.count;
-    expect(before).toBe(2);
+    expect(before).toBe(4);
     expect(after).toBe(before);
+  });
+
+  it("keeps receipts task-scoped, causal, and uniquely undoable", async () => {
+    const constraints = await connection.client.unsafe<
+      { conname: string; definition: string }[]
+    >(`
+      select conname, pg_get_constraintdef(oid) as definition
+      from pg_constraint
+      where conname in (
+        'state_change_applications_source_input_fk',
+        'state_change_applications_undo_target_fk',
+        'state_change_applications_task_source_unique'
+      )
+      order by conname
+    `);
+    expect(constraints).toHaveLength(3);
+    expect(constraints.map((row) => row.definition).join(" ")).toContain(
+      "FOREIGN KEY (task_id, source_task_input_id)",
+    );
+    expect(constraints.map((row) => row.definition).join(" ")).toContain(
+      "FOREIGN KEY (task_id, undoes_application_id)",
+    );
+
+    const [undoIndex] = await connection.client.unsafe<
+      { index_definition: string }[]
+    >(`
+      select pg_get_indexdef(indexrelid) as index_definition
+      from pg_index
+      join pg_class on pg_class.oid = indexrelid
+      where pg_class.relname = 'state_change_applications_one_undo_per_target'
+    `);
+    expect(undoIndex?.index_definition).toContain(
+      "WHERE (undoes_application_id IS NOT NULL)",
+    );
   });
 
   it("keeps successor ownership deferred across task, lineage, and concept", async () => {

@@ -26,6 +26,7 @@ export async function resetShoppingState(
   }
   await connection.client.unsafe(`
     TRUNCATE TABLE
+      shopping_private.state_change_applications,
       shopping_private.criterion_sources,
       shopping_private.decision_criteria,
       shopping_private.concept_definitions,

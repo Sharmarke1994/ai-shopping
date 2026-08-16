@@ -15,6 +15,20 @@
       "when": 1786881977226,
       "tag": "0001_v0_03_postgres_guards",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1786894981317,
+      "tag": "0002_thankful_shinko_yamashiro",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1786894985464,
+      "tag": "0003_v0_04_postgres_guards",
+      "breakpoints": true
     }
   ]
 }

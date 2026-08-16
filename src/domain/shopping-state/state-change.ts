@@ -1,0 +1,257 @@
+import { isDeepStrictEqual } from "node:util";
+import { z } from "zod";
+import { conceptDefinitionSchema } from "./concept-definition";
+import {
+  criterionAuthoritySchema,
+  criterionLifecycleSchema,
+  criterionStrengthSchema,
+  decisionCriterionSchema,
+  targetSemanticsSchema,
+  type DecisionCriterion,
+} from "./decision-criterion";
+import {
+  conceptDefinitionIdSchema,
+  criterionIdSchema,
+  criterionLineageIdSchema,
+  shoppingTaskIdSchema,
+  stateChangeApplicationIdSchema,
+  taskInputIdSchema,
+} from "./ids";
+import { semanticValueSchema } from "./semantic-value";
+import { taskRevisionSchema } from "./task";
+
+export const APPLIED_STATE_DELTA_SCHEMA_VERSION = 1 as const;
+
+const revisionStringSchema = z.string().regex(/^(?:0|[1-9]\d*)$/);
+
+export const criterionSnapshotV1Schema = z
+  .strictObject({
+    id: criterionIdSchema,
+    lineageId: criterionLineageIdSchema,
+    conceptId: conceptDefinitionIdSchema,
+    authority: criterionAuthoritySchema,
+    strength: criterionStrengthSchema.nullable(),
+    targetSemantics: targetSemanticsSchema,
+    valueSchemaVersion: z.literal(1),
+    valueKind: z.enum([
+      "boolean",
+      "qualitative",
+      "measurement",
+      "measurement_range",
+      "money",
+      "money_stretch",
+      "categorical",
+      "comparison",
+      "indifferent",
+    ]),
+    semanticValue: semanticValueSchema,
+    lifecycle: criterionLifecycleSchema,
+    createdRevision: revisionStringSchema,
+    endedRevision: revisionStringSchema.nullable(),
+    supersededById: criterionIdSchema.nullable(),
+  })
+  .superRefine((snapshot, context) => {
+    if (snapshot.valueKind !== snapshot.semanticValue.kind) {
+      context.addIssue({
+        code: "custom",
+        message: "Snapshot value discriminators must match",
+      });
+    }
+    const indifferent = snapshot.semanticValue.kind === "indifferent";
+    const hasIndifferentDimensions =
+      snapshot.targetSemantics === "indifferent" && snapshot.strength === null;
+    const hasOrdinaryDimensions =
+      snapshot.targetSemantics !== "indifferent" && snapshot.strength !== null;
+    if (
+      (indifferent && !hasIndifferentDimensions) ||
+      (!indifferent && !hasOrdinaryDimensions)
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "Snapshot indifference dimensions must agree",
+      });
+    }
+    if (
+      (snapshot.lifecycle === "active" &&
+        (snapshot.endedRevision !== null ||
+          snapshot.supersededById !== null)) ||
+      (snapshot.lifecycle === "removed" &&
+        (snapshot.endedRevision === null ||
+          snapshot.supersededById !== null)) ||
+      (snapshot.lifecycle === "superseded" &&
+        (snapshot.endedRevision === null || snapshot.supersededById === null))
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "Snapshot lifecycle fields must agree",
+      });
+    }
+  });
+
+export type CriterionSnapshotV1 = z.infer<typeof criterionSnapshotV1Schema>;
+
+const conceptSnapshotSchema = conceptDefinitionSchema
+  .omit({ taskId: true, createdAt: true, createdRevision: true })
+  .extend({ createdRevision: revisionStringSchema });
+
+const replacementEntryBase = {
+  before: criterionSnapshotV1Schema,
+  ended: criterionSnapshotV1Schema,
+  after: criterionSnapshotV1Schema,
+};
+
+const appliedDeltaEntryV1Schema = z.discriminatedUnion("kind", [
+  z.strictObject({
+    kind: z.literal("concept_created"),
+    concept: conceptSnapshotSchema,
+  }),
+  z.strictObject({
+    kind: z.literal("criterion_added"),
+    after: criterionSnapshotV1Schema,
+  }),
+  z.strictObject({
+    kind: z.literal("criterion_replaced"),
+    ...replacementEntryBase,
+  }),
+  z.strictObject({
+    kind: z.literal("criterion_relaxed"),
+    ...replacementEntryBase,
+  }),
+  z.strictObject({
+    kind: z.literal("criterion_tightened"),
+    ...replacementEntryBase,
+  }),
+  z.strictObject({
+    kind: z.literal("criterion_removed"),
+    before: criterionSnapshotV1Schema,
+    after: criterionSnapshotV1Schema,
+  }),
+  z.strictObject({
+    kind: z.literal("concept_marked_indifferent"),
+    conceptId: conceptDefinitionIdSchema,
+    before: z.array(criterionSnapshotV1Schema),
+    ended: z.array(criterionSnapshotV1Schema),
+    after: criterionSnapshotV1Schema,
+  }),
+  z.strictObject({
+    kind: z.literal("criterion_restored_by_undo"),
+    targetApplicationId: stateChangeApplicationIdSchema,
+    restoredFrom: criterionSnapshotV1Schema,
+    after: criterionSnapshotV1Schema,
+  }),
+  z.strictObject({
+    kind: z.literal("criterion_ended_by_undo"),
+    targetApplicationId: stateChangeApplicationIdSchema,
+    before: criterionSnapshotV1Schema,
+    after: criterionSnapshotV1Schema,
+  }),
+]);
+
+export const appliedStateDeltaV1Schema = z.strictObject({
+  schemaVersion: z.literal(APPLIED_STATE_DELTA_SCHEMA_VERSION),
+  entries: z.array(appliedDeltaEntryV1Schema),
+});
+
+export type AppliedStateDeltaV1 = z.infer<typeof appliedStateDeltaV1Schema>;
+export type AppliedDeltaEntryV1 = AppliedStateDeltaV1["entries"][number];
+
+export const stateChangeApplicationSchema = z
+  .strictObject({
+    id: stateChangeApplicationIdSchema,
+    taskId: shoppingTaskIdSchema,
+    sourceTaskInputId: taskInputIdSchema,
+    applicationKind: z.enum(["patch", "undo"]),
+    requestSchemaVersion: z.literal(1),
+    fingerprintVersion: z.literal(1),
+    requestFingerprint: z.string().regex(/^[a-f0-9]{64}$/),
+    baseRevision: taskRevisionSchema,
+    resultingRevision: taskRevisionSchema,
+    outcome: z.enum(["applied", "no_change"]),
+    deltaSchemaVersion: z.literal(APPLIED_STATE_DELTA_SCHEMA_VERSION),
+    appliedDelta: appliedStateDeltaV1Schema,
+    undoesApplicationId: stateChangeApplicationIdSchema.nullable(),
+    createdAt: z.date(),
+  })
+  .superRefine((application, context) => {
+    const expectedResult =
+      application.outcome === "applied"
+        ? application.baseRevision + 1n
+        : application.baseRevision;
+    if (application.resultingRevision !== expectedResult) {
+      context.addIssue({
+        code: "custom",
+        message: "Receipt revisions do not match its outcome",
+      });
+    }
+    if (
+      (application.outcome === "no_change") !==
+      (application.appliedDelta.entries.length === 0)
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "Receipt outcome does not match its delta",
+      });
+    }
+    if (
+      (application.applicationKind === "undo") !==
+      (application.undoesApplicationId !== null)
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "Only undo receipts require an undo target",
+      });
+    }
+    if (
+      application.applicationKind === "undo" &&
+      application.outcome !== "applied"
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "Undo cannot be a no-change receipt",
+      });
+    }
+  });
+
+export type StateChangeApplication = z.infer<
+  typeof stateChangeApplicationSchema
+>;
+
+export function snapshotCriterion(
+  criterionInput: DecisionCriterion,
+): CriterionSnapshotV1 {
+  const criterion = decisionCriterionSchema.parse(criterionInput);
+  return criterionSnapshotV1Schema.parse({
+    id: criterion.id,
+    lineageId: criterion.lineageId,
+    conceptId: criterion.conceptId,
+    authority: criterion.authority,
+    strength: criterion.strength,
+    targetSemantics: criterion.targetSemantics,
+    valueSchemaVersion: criterion.valueSchemaVersion,
+    valueKind: criterion.valueKind,
+    semanticValue: criterion.semanticValue,
+    lifecycle: criterion.lifecycle,
+    createdRevision: criterion.createdRevision.toString(),
+    endedRevision: criterion.endedRevision?.toString() ?? null,
+    supersededById: criterion.supersededById,
+  });
+}
+
+export function immutableSnapshotMatchesCriterion(
+  snapshot: CriterionSnapshotV1,
+  criterion: DecisionCriterion,
+) {
+  const persisted = snapshotCriterion(criterion);
+  return (
+    snapshot.id === persisted.id &&
+    snapshot.lineageId === persisted.lineageId &&
+    snapshot.conceptId === persisted.conceptId &&
+    snapshot.authority === persisted.authority &&
+    snapshot.strength === persisted.strength &&
+    snapshot.targetSemantics === persisted.targetSemantics &&
+    snapshot.valueSchemaVersion === persisted.valueSchemaVersion &&
+    snapshot.valueKind === persisted.valueKind &&
+    isDeepStrictEqual(snapshot.semanticValue, persisted.semanticValue) &&
+    snapshot.createdRevision === persisted.createdRevision
+  );
+}

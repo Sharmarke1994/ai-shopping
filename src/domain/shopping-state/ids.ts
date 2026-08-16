@@ -9,6 +9,9 @@ export const conceptDefinitionIdSchema = z
 export const criterionIdSchema = z.uuid().brand<"CriterionId">();
 export const criterionLineageIdSchema = z.uuid().brand<"CriterionLineageId">();
 export const criterionSourceIdSchema = z.uuid().brand<"CriterionSourceId">();
+export const stateChangeApplicationIdSchema = z
+  .uuid()
+  .brand<"StateChangeApplicationId">();
 export const candidateListingIdSchema = z.uuid().brand<"CandidateListingId">();
 
 export type ShoppingTaskId = z.infer<typeof shoppingTaskIdSchema>;
@@ -18,4 +21,7 @@ export type ConceptDefinitionId = z.infer<typeof conceptDefinitionIdSchema>;
 export type CriterionId = z.infer<typeof criterionIdSchema>;
 export type CriterionLineageId = z.infer<typeof criterionLineageIdSchema>;
 export type CriterionSourceId = z.infer<typeof criterionSourceIdSchema>;
+export type StateChangeApplicationId = z.infer<
+  typeof stateChangeApplicationIdSchema
+>;
 export type CandidateListingId = z.infer<typeof candidateListingIdSchema>;
