@@ -62,3 +62,30 @@ export class ProvenanceValidationError extends Error {
     this.name = "ProvenanceValidationError";
   }
 }
+
+export class TaskRevisionBoundsError extends Error {
+  readonly taskId: string;
+  readonly attemptedRevision: bigint;
+  readonly currentRevision: bigint;
+
+  constructor(options: {
+    taskId: string;
+    attemptedRevision: bigint;
+    currentRevision: bigint;
+  }) {
+    super(
+      `Revision ${options.attemptedRevision} exceeds task ${options.taskId} revision ${options.currentRevision}`,
+    );
+    this.name = "TaskRevisionBoundsError";
+    this.taskId = options.taskId;
+    this.attemptedRevision = options.attemptedRevision;
+    this.currentRevision = options.currentRevision;
+  }
+}
+
+export class SourceInputMismatchError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "SourceInputMismatchError";
+  }
+}

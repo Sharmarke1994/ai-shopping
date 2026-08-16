@@ -16,7 +16,7 @@ const rawUserText = z
   .max(10_000)
   .refine((value) => value.trim().length > 0, "Expected non-whitespace text");
 
-const stableClientIdentifier = z
+export const stableClientIdentifierSchema = z
   .string()
   .min(1)
   .max(160)
@@ -36,14 +36,14 @@ export const taskInputRequestSchema = z.discriminatedUnion("kind", [
   z.strictObject({
     ...inputRequestBase,
     kind: z.literal("question_answer"),
-    questionId: stableClientIdentifier,
-    optionId: stableClientIdentifier,
+    questionId: stableClientIdentifierSchema,
+    optionId: stableClientIdentifierSchema,
     answerText: rawUserText,
   }),
   z.strictObject({
     ...inputRequestBase,
     kind: z.literal("direct_brief_action"),
-    controlId: stableClientIdentifier,
+    controlId: stableClientIdentifierSchema,
     submittedText: rawUserText,
   }),
 ]);
@@ -58,14 +58,14 @@ const taskInputPayloadSchema = z.discriminatedUnion("kind", [
   z.strictObject({
     schemaVersion: z.literal(TASK_INPUT_SCHEMA_VERSION),
     kind: z.literal("question_answer"),
-    questionId: stableClientIdentifier,
-    optionId: stableClientIdentifier,
+    questionId: stableClientIdentifierSchema,
+    optionId: stableClientIdentifierSchema,
     answerText: rawUserText,
   }),
   z.strictObject({
     schemaVersion: z.literal(TASK_INPUT_SCHEMA_VERSION),
     kind: z.literal("direct_brief_action"),
-    controlId: stableClientIdentifier,
+    controlId: stableClientIdentifierSchema,
     submittedText: rawUserText,
   }),
 ]);
@@ -75,7 +75,7 @@ export type TaskInputPayload = z.infer<typeof taskInputPayloadSchema>;
 export const taskInputSchema = z.strictObject({
   id: taskInputIdSchema,
   taskId: shoppingTaskIdSchema,
-  clientActionId: stableClientIdentifier,
+  clientActionId: stableClientIdentifierSchema,
   inputSchemaVersion: z.literal(TASK_INPUT_SCHEMA_VERSION),
   inputPayload: taskInputPayloadSchema,
   fingerprintVersion: z.literal(REQUEST_FINGERPRINT_VERSION),
