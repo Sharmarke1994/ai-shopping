@@ -1,6 +1,6 @@
 import { isDeepStrictEqual } from "node:util";
 import { z } from "zod";
-import { conceptDefinitionSchema } from "./concept-definition";
+import { conceptValueFamilySchema } from "./concept-definition";
 import {
   criterionAuthoritySchema,
   criterionLifecycleSchema,
@@ -17,7 +17,7 @@ import {
   stateChangeApplicationIdSchema,
   taskInputIdSchema,
 } from "./ids";
-import { semanticValueSchema } from "./semantic-value";
+import { measurementUnitSchema, semanticValueSchema } from "./semantic-value";
 import { taskRevisionSchema } from "./task";
 
 export const APPLIED_STATE_DELTA_SCHEMA_VERSION = 1 as const;
@@ -90,9 +90,26 @@ export const criterionSnapshotV1Schema = z
 
 export type CriterionSnapshotV1 = z.infer<typeof criterionSnapshotV1Schema>;
 
-const conceptSnapshotSchema = conceptDefinitionSchema
-  .omit({ taskId: true, createdAt: true, createdRevision: true })
-  .extend({ createdRevision: revisionStringSchema });
+const conceptSnapshotSchema = z
+  .strictObject({
+    id: conceptDefinitionIdSchema,
+    label: z.string().trim().min(1).max(120),
+    definition: z.string().trim().min(1).max(500),
+    valueFamily: conceptValueFamilySchema,
+    canonicalUnit: measurementUnitSchema.nullable(),
+    createdRevision: revisionStringSchema,
+  })
+  .superRefine((concept, context) => {
+    if (
+      (concept.valueFamily === "measurement") !==
+      (concept.canonicalUnit !== null)
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "Only measurement concept snapshots have a canonical unit",
+      });
+    }
+  });
 
 const replacementEntryBase = {
   before: criterionSnapshotV1Schema,
