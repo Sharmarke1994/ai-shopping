@@ -1,7 +1,10 @@
 import { asc, eq } from "drizzle-orm";
 import type { z } from "zod";
 import { conceptDefinitionSchema } from "../../../domain/shopping-state/concept-definition";
-import { TaskRevisionBoundsError } from "../../../domain/shopping-state/errors";
+import {
+  PersistedDataCorruptionError,
+  TaskRevisionBoundsError,
+} from "../../../domain/shopping-state/errors";
 import { shoppingTaskIdSchema } from "../../../domain/shopping-state/ids";
 import type { ShoppingDatabaseExecutor } from "../../../infrastructure/database/clients";
 import {
@@ -67,6 +70,15 @@ export async function listConceptDefinitions(
   taskIdInput: unknown,
 ) {
   const taskId = shoppingTaskIdSchema.parse(taskIdInput);
+  const [taskRow] = await db
+    .select()
+    .from(shoppingTasks)
+    .where(eq(shoppingTasks.id, taskId))
+    .limit(1);
+  if (taskRow === undefined) {
+    return [];
+  }
+  const task = mapShoppingTask(taskRow);
   const rows = await db
     .select()
     .from(conceptDefinitions)
@@ -75,5 +87,19 @@ export async function listConceptDefinitions(
       asc(conceptDefinitions.createdRevision),
       asc(conceptDefinitions.id),
     );
-  return rows.map(mapConceptDefinition);
+  return rows.map((row) => {
+    const concept = mapConceptDefinition(row);
+    if (concept.createdRevision > task.currentRevision) {
+      throw new PersistedDataCorruptionError({
+        recordType: "ConceptDefinition",
+        recordId: concept.id,
+        cause: new TaskRevisionBoundsError({
+          taskId: task.id,
+          attemptedRevision: concept.createdRevision,
+          currentRevision: task.currentRevision,
+        }),
+      });
+    }
+    return concept;
+  });
 }

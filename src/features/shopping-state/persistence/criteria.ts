@@ -207,6 +207,10 @@ export async function listDecisionCriteria(
     .from(criterionSources)
     .where(eq(criterionSources.taskId, taskId))
     .orderBy(asc(criterionSources.id));
+  const inputRows = await db
+    .select({ id: taskInputs.id, inputKind: taskInputs.inputKind })
+    .from(taskInputs)
+    .where(eq(taskInputs.taskId, taskId));
   const rawTask = taskRow[0];
   if (rawTask === undefined) {
     return [];
@@ -223,6 +227,9 @@ export async function listDecisionCriteria(
     string,
     ReturnType<typeof mapCriterionSource>[]
   >();
+  const persistedInputKinds = new Map(
+    inputRows.map((row) => [row.id, row.inputKind] as const),
+  );
   for (const sourceRow of sourceRows) {
     const source = mapCriterionSource(sourceRow);
     const entries = sourcesByCriterion.get(source.criterionId) ?? [];
@@ -244,6 +251,27 @@ export async function listDecisionCriteria(
     try {
       parseDecisionCriterionForContext({ criterion, concept, task });
       validateCriterionSources({ criterion, sources });
+      const revisions = [
+        criterion.createdRevision,
+        criterion.endedRevision,
+      ].filter((revision): revision is bigint => revision !== null);
+      if (revisions.some((revision) => revision > task.currentRevision)) {
+        throw new TaskRevisionBoundsError({
+          taskId: task.id,
+          attemptedRevision: revisions.reduce(
+            (highest, revision) => (revision > highest ? revision : highest),
+            0n,
+          ),
+          currentRevision: task.currentRevision,
+        });
+      }
+      for (const source of sources) {
+        if (persistedInputKinds.get(source.taskInputId) !== source.sourceKind) {
+          throw new SourceInputMismatchError(
+            `Persisted source ${source.id} kind does not match its task input`,
+          );
+        }
+      }
     } catch (cause) {
       throw new PersistedDataCorruptionError({
         recordType: "DecisionCriterion",

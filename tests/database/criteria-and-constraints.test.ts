@@ -711,6 +711,54 @@ describe("criterion persistence and PostgreSQL constraints", () => {
       .from(decisionCriteria)
       .where(eq(decisionCriteria.id, predecessorId));
     expect(stillActive?.lifecycle).toBe("active");
+
+    const validSuccessorId = randomUUID();
+    await connection.db.transaction(async (tx) => {
+      await tx
+        .update(decisionCriteria)
+        .set({
+          lifecycle: "superseded",
+          endedRevision: 3n,
+          supersededById: validSuccessorId,
+        })
+        .where(eq(decisionCriteria.id, predecessorId));
+      await tx.insert(decisionCriteria).values({
+        id: validSuccessorId,
+        taskId: task.id,
+        lineageId,
+        conceptId: firstConcept.id,
+        authority: "user_explicit",
+        strength: "preference",
+        targetSemantics: "categorical",
+        valueSchemaVersion: 1,
+        valueKind: "categorical",
+        semanticValue: JSON.parse(semanticJson) as unknown,
+        lifecycle: "active",
+        createdRevision: 3n,
+      });
+    });
+    const lifecycleRows = await connection.db
+      .select({
+        id: decisionCriteria.id,
+        lifecycle: decisionCriteria.lifecycle,
+        supersededById: decisionCriteria.supersededById,
+      })
+      .from(decisionCriteria)
+      .where(eq(decisionCriteria.lineageId, lineageId));
+    expect(lifecycleRows).toEqual(
+      expect.arrayContaining([
+        {
+          id: predecessorId,
+          lifecycle: "superseded",
+          supersededById: validSuccessorId,
+        },
+        {
+          id: validSuccessorId,
+          lifecycle: "active",
+          supersededById: null,
+        },
+      ]),
+    );
   });
 
   it("rolls back a criterion and its provenance with the caller transaction", async () => {
