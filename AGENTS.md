@@ -7,11 +7,12 @@ Build a consumer shopping intelligence product that turns natural, incomplete, a
 ## Current phase
 
 The approved product and architecture knowledge base, V0-01 runnable foundation,
-and accepted V0-02 fixture-driven consumer shell exist. Gate 1 is closed and Gate
-2 has begun. The approved V0-03 domain/persistence foundation is the current
-bounded implementation task. Do not begin V0-04, AI, retrieval, or external
-integrations automatically. Do not broaden a task because later work is
-documented.
+accepted V0-02 fixture-driven consumer shell, and accepted V0-03 semantic
+domain/persistence foundation exist. Gate 1 is closed and Gate 2 has begun.
+V0-04 deterministic state-transition planning is the current bounded task. Do
+not begin V0-04 implementation until its plan is independently accepted. Do not
+begin AI/V0-05, retrieval, or later integrations automatically. Do not broaden a
+task because later work is documented.
 
 ## Hard invariants
 
