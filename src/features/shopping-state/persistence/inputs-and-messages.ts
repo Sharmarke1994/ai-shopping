@@ -86,7 +86,22 @@ async function loadExistingInput(options: {
     });
   }
 
-  return { created: false, input, message: mapUserMessage(messageRow) };
+  const message = mapUserMessage(messageRow);
+  if (
+    message.taskInputId !== input.id ||
+    message.taskId !== options.taskId ||
+    message.receivedAtRevision !== input.expectedRevision
+  ) {
+    throw new PersistedDataCorruptionError({
+      recordType: "TaskInput",
+      recordId: input.id,
+      cause: new Error(
+        "Message input does not match its exact task, input, and revision",
+      ),
+    });
+  }
+
+  return { created: false, input, message };
 }
 
 export async function recordTaskInput(options: {

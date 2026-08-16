@@ -1,3 +1,4 @@
+import { isDeepStrictEqual } from "node:util";
 import { and, asc, eq, inArray } from "drizzle-orm";
 import type { z } from "zod";
 import { conceptDefinitionIdSchema } from "../../../domain/shopping-state/ids";
@@ -249,7 +250,23 @@ export async function listDecisionCriteria(
       });
     }
     try {
-      parseDecisionCriterionForContext({ criterion, concept, task });
+      const canonicalCriterion = parseDecisionCriterionForContext({
+        criterion,
+        concept,
+        task,
+      }).criterion;
+      if (
+        (criterion.semanticValue.kind === "measurement" ||
+          criterion.semanticValue.kind === "measurement_range") &&
+        !isDeepStrictEqual(
+          criterion.semanticValue,
+          canonicalCriterion.semanticValue,
+        )
+      ) {
+        throw new Error(
+          "Persisted measurement is not in the concept's canonical representation",
+        );
+      }
       validateCriterionSources({ criterion, sources });
       const revisions = [
         criterion.createdRevision,

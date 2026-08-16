@@ -12,7 +12,10 @@ import {
   PersistedDataCorruptionError,
 } from "../../src/domain/shopping-state/errors";
 import { recordTaskInput } from "../../src/features/shopping-state/persistence/inputs-and-messages";
-import { insertConceptDefinition } from "../../src/features/shopping-state/persistence/concepts";
+import {
+  insertConceptDefinitionInTransaction,
+  listConceptDefinitions,
+} from "../../src/features/shopping-state/persistence/concepts";
 import {
   insertCriterionWithSourcesInTransaction,
   listDecisionCriteria,
@@ -170,7 +173,9 @@ describe("criterion persistence and PostgreSQL constraints", () => {
           valueFamily: "categorical",
         }),
       ].map((entry) =>
-        insertConceptDefinition({ db: connection.db, concept: entry }),
+        connection.db.transaction((tx) =>
+          insertConceptDefinitionInTransaction({ tx, concept: entry }),
+        ),
       ),
     );
     const byLabel = new Map(concepts.map((entry) => [entry.label, entry]));
@@ -352,14 +357,16 @@ describe("criterion persistence and PostgreSQL constraints", () => {
       },
     });
     if (origin.message === null) throw new Error("Expected origin message");
-    const qualitative = await insertConceptDefinition({
-      db: connection.db,
-      concept: concept({
-        taskId: task.id,
-        label: "Physical bulk",
-        valueFamily: "qualitative",
+    const qualitative = await connection.db.transaction((tx) =>
+      insertConceptDefinitionInTransaction({
+        tx,
+        concept: concept({
+          taskId: task.id,
+          label: "Physical bulk",
+          valueFamily: "qualitative",
+        }),
       }),
-    });
+    );
     const comparison = criterion({
       taskId: task.id,
       conceptId: qualitative.id,
@@ -422,14 +429,16 @@ describe("criterion persistence and PostgreSQL constraints", () => {
       },
     });
     if (origin.message === null) throw new Error("Expected origin message");
-    const anc = await insertConceptDefinition({
-      db: connection.db,
-      concept: concept({
-        taskId: task.id,
-        label: "Noise cancellation",
-        valueFamily: "qualitative",
+    const anc = await connection.db.transaction((tx) =>
+      insertConceptDefinitionInTransaction({
+        tx,
+        concept: concept({
+          taskId: task.id,
+          label: "Noise cancellation",
+          valueFamily: "qualitative",
+        }),
       }),
-    });
+    );
     const entry = criterion({
       taskId: task.id,
       conceptId: anc.id,
@@ -504,14 +513,16 @@ describe("criterion persistence and PostgreSQL constraints", () => {
     if (firstMessage.message === null || secondMessage.message === null) {
       throw new Error("Expected message rows");
     }
-    const secondConcept = await insertConceptDefinition({
-      db: connection.db,
-      concept: concept({
-        taskId: secondTask.id,
-        label: "Colour",
-        valueFamily: "categorical",
+    const secondConcept = await connection.db.transaction((tx) =>
+      insertConceptDefinitionInTransaction({
+        tx,
+        concept: concept({
+          taskId: secondTask.id,
+          label: "Colour",
+          valueFamily: "categorical",
+        }),
       }),
-    });
+    );
 
     await expect(
       connection.client.unsafe(`
@@ -528,14 +539,16 @@ describe("criterion persistence and PostgreSQL constraints", () => {
       `),
     ).rejects.toThrow();
 
-    const firstConcept = await insertConceptDefinition({
-      db: connection.db,
-      concept: concept({
-        taskId: firstTask.id,
-        label: "Brand",
-        valueFamily: "categorical",
+    const firstConcept = await connection.db.transaction((tx) =>
+      insertConceptDefinitionInTransaction({
+        tx,
+        concept: concept({
+          taskId: firstTask.id,
+          label: "Brand",
+          valueFamily: "categorical",
+        }),
       }),
-    });
+    );
     const storedCriterion = criterion({
       taskId: firstTask.id,
       conceptId: firstConcept.id,
@@ -578,22 +591,26 @@ describe("criterion persistence and PostgreSQL constraints", () => {
   it("enforces JSON, lifecycle, active-lineage, and cross-concept successor guards", async () => {
     const task = await createShoppingTask(connection.db);
     await advanceFixtureRevision(connection, task.id, 5n);
-    const firstConcept = await insertConceptDefinition({
-      db: connection.db,
-      concept: concept({
-        taskId: task.id,
-        label: "Colour",
-        valueFamily: "categorical",
+    const firstConcept = await connection.db.transaction((tx) =>
+      insertConceptDefinitionInTransaction({
+        tx,
+        concept: concept({
+          taskId: task.id,
+          label: "Colour",
+          valueFamily: "categorical",
+        }),
       }),
-    });
-    const secondConcept = await insertConceptDefinition({
-      db: connection.db,
-      concept: concept({
-        taskId: task.id,
-        label: "Brand",
-        valueFamily: "categorical",
+    );
+    const secondConcept = await connection.db.transaction((tx) =>
+      insertConceptDefinitionInTransaction({
+        tx,
+        concept: concept({
+          taskId: task.id,
+          label: "Brand",
+          valueFamily: "categorical",
+        }),
       }),
-    });
+    );
     const lineageId = randomUUID();
     const predecessorId = randomUUID();
     const successorId = randomUUID();
@@ -776,14 +793,16 @@ describe("criterion persistence and PostgreSQL constraints", () => {
       },
     });
     if (origin.message === null) throw new Error("Expected origin message");
-    const colour = await insertConceptDefinition({
-      db: connection.db,
-      concept: concept({
-        taskId: task.id,
-        label: "Colour",
-        valueFamily: "categorical",
+    const colour = await connection.db.transaction((tx) =>
+      insertConceptDefinitionInTransaction({
+        tx,
+        concept: concept({
+          taskId: task.id,
+          label: "Colour",
+          valueFamily: "categorical",
+        }),
       }),
-    });
+    );
     const entry = criterion({
       taskId: task.id,
       conceptId: colour.id,
@@ -821,17 +840,109 @@ describe("criterion persistence and PostgreSQL constraints", () => {
     expect(criterionCount?.count).toBe(0);
   });
 
+  it("rolls back a concept with its caller transaction", async () => {
+    const task = await createShoppingTask(connection.db);
+    await advanceFixtureRevision(connection, task.id, 1n);
+    const entry = concept({
+      taskId: task.id,
+      label: "Colour",
+      valueFamily: "categorical",
+    });
+
+    await expect(
+      connection.db.transaction(async (tx) => {
+        await insertConceptDefinitionInTransaction({ tx, concept: entry });
+        throw new Error("force rollback");
+      }),
+    ).rejects.toThrow("force rollback");
+
+    await expect(
+      listConceptDefinitions(connection.db, task.id),
+    ).resolves.toEqual([]);
+  });
+
+  it("fails closed when a persisted measurement is not canonical", async () => {
+    const task = await createShoppingTask(connection.db);
+    await advanceFixtureRevision(connection, task.id, 2n);
+    const origin = await recordTaskInput({
+      db: connection.db,
+      taskId: task.id,
+      clientActionId: "measurement-origin",
+      request: {
+        inputSchemaVersion: 1,
+        expectedRevision: 2n,
+        kind: "message",
+        body: "Keep it around 60 cm wide",
+      },
+    });
+    if (origin.message === null) throw new Error("Expected origin message");
+    const width = await connection.db.transaction((tx) =>
+      insertConceptDefinitionInTransaction({
+        tx,
+        concept: concept({
+          taskId: task.id,
+          label: "Width",
+          valueFamily: "measurement",
+          canonicalUnit: "cm",
+        }),
+      }),
+    );
+    const entry = criterion({
+      taskId: task.id,
+      conceptId: width.id,
+      targetSemantics: "around",
+      semanticValue: {
+        schemaVersion: 1,
+        kind: "measurement",
+        amount: "60",
+        unit: "cm",
+      },
+    });
+    await connection.db.transaction((tx) =>
+      insertCriterionWithSourcesInTransaction({
+        tx,
+        criterion: entry,
+        sources: [
+          originSource({
+            taskId: task.id,
+            criterionId: entry.id,
+            taskInputId: origin.input.id,
+            messageId: origin.message!.id,
+          }),
+        ],
+      }),
+    );
+
+    await connection.db
+      .update(decisionCriteria)
+      .set({
+        semanticValue: {
+          schemaVersion: 1,
+          kind: "measurement",
+          amount: "0.6",
+          unit: "m",
+        },
+      })
+      .where(eq(decisionCriteria.id, entry.id));
+
+    await expect(
+      listDecisionCriteria(connection.db, task.id),
+    ).rejects.toBeInstanceOf(PersistedDataCorruptionError);
+  });
+
   it("fails closed when persisted JSON passes shallow SQL checks but not Zod", async () => {
     const task = await createShoppingTask(connection.db);
     await advanceFixtureRevision(connection, task.id, 2n);
-    const colour = await insertConceptDefinition({
-      db: connection.db,
-      concept: concept({
-        taskId: task.id,
-        label: "Colour",
-        valueFamily: "categorical",
+    const colour = await connection.db.transaction((tx) =>
+      insertConceptDefinitionInTransaction({
+        tx,
+        concept: concept({
+          taskId: task.id,
+          label: "Colour",
+          valueFamily: "categorical",
+        }),
       }),
-    });
+    );
     await connection.client.unsafe(`
       insert into shopping_private.decision_criteria (
         id, task_id, lineage_id, concept_id, authority, strength,

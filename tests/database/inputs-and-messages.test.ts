@@ -1,7 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { IdempotencyConflictError } from "../../src/domain/shopping-state/errors";
+import {
+  IdempotencyConflictError,
+  PersistedDataCorruptionError,
+} from "../../src/domain/shopping-state/errors";
 import { createRequestFingerprint } from "../../src/domain/shopping-state/task-input";
 import { recordTaskInput } from "../../src/features/shopping-state/persistence/inputs-and-messages";
 import { createShoppingTask } from "../../src/features/shopping-state/persistence/tasks";
@@ -58,6 +61,31 @@ describe("task input and message persistence", () => {
     expect(retry.input.expectedRevision).toBe(0n);
     expect(first.input.receivedAt).toBeInstanceOf(Date);
     expect(first.message?.createdAt).toBeInstanceOf(Date);
+  });
+
+  it("fails closed when a stored retry message has a different revision", async () => {
+    const task = await createShoppingTask(connection.db);
+    const first = await recordTaskInput({
+      db: connection.db,
+      taskId: task.id,
+      clientActionId: "corrupt-message-revision",
+      request: messageRequest,
+    });
+    if (first.message === null) throw new Error("Expected message row");
+
+    await connection.db
+      .update(userMessages)
+      .set({ receivedAtRevision: 1n })
+      .where(eq(userMessages.id, first.message.id));
+
+    await expect(
+      recordTaskInput({
+        db: connection.db,
+        taskId: task.id,
+        clientActionId: "corrupt-message-revision",
+        request: messageRequest,
+      }),
+    ).rejects.toBeInstanceOf(PersistedDataCorruptionError);
   });
 
   it("rejects one task-scoped key reused for different source content", async () => {

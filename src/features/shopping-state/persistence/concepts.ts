@@ -6,7 +6,10 @@ import {
   TaskRevisionBoundsError,
 } from "../../../domain/shopping-state/errors";
 import { shoppingTaskIdSchema } from "../../../domain/shopping-state/ids";
-import type { ShoppingDatabaseExecutor } from "../../../infrastructure/database/clients";
+import type {
+  ShoppingDatabaseExecutor,
+  ShoppingTransaction,
+} from "../../../infrastructure/database/clients";
 import {
   conceptDefinitions,
   shoppingTasks,
@@ -20,8 +23,8 @@ type NewConceptDefinition = Omit<
 
 const validationInstant = new Date(0);
 
-export async function insertConceptDefinition(options: {
-  db: ShoppingDatabaseExecutor;
+export async function insertConceptDefinitionInTransaction(options: {
+  tx: ShoppingTransaction;
   concept: NewConceptDefinition;
 }) {
   const concept = conceptDefinitionSchema.parse({
@@ -29,7 +32,7 @@ export async function insertConceptDefinition(options: {
     createdAt: validationInstant,
   });
 
-  const [taskRow] = await options.db
+  const [taskRow] = await options.tx
     .select()
     .from(shoppingTasks)
     .where(eq(shoppingTasks.id, concept.taskId))
@@ -47,7 +50,7 @@ export async function insertConceptDefinition(options: {
     });
   }
 
-  const [row] = await options.db
+  const [row] = await options.tx
     .insert(conceptDefinitions)
     .values({
       id: concept.id,
