@@ -484,7 +484,7 @@ function compilePatch(options: {
         lifecycle: "superseded",
         endedRevision: nextRevision,
         supersededById: after.id,
-        updatedAt: new Date(0),
+        updatedAt: before.updatedAt,
       };
       const deltaKind =
         operation.op === "replace_target"
@@ -518,7 +518,7 @@ function compilePatch(options: {
         lifecycle: "removed",
         endedRevision: nextRevision,
         supersededById: null,
-        updatedAt: new Date(0),
+        updatedAt: before.updatedAt,
       };
       const causal =
         options.command.source.kind === "user_explicit"
@@ -565,7 +565,7 @@ function compilePatch(options: {
       lifecycle: "removed" as const,
       endedRevision: nextRevision,
       supersededById: null,
-      updatedAt: new Date(0),
+      updatedAt: criterion.updatedAt,
     }));
     const after = parseDecisionCriterionForContext({
       task: options.state.task,
@@ -1327,7 +1327,7 @@ function compileUndo(options: {
       lifecycle: "removed",
       endedRevision: nextRevision,
       supersededById: null,
-      updatedAt: new Date(0),
+      updatedAt: current.updatedAt,
     };
     const source = makeSource(
       current.id,
@@ -1404,7 +1404,7 @@ function compileUndo(options: {
       lifecycle: "superseded",
       endedRevision: nextRevision,
       supersededById: restored.id,
-      updatedAt: new Date(0),
+      updatedAt: current.updatedAt,
     };
     const sources = preservedRestoreSources({
       oldSources: historical.sources,
