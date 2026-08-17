@@ -1,6 +1,6 @@
 # Founder MVP progress
 
-**Updated:** 2026-08-17 12:17 Europe/London  
+**Updated:** 2026-08-17 12:31 Europe/London
 **Durable goal:** Deliver a polished founder-usable AI shopping MVP whose live
 understanding, market retrieval, evidence-aware evaluation, refinement, saving,
 and comparison are meaningfully better than beginning with Google.
@@ -10,8 +10,8 @@ and comparison are meaningfully better than beginning with Google.
 - Repository: `Sharmarke1994/ai-shopping`
 - Merged `main`: `cbb3314a4dcb04ef6ff8b351fa7823ffdc0bf753`
 - Current branch: `codex/v0-05-plan`
-- Current branch head before this continuity commit:
-  `23178f3c5b9f9d0baa4d9f028b4ab90464a09abd`
+- Current committed branch head before the V0-05 correction commit:
+  `9d309aa58a1350b1d4be7bdca31cc6552b1c5dc8`
 - Current checkpoint: draft PR #8, `V0-05: plan AI interpretation and context
   acquisition`
 - PR #8 state before this continuity commit: open, draft, mergeable; quality,
@@ -36,19 +36,22 @@ and comparison are meaningfully better than beginning with Google.
 
 ## Current work
 
-Finish the bounded V0-05 checkpoint before implementation:
+The bounded V0-05 plan correction is complete locally and awaiting commit/push
+to PR #8. It now includes:
 
-1. Amend `docs/plans/v0-05.md` for strict provider-wire Structured Outputs and
-   deterministic lowering into the existing V0-04 patch contract.
-2. Remove stage-two dependence on ephemeral interpretation ambiguities.
-3. Define backward-compatible question-answer V2 for open text and
-   single-select, with server-resolved option meaning, single-use semantics, and
-   stale-question rejection before model execution.
-4. Freeze conservative strength labels in the golden cases.
-5. Correct diagnostic trace wording so bounded structured semantic text is
-   acknowledged without storing chain-of-thought or raw prompt/provider dumps.
-6. Self-review, run checks, update PR #8, and then implement V0-05 without
-   reopening a broad architecture cycle.
+- strict JSON-safe provider input and output wire boundaries;
+- deterministic semantic-identity lowering into V0-04;
+- stage-two independence from diagnostic ambiguities;
+- receipt-bound idempotent action selection and fail-closed receipt recovery;
+- backward-compatible question-answer/fingerprint V2 for open text and
+  single-select, immutable single use, and stale rejection;
+- conservative labelled strength fixtures;
+- accurate diagnostic trace wording;
+- repeatable three-run protected live gates and a multi-turn live harness proof.
+
+After the correction commit is pushed and PR #8 checks are green, treat the
+planning checkpoint as complete and begin bounded V0-05 implementation. Do not
+reopen broad planning unless implementation evidence exposes a contradiction.
 
 ## Next validated checkpoints
 
@@ -89,10 +92,12 @@ non-trivial paid commitment is required.
 
 ## Latest verification state
 
-- PR #8 GitHub Actions on `23178f3`: quality green, persistence green,
-  browser-smoke green.
-- Local `pnpm check`: passed formatting, lint, typecheck, 65 unit/component
-  tests, and production build before this continuity commit.
+- PR #8 GitHub Actions on continuity head `9d309aa`: quality green, persistence
+  green, browser-smoke failed only in the existing pre-hydration compact-brief
+  test after three 30-second timeouts. The continuity commit changed docs only;
+  inspect the new run before classifying this as flaky or fixing the test.
+- Local `pnpm check` after the V0-05 plan correction passed formatting, lint,
+  typecheck, 65 unit/component tests, and production build.
 - Local shell currently runs Node 24.19.0 and emits the expected engine warning;
   the repository contract and CI pin Node 22.18.0.
 - Working tree was clean before adding the two continuity documents.
