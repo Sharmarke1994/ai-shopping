@@ -1,3 +1,4 @@
+import { isDeepStrictEqual } from "node:util";
 import { PersistedDataCorruptionError } from "../../../domain/shopping-state/errors";
 import {
   type ConceptDefinition,
@@ -19,6 +20,10 @@ import {
   type ShoppingTask,
   shoppingTaskSchema,
 } from "../../../domain/shopping-state/task";
+import {
+  type StateChangeApplication,
+  stateChangeApplicationSchema,
+} from "../../../domain/shopping-state/state-change";
 
 function parsePersisted<T>(options: {
   recordType: string;
@@ -163,5 +168,36 @@ export function mapCriterionSource(row: {
     recordType: "CriterionSource",
     recordId: row.id,
     parse: () => criterionSourceSchema.parse(row),
+  });
+}
+
+export function mapStateChangeApplication(row: {
+  id: string;
+  taskId: string;
+  sourceTaskInputId: string;
+  applicationKind: string;
+  requestSchemaVersion: number;
+  fingerprintVersion: number;
+  requestFingerprint: string;
+  baseRevision: bigint;
+  resultingRevision: bigint;
+  outcome: string;
+  deltaSchemaVersion: number;
+  appliedDelta: unknown;
+  undoesApplicationId: string | null;
+  createdAt: Date;
+}): StateChangeApplication {
+  return parsePersisted({
+    recordType: "StateChangeApplication",
+    recordId: row.id,
+    parse: () => {
+      const application = stateChangeApplicationSchema.parse(row);
+      if (!isDeepStrictEqual(row.appliedDelta, application.appliedDelta)) {
+        throw new Error(
+          "Persisted applied delta is not in its exact canonical representation",
+        );
+      }
+      return application;
+    },
   });
 }

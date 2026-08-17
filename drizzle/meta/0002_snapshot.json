@@ -1,0 +1,964 @@
+{
+  "id": "3a6eac6c-0853-4462-afab-1b521c27f991",
+  "prevId": "3551fb73-cfd1-4648-8a9c-e6a108174a40",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "shopping_private.concept_definitions": {
+      "name": "concept_definitions",
+      "schema": "shopping_private",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "task_id": {
+          "name": "task_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "label": {
+          "name": "label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "definition": {
+          "name": "definition",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value_family": {
+          "name": "value_family",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "canonical_unit": {
+          "name": "canonical_unit",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_revision": {
+          "name": "created_revision",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "concept_definitions_task_fk": {
+          "name": "concept_definitions_task_fk",
+          "tableFrom": "concept_definitions",
+          "tableTo": "shopping_tasks",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "concept_definitions_task_id_id_unique": {
+          "name": "concept_definitions_task_id_id_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "id"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "concept_definitions_label_shape": {
+          "name": "concept_definitions_label_shape",
+          "value": "char_length(btrim(\"shopping_private\".\"concept_definitions\".\"label\")) between 1 and 120"
+        },
+        "concept_definitions_definition_shape": {
+          "name": "concept_definitions_definition_shape",
+          "value": "char_length(btrim(\"shopping_private\".\"concept_definitions\".\"definition\")) between 1 and 500"
+        },
+        "concept_definitions_family_allowed": {
+          "name": "concept_definitions_family_allowed",
+          "value": "\"shopping_private\".\"concept_definitions\".\"value_family\" in ('boolean', 'qualitative', 'measurement', 'money', 'categorical')"
+        },
+        "concept_definitions_unit_shape": {
+          "name": "concept_definitions_unit_shape",
+          "value": "(\"shopping_private\".\"concept_definitions\".\"value_family\" = 'measurement' and \"shopping_private\".\"concept_definitions\".\"canonical_unit\" is not null and \"shopping_private\".\"concept_definitions\".\"canonical_unit\" in ('mm', 'cm', 'm', 'g', 'kg')) or (\"shopping_private\".\"concept_definitions\".\"value_family\" <> 'measurement' and \"shopping_private\".\"concept_definitions\".\"canonical_unit\" is null)"
+        },
+        "concept_definitions_revision_nonnegative": {
+          "name": "concept_definitions_revision_nonnegative",
+          "value": "\"shopping_private\".\"concept_definitions\".\"created_revision\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "shopping_private.criterion_sources": {
+      "name": "criterion_sources",
+      "schema": "shopping_private",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "task_id": {
+          "name": "task_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "criterion_id": {
+          "name": "criterion_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_role": {
+          "name": "source_role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_kind": {
+          "name": "source_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "task_input_id": {
+          "name": "task_input_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "message_id": {
+          "name": "message_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "criterion_sources_task_fk": {
+          "name": "criterion_sources_task_fk",
+          "tableFrom": "criterion_sources",
+          "tableTo": "shopping_tasks",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "criterion_sources_criterion_fk": {
+          "name": "criterion_sources_criterion_fk",
+          "tableFrom": "criterion_sources",
+          "tableTo": "decision_criteria",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id", "criterion_id"],
+          "columnsTo": ["task_id", "id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "criterion_sources_input_fk": {
+          "name": "criterion_sources_input_fk",
+          "tableFrom": "criterion_sources",
+          "tableTo": "task_inputs",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id", "task_input_id"],
+          "columnsTo": ["task_id", "id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "criterion_sources_exact_message_fk": {
+          "name": "criterion_sources_exact_message_fk",
+          "tableFrom": "criterion_sources",
+          "tableTo": "user_messages",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id", "task_input_id", "message_id"],
+          "columnsTo": ["task_id", "task_input_id", "id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "criterion_sources_task_id_id_unique": {
+          "name": "criterion_sources_task_id_id_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "id"]
+        },
+        "criterion_sources_role_input_unique": {
+          "name": "criterion_sources_role_input_unique",
+          "nullsNotDistinct": false,
+          "columns": ["criterion_id", "source_role", "task_input_id"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "criterion_sources_role_allowed": {
+          "name": "criterion_sources_role_allowed",
+          "value": "\"shopping_private\".\"criterion_sources\".\"source_role\" in ('origin', 'confirmation', 'change')"
+        },
+        "criterion_sources_kind_allowed": {
+          "name": "criterion_sources_kind_allowed",
+          "value": "\"shopping_private\".\"criterion_sources\".\"source_kind\" in ('message', 'question_answer', 'direct_brief_action')"
+        },
+        "criterion_sources_message_shape": {
+          "name": "criterion_sources_message_shape",
+          "value": "(\"shopping_private\".\"criterion_sources\".\"source_kind\" = 'message' and \"shopping_private\".\"criterion_sources\".\"message_id\" is not null) or (\"shopping_private\".\"criterion_sources\".\"source_kind\" <> 'message' and \"shopping_private\".\"criterion_sources\".\"message_id\" is null)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "shopping_private.decision_criteria": {
+      "name": "decision_criteria",
+      "schema": "shopping_private",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "task_id": {
+          "name": "task_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "lineage_id": {
+          "name": "lineage_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "concept_id": {
+          "name": "concept_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "authority": {
+          "name": "authority",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "strength": {
+          "name": "strength",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "target_semantics": {
+          "name": "target_semantics",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value_schema_version": {
+          "name": "value_schema_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value_kind": {
+          "name": "value_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "semantic_value": {
+          "name": "semantic_value",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "lifecycle": {
+          "name": "lifecycle",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_revision": {
+          "name": "created_revision",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ended_revision": {
+          "name": "ended_revision",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "superseded_by_id": {
+          "name": "superseded_by_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "decision_criteria_one_active_lineage": {
+          "name": "decision_criteria_one_active_lineage",
+          "columns": [
+            {
+              "expression": "task_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "lineage_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"shopping_private\".\"decision_criteria\".\"lifecycle\" = 'active'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "decision_criteria_task_fk": {
+          "name": "decision_criteria_task_fk",
+          "tableFrom": "decision_criteria",
+          "tableTo": "shopping_tasks",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "decision_criteria_concept_fk": {
+          "name": "decision_criteria_concept_fk",
+          "tableFrom": "decision_criteria",
+          "tableTo": "concept_definitions",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id", "concept_id"],
+          "columnsTo": ["task_id", "id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "decision_criteria_task_id_id_unique": {
+          "name": "decision_criteria_task_id_id_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "id"]
+        },
+        "decision_criteria_successor_identity_unique": {
+          "name": "decision_criteria_successor_identity_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "lineage_id", "concept_id", "id"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "decision_criteria_authority_allowed": {
+          "name": "decision_criteria_authority_allowed",
+          "value": "\"shopping_private\".\"decision_criteria\".\"authority\" in ('user_explicit', 'user_confirmed')"
+        },
+        "decision_criteria_strength_allowed": {
+          "name": "decision_criteria_strength_allowed",
+          "value": "\"shopping_private\".\"decision_criteria\".\"strength\" is null or \"shopping_private\".\"decision_criteria\".\"strength\" in ('hard', 'strong_preference', 'preference')"
+        },
+        "decision_criteria_target_allowed": {
+          "name": "decision_criteria_target_allowed",
+          "value": "\"shopping_private\".\"decision_criteria\".\"target_semantics\" in ('exact', 'range', 'around', 'stretch', 'categorical', 'qualitative', 'comparative', 'indifferent')"
+        },
+        "decision_criteria_value_version_positive": {
+          "name": "decision_criteria_value_version_positive",
+          "value": "\"shopping_private\".\"decision_criteria\".\"value_schema_version\" > 0"
+        },
+        "decision_criteria_value_kind_allowed": {
+          "name": "decision_criteria_value_kind_allowed",
+          "value": "\"shopping_private\".\"decision_criteria\".\"value_kind\" in ('boolean', 'qualitative', 'measurement', 'measurement_range', 'money', 'money_stretch', 'categorical', 'indifferent')"
+        },
+        "decision_criteria_value_object": {
+          "name": "decision_criteria_value_object",
+          "value": "jsonb_typeof(\"shopping_private\".\"decision_criteria\".\"semantic_value\") is not distinct from 'object'"
+        },
+        "decision_criteria_value_discriminators_match": {
+          "name": "decision_criteria_value_discriminators_match",
+          "value": "(\"shopping_private\".\"decision_criteria\".\"semantic_value\" ->> 'kind') is not distinct from \"shopping_private\".\"decision_criteria\".\"value_kind\" and coalesce(\"shopping_private\".\"decision_criteria\".\"semantic_value\" ->> 'schemaVersion', '') ~ '^[1-9][0-9]*$' and (\"shopping_private\".\"decision_criteria\".\"semantic_value\" ->> 'schemaVersion')::integer = \"shopping_private\".\"decision_criteria\".\"value_schema_version\""
+        },
+        "decision_criteria_indifference_shape": {
+          "name": "decision_criteria_indifference_shape",
+          "value": "(\"shopping_private\".\"decision_criteria\".\"value_kind\" = 'indifferent' and \"shopping_private\".\"decision_criteria\".\"target_semantics\" = 'indifferent' and \"shopping_private\".\"decision_criteria\".\"strength\" is null) or (\"shopping_private\".\"decision_criteria\".\"value_kind\" <> 'indifferent' and \"shopping_private\".\"decision_criteria\".\"target_semantics\" <> 'indifferent' and \"shopping_private\".\"decision_criteria\".\"strength\" is not null)"
+        },
+        "decision_criteria_lifecycle_allowed": {
+          "name": "decision_criteria_lifecycle_allowed",
+          "value": "\"shopping_private\".\"decision_criteria\".\"lifecycle\" in ('active', 'superseded', 'removed')"
+        },
+        "decision_criteria_lifecycle_shape": {
+          "name": "decision_criteria_lifecycle_shape",
+          "value": "(\"shopping_private\".\"decision_criteria\".\"lifecycle\" = 'active' and \"shopping_private\".\"decision_criteria\".\"ended_revision\" is null and \"shopping_private\".\"decision_criteria\".\"superseded_by_id\" is null) or (\"shopping_private\".\"decision_criteria\".\"lifecycle\" = 'superseded' and \"shopping_private\".\"decision_criteria\".\"ended_revision\" is not null and \"shopping_private\".\"decision_criteria\".\"superseded_by_id\" is not null and \"shopping_private\".\"decision_criteria\".\"superseded_by_id\" <> \"shopping_private\".\"decision_criteria\".\"id\") or (\"shopping_private\".\"decision_criteria\".\"lifecycle\" = 'removed' and \"shopping_private\".\"decision_criteria\".\"ended_revision\" is not null and \"shopping_private\".\"decision_criteria\".\"superseded_by_id\" is null)"
+        },
+        "decision_criteria_revision_shape": {
+          "name": "decision_criteria_revision_shape",
+          "value": "\"shopping_private\".\"decision_criteria\".\"created_revision\" >= 0 and (\"shopping_private\".\"decision_criteria\".\"ended_revision\" is null or \"shopping_private\".\"decision_criteria\".\"ended_revision\" >= \"shopping_private\".\"decision_criteria\".\"created_revision\")"
+        },
+        "decision_criteria_timestamp_order": {
+          "name": "decision_criteria_timestamp_order",
+          "value": "\"shopping_private\".\"decision_criteria\".\"updated_at\" >= \"shopping_private\".\"decision_criteria\".\"created_at\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "shopping_private.shopping_tasks": {
+      "name": "shopping_tasks",
+      "schema": "shopping_private",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "current_revision": {
+          "name": "current_revision",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "0"
+        },
+        "market_country": {
+          "name": "market_country",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "language_tag": {
+          "name": "language_tag",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "currency_code": {
+          "name": "currency_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "shopping_tasks_revision_nonnegative": {
+          "name": "shopping_tasks_revision_nonnegative",
+          "value": "\"shopping_private\".\"shopping_tasks\".\"current_revision\" >= 0"
+        },
+        "shopping_tasks_market_country_shape": {
+          "name": "shopping_tasks_market_country_shape",
+          "value": "\"shopping_private\".\"shopping_tasks\".\"market_country\" ~ '^[A-Z]{2}$'"
+        },
+        "shopping_tasks_language_tag_shape": {
+          "name": "shopping_tasks_language_tag_shape",
+          "value": "\"shopping_private\".\"shopping_tasks\".\"language_tag\" ~ '^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$'"
+        },
+        "shopping_tasks_currency_code_shape": {
+          "name": "shopping_tasks_currency_code_shape",
+          "value": "\"shopping_private\".\"shopping_tasks\".\"currency_code\" ~ '^[A-Z]{3}$'"
+        },
+        "shopping_tasks_timestamp_order": {
+          "name": "shopping_tasks_timestamp_order",
+          "value": "\"shopping_private\".\"shopping_tasks\".\"updated_at\" >= \"shopping_private\".\"shopping_tasks\".\"created_at\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "shopping_private.state_change_applications": {
+      "name": "state_change_applications",
+      "schema": "shopping_private",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "task_id": {
+          "name": "task_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_task_input_id": {
+          "name": "source_task_input_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "application_kind": {
+          "name": "application_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "request_schema_version": {
+          "name": "request_schema_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fingerprint_version": {
+          "name": "fingerprint_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "request_fingerprint": {
+          "name": "request_fingerprint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "base_revision": {
+          "name": "base_revision",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "resulting_revision": {
+          "name": "resulting_revision",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "outcome": {
+          "name": "outcome",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "delta_schema_version": {
+          "name": "delta_schema_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "applied_delta": {
+          "name": "applied_delta",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "undoes_application_id": {
+          "name": "undoes_application_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "state_change_applications_one_undo_per_target": {
+          "name": "state_change_applications_one_undo_per_target",
+          "columns": [
+            {
+              "expression": "task_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "undoes_application_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"shopping_private\".\"state_change_applications\".\"undoes_application_id\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "state_change_applications_task_fk": {
+          "name": "state_change_applications_task_fk",
+          "tableFrom": "state_change_applications",
+          "tableTo": "shopping_tasks",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "state_change_applications_source_input_fk": {
+          "name": "state_change_applications_source_input_fk",
+          "tableFrom": "state_change_applications",
+          "tableTo": "task_inputs",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id", "source_task_input_id"],
+          "columnsTo": ["task_id", "id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "state_change_applications_task_id_id_unique": {
+          "name": "state_change_applications_task_id_id_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "id"]
+        },
+        "state_change_applications_task_source_unique": {
+          "name": "state_change_applications_task_source_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "source_task_input_id"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "state_change_applications_kind_allowed": {
+          "name": "state_change_applications_kind_allowed",
+          "value": "\"shopping_private\".\"state_change_applications\".\"application_kind\" in ('patch', 'undo')"
+        },
+        "state_change_applications_outcome_allowed": {
+          "name": "state_change_applications_outcome_allowed",
+          "value": "\"shopping_private\".\"state_change_applications\".\"outcome\" in ('applied', 'no_change')"
+        },
+        "state_change_applications_versions_positive": {
+          "name": "state_change_applications_versions_positive",
+          "value": "\"shopping_private\".\"state_change_applications\".\"request_schema_version\" > 0 and \"shopping_private\".\"state_change_applications\".\"fingerprint_version\" > 0 and \"shopping_private\".\"state_change_applications\".\"delta_schema_version\" > 0"
+        },
+        "state_change_applications_fingerprint_shape": {
+          "name": "state_change_applications_fingerprint_shape",
+          "value": "\"shopping_private\".\"state_change_applications\".\"request_fingerprint\" ~ '^[a-f0-9]{64}$'"
+        },
+        "state_change_applications_revision_shape": {
+          "name": "state_change_applications_revision_shape",
+          "value": "\"shopping_private\".\"state_change_applications\".\"base_revision\" >= 0 and ((\"shopping_private\".\"state_change_applications\".\"outcome\" = 'no_change' and \"shopping_private\".\"state_change_applications\".\"resulting_revision\" = \"shopping_private\".\"state_change_applications\".\"base_revision\") or (\"shopping_private\".\"state_change_applications\".\"outcome\" = 'applied' and \"shopping_private\".\"state_change_applications\".\"resulting_revision\" = \"shopping_private\".\"state_change_applications\".\"base_revision\" + 1))"
+        },
+        "state_change_applications_undo_shape": {
+          "name": "state_change_applications_undo_shape",
+          "value": "(\"shopping_private\".\"state_change_applications\".\"application_kind\" = 'patch' and \"shopping_private\".\"state_change_applications\".\"undoes_application_id\" is null) or (\"shopping_private\".\"state_change_applications\".\"application_kind\" = 'undo' and \"shopping_private\".\"state_change_applications\".\"undoes_application_id\" is not null and \"shopping_private\".\"state_change_applications\".\"outcome\" = 'applied')"
+        },
+        "state_change_applications_delta_object": {
+          "name": "state_change_applications_delta_object",
+          "value": "jsonb_typeof(\"shopping_private\".\"state_change_applications\".\"applied_delta\") is not distinct from 'object'"
+        },
+        "state_change_applications_delta_shape": {
+          "name": "state_change_applications_delta_shape",
+          "value": "coalesce(\"shopping_private\".\"state_change_applications\".\"applied_delta\" ->> 'schemaVersion', '') ~ '^[1-9][0-9]*$' and (\"shopping_private\".\"state_change_applications\".\"applied_delta\" ->> 'schemaVersion')::integer = \"shopping_private\".\"state_change_applications\".\"delta_schema_version\" and jsonb_typeof(\"shopping_private\".\"state_change_applications\".\"applied_delta\" -> 'entries') is not distinct from 'array'"
+        },
+        "state_change_applications_delta_outcome": {
+          "name": "state_change_applications_delta_outcome",
+          "value": "(\"shopping_private\".\"state_change_applications\".\"outcome\" = 'no_change' and jsonb_array_length(\"shopping_private\".\"state_change_applications\".\"applied_delta\" -> 'entries') = 0) or (\"shopping_private\".\"state_change_applications\".\"outcome\" = 'applied' and jsonb_array_length(\"shopping_private\".\"state_change_applications\".\"applied_delta\" -> 'entries') > 0)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "shopping_private.task_inputs": {
+      "name": "task_inputs",
+      "schema": "shopping_private",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "task_id": {
+          "name": "task_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "client_action_id": {
+          "name": "client_action_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "input_kind": {
+          "name": "input_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "input_schema_version": {
+          "name": "input_schema_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "input_payload": {
+          "name": "input_payload",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fingerprint_version": {
+          "name": "fingerprint_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "request_fingerprint": {
+          "name": "request_fingerprint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expected_revision": {
+          "name": "expected_revision",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "received_at": {
+          "name": "received_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "task_inputs_task_fk": {
+          "name": "task_inputs_task_fk",
+          "tableFrom": "task_inputs",
+          "tableTo": "shopping_tasks",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "task_inputs_task_id_id_unique": {
+          "name": "task_inputs_task_id_id_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "id"]
+        },
+        "task_inputs_task_client_action_unique": {
+          "name": "task_inputs_task_client_action_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "client_action_id"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "task_inputs_client_action_shape": {
+          "name": "task_inputs_client_action_shape",
+          "value": "char_length(\"shopping_private\".\"task_inputs\".\"client_action_id\") between 1 and 160 and \"shopping_private\".\"task_inputs\".\"client_action_id\" ~ '^[A-Za-z0-9][A-Za-z0-9._:-]*$'"
+        },
+        "task_inputs_kind_allowed": {
+          "name": "task_inputs_kind_allowed",
+          "value": "\"shopping_private\".\"task_inputs\".\"input_kind\" in ('message', 'question_answer', 'direct_brief_action')"
+        },
+        "task_inputs_schema_version_positive": {
+          "name": "task_inputs_schema_version_positive",
+          "value": "\"shopping_private\".\"task_inputs\".\"input_schema_version\" > 0"
+        },
+        "task_inputs_payload_object": {
+          "name": "task_inputs_payload_object",
+          "value": "jsonb_typeof(\"shopping_private\".\"task_inputs\".\"input_payload\") is not distinct from 'object'"
+        },
+        "task_inputs_payload_discriminators_match": {
+          "name": "task_inputs_payload_discriminators_match",
+          "value": "(\"shopping_private\".\"task_inputs\".\"input_payload\" ->> 'kind') is not distinct from \"shopping_private\".\"task_inputs\".\"input_kind\" and coalesce(\"shopping_private\".\"task_inputs\".\"input_payload\" ->> 'schemaVersion', '') ~ '^[1-9][0-9]*$' and (\"shopping_private\".\"task_inputs\".\"input_payload\" ->> 'schemaVersion')::integer = \"shopping_private\".\"task_inputs\".\"input_schema_version\""
+        },
+        "task_inputs_fingerprint_version_positive": {
+          "name": "task_inputs_fingerprint_version_positive",
+          "value": "\"shopping_private\".\"task_inputs\".\"fingerprint_version\" > 0"
+        },
+        "task_inputs_fingerprint_shape": {
+          "name": "task_inputs_fingerprint_shape",
+          "value": "\"shopping_private\".\"task_inputs\".\"request_fingerprint\" ~ '^[a-f0-9]{64}$'"
+        },
+        "task_inputs_expected_revision_nonnegative": {
+          "name": "task_inputs_expected_revision_nonnegative",
+          "value": "\"shopping_private\".\"task_inputs\".\"expected_revision\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "shopping_private.user_messages": {
+      "name": "user_messages",
+      "schema": "shopping_private",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "task_id": {
+          "name": "task_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "task_input_id": {
+          "name": "task_input_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "body": {
+          "name": "body",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "received_at_revision": {
+          "name": "received_at_revision",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "user_messages_task_fk": {
+          "name": "user_messages_task_fk",
+          "tableFrom": "user_messages",
+          "tableTo": "shopping_tasks",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "user_messages_input_fk": {
+          "name": "user_messages_input_fk",
+          "tableFrom": "user_messages",
+          "tableTo": "task_inputs",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id", "task_input_id"],
+          "columnsTo": ["task_id", "id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "user_messages_task_id_id_unique": {
+          "name": "user_messages_task_id_id_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "id"]
+        },
+        "user_messages_task_input_unique": {
+          "name": "user_messages_task_input_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "task_input_id"]
+        },
+        "user_messages_exact_source_unique": {
+          "name": "user_messages_exact_source_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "task_input_id", "id"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "user_messages_body_shape": {
+          "name": "user_messages_body_shape",
+          "value": "char_length(\"shopping_private\".\"user_messages\".\"body\") between 1 and 10000 and \"shopping_private\".\"user_messages\".\"body\" ~ '[^[:space:]]'"
+        },
+        "user_messages_revision_nonnegative": {
+          "name": "user_messages_revision_nonnegative",
+          "value": "\"shopping_private\".\"user_messages\".\"received_at_revision\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {
+    "shopping_private": "shopping_private"
+  },
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}
