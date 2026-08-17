@@ -18,7 +18,8 @@
 | Google's legacy Custom Search JSON API is closed to new customers and scheduled to end for existing users on 2027-01-01. | Use a third-party Google SERP provider behind an abstraction. [Google documentation](https://developers.google.com/custom-search/v1/overview) |
 | OpenAI publicly documents structured merchant feeds containing core catalogue fields. | This documents an ingestion boundary, not OpenAI's private shopping architecture. [OpenAI commerce documentation](https://developers.openai.com/commerce/guides/get-started) |
 | Current OpenAI documentation lists GPT-5.6 Terra with Responses API, structured outputs, and image input. | It is a reasonable initial model, not a permanent per-stage choice. [OpenAI model documentation](https://developers.openai.com/api/docs/models/gpt-5.6-terra) |
-| The local machine currently has Node 22 and pnpm 11 but no project scaffold. | Scaffold can begin independently of external credential setup. |
+| OpenAI Structured Outputs require an object root (not root `anyOf`), all fields required, and `additionalProperties: false`; nullable unions can represent optional transport fields, while refusals and incomplete Responses remain explicit non-success branches. | V0-05 uses separate strict provider-wire objects and deterministic lowering, scans typed Response message content, and still applies local/domain validation before mutation. [OpenAI Structured Outputs documentation](https://developers.openai.com/api/docs/guides/structured-outputs) |
+| The runnable repository pins Node 22.18.0 and pnpm 11.19.0; scaffold, tests, fixture UI, and deterministic state work do not require external-service credentials. | Live AI/retrieval adapters remain service-scoped credential gates rather than blocking local quality checks. Repository runtime and environment contracts provide the direct evidence. |
 
 ## Open research
 
