@@ -2,12 +2,16 @@ import { randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { and, asc, eq } from "drizzle-orm";
+import postgres from "postgres";
 import { projectShoppingBrief } from "../src/domain/shopping-state/brief";
 import { acquireShoppingContext } from "../src/features/context-acquisition/coordinator";
 import {
+  createV005LiveEvalReport,
   evaluateGoldenCase,
+  renderV005LiveEvalMarkdown,
   V0_05_GOLDEN_CASES,
   type V005GoldenCase,
+  type V005LiveEvalRunResult,
 } from "../src/features/context-acquisition/evals/golden-cases";
 import {
   createOpenAIContextAcquisitionModel,
@@ -17,23 +21,32 @@ import {
   CONTEXT_ACTION_PROMPT_VERSION,
   INTERPRETATION_PROMPT_VERSION,
 } from "../src/features/context-acquisition/prompts";
+import { listDecisionCriteria } from "../src/features/shopping-state/persistence/criteria";
 import { recordTaskInput } from "../src/features/shopping-state/persistence/inputs-and-messages";
 import { loadCurrentShoppingState } from "../src/features/shopping-state/persistence/state-loaders";
 import { applyStatePatch } from "../src/features/shopping-state/persistence/state-transitions";
 import { createShoppingTask } from "../src/features/shopping-state/persistence/tasks";
-import { createRuntimeDatabaseConnection } from "../src/infrastructure/database/clients";
+import { requireTestDatabaseEnvironment } from "../src/infrastructure/config/environment";
+import { createDatabaseConnection } from "../src/infrastructure/database/clients";
+import { migrateDatabase } from "../src/infrastructure/database/migrate";
 import { contextAcquisitionAttempts } from "../src/infrastructure/database/schema";
 
 const RUNS_PER_CASE = 3;
-const connection = createRuntimeDatabaseConnection();
-const model = createOpenAIContextAcquisitionModel();
-const results: unknown[] = [];
+const disposableDatabasePattern = /^ai_shopping_test_[a-f0-9]{32}$/;
+const disposable = await createDisposableEvalDatabase();
+const connection = disposable.connection;
+const results: V005LiveEvalRunResult[] = [];
 
 try {
+  const model = createOpenAIContextAcquisitionModel();
   for (const testCase of V0_05_GOLDEN_CASES) {
     for (let run = 1; run <= RUNS_PER_CASE; run += 1) {
       const task = await createShoppingTask(connection.db);
       const revision = await seed(testCase, task.id);
+      const baselineState = await loadCurrentShoppingState(
+        connection.db,
+        task.id,
+      );
       const input = await recordTaskInput({
         db: connection.db,
         taskId: task.id,
@@ -51,78 +64,60 @@ try {
         taskId: task.id,
         sourceInputId: input.input.id,
       });
-      const attempts = await connection.db
-        .select({
-          stage: contextAcquisitionAttempts.stage,
-          attemptOrdinal: contextAcquisitionAttempts.attemptOrdinal,
-          status: contextAcquisitionAttempts.status,
-          provider: contextAcquisitionAttempts.provider,
-          model: contextAcquisitionAttempts.model,
-          promptVersion: contextAcquisitionAttempts.promptVersion,
-          providerSchemaVersion:
-            contextAcquisitionAttempts.providerSchemaVersion,
-          durationMs: contextAcquisitionAttempts.durationMs,
-          inputTokens: contextAcquisitionAttempts.inputTokens,
-          outputTokens: contextAcquisitionAttempts.outputTokens,
-          errorCode: contextAcquisitionAttempts.errorCode,
-        })
-        .from(contextAcquisitionAttempts)
-        .where(
-          and(
-            eq(contextAcquisitionAttempts.taskId, task.id),
-            eq(contextAcquisitionAttempts.sourceTaskInputId, input.input.id),
-          ),
-        )
-        .orderBy(
-          asc(contextAcquisitionAttempts.stage),
-          asc(contextAcquisitionAttempts.attemptOrdinal),
-        );
+      const attempts = await loadSanitizedAttempts(task.id, input.input.id);
+      const state = await loadCurrentShoppingState(connection.db, task.id);
+      const brief = projectShoppingBrief(state);
+      const criterionHistory = (
+        await listDecisionCriteria(connection.db, task.id)
+      ).map(({ criterion }) => criterion);
+      const evaluation = evaluateGoldenCase({
+        testCase,
+        state,
+        baselineState,
+        criterionHistory,
+        brief,
+        action: acquired.status === "completed" ? acquired.action : null,
+      });
+      const sanitizedBrief = brief.items.map((item) => ({
+        conceptLabel: item.conceptLabel,
+        strength: item.strength,
+        targetSemantics: item.targetSemantics,
+        semanticValue: item.semanticValue,
+      }));
       if (acquired.status === "failed") {
+        const failure = `${acquired.stage}:${acquired.errorCode}`;
         results.push({
           case: testCase.name,
           run,
           passed: false,
-          failures: [`${acquired.stage}:${acquired.errorCode}`],
+          failures: [`[execution] ${failure}`, ...evaluation.failures],
+          measures: [
+            { measure: "execution", passed: false, failures: [failure] },
+            ...evaluation.measures,
+          ],
+          brief: sanitizedBrief,
           attempts,
         });
         continue;
       }
-      const state = await loadCurrentShoppingState(connection.db, task.id);
-      const brief = projectShoppingBrief(state);
-      const evaluation = evaluateGoldenCase({
-        testCase,
-        brief,
-        action: acquired.action.action,
-      });
       results.push({
         case: testCase.name,
         run,
         action: acquired.action.action,
-        brief: brief.items.map((item) => ({
-          conceptLabel: item.conceptLabel,
-          strength: item.strength,
-          targetSemantics: item.targetSemantics,
-          semanticValue: item.semanticValue,
-        })),
+        brief: sanitizedBrief,
         attempts,
         ...evaluation,
       });
     }
   }
 } finally {
-  await connection.close();
+  await disposable.close();
 }
 
-const failed = results.filter(
-  (result) => !(result as { passed?: boolean }).passed,
-);
-const report = {
-  schemaVersion: 1,
-  generatedAt: new Date().toISOString(),
+const generatedAt = new Date().toISOString();
+const report = createV005LiveEvalReport({
+  generatedAt,
   runsPerCase: RUNS_PER_CASE,
-  totalRuns: results.length,
-  protectedInvariantViolations: failed.length,
-  releaseGatePassed: failed.length === 0,
   configuration: {
     provider: "openai",
     model:
@@ -135,27 +130,57 @@ const report = {
     providerSchemaVersion: 1,
   },
   results,
-};
+});
 const directory = resolve("artifacts/evals/v0-05");
 await mkdir(directory, { recursive: true });
-const file = resolve(
-  directory,
-  `${report.generatedAt.replaceAll(":", "-")}.json`,
-);
-await writeFile(
-  file,
-  JSON.stringify(
-    report,
-    (_key, value: unknown) =>
-      typeof value === "bigint" ? value.toString() : value,
-    2,
+const basename = generatedAt.replaceAll(":", "-");
+const jsonFile = resolve(directory, `${basename}.json`);
+const markdownFile = resolve(directory, `${basename}.md`);
+await Promise.all([
+  writeFile(
+    jsonFile,
+    JSON.stringify(
+      report,
+      (_key, value: unknown) =>
+        typeof value === "bigint" ? value.toString() : value,
+      2,
+    ),
+    "utf8",
   ),
-  "utf8",
-);
+  writeFile(markdownFile, renderV005LiveEvalMarkdown(report), "utf8"),
+]);
 process.stdout.write(
-  `${report.releaseGatePassed ? "PASS" : "FAIL"}: ${results.length - failed.length}/${results.length} protected runs; ${file}\n`,
+  `${report.releaseGatePassed ? "PASS" : "FAIL"}: ${results.length - report.protectedInvariantViolations}/${results.length} protected runs; ${jsonFile}; ${markdownFile}\n`,
 );
 if (!report.releaseGatePassed) process.exitCode = 1;
+
+async function loadSanitizedAttempts(taskId: string, inputId: string) {
+  return connection.db
+    .select({
+      stage: contextAcquisitionAttempts.stage,
+      attemptOrdinal: contextAcquisitionAttempts.attemptOrdinal,
+      status: contextAcquisitionAttempts.status,
+      provider: contextAcquisitionAttempts.provider,
+      model: contextAcquisitionAttempts.model,
+      promptVersion: contextAcquisitionAttempts.promptVersion,
+      providerSchemaVersion: contextAcquisitionAttempts.providerSchemaVersion,
+      durationMs: contextAcquisitionAttempts.durationMs,
+      inputTokens: contextAcquisitionAttempts.inputTokens,
+      outputTokens: contextAcquisitionAttempts.outputTokens,
+      errorCode: contextAcquisitionAttempts.errorCode,
+    })
+    .from(contextAcquisitionAttempts)
+    .where(
+      and(
+        eq(contextAcquisitionAttempts.taskId, taskId),
+        eq(contextAcquisitionAttempts.sourceTaskInputId, inputId),
+      ),
+    )
+    .orderBy(
+      asc(contextAcquisitionAttempts.stage),
+      asc(contextAcquisitionAttempts.attemptOrdinal),
+    );
+}
 
 async function seed(testCase: V005GoldenCase, taskId: string) {
   if (testCase.seed === "none") return 0n;
@@ -207,4 +232,57 @@ async function seed(testCase: V005GoldenCase, taskId: string) {
     },
   });
   return 1n;
+}
+
+async function createDisposableEvalDatabase() {
+  const { TEST_DATABASE_URL } = requireTestDatabaseEnvironment(process.env);
+  const baseUrl = new URL(TEST_DATABASE_URL);
+  const databaseName = `ai_shopping_test_${randomUUID().replaceAll("-", "")}`;
+  if (!disposableDatabasePattern.test(databaseName))
+    throw new Error(
+      "Refusing to create a database outside the eval test guard",
+    );
+  const disposableUrl = new URL(baseUrl);
+  disposableUrl.pathname = `/${databaseName}`;
+  const admin = postgres(TEST_DATABASE_URL, { max: 1, prepare: false });
+  try {
+    await admin.unsafe(`CREATE DATABASE "${databaseName}"`);
+    await admin.unsafe(`
+      DO $roles$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN
+          CREATE ROLE anon NOLOGIN;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
+          CREATE ROLE authenticated NOLOGIN;
+        END IF;
+      END
+      $roles$
+    `);
+    await migrateDatabase({ url: disposableUrl.toString() });
+  } catch (error) {
+    await admin.unsafe(
+      `DROP DATABASE IF EXISTS "${databaseName}" WITH (FORCE)`,
+    );
+    await admin.end({ timeout: 5 });
+    throw error;
+  }
+  const evalConnection = createDatabaseConnection({
+    url: disposableUrl.toString(),
+    prepare: false,
+  });
+  return {
+    connection: evalConnection,
+    close: async () => {
+      await evalConnection.close();
+      if (!disposableDatabasePattern.test(databaseName))
+        throw new Error(
+          "Refusing to drop a database outside the eval test guard",
+        );
+      await admin.unsafe(
+        `DROP DATABASE IF EXISTS "${databaseName}" WITH (FORCE)`,
+      );
+      await admin.end({ timeout: 5 });
+    },
+  } as const;
 }

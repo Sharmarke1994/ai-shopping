@@ -149,6 +149,30 @@ The live report records case/run denominators, action, authoritative brief,
 latency/usage diagnostics in persistence, and failures separately. A live pass
 is release evidence, not permission to weaken the deterministic state engine.
 
+The release evaluator matches labelled concept meaning against task-local
+concept definitions without requiring exact labels, then checks a one-to-one
+authoritative criterion set. For each protected case it freezes the exact
+strength, target semantics, semantic-value kind, and relevant value details
+(including categorical direction, measurement bounds/units, and conditional
+money target/stretch). It also compares the structured brief with the
+authoritative current state. The width change case additionally inspects the
+persisted criterion history: the seeded maximum must be superseded in the same
+lineage by active indifference, and that indifference must remain hidden from
+the brief. Removal alone is not a pass. Protected ASK cases also inspect the
+persisted prompt, rationale, and visible options so an unrelated or
+unsupported question cannot pass merely because its action kind is `ASK`.
+Positive qualitative and stretch meanings reject locally negated wording.
+
+`pnpm eval:v0-05:live` requires `TEST_DATABASE_URL` naming a clearly test-only
+database. Each invocation creates, migrates, uses, and drops a separately
+guarded disposable database; it never falls back to `DATABASE_URL`. One dated,
+sanitised result object produces both JSON and concise Markdown artifacts under
+`artifacts/evals/v0-05`, including per-run and per-measure failures. The live
+command evaluates and records the actual authoritative state even when action
+selection fails after interpretation. It remains credential-gated and must not
+be run or reported as passing until the corrected gate has been independently
+reviewed.
+
 ### State semantics
 
 - Explicit replaces or removes conflicting active truth.

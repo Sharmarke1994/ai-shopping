@@ -4,18 +4,27 @@ import { PersistedDataCorruptionError } from "../../../domain/shopping-state/err
 import {
   contextActionIdSchema,
   shoppingTaskIdSchema,
+  taskInputIdSchema,
 } from "../../../domain/shopping-state/ids";
 import {
   QUESTION_ANSWER_INPUT_SCHEMA_VERSION,
+  createRequestFingerprint,
+  requestFingerprintVersionFor,
   stableClientIdentifierSchema,
   taskInputRequestSchema,
+  toTaskInputPayload,
 } from "../../../domain/shopping-state/task-input";
 import type { ShoppingDatabase } from "../../../infrastructure/database/clients";
 import {
   contextActionAnswers,
   shoppingTasks,
+  taskInputs,
 } from "../../../infrastructure/database/schema";
-import { recordTaskInputInTransaction } from "../../shopping-state/persistence/inputs-and-messages";
+import {
+  loadExistingTaskInputInTransaction,
+  type RecordedTaskInput,
+} from "../../shopping-state/persistence/inputs-and-messages";
+import { mapTaskInput } from "../../shopping-state/persistence/mappers";
 import {
   loadContextActionByIdInTransaction,
   type PersistedContextAction,
@@ -68,7 +77,7 @@ type ResolvedContextAnswer =
 
 export type RecordedContextActionAnswer = Readonly<{
   created: boolean;
-  input: Awaited<ReturnType<typeof recordTaskInputInTransaction>>["input"];
+  input: RecordedTaskInput["input"];
   action: Extract<PersistedContextAction, { action: "ask" }>;
   resolvedAnswer: ResolvedContextAnswer;
 }>;
@@ -127,13 +136,40 @@ export async function recordContextActionAnswer(options: {
   const contextActionId = contextActionIdSchema.parse(request.questionId);
 
   return options.db.transaction(async (tx) => {
-    const recorded = await recordTaskInputInTransaction({
-      tx,
-      taskId,
-      clientActionId,
-      request,
-      ...(options.inputId === undefined ? {} : { inputId: options.inputId }),
-    });
+    const fingerprintVersion = requestFingerprintVersionFor(request);
+    const requestFingerprint = createRequestFingerprint(request);
+    const inputPayload = toTaskInputPayload(request);
+    const inputId = taskInputIdSchema.parse(options.inputId ?? randomUUID());
+    const [insertedInput] = await tx
+      .insert(taskInputs)
+      .values({
+        id: inputId,
+        taskId,
+        clientActionId,
+        inputKind: request.kind,
+        inputSchemaVersion: request.inputSchemaVersion,
+        inputPayload,
+        fingerprintVersion,
+        requestFingerprint,
+        expectedRevision: request.expectedRevision,
+      })
+      .onConflictDoNothing({
+        target: [taskInputs.taskId, taskInputs.clientActionId],
+      })
+      .returning();
+    const recorded: RecordedTaskInput =
+      insertedInput === undefined
+        ? await loadExistingTaskInputInTransaction({
+            db: tx,
+            taskId,
+            clientActionId,
+            request,
+          })
+        : {
+            created: true,
+            input: mapTaskInput(insertedInput),
+            message: null,
+          };
 
     if (!recorded.created) {
       const [binding] = await tx

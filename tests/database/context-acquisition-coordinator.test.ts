@@ -1,3 +1,4 @@
+import { and, asc, eq } from "drizzle-orm";
 import {
   afterAll,
   beforeAll,
@@ -19,7 +20,15 @@ import { acquireShoppingContext } from "../../src/features/context-acquisition/c
 import { recordContextActionAnswer } from "../../src/features/context-acquisition/persistence/context-action-answers";
 import { recordTaskInput } from "../../src/features/shopping-state/persistence/inputs-and-messages";
 import { loadCurrentShoppingState } from "../../src/features/shopping-state/persistence/state-loaders";
+import {
+  applyStatePatch,
+  undoStateChange,
+} from "../../src/features/shopping-state/persistence/state-transitions";
 import { createShoppingTask } from "../../src/features/shopping-state/persistence/tasks";
+import {
+  contextAcquisitionAttempts,
+  contextActions,
+} from "../../src/infrastructure/database/schema";
 import {
   createTestDatabaseConnection,
   resetShoppingState,
@@ -113,6 +122,212 @@ describe("context-acquisition coordinator", () => {
     expect(retry).toEqual(first);
     expect(retryModel.interpret).not.toHaveBeenCalled();
     expect(retryModel.selectAction).not.toHaveBeenCalled();
+  });
+
+  it("records both stale action races and fails closed without changing semantic truth", async () => {
+    const task = await createShoppingTask(connection.db);
+    const baselineInput = await recordTaskInput({
+      db: connection.db,
+      taskId: task.id,
+      clientActionId: "stale-action-baseline",
+      request: {
+        inputSchemaVersion: 1,
+        expectedRevision: 0n,
+        kind: "message",
+        body: "I prefer Nike",
+      },
+    });
+    await applyStatePatch(connection.db, {
+      applicationSchemaVersion: 1,
+      applicationKind: "patch",
+      taskId: task.id,
+      expectedRevision: 0n,
+      source: { kind: "user_explicit", inputId: baselineInput.input.id },
+      patch: {
+        schemaVersion: 1,
+        outcome: "change",
+        operations: [
+          {
+            op: "create_concept",
+            localRef: "brand",
+            label: "Brand",
+            definition: "Preferred manufacturer",
+            valueFamily: "categorical",
+            canonicalUnit: null,
+          },
+          {
+            op: "add_criterion",
+            concept: { kind: "created", localRef: "brand" },
+            target: {
+              strength: "preference",
+              targetSemantics: "categorical",
+              semanticValue: {
+                schemaVersion: 1,
+                kind: "categorical",
+                operator: "prefer",
+                values: ["Nike"],
+              },
+            },
+          },
+        ],
+      },
+    });
+    const semanticStateBefore = await loadCurrentShoppingState(
+      connection.db,
+      task.id,
+    );
+    const originalCriterion = semanticStateBefore.activeCriteria[0]?.criterion;
+    if (originalCriterion === undefined) {
+      throw new Error("Expected baseline criterion");
+    }
+
+    const source = await recordTaskInput({
+      db: connection.db,
+      taskId: task.id,
+      clientActionId: "stale-action-source",
+      request: {
+        inputSchemaVersion: 1,
+        expectedRevision: 1n,
+        kind: "message",
+        body: "Show me options",
+      },
+    });
+    let racingApplicationId: string | null = null;
+    let selectionOrdinal = 0;
+    const selectAction = vi.fn(async () => {
+      selectionOrdinal += 1;
+      if (selectionOrdinal === 1) {
+        const raceInput = await recordTaskInput({
+          db: connection.db,
+          taskId: task.id,
+          clientActionId: "stale-action-race-change",
+          request: {
+            inputSchemaVersion: 1,
+            expectedRevision: 1n,
+            kind: "message",
+            body: "Actually I prefer Adidas",
+          },
+        });
+        const race = await applyStatePatch(connection.db, {
+          applicationSchemaVersion: 1,
+          applicationKind: "patch",
+          taskId: task.id,
+          expectedRevision: 1n,
+          source: { kind: "user_explicit", inputId: raceInput.input.id },
+          patch: {
+            schemaVersion: 1,
+            outcome: "change",
+            operations: [
+              {
+                op: "replace_target",
+                targetCriterionId: originalCriterion.id,
+                result: {
+                  strength: "preference",
+                  targetSemantics: "categorical",
+                  semanticValue: {
+                    schemaVersion: 1,
+                    kind: "categorical",
+                    operator: "prefer",
+                    values: ["Adidas"],
+                  },
+                },
+              },
+            ],
+          },
+        });
+        racingApplicationId = race.application.id;
+      } else {
+        if (racingApplicationId === null) {
+          throw new Error("Expected the first racing application");
+        }
+        const undoInput = await recordTaskInput({
+          db: connection.db,
+          taskId: task.id,
+          clientActionId: "stale-action-race-undo",
+          request: {
+            inputSchemaVersion: 1,
+            expectedRevision: 2n,
+            kind: "message",
+            body: "Undo that brand change",
+          },
+        });
+        await undoStateChange(connection.db, {
+          applicationSchemaVersion: 1,
+          applicationKind: "undo",
+          taskId: task.id,
+          expectedRevision: 2n,
+          source: { kind: "user_explicit", inputId: undoInput.input.id },
+          targetApplicationId: racingApplicationId,
+        });
+      }
+      return completed(search);
+    });
+    const model: ContextAcquisitionModel = {
+      interpret: () => completed(noChange),
+      selectAction,
+    };
+
+    const result = await acquireShoppingContext({
+      db: connection.db,
+      model,
+      taskId: task.id,
+      sourceInputId: source.input.id,
+    });
+
+    expect(result).toEqual({
+      status: "failed",
+      stage: "context_action",
+      errorCode: "stale_action_exhausted",
+    });
+    expect(selectAction).toHaveBeenCalledTimes(2);
+    const attempts = await connection.db
+      .select({
+        attemptOrdinal: contextAcquisitionAttempts.attemptOrdinal,
+        snapshotRevision: contextAcquisitionAttempts.snapshotRevision,
+        status: contextAcquisitionAttempts.status,
+        errorCode: contextAcquisitionAttempts.errorCode,
+      })
+      .from(contextAcquisitionAttempts)
+      .where(
+        and(
+          eq(contextAcquisitionAttempts.taskId, task.id),
+          eq(contextAcquisitionAttempts.sourceTaskInputId, source.input.id),
+          eq(contextAcquisitionAttempts.stage, "context_action"),
+        ),
+      )
+      .orderBy(asc(contextAcquisitionAttempts.attemptOrdinal));
+    expect(attempts).toEqual([
+      {
+        attemptOrdinal: 1,
+        snapshotRevision: 1n,
+        status: "stale",
+        errorCode: "stale_action_retrying",
+      },
+      {
+        attemptOrdinal: 2,
+        snapshotRevision: 2n,
+        status: "stale",
+        errorCode: "stale_action_exhausted",
+      },
+    ]);
+    expect(
+      await connection.db
+        .select()
+        .from(contextActions)
+        .where(eq(contextActions.taskId, task.id)),
+    ).toEqual([]);
+    const semanticStateAfter = await loadCurrentShoppingState(
+      connection.db,
+      task.id,
+    );
+    expect(semanticStateAfter.concepts).toEqual(semanticStateBefore.concepts);
+    expect(semanticStateAfter.activeCriteria).toHaveLength(1);
+    expect(semanticStateAfter.activeCriteria[0]?.criterion).toMatchObject({
+      conceptId: originalCriterion.conceptId,
+      strength: originalCriterion.strength,
+      targetSemantics: originalCriterion.targetSemantics,
+      semanticValue: originalCriterion.semanticValue,
+    });
   });
 
   it("supports message to ASK to V2 answer to SEARCH and an explicit relaxation", async () => {

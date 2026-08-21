@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+import OpenAI, { APIConnectionError } from "openai";
 import { zodTextFormat } from "openai/helpers/zod";
 import type { Response } from "openai/resources/responses/responses";
 import type { ZodType } from "zod";
@@ -57,6 +57,7 @@ export function createOpenAIContextAcquisitionModel(options?: {
     options?.client ??
     new OpenAI({
       apiKey: openAIEnvironment.OPENAI_API_KEY,
+      maxRetries: 0,
     });
   const config: OpenAIContextAcquisitionConfig = {
     model:
@@ -140,7 +141,10 @@ async function callStructuredOutput<T>(options: {
             format: zodTextFormat(options.schema, options.schemaName),
           },
         },
-        { signal: AbortSignal.timeout(remainingMs) },
+        {
+          signal: AbortSignal.timeout(remainingMs),
+          maxRetries: 0,
+        },
       );
       return parseOpenAIResponse({
         response,
@@ -175,13 +179,13 @@ async function callStructuredOutput<T>(options: {
 
 export function isRetryableProviderError(error: unknown) {
   if (typeof error !== "object" || error === null) return false;
+  if (error instanceof APIConnectionError) return true;
   const status = "status" in error ? error.status : undefined;
   return (
-    status === undefined ||
     status === 408 ||
     status === 409 ||
     status === 429 ||
-    (typeof status === "number" && status >= 500)
+    (typeof status === "number" && status >= 500 && status <= 599)
   );
 }
 

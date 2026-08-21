@@ -9,7 +9,10 @@ import {
   REQUEST_FINGERPRINT_VERSION_V1,
   createRequestFingerprint,
 } from "../../src/domain/shopping-state/task-input";
-import { recordTaskInput } from "../../src/features/shopping-state/persistence/inputs-and-messages";
+import {
+  recordTaskInput,
+  recordTaskInputInTransaction,
+} from "../../src/features/shopping-state/persistence/inputs-and-messages";
 import { createShoppingTask } from "../../src/features/shopping-state/persistence/tasks";
 import {
   taskInputs,
@@ -191,6 +194,33 @@ describe("task input and message persistence", () => {
           answer: { mode: "open_text", text: "60 cm high at most" },
         },
       }),
+    ).rejects.toThrow(
+      "Question-answer V2 must be recorded through recordContextActionAnswer",
+    );
+    const rows = await connection.db
+      .select()
+      .from(taskInputs)
+      .where(eq(taskInputs.taskId, task.id));
+    expect(rows).toEqual([]);
+  });
+
+  it("rejects V2 through the exported generic transaction writer", async () => {
+    const task = await createShoppingTask(connection.db);
+    await expect(
+      connection.db.transaction((tx) =>
+        recordTaskInputInTransaction({
+          tx,
+          taskId: task.id,
+          clientActionId: "unbound-transaction-answer-v2",
+          request: {
+            inputSchemaVersion: 2,
+            expectedRevision: 0n,
+            kind: "question_answer",
+            questionId: "11111111-1111-4111-8111-111111111111",
+            answer: { mode: "open_text", text: "60 cm high at most" },
+          },
+        }),
+      ),
     ).rejects.toThrow(
       "Question-answer V2 must be recorded through recordContextActionAnswer",
     );

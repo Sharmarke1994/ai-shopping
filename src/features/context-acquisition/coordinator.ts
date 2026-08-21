@@ -435,6 +435,23 @@ async function selectAndPersistAction(options: {
         });
         continue;
       }
+      if (error instanceof StaleContextActionSelectionError) {
+        await recordFailureAttempt({
+          ...options,
+          stage: "context_action",
+          attemptOrdinal,
+          snapshotRevision: state.task.currentRevision,
+          status: "stale",
+          errorCode: "stale_action_exhausted",
+          metadata: modelResult.metadata,
+          contextActionProposal: modelResult.value,
+        });
+        return {
+          status: "failed",
+          stage: "context_action",
+          errorCode: "stale_action_exhausted",
+        };
+      }
       throw error;
     }
   }

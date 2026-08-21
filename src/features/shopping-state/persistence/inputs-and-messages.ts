@@ -36,7 +36,7 @@ type TaskInputTransaction = Parameters<
   Parameters<ShoppingDatabase["transaction"]>[0]
 >[0];
 
-async function loadExistingInput(options: {
+export async function loadExistingTaskInputInTransaction(options: {
   db: TaskInputTransaction;
   taskId: ReturnType<typeof shoppingTaskIdSchema.parse>;
   clientActionId: string;
@@ -109,19 +109,25 @@ async function loadExistingInput(options: {
   return { created: false, input, message };
 }
 
-export async function recordTaskInputInTransaction(options: {
+type RecordTaskInputInTransactionOptions = {
   tx: TaskInputTransaction;
   taskId: unknown;
   clientActionId: string;
   request: unknown;
   inputId?: unknown;
   messageId?: unknown;
-}): Promise<RecordedTaskInput> {
+};
+
+async function recordParsedTaskInputInTransaction(
+  options: Omit<RecordTaskInputInTransactionOptions, "request"> & {
+    request: TaskInputRequest;
+  },
+): Promise<RecordedTaskInput> {
   const taskId = shoppingTaskIdSchema.parse(options.taskId);
   const clientActionId = stableClientIdentifierSchema.parse(
     options.clientActionId,
   );
-  const request = taskInputRequestSchema.parse(options.request);
+  const request = options.request;
   const fingerprintVersion = requestFingerprintVersionFor(request);
   const requestFingerprint = createRequestFingerprint(request);
   const inputPayload = toTaskInputPayload(request);
@@ -145,7 +151,7 @@ export async function recordTaskInputInTransaction(options: {
     .returning();
 
   if (insertedRow === undefined) {
-    return loadExistingInput({
+    return loadExistingTaskInputInTransaction({
       db: options.tx,
       taskId,
       clientActionId,
@@ -179,6 +185,18 @@ export async function recordTaskInputInTransaction(options: {
   return { created: true, input, message: mapUserMessage(messageRow) };
 }
 
+export async function recordTaskInputInTransaction(
+  options: RecordTaskInputInTransactionOptions,
+): Promise<RecordedTaskInput> {
+  const request = taskInputRequestSchema.parse(options.request);
+  if (request.inputSchemaVersion === QUESTION_ANSWER_INPUT_SCHEMA_VERSION) {
+    throw new TypeError(
+      "Question-answer V2 must be recorded through recordContextActionAnswer",
+    );
+  }
+  return recordParsedTaskInputInTransaction({ ...options, request });
+}
+
 export async function recordTaskInput(options: {
   db: ShoppingDatabase;
   taskId: unknown;
@@ -187,18 +205,12 @@ export async function recordTaskInput(options: {
   inputId?: unknown;
   messageId?: unknown;
 }): Promise<RecordedTaskInput> {
-  const request = taskInputRequestSchema.parse(options.request);
-  if (request.inputSchemaVersion === QUESTION_ANSWER_INPUT_SCHEMA_VERSION) {
-    throw new TypeError(
-      "Question-answer V2 must be recorded through recordContextActionAnswer",
-    );
-  }
   return options.db.transaction((tx) =>
     recordTaskInputInTransaction({
       tx,
       taskId: options.taskId,
       clientActionId: options.clientActionId,
-      request,
+      request: options.request,
       ...(options.inputId === undefined ? {} : { inputId: options.inputId }),
       ...(options.messageId === undefined
         ? {}
