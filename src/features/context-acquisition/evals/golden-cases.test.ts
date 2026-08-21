@@ -290,7 +290,7 @@ describe("V0-05 human-labelled golden evaluator", () => {
       kind: "qualitative",
       mode: "ordinal",
       relation: "less",
-      anchor: "weight",
+      anchor: "heavy",
     };
     valid.activeCriteria[1]!.criterion.semanticValue = {
       schemaVersion: 1,

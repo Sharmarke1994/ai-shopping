@@ -98,7 +98,7 @@ export const V0_05_GOLDEN_CASES: readonly V005GoldenCase[] = [
             },
             {
               relations: ["less", "at_most"],
-              anchorMeaning: ["weight", "mass"],
+              anchorMeaning: ["weight", "mass", "heavy", "heaviness"],
             },
           ],
         },

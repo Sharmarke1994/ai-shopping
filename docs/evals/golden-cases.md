@@ -147,7 +147,8 @@ not average an invented criterion away.
 
 Qualitative truth may use text or a directionally equivalent ordinal. An
 ordinal passes only when both its relation and anchor preserve the labelled
-meaning—for example, less weight or more lightness, never more weight. This is
+meaning—for example, less weight/heaviness or more lightness, never more weight.
+This is
 the two-variant wire contract already accepted in V0-05, not a relaxation of
 criterion meaning.
 

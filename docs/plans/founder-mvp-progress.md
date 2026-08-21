@@ -1,6 +1,6 @@
 # Founder MVP progress
 
-**Updated:** 2026-08-21 20:38 Europe/London
+**Updated:** 2026-08-21 21:32 Europe/London
 **Durable goal:** Deliver a polished founder-usable AI shopping MVP whose live
 understanding, market retrieval, evidence-aware evaluation, refinement, saving,
 and comparison are meaningfully better than beginning with Google.
@@ -12,9 +12,9 @@ and comparison are meaningfully better than beginning with Google.
 - Current branch: `codex/v0-05-implementation`
 - Current branch base: merged V0-05 planning checkpoint `6cd0ec8`.
 - Draft [PR #9](https://github.com/Sharmarke1994/ai-shopping/pull/9) is the
-  current checkpoint. Bounded evidence-driven correction `ca119db` is pushed,
-  mergeable, independently reviewed, and green in GitHub Actions run
-  `32519693077` across quality, persistence, and browser-smoke. V0-06 has not
+  current checkpoint. Reviewed correction `ca119db` is pushed, mergeable, and
+  green in GitHub Actions run `32519693077`; a second bounded correction is
+  pending local commit after a genuine paced Terra report. V0-06 has not
   started.
 - Closed checkpoint: PR #8, `V0-05: plan AI interpretation and context
   acquisition`, squash-merged after quality, persistence, and browser-smoke
@@ -42,7 +42,7 @@ and comparison are meaningfully better than beginning with Google.
 V0-05 implementation is feature-complete on
 `codex/v0-05-implementation`. The first independent implementation review and
 adversarial follow-up are reconciled, and exact-head GitHub CI is green at
-`ca119db`. The funded live gate has now produced two honest failing reports:
+`ca119db`. The funded live gate has now produced three honest failing reports:
 
 - Terra release configuration, before pacing: 1/21 passed. Most calls were
   contaminated by the fresh-project 3 RPM / 10k TPM / rolling request allowance,
@@ -51,13 +51,23 @@ adversarial follow-up are reconciled, and exact-head GitHub CI is green at
   structured-output validation failures, one provider failure, and repeatable
   semantic over-interpretation. It is diagnostic evidence only, never a
   substitute for the approved Terra release configuration.
+- Terra release configuration, completion-paced: 15/21 passed. It confirmed
+  that rate limiting is controlled but exposed one true provider timeout, one
+  overly narrow evaluator synonym (`less heavy`), two conditional-stretch
+  conditions incorrectly promoted to Beauty criteria, and two failure-to-ask
+  decisions when comfort versus ANC priority was explicitly unsettled.
 
 The resulting bounded correction classifies quota/rate-limit/SDK timeout
 failures accurately, honours only same-deadline `Retry-After`, waits 35 seconds
 after each completed live-eval model call, aligns qualitative ordinal and
 indifference lifecycle evaluation with accepted contracts, and tightens prompt
-contracts without weakening validation. A fresh paced 21-run Terra report is
-still required after its provider allowance recovers.
+contracts without weakening validation. The latest report supports one more
+bounded correction: accept semantically equivalent less-heaviness, keep a
+conditional stretch condition inside its money criterion, and ask which
+preference leads when that stated ambiguity materially changes judgement. The
+45-second provider timeout is retained as transport evidence rather than
+silently relaxed. A fresh paced 21-run Terra report is still required after its
+provider allowance recovers.
 The bounded slice now includes:
 
 - strict JSON-safe provider input and output wire boundaries;
@@ -99,10 +109,10 @@ The bounded slice now includes:
   state on success or failure and emits one coherent sanitised JSON + Markdown
   report.
 
-Next within this checkpoint: rotate the key that was disclosed in chat and
-replace its Keychain value, then rerun the paced 21-run Terra gate against the
-guarded local database after the rolling allowance recovers. Do not begin
-retrieval inside this branch.
+Next within this checkpoint: commit/push this bounded correction, obtain
+exact-head CI, then rerun the paced 21-run Terra gate against the guarded local
+database after the rolling allowance recovers. The user will manage API-key
+rotation separately. Do not begin retrieval inside this branch.
 
 ## Next validated checkpoints
 
@@ -130,9 +140,8 @@ Credential presence in the current shell at this checkpoint:
   project is funded and successful model calls are confirmed. Terra currently
   has fresh-project limits of 3 RPM, 10k TPM, and a rolling request allowance;
   the unpaced run exhausted that allowance. Wait for recovery before its next
-  21-run gate. Rotate the chat-disclosed key and replace the Keychain value.
-  The key value must never be written to the repository, reports, or shell
-  history.
+  21-run gate. The user will manage key rotation separately. The key value must
+  never be written to the repository, reports, or shell history.
 - `DATABASE_URL`: missing — blocks local PostgreSQL integration/live task runs in
   this shell. GitHub persistence CI is green. A Supabase project named
   `ai-shopping` was previously created, but its connection string is not present
@@ -147,9 +156,8 @@ Credential presence in the current shell at this checkpoint:
 - `SERPER_API_KEY`: missing.
 - GitHub CLI authentication: working as `Sharmarke1994`.
 
-The retrieval provider remains deliberately unselected. Continue
-provider-independent work and a short practical provider spike; pause only if a
-non-trivial paid commitment is required.
+The retrieval provider remains deliberately unselected. Do not begin a provider
+spike or V0-06 work until V0-05 reaches 21/21 and independent review accepts it.
 
 ## Latest verification state
 
@@ -201,6 +209,16 @@ non-trivial paid commitment is required.
   the remainder exposed duplicate conditional-budget truth, unresolved-size
   over-interpretation, and non-specific qualitative text. Prompt versions 3/2
   address these observed contract failures without loosening the schemas.
+- The corrected completion-paced Terra run emitted
+  `artifacts/evals/v0-05/2026-08-21T20-30-38.474Z.*`: 15/21 passed. It is the
+  first fully paced Terra denominator and proves rate-limit control, but is not
+  acceptance evidence: one interpretation timed out, two shelving outputs
+  invented a Beauty criterion from a stretch condition, two headphone actions
+  searched instead of asking which preference leads, and one qualitative
+  ordinal used `less:heavy`. The associated source correction raises prompt
+  versions to interpretation 4 / context action 3 and accepts only that
+  directionally equivalent qualitative synonym; it does not relax the timeout,
+  action, or unexpected-criterion gates.
 - Correction `ca119db` verification: formatting, lint, typecheck,
   119/119 unit/component tests, production build, 6/6 Playwright tests, no
   migration drift, no production dependency vulnerabilities, and
@@ -231,15 +249,17 @@ as follows:
    accepted planning, redo completed checkpoints, or begin a later layer while
    the current checkpoint has a known material failure.
 7. V0-05 draft PR #9 contains reviewed correction `ca119db`, green in run
-   `32519693077`. Do not merge or begin retrieval/V0-06 until the approved Terra
-   configuration produces a genuine paced 21/21 live report and that evidence
-   is reviewed.
+   `32519693077`, plus a local post-Terra correction awaiting commit/push. Do
+   not merge or begin retrieval/V0-06 until the approved Terra configuration
+   produces a genuine paced 21/21 live report and that evidence is reviewed.
 8. Do not claim the live gate passed without an artifact under
    `artifacts/evals/v0-05/` showing 21/21 protected runs. Missing credentials are
    a documented external blocker, not permission to substitute fake evidence.
-   The Luna 10/21 report is diagnostic only. Before rerunning Terra, allow its
-   rolling request allowance to recover; the runner itself now paces from each
-   completed top-level call.
+   The Luna 10/21 report is diagnostic only. The Terra 15/21 report is failure
+   evidence, not acceptance; commit its bounded correction, then allow the
+   rolling request allowance to recover before rerunning. The runner itself
+   paces from each completed top-level call. The user will manage API-key
+   rotation separately; use the currently configured key without printing it.
 9. Update this file whenever a checkpoint is committed, merged, blocked, or
    materially re-scoped. Include exact commit/PR/check state and credential
    requirements.
