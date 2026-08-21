@@ -11,7 +11,7 @@ and comparison are meaningfully better than beginning with Google.
 - Merged `main`: `6cd0ec83ec6e5c807ecc57de83c0c9a99b2e2ce0`
 - Current branch: `codex/v0-05-implementation`
 - Current branch base: merged V0-05 planning checkpoint `6cd0ec8`.
-- Current V0-05 implementation commit: `525482f` (local checkpoint; push and
+- Current V0-05 implementation commit: `bf62eb1` (local checkpoint; push and
   draft PR are next).
 - Closed checkpoint: PR #8, `V0-05: plan AI interpretation and context
   acquisition`, squash-merged after quality, persistence, and browser-smoke
