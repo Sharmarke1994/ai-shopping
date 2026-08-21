@@ -12,11 +12,10 @@ and comparison are meaningfully better than beginning with Google.
 - Current branch: `codex/v0-05-implementation`
 - Current branch base: merged V0-05 planning checkpoint `6cd0ec8`.
 - Draft [PR #9](https://github.com/Sharmarke1994/ai-shopping/pull/9) is the
-  current checkpoint. Pushed head `b448b32` is mergeable and exact-head GitHub
-  quality, persistence, and browser-smoke checks are green. A bounded
-  evidence-driven correction is currently uncommitted: provider error/retry
-  classification, conservative live-eval pacing, prompt versions, and semantic
-  evaluator accuracy. V0-06 has not started.
+  current checkpoint. Bounded evidence-driven correction `ca119db` is pushed,
+  mergeable, independently reviewed, and green in GitHub Actions run
+  `32519693077` across quality, persistence, and browser-smoke. V0-06 has not
+  started.
 - Closed checkpoint: PR #8, `V0-05: plan AI interpretation and context
   acquisition`, squash-merged after quality, persistence, and browser-smoke
   passed on corrected head `2439cfa`.
@@ -43,7 +42,7 @@ and comparison are meaningfully better than beginning with Google.
 V0-05 implementation is feature-complete on
 `codex/v0-05-implementation`. The first independent implementation review and
 adversarial follow-up are reconciled, and exact-head GitHub CI is green at
-`b448b32`. The funded live gate has now produced two honest failing reports:
+`ca119db`. The funded live gate has now produced two honest failing reports:
 
 - Terra release configuration, before pacing: 1/21 passed. Most calls were
   contaminated by the fresh-project 3 RPM / 10k TPM / rolling request allowance,
@@ -100,11 +99,10 @@ The bounded slice now includes:
   state on success or failure and emits one coherent sanitised JSON + Markdown
   report.
 
-Next within this checkpoint: commit and push the bounded correction, obtain
-exact-head green CI, rotate the key that was disclosed in chat and replace its
-Keychain value, then rerun the paced 21-run Terra gate against the guarded local
-database after the rolling allowance recovers. Do not begin retrieval inside
-this branch.
+Next within this checkpoint: rotate the key that was disclosed in chat and
+replace its Keychain value, then rerun the paced 21-run Terra gate against the
+guarded local database after the rolling allowance recovers. Do not begin
+retrieval inside this branch.
 
 ## Next validated checkpoints
 
@@ -203,12 +201,13 @@ non-trivial paid commitment is required.
   the remainder exposed duplicate conditional-budget truth, unresolved-size
   over-interpretation, and non-specific qualitative text. Prompt versions 3/2
   address these observed contract failures without loosening the schemas.
-- Current uncommitted correction verification: formatting, lint, typecheck,
+- Correction `ca119db` verification: formatting, lint, typecheck,
   119/119 unit/component tests, production build, 6/6 Playwright tests, no
   migration drift, no production dependency vulnerabilities, and
-  `git diff --check` all pass. Local PostgreSQL functional cases pass; the sole
-  local suite mismatch is the intentional exact PostgreSQL 17.6 CI pin versus
-  Homebrew PostgreSQL 17.11.
+  `git diff --check` all pass. GitHub Actions run `32519693077` is green for
+  quality, 55/55 PostgreSQL integration tests, and browser-smoke. Local
+  PostgreSQL functional cases pass; the sole local suite mismatch is the
+  intentional exact PostgreSQL 17.6 CI pin versus Homebrew PostgreSQL 17.11.
 - Local shell currently runs Node 24.19.0 and emits the expected engine warning;
   the repository contract and CI pin Node 22.18.0.
 - Working tree was clean when the implementation branch was created from merged
@@ -231,9 +230,8 @@ as follows:
 6. Continue the first incomplete item under **Current work**. Do not restart
    accepted planning, redo completed checkpoints, or begin a later layer while
    the current checkpoint has a known material failure.
-7. V0-05 draft PR #9 is green at pushed head `b448b32`, with a bounded
-   live-evidence correction pending locally. Finish, commit, push, and obtain
-   exact-head CI. Do not merge or begin retrieval/V0-06 until the approved Terra
+7. V0-05 draft PR #9 contains reviewed correction `ca119db`, green in run
+   `32519693077`. Do not merge or begin retrieval/V0-06 until the approved Terra
    configuration produces a genuine paced 21/21 live report and that evidence
    is reviewed.
 8. Do not claim the live gate passed without an artifact under
