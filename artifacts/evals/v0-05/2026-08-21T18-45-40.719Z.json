@@ -1,0 +1,1924 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-21T18:45:40.719Z",
+  "runsPerCase": 3,
+  "totalRuns": 21,
+  "protectedInvariantViolations": 21,
+  "releaseGatePassed": false,
+  "configuration": {
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "reasoningEffort": "low",
+    "timeoutMs": 45000,
+    "maxOutputTokens": 4000,
+    "interpretationPromptVersion": "v0-05-interpretation-1",
+    "contextActionPromptVersion": "v0-05-context-action-1",
+    "providerSchemaVersion": 1
+  },
+  "perMeasure": [
+    {
+      "measure": "action",
+      "total": 21,
+      "passed": 0,
+      "failures": 21
+    },
+    {
+      "measure": "ask-content",
+      "total": 21,
+      "passed": 21,
+      "failures": 0
+    },
+    {
+      "measure": "authoritative-criterion-set",
+      "total": 21,
+      "passed": 9,
+      "failures": 12
+    },
+    {
+      "measure": "brief-projection",
+      "total": 21,
+      "passed": 18,
+      "failures": 3
+    },
+    {
+      "measure": "concept-set",
+      "total": 21,
+      "passed": 21,
+      "failures": 0
+    },
+    {
+      "measure": "criterion-history",
+      "total": 21,
+      "passed": 21,
+      "failures": 0
+    },
+    {
+      "measure": "criterion:breathability:concept",
+      "total": 3,
+      "passed": 0,
+      "failures": 3
+    },
+    {
+      "measure": "criterion:comfort:concept",
+      "total": 3,
+      "passed": 0,
+      "failures": 3
+    },
+    {
+      "measure": "criterion:conditional-budget:concept",
+      "total": 3,
+      "passed": 0,
+      "failures": 3
+    },
+    {
+      "measure": "criterion:lightweight:concept",
+      "total": 3,
+      "passed": 0,
+      "failures": 3
+    },
+    {
+      "measure": "criterion:maximum-width:concept",
+      "total": 3,
+      "passed": 0,
+      "failures": 3
+    },
+    {
+      "measure": "criterion:noise-cancellation:concept",
+      "total": 3,
+      "passed": 0,
+      "failures": 3
+    },
+    {
+      "measure": "criterion:red-colour:concept",
+      "total": 3,
+      "passed": 0,
+      "failures": 3
+    },
+    {
+      "measure": "criterion:visual-lightness:concept",
+      "total": 3,
+      "passed": 0,
+      "failures": 3
+    },
+    {
+      "measure": "criterion:width-indifference:brief-visibility",
+      "total": 3,
+      "passed": 0,
+      "failures": 3
+    },
+    {
+      "measure": "criterion:width-indifference:concept",
+      "total": 3,
+      "passed": 3,
+      "failures": 0
+    },
+    {
+      "measure": "criterion:width-indifference:lifecycle",
+      "total": 3,
+      "passed": 0,
+      "failures": 3
+    },
+    {
+      "measure": "criterion:width-indifference:semantic-value",
+      "total": 3,
+      "passed": 0,
+      "failures": 3
+    },
+    {
+      "measure": "criterion:width-indifference:strength",
+      "total": 3,
+      "passed": 0,
+      "failures": 3
+    },
+    {
+      "measure": "criterion:width-indifference:target-semantics",
+      "total": 3,
+      "passed": 0,
+      "failures": 3
+    },
+    {
+      "measure": "execution",
+      "total": 21,
+      "passed": 0,
+      "failures": 21
+    },
+    {
+      "measure": "forbidden-meaning",
+      "total": 21,
+      "passed": 21,
+      "failures": 0
+    }
+  ],
+  "results": [
+    {
+      "case": "light-breathable-cap",
+      "run": 1,
+      "passed": false,
+      "failures": [
+        "[execution] interpretation:provider_request_failed",
+        "[action] action none not in ask|search",
+        "[authoritative-criterion-set] matched 0/2 labelled criteria",
+        "[criterion:breathability:concept] missing authoritative concept meaning breathable|breathability|airflow|ventilation",
+        "[criterion:lightweight:concept] missing authoritative concept meaning lightweight|light weight|low weight|weight|mass"
+      ],
+      "measures": [
+        {
+          "measure": "execution",
+          "passed": false,
+          "failures": ["interpretation:provider_request_failed"]
+        },
+        {
+          "measure": "action",
+          "passed": false,
+          "failures": ["action none not in ask|search"]
+        },
+        {
+          "measure": "ask-content",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "authoritative-criterion-set",
+          "passed": false,
+          "failures": ["matched 0/2 labelled criteria"]
+        },
+        {
+          "measure": "brief-projection",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "concept-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion-history",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:breathability:concept",
+          "passed": false,
+          "failures": [
+            "missing authoritative concept meaning breathable|breathability|airflow|ventilation"
+          ]
+        },
+        {
+          "measure": "criterion:lightweight:concept",
+          "passed": false,
+          "failures": [
+            "missing authoritative concept meaning lightweight|light weight|low weight|weight|mass"
+          ]
+        },
+        {
+          "measure": "forbidden-meaning",
+          "passed": true,
+          "failures": []
+        }
+      ],
+      "brief": [],
+      "attempts": [
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "provider_failed",
+          "provider": "openai",
+          "model": "gpt-5.6-terra",
+          "promptVersion": "v0-05-interpretation-1",
+          "providerSchemaVersion": 1,
+          "durationMs": 3254,
+          "inputTokens": null,
+          "outputTokens": null,
+          "errorCode": "provider_request_failed"
+        }
+      ]
+    },
+    {
+      "case": "light-breathable-cap",
+      "run": 2,
+      "passed": false,
+      "failures": [
+        "[execution] interpretation:provider_request_failed",
+        "[action] action none not in ask|search",
+        "[authoritative-criterion-set] matched 0/2 labelled criteria",
+        "[criterion:breathability:concept] missing authoritative concept meaning breathable|breathability|airflow|ventilation",
+        "[criterion:lightweight:concept] missing authoritative concept meaning lightweight|light weight|low weight|weight|mass"
+      ],
+      "measures": [
+        {
+          "measure": "execution",
+          "passed": false,
+          "failures": ["interpretation:provider_request_failed"]
+        },
+        {
+          "measure": "action",
+          "passed": false,
+          "failures": ["action none not in ask|search"]
+        },
+        {
+          "measure": "ask-content",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "authoritative-criterion-set",
+          "passed": false,
+          "failures": ["matched 0/2 labelled criteria"]
+        },
+        {
+          "measure": "brief-projection",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "concept-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion-history",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:breathability:concept",
+          "passed": false,
+          "failures": [
+            "missing authoritative concept meaning breathable|breathability|airflow|ventilation"
+          ]
+        },
+        {
+          "measure": "criterion:lightweight:concept",
+          "passed": false,
+          "failures": [
+            "missing authoritative concept meaning lightweight|light weight|low weight|weight|mass"
+          ]
+        },
+        {
+          "measure": "forbidden-meaning",
+          "passed": true,
+          "failures": []
+        }
+      ],
+      "brief": [],
+      "attempts": [
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "provider_failed",
+          "provider": "openai",
+          "model": "gpt-5.6-terra",
+          "promptVersion": "v0-05-interpretation-1",
+          "providerSchemaVersion": 1,
+          "durationMs": 3083,
+          "inputTokens": null,
+          "outputTokens": null,
+          "errorCode": "provider_request_failed"
+        }
+      ]
+    },
+    {
+      "case": "light-breathable-cap",
+      "run": 3,
+      "passed": false,
+      "failures": [
+        "[execution] interpretation:provider_request_failed",
+        "[action] action none not in ask|search",
+        "[authoritative-criterion-set] matched 0/2 labelled criteria",
+        "[criterion:breathability:concept] missing authoritative concept meaning breathable|breathability|airflow|ventilation",
+        "[criterion:lightweight:concept] missing authoritative concept meaning lightweight|light weight|low weight|weight|mass"
+      ],
+      "measures": [
+        {
+          "measure": "execution",
+          "passed": false,
+          "failures": ["interpretation:provider_request_failed"]
+        },
+        {
+          "measure": "action",
+          "passed": false,
+          "failures": ["action none not in ask|search"]
+        },
+        {
+          "measure": "ask-content",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "authoritative-criterion-set",
+          "passed": false,
+          "failures": ["matched 0/2 labelled criteria"]
+        },
+        {
+          "measure": "brief-projection",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "concept-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion-history",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:breathability:concept",
+          "passed": false,
+          "failures": [
+            "missing authoritative concept meaning breathable|breathability|airflow|ventilation"
+          ]
+        },
+        {
+          "measure": "criterion:lightweight:concept",
+          "passed": false,
+          "failures": [
+            "missing authoritative concept meaning lightweight|light weight|low weight|weight|mass"
+          ]
+        },
+        {
+          "measure": "forbidden-meaning",
+          "passed": true,
+          "failures": []
+        }
+      ],
+      "brief": [],
+      "attempts": [
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "provider_failed",
+          "provider": "openai",
+          "model": "gpt-5.6-terra",
+          "promptVersion": "v0-05-interpretation-1",
+          "providerSchemaVersion": 1,
+          "durationMs": 1460,
+          "inputTokens": null,
+          "outputTokens": null,
+          "errorCode": "provider_request_failed"
+        }
+      ]
+    },
+    {
+      "case": "bounded-shelving",
+      "run": 1,
+      "passed": false,
+      "failures": [
+        "[execution] interpretation:provider_request_failed",
+        "[action] action none not in ask|search",
+        "[authoritative-criterion-set] matched 0/3 labelled criteria",
+        "[criterion:conditional-budget:concept] missing authoritative concept meaning budget|price|cost|spend",
+        "[criterion:maximum-width:concept] missing authoritative concept meaning width|wide",
+        "[criterion:visual-lightness:concept] missing authoritative concept meaning visually light|visual lightness|visual weight|airy appearance|visual bulk|appearance bulk"
+      ],
+      "measures": [
+        {
+          "measure": "execution",
+          "passed": false,
+          "failures": ["interpretation:provider_request_failed"]
+        },
+        {
+          "measure": "action",
+          "passed": false,
+          "failures": ["action none not in ask|search"]
+        },
+        {
+          "measure": "ask-content",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "authoritative-criterion-set",
+          "passed": false,
+          "failures": ["matched 0/3 labelled criteria"]
+        },
+        {
+          "measure": "brief-projection",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "concept-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion-history",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:conditional-budget:concept",
+          "passed": false,
+          "failures": [
+            "missing authoritative concept meaning budget|price|cost|spend"
+          ]
+        },
+        {
+          "measure": "criterion:maximum-width:concept",
+          "passed": false,
+          "failures": ["missing authoritative concept meaning width|wide"]
+        },
+        {
+          "measure": "criterion:visual-lightness:concept",
+          "passed": false,
+          "failures": [
+            "missing authoritative concept meaning visually light|visual lightness|visual weight|airy appearance|visual bulk|appearance bulk"
+          ]
+        },
+        {
+          "measure": "forbidden-meaning",
+          "passed": true,
+          "failures": []
+        }
+      ],
+      "brief": [],
+      "attempts": [
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "provider_failed",
+          "provider": "openai",
+          "model": "gpt-5.6-terra",
+          "promptVersion": "v0-05-interpretation-1",
+          "providerSchemaVersion": 1,
+          "durationMs": 1781,
+          "inputTokens": null,
+          "outputTokens": null,
+          "errorCode": "provider_request_failed"
+        }
+      ]
+    },
+    {
+      "case": "bounded-shelving",
+      "run": 2,
+      "passed": false,
+      "failures": [
+        "[execution] interpretation:provider_request_failed",
+        "[action] action none not in ask|search",
+        "[authoritative-criterion-set] matched 0/3 labelled criteria",
+        "[criterion:conditional-budget:concept] missing authoritative concept meaning budget|price|cost|spend",
+        "[criterion:maximum-width:concept] missing authoritative concept meaning width|wide",
+        "[criterion:visual-lightness:concept] missing authoritative concept meaning visually light|visual lightness|visual weight|airy appearance|visual bulk|appearance bulk"
+      ],
+      "measures": [
+        {
+          "measure": "execution",
+          "passed": false,
+          "failures": ["interpretation:provider_request_failed"]
+        },
+        {
+          "measure": "action",
+          "passed": false,
+          "failures": ["action none not in ask|search"]
+        },
+        {
+          "measure": "ask-content",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "authoritative-criterion-set",
+          "passed": false,
+          "failures": ["matched 0/3 labelled criteria"]
+        },
+        {
+          "measure": "brief-projection",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "concept-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion-history",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:conditional-budget:concept",
+          "passed": false,
+          "failures": [
+            "missing authoritative concept meaning budget|price|cost|spend"
+          ]
+        },
+        {
+          "measure": "criterion:maximum-width:concept",
+          "passed": false,
+          "failures": ["missing authoritative concept meaning width|wide"]
+        },
+        {
+          "measure": "criterion:visual-lightness:concept",
+          "passed": false,
+          "failures": [
+            "missing authoritative concept meaning visually light|visual lightness|visual weight|airy appearance|visual bulk|appearance bulk"
+          ]
+        },
+        {
+          "measure": "forbidden-meaning",
+          "passed": true,
+          "failures": []
+        }
+      ],
+      "brief": [],
+      "attempts": [
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "provider_failed",
+          "provider": "openai",
+          "model": "gpt-5.6-terra",
+          "promptVersion": "v0-05-interpretation-1",
+          "providerSchemaVersion": 1,
+          "durationMs": 1536,
+          "inputTokens": null,
+          "outputTokens": null,
+          "errorCode": "provider_request_failed"
+        }
+      ]
+    },
+    {
+      "case": "bounded-shelving",
+      "run": 3,
+      "passed": false,
+      "failures": [
+        "[execution] interpretation:provider_request_failed",
+        "[action] action none not in ask|search",
+        "[authoritative-criterion-set] matched 0/3 labelled criteria",
+        "[criterion:conditional-budget:concept] missing authoritative concept meaning budget|price|cost|spend",
+        "[criterion:maximum-width:concept] missing authoritative concept meaning width|wide",
+        "[criterion:visual-lightness:concept] missing authoritative concept meaning visually light|visual lightness|visual weight|airy appearance|visual bulk|appearance bulk"
+      ],
+      "measures": [
+        {
+          "measure": "execution",
+          "passed": false,
+          "failures": ["interpretation:provider_request_failed"]
+        },
+        {
+          "measure": "action",
+          "passed": false,
+          "failures": ["action none not in ask|search"]
+        },
+        {
+          "measure": "ask-content",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "authoritative-criterion-set",
+          "passed": false,
+          "failures": ["matched 0/3 labelled criteria"]
+        },
+        {
+          "measure": "brief-projection",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "concept-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion-history",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:conditional-budget:concept",
+          "passed": false,
+          "failures": [
+            "missing authoritative concept meaning budget|price|cost|spend"
+          ]
+        },
+        {
+          "measure": "criterion:maximum-width:concept",
+          "passed": false,
+          "failures": ["missing authoritative concept meaning width|wide"]
+        },
+        {
+          "measure": "criterion:visual-lightness:concept",
+          "passed": false,
+          "failures": [
+            "missing authoritative concept meaning visually light|visual lightness|visual weight|airy appearance|visual bulk|appearance bulk"
+          ]
+        },
+        {
+          "measure": "forbidden-meaning",
+          "passed": true,
+          "failures": []
+        }
+      ],
+      "brief": [],
+      "attempts": [
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "provider_failed",
+          "provider": "openai",
+          "model": "gpt-5.6-terra",
+          "promptVersion": "v0-05-interpretation-1",
+          "providerSchemaVersion": 1,
+          "durationMs": 1966,
+          "inputTokens": null,
+          "outputTokens": null,
+          "errorCode": "provider_request_failed"
+        }
+      ]
+    },
+    {
+      "case": "headphones-unsettled-priority",
+      "run": 1,
+      "passed": false,
+      "failures": [
+        "[execution] interpretation:provider_request_failed",
+        "[action] action none not in ask",
+        "[authoritative-criterion-set] matched 0/2 labelled criteria",
+        "[criterion:comfort:concept] missing authoritative concept meaning comfort|comfortable",
+        "[criterion:noise-cancellation:concept] missing authoritative concept meaning noise cancellation|noise cancelling|noise canceling|active noise reduction|anc"
+      ],
+      "measures": [
+        {
+          "measure": "execution",
+          "passed": false,
+          "failures": ["interpretation:provider_request_failed"]
+        },
+        {
+          "measure": "action",
+          "passed": false,
+          "failures": ["action none not in ask"]
+        },
+        {
+          "measure": "ask-content",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "authoritative-criterion-set",
+          "passed": false,
+          "failures": ["matched 0/2 labelled criteria"]
+        },
+        {
+          "measure": "brief-projection",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "concept-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion-history",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:comfort:concept",
+          "passed": false,
+          "failures": [
+            "missing authoritative concept meaning comfort|comfortable"
+          ]
+        },
+        {
+          "measure": "criterion:noise-cancellation:concept",
+          "passed": false,
+          "failures": [
+            "missing authoritative concept meaning noise cancellation|noise cancelling|noise canceling|active noise reduction|anc"
+          ]
+        },
+        {
+          "measure": "forbidden-meaning",
+          "passed": true,
+          "failures": []
+        }
+      ],
+      "brief": [],
+      "attempts": [
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "provider_failed",
+          "provider": "openai",
+          "model": "gpt-5.6-terra",
+          "promptVersion": "v0-05-interpretation-1",
+          "providerSchemaVersion": 1,
+          "durationMs": 2112,
+          "inputTokens": null,
+          "outputTokens": null,
+          "errorCode": "provider_request_failed"
+        }
+      ]
+    },
+    {
+      "case": "headphones-unsettled-priority",
+      "run": 2,
+      "passed": false,
+      "failures": [
+        "[execution] interpretation:provider_request_failed",
+        "[action] action none not in ask",
+        "[authoritative-criterion-set] matched 0/2 labelled criteria",
+        "[criterion:comfort:concept] missing authoritative concept meaning comfort|comfortable",
+        "[criterion:noise-cancellation:concept] missing authoritative concept meaning noise cancellation|noise cancelling|noise canceling|active noise reduction|anc"
+      ],
+      "measures": [
+        {
+          "measure": "execution",
+          "passed": false,
+          "failures": ["interpretation:provider_request_failed"]
+        },
+        {
+          "measure": "action",
+          "passed": false,
+          "failures": ["action none not in ask"]
+        },
+        {
+          "measure": "ask-content",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "authoritative-criterion-set",
+          "passed": false,
+          "failures": ["matched 0/2 labelled criteria"]
+        },
+        {
+          "measure": "brief-projection",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "concept-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion-history",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:comfort:concept",
+          "passed": false,
+          "failures": [
+            "missing authoritative concept meaning comfort|comfortable"
+          ]
+        },
+        {
+          "measure": "criterion:noise-cancellation:concept",
+          "passed": false,
+          "failures": [
+            "missing authoritative concept meaning noise cancellation|noise cancelling|noise canceling|active noise reduction|anc"
+          ]
+        },
+        {
+          "measure": "forbidden-meaning",
+          "passed": true,
+          "failures": []
+        }
+      ],
+      "brief": [],
+      "attempts": [
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "provider_failed",
+          "provider": "openai",
+          "model": "gpt-5.6-terra",
+          "promptVersion": "v0-05-interpretation-1",
+          "providerSchemaVersion": 1,
+          "durationMs": 1404,
+          "inputTokens": null,
+          "outputTokens": null,
+          "errorCode": "provider_request_failed"
+        }
+      ]
+    },
+    {
+      "case": "headphones-unsettled-priority",
+      "run": 3,
+      "passed": false,
+      "failures": [
+        "[execution] interpretation:provider_request_failed",
+        "[action] action none not in ask",
+        "[authoritative-criterion-set] matched 0/2 labelled criteria",
+        "[criterion:comfort:concept] missing authoritative concept meaning comfort|comfortable",
+        "[criterion:noise-cancellation:concept] missing authoritative concept meaning noise cancellation|noise cancelling|noise canceling|active noise reduction|anc"
+      ],
+      "measures": [
+        {
+          "measure": "execution",
+          "passed": false,
+          "failures": ["interpretation:provider_request_failed"]
+        },
+        {
+          "measure": "action",
+          "passed": false,
+          "failures": ["action none not in ask"]
+        },
+        {
+          "measure": "ask-content",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "authoritative-criterion-set",
+          "passed": false,
+          "failures": ["matched 0/2 labelled criteria"]
+        },
+        {
+          "measure": "brief-projection",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "concept-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion-history",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:comfort:concept",
+          "passed": false,
+          "failures": [
+            "missing authoritative concept meaning comfort|comfortable"
+          ]
+        },
+        {
+          "measure": "criterion:noise-cancellation:concept",
+          "passed": false,
+          "failures": [
+            "missing authoritative concept meaning noise cancellation|noise cancelling|noise canceling|active noise reduction|anc"
+          ]
+        },
+        {
+          "measure": "forbidden-meaning",
+          "passed": true,
+          "failures": []
+        }
+      ],
+      "brief": [],
+      "attempts": [
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "provider_failed",
+          "provider": "openai",
+          "model": "gpt-5.6-terra",
+          "promptVersion": "v0-05-interpretation-1",
+          "providerSchemaVersion": 1,
+          "durationMs": 1622,
+          "inputTokens": null,
+          "outputTokens": null,
+          "errorCode": "provider_request_failed"
+        }
+      ]
+    },
+    {
+      "case": "exact-model-lookup",
+      "run": 1,
+      "passed": false,
+      "failures": [
+        "[execution] interpretation:provider_request_failed",
+        "[action] action none not in search"
+      ],
+      "measures": [
+        {
+          "measure": "execution",
+          "passed": false,
+          "failures": ["interpretation:provider_request_failed"]
+        },
+        {
+          "measure": "action",
+          "passed": false,
+          "failures": ["action none not in search"]
+        },
+        {
+          "measure": "ask-content",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "authoritative-criterion-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "brief-projection",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "concept-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion-history",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "forbidden-meaning",
+          "passed": true,
+          "failures": []
+        }
+      ],
+      "brief": [],
+      "attempts": [
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "provider_failed",
+          "provider": "openai",
+          "model": "gpt-5.6-terra",
+          "promptVersion": "v0-05-interpretation-1",
+          "providerSchemaVersion": 1,
+          "durationMs": 2384,
+          "inputTokens": null,
+          "outputTokens": null,
+          "errorCode": "provider_request_failed"
+        }
+      ]
+    },
+    {
+      "case": "exact-model-lookup",
+      "run": 2,
+      "passed": false,
+      "failures": [
+        "[execution] interpretation:provider_request_failed",
+        "[action] action none not in search"
+      ],
+      "measures": [
+        {
+          "measure": "execution",
+          "passed": false,
+          "failures": ["interpretation:provider_request_failed"]
+        },
+        {
+          "measure": "action",
+          "passed": false,
+          "failures": ["action none not in search"]
+        },
+        {
+          "measure": "ask-content",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "authoritative-criterion-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "brief-projection",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "concept-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion-history",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "forbidden-meaning",
+          "passed": true,
+          "failures": []
+        }
+      ],
+      "brief": [],
+      "attempts": [
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "provider_failed",
+          "provider": "openai",
+          "model": "gpt-5.6-terra",
+          "promptVersion": "v0-05-interpretation-1",
+          "providerSchemaVersion": 1,
+          "durationMs": 2736,
+          "inputTokens": null,
+          "outputTokens": null,
+          "errorCode": "provider_request_failed"
+        }
+      ]
+    },
+    {
+      "case": "exact-model-lookup",
+      "run": 3,
+      "passed": false,
+      "failures": [
+        "[execution] interpretation:provider_request_failed",
+        "[action] action none not in search"
+      ],
+      "measures": [
+        {
+          "measure": "execution",
+          "passed": false,
+          "failures": ["interpretation:provider_request_failed"]
+        },
+        {
+          "measure": "action",
+          "passed": false,
+          "failures": ["action none not in search"]
+        },
+        {
+          "measure": "ask-content",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "authoritative-criterion-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "brief-projection",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "concept-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion-history",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "forbidden-meaning",
+          "passed": true,
+          "failures": []
+        }
+      ],
+      "brief": [],
+      "attempts": [
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "provider_failed",
+          "provider": "openai",
+          "model": "gpt-5.6-terra",
+          "promptVersion": "v0-05-interpretation-1",
+          "providerSchemaVersion": 1,
+          "durationMs": 1453,
+          "inputTokens": null,
+          "outputTokens": null,
+          "errorCode": "provider_request_failed"
+        }
+      ]
+    },
+    {
+      "case": "explicit-change-to-indifference",
+      "run": 1,
+      "passed": false,
+      "failures": [
+        "[execution] interpretation:provider_request_failed",
+        "[action] action none not in ask|search",
+        "[brief-projection] brief criterion set does not equal the labelled visible authoritative set",
+        "[criterion:width-indifference:brief-visibility] criterion should be hidden from the brief",
+        "[criterion:width-indifference:lifecycle] seeded criterion was not replaced through one coherent supersession lineage",
+        "[criterion:width-indifference:semantic-value] expected kind indifferent, received measurement_range",
+        "[criterion:width-indifference:strength] expected null, received hard",
+        "[criterion:width-indifference:target-semantics] expected indifferent, received range"
+      ],
+      "measures": [
+        {
+          "measure": "execution",
+          "passed": false,
+          "failures": ["interpretation:provider_request_failed"]
+        },
+        {
+          "measure": "action",
+          "passed": false,
+          "failures": ["action none not in ask|search"]
+        },
+        {
+          "measure": "ask-content",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "authoritative-criterion-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "brief-projection",
+          "passed": false,
+          "failures": [
+            "brief criterion set does not equal the labelled visible authoritative set"
+          ]
+        },
+        {
+          "measure": "concept-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion-history",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:width-indifference:brief-visibility",
+          "passed": false,
+          "failures": ["criterion should be hidden from the brief"]
+        },
+        {
+          "measure": "criterion:width-indifference:concept",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:width-indifference:lifecycle",
+          "passed": false,
+          "failures": [
+            "seeded criterion was not replaced through one coherent supersession lineage"
+          ]
+        },
+        {
+          "measure": "criterion:width-indifference:semantic-value",
+          "passed": false,
+          "failures": ["expected kind indifferent, received measurement_range"]
+        },
+        {
+          "measure": "criterion:width-indifference:strength",
+          "passed": false,
+          "failures": ["expected null, received hard"]
+        },
+        {
+          "measure": "criterion:width-indifference:target-semantics",
+          "passed": false,
+          "failures": ["expected indifferent, received range"]
+        },
+        {
+          "measure": "forbidden-meaning",
+          "passed": true,
+          "failures": []
+        }
+      ],
+      "brief": [
+        {
+          "conceptLabel": "Maximum width",
+          "strength": "hard",
+          "targetSemantics": "range",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "measurement_range",
+            "upper": {
+              "amount": "60",
+              "inclusive": true
+            },
+            "unit": "cm"
+          }
+        }
+      ],
+      "attempts": [
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "provider_failed",
+          "provider": "openai",
+          "model": "gpt-5.6-terra",
+          "promptVersion": "v0-05-interpretation-1",
+          "providerSchemaVersion": 1,
+          "durationMs": 1592,
+          "inputTokens": null,
+          "outputTokens": null,
+          "errorCode": "provider_request_failed"
+        }
+      ]
+    },
+    {
+      "case": "explicit-change-to-indifference",
+      "run": 2,
+      "passed": false,
+      "failures": [
+        "[execution] interpretation:provider_request_failed",
+        "[action] action none not in ask|search",
+        "[brief-projection] brief criterion set does not equal the labelled visible authoritative set",
+        "[criterion:width-indifference:brief-visibility] criterion should be hidden from the brief",
+        "[criterion:width-indifference:lifecycle] seeded criterion was not replaced through one coherent supersession lineage",
+        "[criterion:width-indifference:semantic-value] expected kind indifferent, received measurement_range",
+        "[criterion:width-indifference:strength] expected null, received hard",
+        "[criterion:width-indifference:target-semantics] expected indifferent, received range"
+      ],
+      "measures": [
+        {
+          "measure": "execution",
+          "passed": false,
+          "failures": ["interpretation:provider_request_failed"]
+        },
+        {
+          "measure": "action",
+          "passed": false,
+          "failures": ["action none not in ask|search"]
+        },
+        {
+          "measure": "ask-content",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "authoritative-criterion-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "brief-projection",
+          "passed": false,
+          "failures": [
+            "brief criterion set does not equal the labelled visible authoritative set"
+          ]
+        },
+        {
+          "measure": "concept-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion-history",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:width-indifference:brief-visibility",
+          "passed": false,
+          "failures": ["criterion should be hidden from the brief"]
+        },
+        {
+          "measure": "criterion:width-indifference:concept",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:width-indifference:lifecycle",
+          "passed": false,
+          "failures": [
+            "seeded criterion was not replaced through one coherent supersession lineage"
+          ]
+        },
+        {
+          "measure": "criterion:width-indifference:semantic-value",
+          "passed": false,
+          "failures": ["expected kind indifferent, received measurement_range"]
+        },
+        {
+          "measure": "criterion:width-indifference:strength",
+          "passed": false,
+          "failures": ["expected null, received hard"]
+        },
+        {
+          "measure": "criterion:width-indifference:target-semantics",
+          "passed": false,
+          "failures": ["expected indifferent, received range"]
+        },
+        {
+          "measure": "forbidden-meaning",
+          "passed": true,
+          "failures": []
+        }
+      ],
+      "brief": [
+        {
+          "conceptLabel": "Maximum width",
+          "strength": "hard",
+          "targetSemantics": "range",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "measurement_range",
+            "upper": {
+              "amount": "60",
+              "inclusive": true
+            },
+            "unit": "cm"
+          }
+        }
+      ],
+      "attempts": [
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "provider_failed",
+          "provider": "openai",
+          "model": "gpt-5.6-terra",
+          "promptVersion": "v0-05-interpretation-1",
+          "providerSchemaVersion": 1,
+          "durationMs": 1471,
+          "inputTokens": null,
+          "outputTokens": null,
+          "errorCode": "provider_request_failed"
+        }
+      ]
+    },
+    {
+      "case": "explicit-change-to-indifference",
+      "run": 3,
+      "passed": false,
+      "failures": [
+        "[execution] interpretation:provider_request_failed",
+        "[action] action none not in ask|search",
+        "[brief-projection] brief criterion set does not equal the labelled visible authoritative set",
+        "[criterion:width-indifference:brief-visibility] criterion should be hidden from the brief",
+        "[criterion:width-indifference:lifecycle] seeded criterion was not replaced through one coherent supersession lineage",
+        "[criterion:width-indifference:semantic-value] expected kind indifferent, received measurement_range",
+        "[criterion:width-indifference:strength] expected null, received hard",
+        "[criterion:width-indifference:target-semantics] expected indifferent, received range"
+      ],
+      "measures": [
+        {
+          "measure": "execution",
+          "passed": false,
+          "failures": ["interpretation:provider_request_failed"]
+        },
+        {
+          "measure": "action",
+          "passed": false,
+          "failures": ["action none not in ask|search"]
+        },
+        {
+          "measure": "ask-content",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "authoritative-criterion-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "brief-projection",
+          "passed": false,
+          "failures": [
+            "brief criterion set does not equal the labelled visible authoritative set"
+          ]
+        },
+        {
+          "measure": "concept-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion-history",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:width-indifference:brief-visibility",
+          "passed": false,
+          "failures": ["criterion should be hidden from the brief"]
+        },
+        {
+          "measure": "criterion:width-indifference:concept",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:width-indifference:lifecycle",
+          "passed": false,
+          "failures": [
+            "seeded criterion was not replaced through one coherent supersession lineage"
+          ]
+        },
+        {
+          "measure": "criterion:width-indifference:semantic-value",
+          "passed": false,
+          "failures": ["expected kind indifferent, received measurement_range"]
+        },
+        {
+          "measure": "criterion:width-indifference:strength",
+          "passed": false,
+          "failures": ["expected null, received hard"]
+        },
+        {
+          "measure": "criterion:width-indifference:target-semantics",
+          "passed": false,
+          "failures": ["expected indifferent, received range"]
+        },
+        {
+          "measure": "forbidden-meaning",
+          "passed": true,
+          "failures": []
+        }
+      ],
+      "brief": [
+        {
+          "conceptLabel": "Maximum width",
+          "strength": "hard",
+          "targetSemantics": "range",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "measurement_range",
+            "upper": {
+              "amount": "60",
+              "inclusive": true
+            },
+            "unit": "cm"
+          }
+        }
+      ],
+      "attempts": [
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "provider_failed",
+          "provider": "openai",
+          "model": "gpt-5.6-terra",
+          "promptVersion": "v0-05-interpretation-1",
+          "providerSchemaVersion": 1,
+          "durationMs": 1579,
+          "inputTokens": null,
+          "outputTokens": null,
+          "errorCode": "provider_request_failed"
+        }
+      ]
+    },
+    {
+      "case": "underspecified-size",
+      "run": 1,
+      "passed": false,
+      "failures": [
+        "[execution] interpretation:provider_request_failed",
+        "[action] action none not in ask"
+      ],
+      "measures": [
+        {
+          "measure": "execution",
+          "passed": false,
+          "failures": ["interpretation:provider_request_failed"]
+        },
+        {
+          "measure": "action",
+          "passed": false,
+          "failures": ["action none not in ask"]
+        },
+        {
+          "measure": "ask-content",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "authoritative-criterion-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "brief-projection",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "concept-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion-history",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "forbidden-meaning",
+          "passed": true,
+          "failures": []
+        }
+      ],
+      "brief": [],
+      "attempts": [
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "provider_failed",
+          "provider": "openai",
+          "model": "gpt-5.6-terra",
+          "promptVersion": "v0-05-interpretation-1",
+          "providerSchemaVersion": 1,
+          "durationMs": 2108,
+          "inputTokens": null,
+          "outputTokens": null,
+          "errorCode": "provider_request_failed"
+        }
+      ]
+    },
+    {
+      "case": "underspecified-size",
+      "run": 2,
+      "passed": false,
+      "failures": [
+        "[execution] interpretation:provider_request_failed",
+        "[action] action none not in ask"
+      ],
+      "measures": [
+        {
+          "measure": "execution",
+          "passed": false,
+          "failures": ["interpretation:provider_request_failed"]
+        },
+        {
+          "measure": "action",
+          "passed": false,
+          "failures": ["action none not in ask"]
+        },
+        {
+          "measure": "ask-content",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "authoritative-criterion-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "brief-projection",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "concept-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion-history",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "forbidden-meaning",
+          "passed": true,
+          "failures": []
+        }
+      ],
+      "brief": [],
+      "attempts": [
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "provider_failed",
+          "provider": "openai",
+          "model": "gpt-5.6-terra",
+          "promptVersion": "v0-05-interpretation-1",
+          "providerSchemaVersion": 1,
+          "durationMs": 1912,
+          "inputTokens": null,
+          "outputTokens": null,
+          "errorCode": "provider_request_failed"
+        }
+      ]
+    },
+    {
+      "case": "underspecified-size",
+      "run": 3,
+      "passed": false,
+      "failures": [
+        "[execution] interpretation:provider_request_failed",
+        "[action] action none not in ask"
+      ],
+      "measures": [
+        {
+          "measure": "execution",
+          "passed": false,
+          "failures": ["interpretation:provider_request_failed"]
+        },
+        {
+          "measure": "action",
+          "passed": false,
+          "failures": ["action none not in ask"]
+        },
+        {
+          "measure": "ask-content",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "authoritative-criterion-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "brief-projection",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "concept-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion-history",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "forbidden-meaning",
+          "passed": true,
+          "failures": []
+        }
+      ],
+      "brief": [],
+      "attempts": [
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "provider_failed",
+          "provider": "openai",
+          "model": "gpt-5.6-terra",
+          "promptVersion": "v0-05-interpretation-1",
+          "providerSchemaVersion": 1,
+          "durationMs": 1691,
+          "inputTokens": null,
+          "outputTokens": null,
+          "errorCode": "provider_request_failed"
+        }
+      ]
+    },
+    {
+      "case": "quoted-prompt-injection",
+      "run": 1,
+      "passed": false,
+      "failures": [
+        "[execution] interpretation:provider_request_failed",
+        "[action] action none not in ask|search",
+        "[authoritative-criterion-set] matched 0/1 labelled criteria",
+        "[criterion:red-colour:concept] missing authoritative concept meaning colour|color|finish hue"
+      ],
+      "measures": [
+        {
+          "measure": "execution",
+          "passed": false,
+          "failures": ["interpretation:provider_request_failed"]
+        },
+        {
+          "measure": "action",
+          "passed": false,
+          "failures": ["action none not in ask|search"]
+        },
+        {
+          "measure": "ask-content",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "authoritative-criterion-set",
+          "passed": false,
+          "failures": ["matched 0/1 labelled criteria"]
+        },
+        {
+          "measure": "brief-projection",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "concept-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion-history",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:red-colour:concept",
+          "passed": false,
+          "failures": [
+            "missing authoritative concept meaning colour|color|finish hue"
+          ]
+        },
+        {
+          "measure": "forbidden-meaning",
+          "passed": true,
+          "failures": []
+        }
+      ],
+      "brief": [],
+      "attempts": [
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "provider_failed",
+          "provider": "openai",
+          "model": "gpt-5.6-terra",
+          "promptVersion": "v0-05-interpretation-1",
+          "providerSchemaVersion": 1,
+          "durationMs": 2253,
+          "inputTokens": null,
+          "outputTokens": null,
+          "errorCode": "provider_request_failed"
+        }
+      ]
+    },
+    {
+      "case": "quoted-prompt-injection",
+      "run": 2,
+      "passed": false,
+      "failures": [
+        "[execution] interpretation:provider_request_failed",
+        "[action] action none not in ask|search",
+        "[authoritative-criterion-set] matched 0/1 labelled criteria",
+        "[criterion:red-colour:concept] missing authoritative concept meaning colour|color|finish hue"
+      ],
+      "measures": [
+        {
+          "measure": "execution",
+          "passed": false,
+          "failures": ["interpretation:provider_request_failed"]
+        },
+        {
+          "measure": "action",
+          "passed": false,
+          "failures": ["action none not in ask|search"]
+        },
+        {
+          "measure": "ask-content",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "authoritative-criterion-set",
+          "passed": false,
+          "failures": ["matched 0/1 labelled criteria"]
+        },
+        {
+          "measure": "brief-projection",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "concept-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion-history",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:red-colour:concept",
+          "passed": false,
+          "failures": [
+            "missing authoritative concept meaning colour|color|finish hue"
+          ]
+        },
+        {
+          "measure": "forbidden-meaning",
+          "passed": true,
+          "failures": []
+        }
+      ],
+      "brief": [],
+      "attempts": [
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "provider_failed",
+          "provider": "openai",
+          "model": "gpt-5.6-terra",
+          "promptVersion": "v0-05-interpretation-1",
+          "providerSchemaVersion": 1,
+          "durationMs": 2015,
+          "inputTokens": null,
+          "outputTokens": null,
+          "errorCode": "provider_request_failed"
+        }
+      ]
+    },
+    {
+      "case": "quoted-prompt-injection",
+      "run": 3,
+      "passed": false,
+      "failures": [
+        "[execution] interpretation:provider_request_failed",
+        "[action] action none not in ask|search",
+        "[authoritative-criterion-set] matched 0/1 labelled criteria",
+        "[criterion:red-colour:concept] missing authoritative concept meaning colour|color|finish hue"
+      ],
+      "measures": [
+        {
+          "measure": "execution",
+          "passed": false,
+          "failures": ["interpretation:provider_request_failed"]
+        },
+        {
+          "measure": "action",
+          "passed": false,
+          "failures": ["action none not in ask|search"]
+        },
+        {
+          "measure": "ask-content",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "authoritative-criterion-set",
+          "passed": false,
+          "failures": ["matched 0/1 labelled criteria"]
+        },
+        {
+          "measure": "brief-projection",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "concept-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion-history",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:red-colour:concept",
+          "passed": false,
+          "failures": [
+            "missing authoritative concept meaning colour|color|finish hue"
+          ]
+        },
+        {
+          "measure": "forbidden-meaning",
+          "passed": true,
+          "failures": []
+        }
+      ],
+      "brief": [],
+      "attempts": [
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "provider_failed",
+          "provider": "openai",
+          "model": "gpt-5.6-terra",
+          "promptVersion": "v0-05-interpretation-1",
+          "providerSchemaVersion": 1,
+          "durationMs": 1794,
+          "inputTokens": null,
+          "outputTokens": null,
+          "errorCode": "provider_request_failed"
+        }
+      ]
+    }
+  ]
+}

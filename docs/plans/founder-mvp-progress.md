@@ -1,6 +1,6 @@
 # Founder MVP progress
 
-**Updated:** 2026-08-21 18:50 Europe/London
+**Updated:** 2026-08-21 19:46 Europe/London
 **Durable goal:** Deliver a polished founder-usable AI shopping MVP whose live
 understanding, market retrieval, evidence-aware evaluation, refinement, saving,
 and comparison are meaningfully better than beginning with Google.
@@ -13,8 +13,9 @@ and comparison are meaningfully better than beginning with Google.
 - Current branch base: merged V0-05 planning checkpoint `6cd0ec8`.
 - Draft [PR #9](https://github.com/Sharmarke1994/ai-shopping/pull/9) is the
   current checkpoint. Independent review of `8e6c64b` requested one bounded
-  correction pass; implementation commit `ca05f07` resolves it. Review head
-  `1d048af` is pushed, clean, and green; independent re-review is next.
+  correction pass; implementation commit `ca05f07` resolves it. Current head
+  `3407d40` is pushed, clean, independently re-reviewed, and green. The only
+  remaining release evidence is the credential-gated live gate.
 - Closed checkpoint: PR #8, `V0-05: plan AI interpretation and context
   acquisition`, squash-merged after quality, persistence, and browser-smoke
   passed on corrected head `2439cfa`.
@@ -40,8 +41,13 @@ and comparison are meaningfully better than beginning with Google.
 
 V0-05 implementation is feature-complete on
 `codex/v0-05-implementation`. The first independent implementation review is
-reconciled at `ca05f07`, and exact-head GitHub CI is green at `1d048af`.
-Independent re-review and credential-gated live-model evidence remain.
+reconciled at `ca05f07`, the adversarial follow-up is reconciled, and exact-head
+GitHub CI is green at `3407d40`. The credential-gated live gate was attempted
+against an isolated local PostgreSQL 17 database on 2026-08-21. All 21 runs
+failed before inference with `provider_request_failed`; a separate sanitised
+connectivity diagnostic identified OpenAI HTTP 429 `insufficient_quota`. This
+is provider billing/quota evidence, not a semantic-model result. A funded API
+project and a fresh 21-run report remain required.
 The bounded slice now includes:
 
 - strict JSON-safe provider input and output wire boundaries;
@@ -83,9 +89,10 @@ The bounded slice now includes:
   state on success or failure and emits one coherent sanitised JSON + Markdown
   report.
 
-Next within this checkpoint: obtain independent re-review. Run the 21-call live
-gate only when `OPENAI_API_KEY` plus a guarded `TEST_DATABASE_URL` are
-available. Do not begin retrieval inside this branch.
+Next within this checkpoint: enable usable OpenAI API billing/credits for the
+project, rotate the key that was disclosed in chat, replace the Keychain value,
+and rerun the 21-call live gate against the guarded local database. Do not begin
+retrieval inside this branch.
 
 ## Next validated checkpoints
 
@@ -109,15 +116,21 @@ available. Do not begin retrieval inside this branch.
 
 Credential presence in the current shell at this checkpoint:
 
-- `OPENAI_API_KEY`: missing — blocks credential-gated live V0-05 model eval and
-  real-model harness only; does not block implementation or deterministic tests.
+- `OPENAI_API_KEY`: stored in macOS Keychain service `ai-shopping-openai`, but
+  the associated project returned HTTP 429 `insufficient_quota` on 2026-08-21.
+  Enable API billing/credits and rotate the chat-disclosed key before rerunning.
+  The key value must never be written to the repository, reports, or shell
+  history.
 - `DATABASE_URL`: missing — blocks local PostgreSQL integration/live task runs in
   this shell. GitHub persistence CI is green. A Supabase project named
   `ai-shopping` was previously created, but its connection string is not present
   in this shell.
 - `DIRECT_DATABASE_URL`: missing.
-- `TEST_DATABASE_URL`: missing — blocks local PostgreSQL integration tests and
-  the isolated live eval. The live eval never falls back to `DATABASE_URL`.
+- `TEST_DATABASE_URL`: not persisted as a shell secret. Local PostgreSQL 17.11
+  is installed and running, with test-only base database `ai_shopping_test`.
+  Supply its local loopback URL only to the command invocation. The live eval
+  creates and drops its own guarded disposable database and never falls back to
+  `DATABASE_URL`.
 - `SERPAPI_API_KEY`: missing.
 - `SERPER_API_KEY`: missing.
 - GitHub CLI authentication: working as `Sharmarke1994`.
@@ -156,6 +169,13 @@ non-trivial paid commitment is required.
 - The live release command is `pnpm eval:v0-05:live`; it is intentionally not
   claimed as passing until all 21 real-model runs execute with zero protected
   invariant violations. `pnpm harness:v0-05` is the interactive proof command.
+- Local PostgreSQL 17.11 is installed through Homebrew, running on loopback, and
+  validated as user `alchemist32` against `ai_shopping_test`. The 2026-08-21
+  live attempt produced sanitised JSON and Markdown reports under
+  `artifacts/evals/v0-05/2026-08-21T18-45-40.719Z.*`; 0/21 passed because every
+  interpretation call received `provider_request_failed`. A separate minimal
+  Responses API diagnostic returned 429 `insufficient_quota`, so this report
+  must not be treated as a model-quality result.
 - Local shell currently runs Node 24.19.0 and emits the expected engine warning;
   the repository contract and CI pin Node 22.18.0.
 - Working tree was clean when the implementation branch was created from merged
@@ -178,8 +198,9 @@ as follows:
 6. Continue the first incomplete item under **Current work**. Do not restart
    accepted planning, redo completed checkpoints, or begin a later layer while
    the current checkpoint has a known material failure.
-7. V0-05 draft PR #9 is green at review head `1d048af`. Obtain independent
-   re-review. Do not merge or begin retrieval/V0-06 before that re-review.
+7. V0-05 draft PR #9 is green and independently re-reviewed at current head
+   `3407d40`. Do not merge or begin retrieval/V0-06 until a funded API project
+   produces a genuine 21/21 live report and that evidence is reviewed.
 8. Do not claim the live gate passed without an artifact under
    `artifacts/evals/v0-05/` showing 21/21 protected runs. Missing credentials are
    a documented external blocker, not permission to substitute fake evidence.
