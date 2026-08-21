@@ -1,6 +1,6 @@
 # Founder MVP progress
 
-**Updated:** 2026-08-17 12:31 Europe/London
+**Updated:** 2026-08-21 21:32 Europe/London
 **Durable goal:** Deliver a polished founder-usable AI shopping MVP whose live
 understanding, market retrieval, evidence-aware evaluation, refinement, saving,
 and comparison are meaningfully better than beginning with Google.
@@ -8,14 +8,17 @@ and comparison are meaningfully better than beginning with Google.
 ## Repository checkpoint
 
 - Repository: `Sharmarke1994/ai-shopping`
-- Merged `main`: `cbb3314a4dcb04ef6ff8b351fa7823ffdc0bf753`
-- Current branch: `codex/v0-05-plan`
-- Current committed branch head before the V0-05 correction commit:
-  `9d309aa58a1350b1d4be7bdca31cc6552b1c5dc8`
-- Current checkpoint: draft PR #8, `V0-05: plan AI interpretation and context
-  acquisition`
-- PR #8 state before this continuity commit: open, draft, mergeable; quality,
-  persistence, and browser-smoke checks green on `23178f3`.
+- Merged `main`: `6cd0ec83ec6e5c807ecc57de83c0c9a99b2e2ce0`
+- Current branch: `codex/v0-05-implementation`
+- Current branch base: merged V0-05 planning checkpoint `6cd0ec8`.
+- Draft [PR #9](https://github.com/Sharmarke1994/ai-shopping/pull/9) is the
+  current checkpoint. Reviewed correction `ca119db` is pushed, mergeable, and
+  green in GitHub Actions run `32519693077`; a second bounded correction is
+  pending local commit after a genuine paced Terra report. V0-06 has not
+  started.
+- Closed checkpoint: PR #8, `V0-05: plan AI interpretation and context
+  acquisition`, squash-merged after quality, persistence, and browser-smoke
+  passed on corrected head `2439cfa`.
 - Authoritative execution brief: `docs/plans/founder-usable-mvp.md`
 
 ## Completed work
@@ -36,8 +39,36 @@ and comparison are meaningfully better than beginning with Google.
 
 ## Current work
 
-The bounded V0-05 plan correction is complete locally and awaiting commit/push
-to PR #8. It now includes:
+V0-05 implementation is feature-complete on
+`codex/v0-05-implementation`. The first independent implementation review and
+adversarial follow-up are reconciled, and exact-head GitHub CI is green at
+`ca119db`. The funded live gate has now produced three honest failing reports:
+
+- Terra release configuration, before pacing: 1/21 passed. Most calls were
+  contaminated by the fresh-project 3 RPM / 10k TPM / rolling request allowance,
+  so this is not a valid semantic-quality denominator.
+- Luna diagnostic configuration, paced: 10/21 passed. It exposed eight
+  structured-output validation failures, one provider failure, and repeatable
+  semantic over-interpretation. It is diagnostic evidence only, never a
+  substitute for the approved Terra release configuration.
+- Terra release configuration, completion-paced: 15/21 passed. It confirmed
+  that rate limiting is controlled but exposed one true provider timeout, one
+  overly narrow evaluator synonym (`less heavy`), two conditional-stretch
+  conditions incorrectly promoted to Beauty criteria, and two failure-to-ask
+  decisions when comfort versus ANC priority was explicitly unsettled.
+
+The resulting bounded correction classifies quota/rate-limit/SDK timeout
+failures accurately, honours only same-deadline `Retry-After`, waits 35 seconds
+after each completed live-eval model call, aligns qualitative ordinal and
+indifference lifecycle evaluation with accepted contracts, and tightens prompt
+contracts without weakening validation. The latest report supports one more
+bounded correction: accept semantically equivalent less-heaviness, keep a
+conditional stretch condition inside its money criterion, and ask which
+preference leads when that stated ambiguity materially changes judgement. The
+45-second provider timeout is retained as transport evidence rather than
+silently relaxed. A fresh paced 21-run Terra report is still required after its
+provider allowance recovers.
+The bounded slice now includes:
 
 - strict JSON-safe provider input and output wire boundaries;
 - deterministic semantic-identity lowering into V0-04;
@@ -49,9 +80,39 @@ to PR #8. It now includes:
 - accurate diagnostic trace wording;
 - repeatable three-run protected live gates and a multi-turn live harness proof.
 
-After the correction commit is pushed and PR #8 checks are green, treat the
-planning checkpoint as complete and begin bounded V0-05 implementation. Do not
-reopen broad planning unless implementation evidence exposes a contradiction.
+- strict provider-wire schemas, JSON-safe bounded inputs, deterministic
+  lowering, and an official OpenAI Responses adapter;
+- one same-deadline retry for explicitly retryable provider transport failures,
+  with refusal, incomplete, malformed, timeout, and failed statuses kept
+  distinct;
+- receipt-bound interpretation/action orchestration with V0-04 CAS,
+  fail-closed crash recovery, bounded stale reinterpretation, and application
+  capability checks;
+- immutable context actions/questions, atomic question-answer V2 bindings,
+  exact V1/V2 fingerprints, server option IDs, and no public unbound V2 write
+  path;
+- minimal stage-specific attempt diagnostics, private PostgreSQL migrations,
+  and fail-closed action/receipt reads;
+- an interactive same-task real-model harness and seven protected live cases,
+  each configured for three release-model runs.
+- typed exhaustion after two action-selection revision races, with no stale
+  question/action persisted;
+- a closed V2 boundary: generic public and transaction input writers reject V2,
+  while the module-private insert executes only inside the atomic question
+  answer + binding transaction;
+- explicit provider retries limited to reviewed HTTP/SDK transient failures,
+  with OpenAI SDK retries disabled at every request boundary;
+- a semantic release evaluator that checks exact strengths, targets, values,
+  units/operators, indifference and lifecycle history, unexpected truth,
+  relevant ASK content, and locally negated meanings;
+- a guarded disposable `TEST_DATABASE_URL` run that evaluates actual persisted
+  state on success or failure and emits one coherent sanitised JSON + Markdown
+  report.
+
+Next within this checkpoint: commit/push this bounded correction, obtain
+exact-head CI, then rerun the paced 21-run Terra gate against the guarded local
+database after the rolling allowance recovers. The user will manage API-key
+rotation separately. Do not begin retrieval inside this branch.
 
 ## Next validated checkpoints
 
@@ -75,32 +136,100 @@ reopen broad planning unless implementation evidence exposes a contradiction.
 
 Credential presence in the current shell at this checkpoint:
 
-- `OPENAI_API_KEY`: missing — blocks credential-gated live V0-05 model eval and
-  real-model harness only; does not block implementation or deterministic tests.
+- `OPENAI_API_KEY`: stored in macOS Keychain service `ai-shopping-openai`. The
+  project is funded and successful model calls are confirmed. Terra currently
+  has fresh-project limits of 3 RPM, 10k TPM, and a rolling request allowance;
+  the unpaced run exhausted that allowance. Wait for recovery before its next
+  21-run gate. The user will manage key rotation separately. The key value must
+  never be written to the repository, reports, or shell history.
 - `DATABASE_URL`: missing — blocks local PostgreSQL integration/live task runs in
   this shell. GitHub persistence CI is green. A Supabase project named
   `ai-shopping` was previously created, but its connection string is not present
   in this shell.
-- `DIRECT_URL`: missing.
+- `DIRECT_DATABASE_URL`: missing.
+- `TEST_DATABASE_URL`: not persisted as a shell secret. Local PostgreSQL 17.11
+  is installed and running, with test-only base database `ai_shopping_test`.
+  Supply its local loopback URL only to the command invocation. The live eval
+  creates and drops its own guarded disposable database and never falls back to
+  `DATABASE_URL`.
 - `SERPAPI_API_KEY`: missing.
 - `SERPER_API_KEY`: missing.
 - GitHub CLI authentication: working as `Sharmarke1994`.
 
-The retrieval provider remains deliberately unselected. Continue
-provider-independent work and a short practical provider spike; pause only if a
-non-trivial paid commitment is required.
+The retrieval provider remains deliberately unselected. Do not begin a provider
+spike or V0-06 work until V0-05 reaches 21/21 and independent review accepts it.
 
 ## Latest verification state
 
-- PR #8 GitHub Actions on continuity head `9d309aa`: quality green, persistence
-  green, browser-smoke failed only in the existing pre-hydration compact-brief
-  test after three 30-second timeouts. The continuity commit changed docs only;
-  inspect the new run before classifying this as flaky or fixing the test.
-- Local `pnpm check` after the V0-05 plan correction passed formatting, lint,
-  typecheck, 65 unit/component tests, and production build.
+- PR #8 corrected head `2439cfa`: quality green, persistence green,
+  browser-smoke green; merged as `6cd0ec8`.
+- Corrected implementation `ca05f07`: formatting, lint, typecheck, 112 deterministic
+  unit/component tests, production build, six Playwright browser tests,
+  migration drift generation, `git diff --check`, and production dependency
+  audit all pass locally.
+- Twelve V0-05 PostgreSQL integration cases bring the suite to 55 tests. They cover
+  context-action/question persistence, atomic V2 answers, migration/security
+  shape, exact coordinator retries, two action-selection races, rejection of
+  unbound V2 transaction writes, ASK → answer → SEARCH, and change of mind.
+  Local execution is unavailable because this shell has no disposable database;
+  the suite is ready for GitHub persistence CI.
+- First PR #9 persistence CI exposed a missing `@` alias in the database-only
+  Vitest configuration before it could execute tests. The focused configuration
+  correction at `54806ce` passed its replacement GitHub run. The current exact
+  PR head `66e1a59` also passed GitHub Actions run `32505346894`: quality,
+  53/53 PostgreSQL integration tests, and 6/6 browser tests are green.
+- Independent review of `8e6c64b` found four bounded issues: second action-stage
+  stale exhaustion, insufficient semantic live-gate assertions, an exported
+  unbound V2 transaction path, and over-broad status-less retries. `ca05f07`
+  resolves all four. A Sol High adversarial pass additionally found ASK-content,
+  negated-meaning, failed-run-state, injected-client retry, and exact-5xx gaps;
+  those are resolved in the same correction commit. GitHub Actions run
+  `32509855120` is green at exact review head `1d048af`: quality, 55/55
+  PostgreSQL tests, and 6/6 browser tests passed.
+- The live release command is `pnpm eval:v0-05:live`; it is intentionally not
+  claimed as passing until all 21 real-model runs execute with zero protected
+  invariant violations. `pnpm harness:v0-05` is the interactive proof command.
+- Local PostgreSQL 17.11 is installed through Homebrew, running on loopback, and
+  validated as user `alchemist32` against `ai_shopping_test`. The 2026-08-21
+  live attempt produced sanitised JSON and Markdown reports under
+  `artifacts/evals/v0-05/2026-08-21T18-45-40.719Z.*`; 0/21 passed because every
+  interpretation call received `provider_request_failed`. A separate minimal
+  Responses API diagnostic returned 429 `insufficient_quota`, so this report
+  must not be treated as a model-quality result.
+- After funding, the unpaced Terra run emitted
+  `artifacts/evals/v0-05/2026-08-21T18-55-42.849Z.*`: 1/21 passed, with provider
+  rate-limit failures contaminating most runs. Direct rate-limit evidence showed
+  Terra at 3 RPM / 10k TPM and a rolling request allowance. The report is kept
+  as failure evidence, not claimed as a semantic release result.
+- The paced Luna diagnostic emitted
+  `artifacts/evals/v0-05/2026-08-21T19-34-21.982Z.*`: 10/21 passed. All cap,
+  exact-lookup, and quoted-injection runs except one over-broad product-type
+  interpretation passed; explicit indifference passed 2/3. Eight attempts were
+  strict structured-output validation failures, one was a provider failure, and
+  the remainder exposed duplicate conditional-budget truth, unresolved-size
+  over-interpretation, and non-specific qualitative text. Prompt versions 3/2
+  address these observed contract failures without loosening the schemas.
+- The corrected completion-paced Terra run emitted
+  `artifacts/evals/v0-05/2026-08-21T20-30-38.474Z.*`: 15/21 passed. It is the
+  first fully paced Terra denominator and proves rate-limit control, but is not
+  acceptance evidence: one interpretation timed out, two shelving outputs
+  invented a Beauty criterion from a stretch condition, two headphone actions
+  searched instead of asking which preference leads, and one qualitative
+  ordinal used `less:heavy`. The associated source correction raises prompt
+  versions to interpretation 4 / context action 3 and accepts only that
+  directionally equivalent qualitative synonym; it does not relax the timeout,
+  action, or unexpected-criterion gates.
+- Correction `ca119db` verification: formatting, lint, typecheck,
+  119/119 unit/component tests, production build, 6/6 Playwright tests, no
+  migration drift, no production dependency vulnerabilities, and
+  `git diff --check` all pass. GitHub Actions run `32519693077` is green for
+  quality, 55/55 PostgreSQL integration tests, and browser-smoke. Local
+  PostgreSQL functional cases pass; the sole local suite mismatch is the
+  intentional exact PostgreSQL 17.6 CI pin versus Homebrew PostgreSQL 17.11.
 - Local shell currently runs Node 24.19.0 and emits the expected engine warning;
   the repository contract and CI pin Node 22.18.0.
-- Working tree was clean before adding the two continuity documents.
+- Working tree was clean when the implementation branch was created from merged
+  main.
 
 ## Exact resume instructions
 
@@ -119,15 +248,27 @@ as follows:
 6. Continue the first incomplete item under **Current work**. Do not restart
    accepted planning, redo completed checkpoints, or begin a later layer while
    the current checkpoint has a known material failure.
-7. Update this file whenever a checkpoint is committed, merged, blocked, or
+7. V0-05 draft PR #9 contains reviewed correction `ca119db`, green in run
+   `32519693077`, plus a local post-Terra correction awaiting commit/push. Do
+   not merge or begin retrieval/V0-06 until the approved Terra configuration
+   produces a genuine paced 21/21 live report and that evidence is reviewed.
+8. Do not claim the live gate passed without an artifact under
+   `artifacts/evals/v0-05/` showing 21/21 protected runs. Missing credentials are
+   a documented external blocker, not permission to substitute fake evidence.
+   The Luna 10/21 report is diagnostic only. The Terra 15/21 report is failure
+   evidence, not acceptance; commit its bounded correction, then allow the
+   rolling request allowance to recover before rerunning. The runner itself
+   paces from each completed top-level call. The user will manage API-key
+   rotation separately; use the currently configured key without printing it.
+9. Update this file whenever a checkpoint is committed, merged, blocked, or
    materially re-scoped. Include exact commit/PR/check state and credential
    requirements.
-8. Keep checkpoints bounded; run the applicable full repository gates, perform
+10. Keep checkpoints bounded; run the applicable full repository gates, perform
    a deliberate second review, commit, push, and keep the tree clean.
-9. Continue autonomously through founder-MVP checkpoints. Stop for user input
+11. Continue autonomously through founder-MVP checkpoints. Stop for user input
    only for a required credential, material paid-vendor decision,
    consequential product decision, security/privacy implication, destructive
    migration, or fundamental conflict with accepted architecture.
-10. Do not declare completion until every acceptance condition in section 42 of
+12. Do not declare completion until every acceptance condition in section 42 of
     `docs/plans/founder-usable-mvp.md` is actually satisfied and the founder
     handoff has been produced.

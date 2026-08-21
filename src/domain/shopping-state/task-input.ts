@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import {
+  contextActionIdSchema,
+  contextQuestionOptionIdSchema,
   shoppingTaskIdSchema,
   taskInputIdSchema,
   userMessageIdSchema,
@@ -8,7 +10,9 @@ import {
 import { taskRevisionSchema } from "./task";
 
 export const TASK_INPUT_SCHEMA_VERSION = 1 as const;
-export const REQUEST_FINGERPRINT_VERSION = 1 as const;
+export const QUESTION_ANSWER_INPUT_SCHEMA_VERSION = 2 as const;
+export const REQUEST_FINGERPRINT_VERSION_V1 = 1 as const;
+export const REQUEST_FINGERPRINT_VERSION_V2 = 2 as const;
 
 const rawUserText = z
   .string()
@@ -22,35 +26,57 @@ export const stableClientIdentifierSchema = z
   .max(160)
   .regex(/^[A-Za-z0-9][A-Za-z0-9._:-]*$/);
 
-const inputRequestBase = {
+const inputRequestV1Base = {
   inputSchemaVersion: z.literal(TASK_INPUT_SCHEMA_VERSION),
   expectedRevision: taskRevisionSchema,
 };
 
-export const taskInputRequestSchema = z.discriminatedUnion("kind", [
+const taskInputRequestV1Schema = z.discriminatedUnion("kind", [
   z.strictObject({
-    ...inputRequestBase,
+    ...inputRequestV1Base,
     kind: z.literal("message"),
     body: rawUserText,
   }),
   z.strictObject({
-    ...inputRequestBase,
+    ...inputRequestV1Base,
     kind: z.literal("question_answer"),
     questionId: stableClientIdentifierSchema,
     optionId: stableClientIdentifierSchema,
     answerText: rawUserText,
   }),
   z.strictObject({
-    ...inputRequestBase,
+    ...inputRequestV1Base,
     kind: z.literal("direct_brief_action"),
     controlId: stableClientIdentifierSchema,
     submittedText: rawUserText,
   }),
 ]);
 
+const questionAnswerV2Schema = z.strictObject({
+  inputSchemaVersion: z.literal(QUESTION_ANSWER_INPUT_SCHEMA_VERSION),
+  expectedRevision: taskRevisionSchema,
+  kind: z.literal("question_answer"),
+  questionId: contextActionIdSchema,
+  answer: z.discriminatedUnion("mode", [
+    z.strictObject({
+      mode: z.literal("open_text"),
+      text: rawUserText,
+    }),
+    z.strictObject({
+      mode: z.literal("single_select"),
+      optionId: contextQuestionOptionIdSchema,
+    }),
+  ]),
+});
+
+export const taskInputRequestSchema = z.union([
+  taskInputRequestV1Schema,
+  questionAnswerV2Schema,
+]);
+
 export type TaskInputRequest = z.infer<typeof taskInputRequestSchema>;
 
-const taskInputPayloadSchema = z.discriminatedUnion("kind", [
+const taskInputPayloadV1Schema = z.discriminatedUnion("kind", [
   z.strictObject({
     schemaVersion: z.literal(TASK_INPUT_SCHEMA_VERSION),
     kind: z.literal("message"),
@@ -70,19 +96,49 @@ const taskInputPayloadSchema = z.discriminatedUnion("kind", [
   }),
 ]);
 
-export type TaskInputPayload = z.infer<typeof taskInputPayloadSchema>;
+const questionAnswerPayloadV2Schema = z.strictObject({
+  schemaVersion: z.literal(QUESTION_ANSWER_INPUT_SCHEMA_VERSION),
+  kind: z.literal("question_answer"),
+  questionId: contextActionIdSchema,
+  answer: z.discriminatedUnion("mode", [
+    z.strictObject({
+      mode: z.literal("open_text"),
+      text: rawUserText,
+    }),
+    z.strictObject({
+      mode: z.literal("single_select"),
+      optionId: contextQuestionOptionIdSchema,
+    }),
+  ]),
+});
 
-export const taskInputSchema = z.strictObject({
+export type TaskInputPayload =
+  | z.infer<typeof taskInputPayloadV1Schema>
+  | z.infer<typeof questionAnswerPayloadV2Schema>;
+
+const taskInputBase = {
   id: taskInputIdSchema,
   taskId: shoppingTaskIdSchema,
   clientActionId: stableClientIdentifierSchema,
-  inputSchemaVersion: z.literal(TASK_INPUT_SCHEMA_VERSION),
-  inputPayload: taskInputPayloadSchema,
-  fingerprintVersion: z.literal(REQUEST_FINGERPRINT_VERSION),
   requestFingerprint: z.string().regex(/^[a-f0-9]{64}$/),
   expectedRevision: taskRevisionSchema,
   receivedAt: z.date(),
-});
+};
+
+export const taskInputSchema = z.discriminatedUnion("inputSchemaVersion", [
+  z.strictObject({
+    ...taskInputBase,
+    inputSchemaVersion: z.literal(TASK_INPUT_SCHEMA_VERSION),
+    inputPayload: taskInputPayloadV1Schema,
+    fingerprintVersion: z.literal(REQUEST_FINGERPRINT_VERSION_V1),
+  }),
+  z.strictObject({
+    ...taskInputBase,
+    inputSchemaVersion: z.literal(QUESTION_ANSWER_INPUT_SCHEMA_VERSION),
+    inputPayload: questionAnswerPayloadV2Schema,
+    fingerprintVersion: z.literal(REQUEST_FINGERPRINT_VERSION_V2),
+  }),
+]);
 
 export type TaskInput = z.infer<typeof taskInputSchema>;
 
@@ -124,10 +180,13 @@ function canonicalJson(value: CanonicalJson): string {
     .join(",")}}`;
 }
 
-function fingerprintEnvelopeV1(request: TaskInputRequest): CanonicalJson {
+type TaskInputRequestV1 = z.infer<typeof taskInputRequestV1Schema>;
+type QuestionAnswerRequestV2 = z.infer<typeof questionAnswerV2Schema>;
+
+function fingerprintEnvelopeV1(request: TaskInputRequestV1): CanonicalJson {
   const common = {
     expectedRevision: request.expectedRevision.toString(),
-    fingerprintVersion: REQUEST_FINGERPRINT_VERSION,
+    fingerprintVersion: REQUEST_FINGERPRINT_VERSION_V1,
     inputSchemaVersion: request.inputSchemaVersion,
     kind: request.kind,
   } as const;
@@ -155,19 +214,45 @@ function fingerprintEnvelopeV1(request: TaskInputRequest): CanonicalJson {
   }
 }
 
+function fingerprintEnvelopeV2(
+  request: QuestionAnswerRequestV2,
+): CanonicalJson {
+  return {
+    expectedRevision: request.expectedRevision.toString(),
+    fingerprintVersion: REQUEST_FINGERPRINT_VERSION_V2,
+    inputSchemaVersion: request.inputSchemaVersion,
+    kind: request.kind,
+    sourceContent: {
+      answer:
+        request.answer.mode === "open_text"
+          ? { mode: request.answer.mode, text: request.answer.text }
+          : {
+              mode: request.answer.mode,
+              optionId: request.answer.optionId,
+            },
+      questionId: request.questionId,
+    },
+  };
+}
+
 const fingerprintCanonicalizers = {
-  [REQUEST_FINGERPRINT_VERSION]: (request: TaskInputRequest) =>
-    canonicalJson(fingerprintEnvelopeV1(request)),
+  [REQUEST_FINGERPRINT_VERSION_V1]: (request: unknown) =>
+    canonicalJson(
+      fingerprintEnvelopeV1(taskInputRequestV1Schema.parse(request)),
+    ),
+  [REQUEST_FINGERPRINT_VERSION_V2]: (request: unknown) =>
+    canonicalJson(fingerprintEnvelopeV2(questionAnswerV2Schema.parse(request))),
 } as const;
 
 export type RequestFingerprintVersion = keyof typeof fingerprintCanonicalizers;
 
 export function createRequestFingerprint(
   requestInput: unknown,
-  version: RequestFingerprintVersion = REQUEST_FINGERPRINT_VERSION,
+  version?: RequestFingerprintVersion,
 ) {
   const request = taskInputRequestSchema.parse(requestInput);
-  const canonicalizer = fingerprintCanonicalizers[version];
+  const selectedVersion = version ?? requestFingerprintVersionFor(request);
+  const canonicalizer = fingerprintCanonicalizers[selectedVersion];
 
   return createHash("sha256")
     .update(canonicalizer(request), "utf8")
@@ -184,10 +269,23 @@ export function requestMatchesStoredFingerprint(options: {
   }
 
   const version = options.fingerprintVersion as RequestFingerprintVersion;
-  return (
-    createRequestFingerprint(options.request, version) ===
-    options.requestFingerprint
-  );
+  try {
+    return (
+      createRequestFingerprint(options.request, version) ===
+      options.requestFingerprint
+    );
+  } catch {
+    return false;
+  }
+}
+
+export function requestFingerprintVersionFor(
+  requestInput: unknown,
+): RequestFingerprintVersion {
+  const request = taskInputRequestSchema.parse(requestInput);
+  return request.inputSchemaVersion === TASK_INPUT_SCHEMA_VERSION
+    ? REQUEST_FINGERPRINT_VERSION_V1
+    : REQUEST_FINGERPRINT_VERSION_V2;
 }
 
 export function toTaskInputPayload(requestInput: unknown): TaskInputPayload {
@@ -197,6 +295,14 @@ export function toTaskInputPayload(requestInput: unknown): TaskInputPayload {
     case "message":
       return { schemaVersion: TASK_INPUT_SCHEMA_VERSION, kind: "message" };
     case "question_answer":
+      if (request.inputSchemaVersion === QUESTION_ANSWER_INPUT_SCHEMA_VERSION) {
+        return {
+          schemaVersion: QUESTION_ANSWER_INPUT_SCHEMA_VERSION,
+          kind: "question_answer",
+          questionId: request.questionId,
+          answer: request.answer,
+        };
+      }
       return {
         schemaVersion: TASK_INPUT_SCHEMA_VERSION,
         kind: "question_answer",

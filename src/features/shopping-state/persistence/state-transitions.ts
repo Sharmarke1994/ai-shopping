@@ -34,7 +34,9 @@ import {
   criterionIdSchema,
   criterionLineageIdSchema,
   criterionSourceIdSchema,
+  shoppingTaskIdSchema,
   stateChangeApplicationIdSchema,
+  taskInputIdSchema,
 } from "../../../domain/shopping-state/ids";
 import {
   projectShoppingBrief,
@@ -1129,6 +1131,38 @@ async function returnExisting(
   return {
     application: receipt,
     brief,
+  };
+}
+
+export async function loadValidatedStateApplicationBySourceInput(
+  db: ShoppingDatabase,
+  taskIdInput: unknown,
+  sourceTaskInputIdInput: unknown,
+): Promise<StateApplicationResult | null> {
+  const taskId = shoppingTaskIdSchema.parse(taskIdInput);
+  const sourceTaskInputId = taskInputIdSchema.parse(sourceTaskInputIdInput);
+
+  return db.transaction(async (tx) => {
+    return loadValidatedStateApplicationBySourceInputInTransaction(
+      tx,
+      taskId,
+      sourceTaskInputId,
+    );
+  });
+}
+
+export async function loadValidatedStateApplicationBySourceInputInTransaction(
+  tx: ShoppingTransaction,
+  taskIdInput: unknown,
+  sourceTaskInputIdInput: unknown,
+): Promise<StateApplicationResult | null> {
+  const taskId = shoppingTaskIdSchema.parse(taskIdInput);
+  const sourceTaskInputId = taskInputIdSchema.parse(sourceTaskInputIdInput);
+  const receipt = await findReceipt(tx, taskId, sourceTaskInputId);
+  if (receipt === null) return null;
+  return {
+    application: receipt,
+    brief: await validateHistoricalReceipt(tx, receipt),
   };
 }
 

@@ -1,0 +1,1 @@
+ALTER TABLE "shopping_private"."context_acquisition_attempts" ADD CONSTRAINT "context_acquisition_attempts_run_stage_ordinal_unique" UNIQUE("orchestration_run_id","stage","attempt_ordinal");

@@ -5,7 +5,7 @@ import {
   type TestDatabaseConnection,
 } from "./helpers";
 
-describe("V0-04 migration shape", () => {
+describe("shopping-state and context-acquisition migration shape", () => {
   let connection: TestDatabaseConnection;
 
   beforeAll(() => {
@@ -30,6 +30,10 @@ describe("V0-04 migration shape", () => {
     `);
     expect(tables.map((row) => row.table_name)).toEqual([
       "concept_definitions",
+      "context_acquisition_attempts",
+      "context_action_answers",
+      "context_actions",
+      "context_question_options",
       "criterion_sources",
       "decision_criteria",
       "shopping_tasks",
@@ -52,7 +56,7 @@ describe("V0-04 migration shape", () => {
       'select count(*)::integer as count from "drizzle"."migrations"',
     );
     const after = afterRows[0]?.count;
-    expect(before).toBe(4);
+    expect(before).toBe(7);
     expect(after).toBe(before);
   });
 
@@ -155,9 +159,9 @@ describe("V0-04 migration shape", () => {
     >(`
       select
         has_schema_privilege('anon', 'shopping_private', 'USAGE') as anon_schema,
-        has_table_privilege('anon', 'shopping_private.shopping_tasks', 'SELECT') as anon_table,
+        has_table_privilege('anon', 'shopping_private.context_actions', 'SELECT') as anon_table,
         has_schema_privilege('authenticated', 'shopping_private', 'USAGE') as authenticated_schema,
-        has_table_privilege('authenticated', 'shopping_private.shopping_tasks', 'SELECT') as authenticated_table
+        has_table_privilege('authenticated', 'shopping_private.context_acquisition_attempts', 'SELECT') as authenticated_table
     `);
     expect(privileges).toEqual({
       anon_schema: false,
@@ -165,6 +169,31 @@ describe("V0-04 migration shape", () => {
       authenticated_schema: false,
       authenticated_table: false,
     });
+  });
+
+  it("keeps actions receipt-bound and attempts terminally coherent", async () => {
+    const constraints = await connection.client.unsafe<
+      { conname: string; definition: string }[]
+    >(`
+      select conname, pg_get_constraintdef(oid) as definition
+      from pg_constraint
+      where conname in (
+        'context_actions_application_fk',
+        'context_actions_task_application_unique',
+        'context_acquisition_attempts_terminal_shape',
+        'context_acquisition_attempts_run_stage_ordinal_unique'
+      )
+      order by conname
+    `);
+    expect(constraints).toHaveLength(4);
+    const definitions = constraints.map((row) => row.definition).join(" ");
+    expect(definitions).toContain(
+      "FOREIGN KEY (task_id, state_change_application_id)",
+    );
+    expect(definitions).toContain(
+      "UNIQUE (orchestration_run_id, stage, attempt_ordinal)",
+    );
+    expect(definitions).toContain("status = 'completed'::text");
   });
 
   it("contains no premature product or candidate persistence", async () => {
