@@ -1,6 +1,6 @@
 # Founder MVP progress
 
-**Updated:** 2026-08-21 18:02 Europe/London
+**Updated:** 2026-08-21 18:47 Europe/London
 **Durable goal:** Deliver a polished founder-usable AI shopping MVP whose live
 understanding, market retrieval, evidence-aware evaluation, refinement, saving,
 and comparison are meaningfully better than beginning with Google.
@@ -11,9 +11,10 @@ and comparison are meaningfully better than beginning with Google.
 - Merged `main`: `6cd0ec83ec6e5c807ecc57de83c0c9a99b2e2ce0`
 - Current branch: `codex/v0-05-implementation`
 - Current branch base: merged V0-05 planning checkpoint `6cd0ec8`.
-- Current V0-05 implementation review head: `66e1a59`, pushed as draft
-  [PR #9](https://github.com/Sharmarke1994/ai-shopping/pull/9). It is clean
-  and mergeable; the required independent implementation review is next.
+- Draft [PR #9](https://github.com/Sharmarke1994/ai-shopping/pull/9) is the
+  current checkpoint. Independent review of `8e6c64b` requested one bounded
+  correction pass; implementation commit `ca05f07` resolves it and awaits push,
+  exact-head CI, and independent re-review.
 - Closed checkpoint: PR #8, `V0-05: plan AI interpretation and context
   acquisition`, squash-merged after quality, persistence, and browser-smoke
   passed on corrected head `2439cfa`.
@@ -38,9 +39,9 @@ and comparison are meaningfully better than beginning with Google.
 ## Current work
 
 V0-05 implementation is feature-complete on
-`codex/v0-05-implementation`. Draft PR #9 is green and awaits its required
-independent implementation review; live-model acceptance evidence remains
-credential-gated.
+`codex/v0-05-implementation`. The first independent implementation review is
+reconciled at `ca05f07`; exact-head GitHub CI and independent re-review remain.
+Live-model acceptance evidence remains credential-gated.
 The bounded slice now includes:
 
 - strict JSON-safe provider input and output wire boundaries;
@@ -68,11 +69,24 @@ The bounded slice now includes:
   and fail-closed action/receipt reads;
 - an interactive same-task real-model harness and seven protected live cases,
   each configured for three release-model runs.
+- typed exhaustion after two action-selection revision races, with no stale
+  question/action persisted;
+- a closed V2 boundary: generic public and transaction input writers reject V2,
+  while the module-private insert executes only inside the atomic question
+  answer + binding transaction;
+- explicit provider retries limited to reviewed HTTP/SDK transient failures,
+  with OpenAI SDK retries disabled at every request boundary;
+- a semantic release evaluator that checks exact strengths, targets, values,
+  units/operators, indifference and lifecycle history, unexpected truth,
+  relevant ASK content, and locally negated meanings;
+- a guarded disposable `TEST_DATABASE_URL` run that evaluates actual persisted
+  state on success or failure and emits one coherent sanitised JSON + Markdown
+  report.
 
-Next within this checkpoint: conduct the required independent implementation
-review, reconcile any material finding, and run the 21-call live gate when
-`OPENAI_API_KEY` plus database URLs are available. Do not begin retrieval
-inside this branch.
+Next within this checkpoint: push the correction, verify all three exact-head
+GitHub jobs, and obtain independent re-review. Run the 21-call live gate only
+when `OPENAI_API_KEY` plus a guarded `TEST_DATABASE_URL` are available. Do not
+begin retrieval inside this branch.
 
 ## Next validated checkpoints
 
@@ -102,7 +116,9 @@ Credential presence in the current shell at this checkpoint:
   this shell. GitHub persistence CI is green. A Supabase project named
   `ai-shopping` was previously created, but its connection string is not present
   in this shell.
-- `DIRECT_URL`: missing.
+- `DIRECT_DATABASE_URL`: missing.
+- `TEST_DATABASE_URL`: missing — blocks local PostgreSQL integration tests and
+  the isolated live eval. The live eval never falls back to `DATABASE_URL`.
 - `SERPAPI_API_KEY`: missing.
 - `SERPER_API_KEY`: missing.
 - GitHub CLI authentication: working as `Sharmarke1994`.
@@ -115,13 +131,14 @@ non-trivial paid commitment is required.
 
 - PR #8 corrected head `2439cfa`: quality green, persistence green,
   browser-smoke green; merged as `6cd0ec8`.
-- Current implementation: formatting, lint, typecheck, 96 deterministic
+- Corrected implementation `ca05f07`: formatting, lint, typecheck, 112 deterministic
   unit/component tests, production build, six Playwright browser tests,
   migration drift generation, `git diff --check`, and production dependency
   audit all pass locally.
-- Ten new PostgreSQL integration cases bring the suite to 53 tests. They cover
+- Twelve V0-05 PostgreSQL integration cases bring the suite to 55 tests. They cover
   context-action/question persistence, atomic V2 answers, migration/security
-  shape, exact coordinator retries, ASK → answer → SEARCH, and change of mind.
+  shape, exact coordinator retries, two action-selection races, rejection of
+  unbound V2 transaction writes, ASK → answer → SEARCH, and change of mind.
   Local execution is unavailable because this shell has no disposable database;
   the suite is ready for GitHub persistence CI.
 - First PR #9 persistence CI exposed a missing `@` alias in the database-only
@@ -129,6 +146,12 @@ non-trivial paid commitment is required.
   correction at `54806ce` passed its replacement GitHub run. The current exact
   PR head `66e1a59` also passed GitHub Actions run `32505346894`: quality,
   53/53 PostgreSQL integration tests, and 6/6 browser tests are green.
+- Independent review of `8e6c64b` found four bounded issues: second action-stage
+  stale exhaustion, insufficient semantic live-gate assertions, an exported
+  unbound V2 transaction path, and over-broad status-less retries. `ca05f07`
+  resolves all four. A Sol High adversarial pass additionally found ASK-content,
+  negated-meaning, failed-run-state, injected-client retry, and exact-5xx gaps;
+  those are resolved in the same correction commit. Exact-head CI is pending.
 - The live release command is `pnpm eval:v0-05:live`; it is intentionally not
   claimed as passing until all 21 real-model runs execute with zero protected
   invariant violations. `pnpm harness:v0-05` is the interactive proof command.
@@ -154,10 +177,9 @@ as follows:
 6. Continue the first incomplete item under **Current work**. Do not restart
    accepted planning, redo completed checkpoints, or begin a later layer while
    the current checkpoint has a known material failure.
-7. V0-05 is pushed as draft PR #9 at `66e1a59`, with all three GitHub checks
-   green. Conduct the independent review before merge; do not begin retrieval
-   or V0-06 while that review is outstanding. If it has changed, inspect the
-   exact PR head and all three CI jobs before editing.
+7. V0-05 draft PR #9 has correction commit `ca05f07` locally. Push it, inspect
+   the exact PR head and all three CI jobs, then obtain independent re-review.
+   Do not merge or begin retrieval/V0-06 before that re-review.
 8. Do not claim the live gate passed without an artifact under
    `artifacts/evals/v0-05/` showing 21/21 protected runs. Missing credentials are
    a documented external blocker, not permission to substitute fake evidence.
