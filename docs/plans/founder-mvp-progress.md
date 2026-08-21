@@ -11,8 +11,8 @@ and comparison are meaningfully better than beginning with Google.
 - Merged `main`: `6cd0ec83ec6e5c807ecc57de83c0c9a99b2e2ce0`
 - Current branch: `codex/v0-05-implementation`
 - Current branch base: merged V0-05 planning checkpoint `6cd0ec8`.
-- Current V0-05 implementation commit: `bf62eb1` (local checkpoint; push and
-  draft PR are next).
+- Current V0-05 implementation commit: `bf62eb1`, with durable progress update
+  `8ae4b86`; pushed for review as draft PR #9.
 - Closed checkpoint: PR #8, `V0-05: plan AI interpretation and context
   acquisition`, squash-merged after quality, persistence, and browser-smoke
   passed on corrected head `2439cfa`.
@@ -66,10 +66,10 @@ The bounded slice now includes:
 - an interactive same-task real-model harness and seven protected live cases,
   each configured for three release-model runs.
 
-Next within this checkpoint: commit/push the implementation, let GitHub run the
-53-test PostgreSQL suite on PostgreSQL 17.6, reconcile any review/CI findings,
-and run the 21-call live gate when `OPENAI_API_KEY` plus database URLs are
-available. Do not begin retrieval inside this branch.
+Next within this checkpoint: let GitHub run the 53-test PostgreSQL suite on
+PostgreSQL 17.6, reconcile any review/CI findings, and run the 21-call live
+gate when `OPENAI_API_KEY` plus database URLs are available. Do not begin
+retrieval inside this branch.
 
 ## Next validated checkpoints
 
