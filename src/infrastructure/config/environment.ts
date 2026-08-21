@@ -4,6 +4,7 @@ const requiredSecret = z.string().trim().min(1);
 
 const openAIEnvironmentSchema = z.object({
   OPENAI_API_KEY: requiredSecret,
+  OPENAI_CONTEXT_MODEL: z.string().trim().min(1).max(160).optional(),
 });
 
 const postgresUrl = z

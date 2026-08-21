@@ -1,4 +1,7 @@
 export { conceptDefinitions } from "./concept-definitions";
+export { contextActionAnswers } from "./context-action-answers";
+export { contextActions, contextQuestionOptions } from "./context-actions";
+export { contextAcquisitionAttempts } from "./context-acquisition-attempts";
 export { criterionSources } from "./criterion-sources";
 export { decisionCriteria } from "./decision-criteria";
 export { shoppingPrivate } from "./shopping-private";

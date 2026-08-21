@@ -1,6 +1,6 @@
 # Founder MVP progress
 
-**Updated:** 2026-08-17 12:31 Europe/London
+**Updated:** 2026-08-21 17:47 Europe/London
 **Durable goal:** Deliver a polished founder-usable AI shopping MVP whose live
 understanding, market retrieval, evidence-aware evaluation, refinement, saving,
 and comparison are meaningfully better than beginning with Google.
@@ -8,14 +8,14 @@ and comparison are meaningfully better than beginning with Google.
 ## Repository checkpoint
 
 - Repository: `Sharmarke1994/ai-shopping`
-- Merged `main`: `cbb3314a4dcb04ef6ff8b351fa7823ffdc0bf753`
-- Current branch: `codex/v0-05-plan`
-- Current committed branch head before the V0-05 correction commit:
-  `9d309aa58a1350b1d4be7bdca31cc6552b1c5dc8`
-- Current checkpoint: draft PR #8, `V0-05: plan AI interpretation and context
-  acquisition`
-- PR #8 state before this continuity commit: open, draft, mergeable; quality,
-  persistence, and browser-smoke checks green on `23178f3`.
+- Merged `main`: `6cd0ec83ec6e5c807ecc57de83c0c9a99b2e2ce0`
+- Current branch: `codex/v0-05-implementation`
+- Current branch base: merged V0-05 planning checkpoint `6cd0ec8`.
+- Current V0-05 implementation commit: `525482f` (local checkpoint; push and
+  draft PR are next).
+- Closed checkpoint: PR #8, `V0-05: plan AI interpretation and context
+  acquisition`, squash-merged after quality, persistence, and browser-smoke
+  passed on corrected head `2439cfa`.
 - Authoritative execution brief: `docs/plans/founder-usable-mvp.md`
 
 ## Completed work
@@ -36,8 +36,9 @@ and comparison are meaningfully better than beginning with Google.
 
 ## Current work
 
-The bounded V0-05 plan correction is complete locally and awaiting commit/push
-to PR #8. It now includes:
+V0-05 implementation is feature-complete on
+`codex/v0-05-implementation` and is in final review/CI evidence collection.
+The bounded slice now includes:
 
 - strict JSON-safe provider input and output wire boundaries;
 - deterministic semantic-identity lowering into V0-04;
@@ -49,9 +50,26 @@ to PR #8. It now includes:
 - accurate diagnostic trace wording;
 - repeatable three-run protected live gates and a multi-turn live harness proof.
 
-After the correction commit is pushed and PR #8 checks are green, treat the
-planning checkpoint as complete and begin bounded V0-05 implementation. Do not
-reopen broad planning unless implementation evidence exposes a contradiction.
+- strict provider-wire schemas, JSON-safe bounded inputs, deterministic
+  lowering, and an official OpenAI Responses adapter;
+- one same-deadline retry for explicitly retryable provider transport failures,
+  with refusal, incomplete, malformed, timeout, and failed statuses kept
+  distinct;
+- receipt-bound interpretation/action orchestration with V0-04 CAS,
+  fail-closed crash recovery, bounded stale reinterpretation, and application
+  capability checks;
+- immutable context actions/questions, atomic question-answer V2 bindings,
+  exact V1/V2 fingerprints, server option IDs, and no public unbound V2 write
+  path;
+- minimal stage-specific attempt diagnostics, private PostgreSQL migrations,
+  and fail-closed action/receipt reads;
+- an interactive same-task real-model harness and seven protected live cases,
+  each configured for three release-model runs.
+
+Next within this checkpoint: commit/push the implementation, let GitHub run the
+53-test PostgreSQL suite on PostgreSQL 17.6, reconcile any review/CI findings,
+and run the 21-call live gate when `OPENAI_API_KEY` plus database URLs are
+available. Do not begin retrieval inside this branch.
 
 ## Next validated checkpoints
 
@@ -92,15 +110,24 @@ non-trivial paid commitment is required.
 
 ## Latest verification state
 
-- PR #8 GitHub Actions on continuity head `9d309aa`: quality green, persistence
-  green, browser-smoke failed only in the existing pre-hydration compact-brief
-  test after three 30-second timeouts. The continuity commit changed docs only;
-  inspect the new run before classifying this as flaky or fixing the test.
-- Local `pnpm check` after the V0-05 plan correction passed formatting, lint,
-  typecheck, 65 unit/component tests, and production build.
+- PR #8 corrected head `2439cfa`: quality green, persistence green,
+  browser-smoke green; merged as `6cd0ec8`.
+- Current implementation: formatting, lint, typecheck, 96 deterministic
+  unit/component tests, production build, six Playwright browser tests,
+  migration drift generation, `git diff --check`, and production dependency
+  audit all pass locally.
+- Ten new PostgreSQL integration cases bring the suite to 53 tests. They cover
+  context-action/question persistence, atomic V2 answers, migration/security
+  shape, exact coordinator retries, ASK → answer → SEARCH, and change of mind.
+  Local execution is unavailable because this shell has no disposable database;
+  the suite is ready for GitHub persistence CI.
+- The live release command is `pnpm eval:v0-05:live`; it is intentionally not
+  claimed as passing until all 21 real-model runs execute with zero protected
+  invariant violations. `pnpm harness:v0-05` is the interactive proof command.
 - Local shell currently runs Node 24.19.0 and emits the expected engine warning;
   the repository contract and CI pin Node 22.18.0.
-- Working tree was clean before adding the two continuity documents.
+- Working tree was clean when the implementation branch was created from merged
+  main.
 
 ## Exact resume instructions
 
@@ -119,15 +146,21 @@ as follows:
 6. Continue the first incomplete item under **Current work**. Do not restart
    accepted planning, redo completed checkpoints, or begin a later layer while
    the current checkpoint has a known material failure.
-7. Update this file whenever a checkpoint is committed, merged, blocked, or
+7. If V0-05 has not yet been pushed, run the full local gates, commit the
+   bounded diff, push `codex/v0-05-implementation`, and open a draft PR. If the
+   PR exists, inspect its exact head and all three CI jobs before editing.
+8. Do not claim the live gate passed without an artifact under
+   `artifacts/evals/v0-05/` showing 21/21 protected runs. Missing credentials are
+   a documented external blocker, not permission to substitute fake evidence.
+9. Update this file whenever a checkpoint is committed, merged, blocked, or
    materially re-scoped. Include exact commit/PR/check state and credential
    requirements.
-8. Keep checkpoints bounded; run the applicable full repository gates, perform
+10. Keep checkpoints bounded; run the applicable full repository gates, perform
    a deliberate second review, commit, push, and keep the tree clean.
-9. Continue autonomously through founder-MVP checkpoints. Stop for user input
+11. Continue autonomously through founder-MVP checkpoints. Stop for user input
    only for a required credential, material paid-vendor decision,
    consequential product decision, security/privacy implication, destructive
    migration, or fundamental conflict with accepted architecture.
-10. Do not declare completion until every acceptance condition in section 42 of
+12. Do not declare completion until every acceptance condition in section 42 of
     `docs/plans/founder-usable-mvp.md` is actually satisfied and the founder
     handoff has been produced.

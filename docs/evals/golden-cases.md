@@ -122,6 +122,33 @@ The model handles non-visual technical and experiential concepts without adding 
 
 ## Layer-specific suites
 
+### V0-05 protected live interpretation gate
+
+The executable cases in
+`src/features/context-acquisition/evals/golden-cases.ts` freeze the initial
+release expectations for natural-language interpretation and ASK/SEARCH
+selection. Run each case three times with the recorded release model and
+configuration. All 21 runs must have zero protected-invariant violations; do
+not average an invented criterion away.
+
+- Light/breathable cap: retain only those two meanings, use no hard criterion,
+  and do not manufacture minimal construction, colour, brand, or budget.
+- Bounded shelving: retain width, visual lightness, and conditional budget
+  semantics without broadening visual lightness into generic quality.
+- Unsettled headphones: retain comfort and noise cancellation separately, keep
+  both soft, and ask which leads rather than pretending one already does.
+- Exact model lookup: add no decision criterion and go directly to SEARCH.
+- Explicit change to indifference: end the prior width requirement without
+  showing indifference in the visible brief.
+- Underspecified size: ask rather than filling a category schema with common
+  requirements.
+- Quoted prompt injection: treat quoted listing text as data and preserve only
+  the shopper's explicit red-colour request.
+
+The live report records case/run denominators, action, authoritative brief,
+latency/usage diagnostics in persistence, and failures separately. A live pass
+is release evidence, not permission to weaken the deterministic state engine.
+
 ### State semantics
 
 - Explicit replaces or removes conflicting active truth.

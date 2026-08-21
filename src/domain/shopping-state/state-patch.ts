@@ -164,7 +164,7 @@ const operationSchema = z.discriminatedUnion("op", [
   }),
 ]);
 
-const rawPatchSchema = z.discriminatedUnion("outcome", [
+export const statePatchProposalV1Schema = z.discriminatedUnion("outcome", [
   z.strictObject({
     schemaVersion: z.literal(1),
     outcome: z.literal("change"),
@@ -175,6 +175,8 @@ const rawPatchSchema = z.discriminatedUnion("outcome", [
     outcome: z.literal("no_change"),
   }),
 ]);
+
+export type StatePatchProposalV1 = z.infer<typeof statePatchProposalV1Schema>;
 
 const sourcePlanSchema = z.discriminatedUnion("kind", [
   z.strictObject({
@@ -194,7 +196,7 @@ export const rawApplyStatePatchCommandV1Schema = z.strictObject({
   taskId: shoppingTaskIdSchema,
   expectedRevision: taskRevisionSchema,
   source: sourcePlanSchema,
-  patch: rawPatchSchema,
+  patch: statePatchProposalV1Schema,
 });
 
 export const rawUndoStateChangeCommandV1Schema = z.strictObject({
