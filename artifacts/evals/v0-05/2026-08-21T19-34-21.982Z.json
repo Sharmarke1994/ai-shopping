@@ -1,0 +1,2776 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-21T19:34:21.982Z",
+  "runsPerCase": 3,
+  "totalRuns": 21,
+  "protectedInvariantViolations": 11,
+  "releaseGatePassed": false,
+  "configuration": {
+    "provider": "openai",
+    "model": "gpt-5.6-luna",
+    "reasoningEffort": "low",
+    "timeoutMs": 45000,
+    "maxOutputTokens": 4000,
+    "minimumModelCallIntervalMs": 35000,
+    "interpretationPromptVersion": "v0-05-interpretation-2",
+    "contextActionPromptVersion": "v0-05-context-action-1",
+    "providerSchemaVersion": 1
+  },
+  "perMeasure": [
+    {
+      "measure": "action",
+      "total": 21,
+      "passed": 12,
+      "failures": 9
+    },
+    {
+      "measure": "ask-content",
+      "total": 21,
+      "passed": 21,
+      "failures": 0
+    },
+    {
+      "measure": "authoritative-criterion-set",
+      "total": 21,
+      "passed": 15,
+      "failures": 6
+    },
+    {
+      "measure": "brief-projection",
+      "total": 21,
+      "passed": 17,
+      "failures": 4
+    },
+    {
+      "measure": "concept-set",
+      "total": 21,
+      "passed": 17,
+      "failures": 4
+    },
+    {
+      "measure": "criterion-history",
+      "total": 21,
+      "passed": 17,
+      "failures": 4
+    },
+    {
+      "measure": "criterion:breathability:brief-visibility",
+      "total": 3,
+      "passed": 3,
+      "failures": 0
+    },
+    {
+      "measure": "criterion:breathability:concept",
+      "total": 3,
+      "passed": 3,
+      "failures": 0
+    },
+    {
+      "measure": "criterion:breathability:semantic-value",
+      "total": 3,
+      "passed": 3,
+      "failures": 0
+    },
+    {
+      "measure": "criterion:breathability:strength",
+      "total": 3,
+      "passed": 3,
+      "failures": 0
+    },
+    {
+      "measure": "criterion:breathability:target-semantics",
+      "total": 3,
+      "passed": 3,
+      "failures": 0
+    },
+    {
+      "measure": "criterion:comfort:brief-visibility",
+      "total": 3,
+      "passed": 3,
+      "failures": 0
+    },
+    {
+      "measure": "criterion:comfort:concept",
+      "total": 3,
+      "passed": 3,
+      "failures": 0
+    },
+    {
+      "measure": "criterion:comfort:semantic-value",
+      "total": 3,
+      "passed": 2,
+      "failures": 1
+    },
+    {
+      "measure": "criterion:comfort:strength",
+      "total": 3,
+      "passed": 3,
+      "failures": 0
+    },
+    {
+      "measure": "criterion:comfort:target-semantics",
+      "total": 3,
+      "passed": 3,
+      "failures": 0
+    },
+    {
+      "measure": "criterion:conditional-budget:concept",
+      "total": 3,
+      "passed": 0,
+      "failures": 3
+    },
+    {
+      "measure": "criterion:lightweight:brief-visibility",
+      "total": 3,
+      "passed": 3,
+      "failures": 0
+    },
+    {
+      "measure": "criterion:lightweight:concept",
+      "total": 3,
+      "passed": 3,
+      "failures": 0
+    },
+    {
+      "measure": "criterion:lightweight:semantic-value",
+      "total": 3,
+      "passed": 3,
+      "failures": 0
+    },
+    {
+      "measure": "criterion:lightweight:strength",
+      "total": 3,
+      "passed": 3,
+      "failures": 0
+    },
+    {
+      "measure": "criterion:lightweight:target-semantics",
+      "total": 3,
+      "passed": 3,
+      "failures": 0
+    },
+    {
+      "measure": "criterion:maximum-width:brief-visibility",
+      "total": 1,
+      "passed": 1,
+      "failures": 0
+    },
+    {
+      "measure": "criterion:maximum-width:concept",
+      "total": 3,
+      "passed": 1,
+      "failures": 2
+    },
+    {
+      "measure": "criterion:maximum-width:semantic-value",
+      "total": 1,
+      "passed": 1,
+      "failures": 0
+    },
+    {
+      "measure": "criterion:maximum-width:strength",
+      "total": 1,
+      "passed": 1,
+      "failures": 0
+    },
+    {
+      "measure": "criterion:maximum-width:target-semantics",
+      "total": 1,
+      "passed": 1,
+      "failures": 0
+    },
+    {
+      "measure": "criterion:noise-cancellation:brief-visibility",
+      "total": 3,
+      "passed": 3,
+      "failures": 0
+    },
+    {
+      "measure": "criterion:noise-cancellation:concept",
+      "total": 3,
+      "passed": 3,
+      "failures": 0
+    },
+    {
+      "measure": "criterion:noise-cancellation:semantic-value",
+      "total": 3,
+      "passed": 2,
+      "failures": 1
+    },
+    {
+      "measure": "criterion:noise-cancellation:strength",
+      "total": 3,
+      "passed": 3,
+      "failures": 0
+    },
+    {
+      "measure": "criterion:noise-cancellation:target-semantics",
+      "total": 3,
+      "passed": 3,
+      "failures": 0
+    },
+    {
+      "measure": "criterion:red-colour:brief-visibility",
+      "total": 3,
+      "passed": 3,
+      "failures": 0
+    },
+    {
+      "measure": "criterion:red-colour:concept",
+      "total": 3,
+      "passed": 3,
+      "failures": 0
+    },
+    {
+      "measure": "criterion:red-colour:semantic-value",
+      "total": 3,
+      "passed": 3,
+      "failures": 0
+    },
+    {
+      "measure": "criterion:red-colour:strength",
+      "total": 3,
+      "passed": 3,
+      "failures": 0
+    },
+    {
+      "measure": "criterion:red-colour:target-semantics",
+      "total": 3,
+      "passed": 3,
+      "failures": 0
+    },
+    {
+      "measure": "criterion:visual-lightness:brief-visibility",
+      "total": 1,
+      "passed": 1,
+      "failures": 0
+    },
+    {
+      "measure": "criterion:visual-lightness:concept",
+      "total": 3,
+      "passed": 1,
+      "failures": 2
+    },
+    {
+      "measure": "criterion:visual-lightness:semantic-value",
+      "total": 1,
+      "passed": 1,
+      "failures": 0
+    },
+    {
+      "measure": "criterion:visual-lightness:strength",
+      "total": 1,
+      "passed": 1,
+      "failures": 0
+    },
+    {
+      "measure": "criterion:visual-lightness:target-semantics",
+      "total": 1,
+      "passed": 1,
+      "failures": 0
+    },
+    {
+      "measure": "criterion:width-indifference:brief-visibility",
+      "total": 3,
+      "passed": 3,
+      "failures": 0
+    },
+    {
+      "measure": "criterion:width-indifference:concept",
+      "total": 3,
+      "passed": 3,
+      "failures": 0
+    },
+    {
+      "measure": "criterion:width-indifference:lifecycle",
+      "total": 3,
+      "passed": 3,
+      "failures": 0
+    },
+    {
+      "measure": "criterion:width-indifference:semantic-value",
+      "total": 3,
+      "passed": 3,
+      "failures": 0
+    },
+    {
+      "measure": "criterion:width-indifference:strength",
+      "total": 3,
+      "passed": 3,
+      "failures": 0
+    },
+    {
+      "measure": "criterion:width-indifference:target-semantics",
+      "total": 3,
+      "passed": 3,
+      "failures": 0
+    },
+    {
+      "measure": "execution",
+      "total": 9,
+      "passed": 0,
+      "failures": 9
+    },
+    {
+      "measure": "forbidden-meaning",
+      "total": 21,
+      "passed": 21,
+      "failures": 0
+    }
+  ],
+  "results": [
+    {
+      "case": "light-breathable-cap",
+      "run": 1,
+      "action": "search",
+      "brief": [
+        {
+          "conceptLabel": "Breathability",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "breathable"
+          }
+        },
+        {
+          "conceptLabel": "Lightweight",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "lightweight"
+          }
+        }
+      ],
+      "attempts": [
+        {
+          "stage": "context_action",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "provider": "openai",
+          "model": "gpt-5.6-luna",
+          "promptVersion": "v0-05-context-action-1",
+          "providerSchemaVersion": 1,
+          "durationMs": 2027,
+          "inputTokens": 1024,
+          "outputTokens": 84,
+          "errorCode": null
+        },
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "provider": "openai",
+          "model": "gpt-5.6-luna",
+          "promptVersion": "v0-05-interpretation-2",
+          "providerSchemaVersion": 1,
+          "durationMs": 4799,
+          "inputTokens": 3208,
+          "outputTokens": 334,
+          "errorCode": null
+        }
+      ],
+      "passed": true,
+      "failures": [],
+      "measures": [
+        {
+          "measure": "action",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "ask-content",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "authoritative-criterion-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "brief-projection",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "concept-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion-history",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:breathability:brief-visibility",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:breathability:concept",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:breathability:semantic-value",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:breathability:strength",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:breathability:target-semantics",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:lightweight:brief-visibility",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:lightweight:concept",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:lightweight:semantic-value",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:lightweight:strength",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:lightweight:target-semantics",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "forbidden-meaning",
+          "passed": true,
+          "failures": []
+        }
+      ]
+    },
+    {
+      "case": "light-breathable-cap",
+      "run": 2,
+      "action": "search",
+      "brief": [
+        {
+          "conceptLabel": "Breathable",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "breathable"
+          }
+        },
+        {
+          "conceptLabel": "Lightweight",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "lightweight"
+          }
+        }
+      ],
+      "attempts": [
+        {
+          "stage": "context_action",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "provider": "openai",
+          "model": "gpt-5.6-luna",
+          "promptVersion": "v0-05-context-action-1",
+          "providerSchemaVersion": 1,
+          "durationMs": 3172,
+          "inputTokens": 1031,
+          "outputTokens": 77,
+          "errorCode": null
+        },
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "provider": "openai",
+          "model": "gpt-5.6-luna",
+          "promptVersion": "v0-05-interpretation-2",
+          "providerSchemaVersion": 1,
+          "durationMs": 7551,
+          "inputTokens": 3213,
+          "outputTokens": 329,
+          "errorCode": null
+        }
+      ],
+      "passed": true,
+      "failures": [],
+      "measures": [
+        {
+          "measure": "action",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "ask-content",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "authoritative-criterion-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "brief-projection",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "concept-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion-history",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:breathability:brief-visibility",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:breathability:concept",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:breathability:semantic-value",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:breathability:strength",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:breathability:target-semantics",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:lightweight:brief-visibility",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:lightweight:concept",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:lightweight:semantic-value",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:lightweight:strength",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:lightweight:target-semantics",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "forbidden-meaning",
+          "passed": true,
+          "failures": []
+        }
+      ]
+    },
+    {
+      "case": "light-breathable-cap",
+      "run": 3,
+      "action": "search",
+      "brief": [
+        {
+          "conceptLabel": "Lightweight",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "light"
+          }
+        },
+        {
+          "conceptLabel": "Breathability",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "breathable"
+          }
+        }
+      ],
+      "attempts": [
+        {
+          "stage": "context_action",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "provider": "openai",
+          "model": "gpt-5.6-luna",
+          "promptVersion": "v0-05-context-action-1",
+          "providerSchemaVersion": 1,
+          "durationMs": 1787,
+          "inputTokens": 1040,
+          "outputTokens": 53,
+          "errorCode": null
+        },
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "provider": "openai",
+          "model": "gpt-5.6-luna",
+          "promptVersion": "v0-05-interpretation-2",
+          "providerSchemaVersion": 1,
+          "durationMs": 5253,
+          "inputTokens": 3215,
+          "outputTokens": 391,
+          "errorCode": null
+        }
+      ],
+      "passed": true,
+      "failures": [],
+      "measures": [
+        {
+          "measure": "action",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "ask-content",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "authoritative-criterion-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "brief-projection",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "concept-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion-history",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:breathability:brief-visibility",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:breathability:concept",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:breathability:semantic-value",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:breathability:strength",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:breathability:target-semantics",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:lightweight:brief-visibility",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:lightweight:concept",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:lightweight:semantic-value",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:lightweight:strength",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:lightweight:target-semantics",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "forbidden-meaning",
+          "passed": true,
+          "failures": []
+        }
+      ]
+    },
+    {
+      "case": "bounded-shelving",
+      "run": 1,
+      "passed": false,
+      "failures": [
+        "[execution] interpretation:structured_output_validation_failed",
+        "[action] action none not in ask|search",
+        "[authoritative-criterion-set] matched 0/3 labelled criteria",
+        "[criterion:conditional-budget:concept] missing authoritative concept meaning budget|price|cost|spend",
+        "[criterion:maximum-width:concept] missing authoritative concept meaning width|wide",
+        "[criterion:visual-lightness:concept] missing authoritative concept meaning visually light|visual lightness|visual weight|airy appearance|visual bulk|appearance bulk"
+      ],
+      "measures": [
+        {
+          "measure": "execution",
+          "passed": false,
+          "failures": ["interpretation:structured_output_validation_failed"]
+        },
+        {
+          "measure": "action",
+          "passed": false,
+          "failures": ["action none not in ask|search"]
+        },
+        {
+          "measure": "ask-content",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "authoritative-criterion-set",
+          "passed": false,
+          "failures": ["matched 0/3 labelled criteria"]
+        },
+        {
+          "measure": "brief-projection",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "concept-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion-history",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:conditional-budget:concept",
+          "passed": false,
+          "failures": [
+            "missing authoritative concept meaning budget|price|cost|spend"
+          ]
+        },
+        {
+          "measure": "criterion:maximum-width:concept",
+          "passed": false,
+          "failures": ["missing authoritative concept meaning width|wide"]
+        },
+        {
+          "measure": "criterion:visual-lightness:concept",
+          "passed": false,
+          "failures": [
+            "missing authoritative concept meaning visually light|visual lightness|visual weight|airy appearance|visual bulk|appearance bulk"
+          ]
+        },
+        {
+          "measure": "forbidden-meaning",
+          "passed": true,
+          "failures": []
+        }
+      ],
+      "brief": [],
+      "attempts": [
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "malformed",
+          "provider": "openai",
+          "model": "gpt-5.6-luna",
+          "promptVersion": "v0-05-interpretation-2",
+          "providerSchemaVersion": 1,
+          "durationMs": 5292,
+          "inputTokens": 3233,
+          "outputTokens": 462,
+          "errorCode": "structured_output_validation_failed"
+        }
+      ]
+    },
+    {
+      "case": "bounded-shelving",
+      "run": 2,
+      "passed": false,
+      "failures": [
+        "[execution] interpretation:provider_request_failed",
+        "[action] action none not in ask|search",
+        "[authoritative-criterion-set] matched 0/3 labelled criteria",
+        "[criterion:conditional-budget:concept] missing authoritative concept meaning budget|price|cost|spend",
+        "[criterion:maximum-width:concept] missing authoritative concept meaning width|wide",
+        "[criterion:visual-lightness:concept] missing authoritative concept meaning visually light|visual lightness|visual weight|airy appearance|visual bulk|appearance bulk"
+      ],
+      "measures": [
+        {
+          "measure": "execution",
+          "passed": false,
+          "failures": ["interpretation:provider_request_failed"]
+        },
+        {
+          "measure": "action",
+          "passed": false,
+          "failures": ["action none not in ask|search"]
+        },
+        {
+          "measure": "ask-content",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "authoritative-criterion-set",
+          "passed": false,
+          "failures": ["matched 0/3 labelled criteria"]
+        },
+        {
+          "measure": "brief-projection",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "concept-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion-history",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:conditional-budget:concept",
+          "passed": false,
+          "failures": [
+            "missing authoritative concept meaning budget|price|cost|spend"
+          ]
+        },
+        {
+          "measure": "criterion:maximum-width:concept",
+          "passed": false,
+          "failures": ["missing authoritative concept meaning width|wide"]
+        },
+        {
+          "measure": "criterion:visual-lightness:concept",
+          "passed": false,
+          "failures": [
+            "missing authoritative concept meaning visually light|visual lightness|visual weight|airy appearance|visual bulk|appearance bulk"
+          ]
+        },
+        {
+          "measure": "forbidden-meaning",
+          "passed": true,
+          "failures": []
+        }
+      ],
+      "brief": [],
+      "attempts": [
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "provider_failed",
+          "provider": "openai",
+          "model": "gpt-5.6-luna",
+          "promptVersion": "v0-05-interpretation-2",
+          "providerSchemaVersion": 1,
+          "durationMs": 45020,
+          "inputTokens": null,
+          "outputTokens": null,
+          "errorCode": "provider_request_failed"
+        }
+      ]
+    },
+    {
+      "case": "bounded-shelving",
+      "run": 3,
+      "action": "search",
+      "brief": [
+        {
+          "conceptLabel": "Width",
+          "strength": "hard",
+          "targetSemantics": "range",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "measurement_range",
+            "upper": {
+              "amount": "80",
+              "inclusive": false
+            },
+            "unit": "cm"
+          }
+        },
+        {
+          "conceptLabel": "Visual lightness",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "Feels visually light"
+          }
+        },
+        {
+          "conceptLabel": "Price",
+          "strength": "preference",
+          "targetSemantics": "stretch",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "money_stretch",
+            "targetMinor": 15000,
+            "stretchCeilingMinor": 22000,
+            "currency": "GBP",
+            "condition": "if it is especially beautiful"
+          }
+        },
+        {
+          "conceptLabel": "Price",
+          "strength": "preference",
+          "targetSemantics": "around",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "money",
+            "mode": "target",
+            "amountMinor": 15000,
+            "currency": "GBP"
+          }
+        }
+      ],
+      "attempts": [
+        {
+          "stage": "context_action",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "provider": "openai",
+          "model": "gpt-5.6-luna",
+          "promptVersion": "v0-05-context-action-1",
+          "providerSchemaVersion": 1,
+          "durationMs": 2256,
+          "inputTokens": 1569,
+          "outputTokens": 110,
+          "errorCode": null
+        },
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "provider": "openai",
+          "model": "gpt-5.6-luna",
+          "promptVersion": "v0-05-interpretation-2",
+          "providerSchemaVersion": 1,
+          "durationMs": 8627,
+          "inputTokens": 3227,
+          "outputTokens": 566,
+          "errorCode": null
+        }
+      ],
+      "passed": false,
+      "failures": [
+        "[authoritative-criterion-set] unexpected authoritative criteria: Price: The purchase price of the shelving.; Price: The purchase price of the shelving.",
+        "[authoritative-criterion-set] matched 2/3 labelled criteria",
+        "[brief-projection] brief criterion set does not equal the labelled visible authoritative set",
+        "[concept-set] unexpected task-local concept: Price: The purchase price of the shelving.",
+        "[criterion-history] unexpected historical criteria: 27d65c1c-798c-41ca-83ca-2920f7d98258|65d36092-e219-473d-a083-ef62116034ba",
+        "[criterion:conditional-budget:concept] concept meaning matched 2 authoritative criteria"
+      ],
+      "measures": [
+        {
+          "measure": "action",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "ask-content",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "authoritative-criterion-set",
+          "passed": false,
+          "failures": [
+            "unexpected authoritative criteria: Price: The purchase price of the shelving.; Price: The purchase price of the shelving.",
+            "matched 2/3 labelled criteria"
+          ]
+        },
+        {
+          "measure": "brief-projection",
+          "passed": false,
+          "failures": [
+            "brief criterion set does not equal the labelled visible authoritative set"
+          ]
+        },
+        {
+          "measure": "concept-set",
+          "passed": false,
+          "failures": [
+            "unexpected task-local concept: Price: The purchase price of the shelving."
+          ]
+        },
+        {
+          "measure": "criterion-history",
+          "passed": false,
+          "failures": [
+            "unexpected historical criteria: 27d65c1c-798c-41ca-83ca-2920f7d98258|65d36092-e219-473d-a083-ef62116034ba"
+          ]
+        },
+        {
+          "measure": "criterion:conditional-budget:concept",
+          "passed": false,
+          "failures": ["concept meaning matched 2 authoritative criteria"]
+        },
+        {
+          "measure": "criterion:maximum-width:brief-visibility",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:maximum-width:concept",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:maximum-width:semantic-value",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:maximum-width:strength",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:maximum-width:target-semantics",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:visual-lightness:brief-visibility",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:visual-lightness:concept",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:visual-lightness:semantic-value",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:visual-lightness:strength",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:visual-lightness:target-semantics",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "forbidden-meaning",
+          "passed": true,
+          "failures": []
+        }
+      ]
+    },
+    {
+      "case": "headphones-unsettled-priority",
+      "run": 1,
+      "passed": false,
+      "failures": [
+        "[execution] context_action:structured_output_validation_failed",
+        "[action] action none not in ask"
+      ],
+      "measures": [
+        {
+          "measure": "execution",
+          "passed": false,
+          "failures": ["context_action:structured_output_validation_failed"]
+        },
+        {
+          "measure": "action",
+          "passed": false,
+          "failures": ["action none not in ask"]
+        },
+        {
+          "measure": "ask-content",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "authoritative-criterion-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "brief-projection",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "concept-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion-history",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:comfort:brief-visibility",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:comfort:concept",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:comfort:semantic-value",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:comfort:strength",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:comfort:target-semantics",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:noise-cancellation:brief-visibility",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:noise-cancellation:concept",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:noise-cancellation:semantic-value",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:noise-cancellation:strength",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:noise-cancellation:target-semantics",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "forbidden-meaning",
+          "passed": true,
+          "failures": []
+        }
+      ],
+      "brief": [
+        {
+          "conceptLabel": "Noise cancellation",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "Noise cancellation matters."
+          }
+        },
+        {
+          "conceptLabel": "Comfort",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "Comfort matters."
+          }
+        }
+      ],
+      "attempts": [
+        {
+          "stage": "context_action",
+          "attemptOrdinal": 1,
+          "status": "malformed",
+          "provider": "openai",
+          "model": "gpt-5.6-luna",
+          "promptVersion": "v0-05-context-action-1",
+          "providerSchemaVersion": 1,
+          "durationMs": 3263,
+          "inputTokens": 1032,
+          "outputTokens": 216,
+          "errorCode": "structured_output_validation_failed"
+        },
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "provider": "openai",
+          "model": "gpt-5.6-luna",
+          "promptVersion": "v0-05-interpretation-2",
+          "providerSchemaVersion": 1,
+          "durationMs": 5845,
+          "inputTokens": 3221,
+          "outputTokens": 420,
+          "errorCode": null
+        }
+      ]
+    },
+    {
+      "case": "headphones-unsettled-priority",
+      "run": 2,
+      "passed": false,
+      "failures": [
+        "[execution] context_action:structured_output_validation_failed",
+        "[action] action none not in ask"
+      ],
+      "measures": [
+        {
+          "measure": "execution",
+          "passed": false,
+          "failures": ["context_action:structured_output_validation_failed"]
+        },
+        {
+          "measure": "action",
+          "passed": false,
+          "failures": ["action none not in ask"]
+        },
+        {
+          "measure": "ask-content",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "authoritative-criterion-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "brief-projection",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "concept-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion-history",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:comfort:brief-visibility",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:comfort:concept",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:comfort:semantic-value",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:comfort:strength",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:comfort:target-semantics",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:noise-cancellation:brief-visibility",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:noise-cancellation:concept",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:noise-cancellation:semantic-value",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:noise-cancellation:strength",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:noise-cancellation:target-semantics",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "forbidden-meaning",
+          "passed": true,
+          "failures": []
+        }
+      ],
+      "brief": [
+        {
+          "conceptLabel": "Comfort",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "comfortable to wear"
+          }
+        },
+        {
+          "conceptLabel": "Noise cancellation",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "effective noise cancellation"
+          }
+        }
+      ],
+      "attempts": [
+        {
+          "stage": "context_action",
+          "attemptOrdinal": 1,
+          "status": "malformed",
+          "provider": "openai",
+          "model": "gpt-5.6-luna",
+          "promptVersion": "v0-05-context-action-1",
+          "providerSchemaVersion": 1,
+          "durationMs": 3142,
+          "inputTokens": 1028,
+          "outputTokens": 198,
+          "errorCode": "structured_output_validation_failed"
+        },
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "provider": "openai",
+          "model": "gpt-5.6-luna",
+          "promptVersion": "v0-05-interpretation-2",
+          "providerSchemaVersion": 1,
+          "durationMs": 3621,
+          "inputTokens": 3220,
+          "outputTokens": 309,
+          "errorCode": null
+        }
+      ]
+    },
+    {
+      "case": "headphones-unsettled-priority",
+      "run": 3,
+      "passed": false,
+      "failures": [
+        "[execution] context_action:structured_output_validation_failed",
+        "[action] action none not in ask",
+        "[criterion:comfort:semantic-value] qualitative text does not preserve comfort|comfortable",
+        "[criterion:noise-cancellation:semantic-value] qualitative text does not preserve noise cancellation|noise cancelling|noise canceling|active noise reduction|anc"
+      ],
+      "measures": [
+        {
+          "measure": "execution",
+          "passed": false,
+          "failures": ["context_action:structured_output_validation_failed"]
+        },
+        {
+          "measure": "action",
+          "passed": false,
+          "failures": ["action none not in ask"]
+        },
+        {
+          "measure": "ask-content",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "authoritative-criterion-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "brief-projection",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "concept-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion-history",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:comfort:brief-visibility",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:comfort:concept",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:comfort:semantic-value",
+          "passed": false,
+          "failures": ["qualitative text does not preserve comfort|comfortable"]
+        },
+        {
+          "measure": "criterion:comfort:strength",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:comfort:target-semantics",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:noise-cancellation:brief-visibility",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:noise-cancellation:concept",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:noise-cancellation:semantic-value",
+          "passed": false,
+          "failures": [
+            "qualitative text does not preserve noise cancellation|noise cancelling|noise canceling|active noise reduction|anc"
+          ]
+        },
+        {
+          "measure": "criterion:noise-cancellation:strength",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:noise-cancellation:target-semantics",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "forbidden-meaning",
+          "passed": true,
+          "failures": []
+        }
+      ],
+      "brief": [
+        {
+          "conceptLabel": "Noise cancellation",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "matters"
+          }
+        },
+        {
+          "conceptLabel": "Comfort",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "matters"
+          }
+        }
+      ],
+      "attempts": [
+        {
+          "stage": "context_action",
+          "attemptOrdinal": 1,
+          "status": "malformed",
+          "provider": "openai",
+          "model": "gpt-5.6-luna",
+          "promptVersion": "v0-05-context-action-1",
+          "providerSchemaVersion": 1,
+          "durationMs": 2303,
+          "inputTokens": 1040,
+          "outputTokens": 158,
+          "errorCode": "structured_output_validation_failed"
+        },
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "provider": "openai",
+          "model": "gpt-5.6-luna",
+          "promptVersion": "v0-05-interpretation-2",
+          "providerSchemaVersion": 1,
+          "durationMs": 4861,
+          "inputTokens": 3226,
+          "outputTokens": 387,
+          "errorCode": null
+        }
+      ]
+    },
+    {
+      "case": "exact-model-lookup",
+      "run": 1,
+      "action": "search",
+      "brief": [],
+      "attempts": [
+        {
+          "stage": "context_action",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "provider": "openai",
+          "model": "gpt-5.6-luna",
+          "promptVersion": "v0-05-context-action-1",
+          "providerSchemaVersion": 1,
+          "durationMs": 1622,
+          "inputTokens": 452,
+          "outputTokens": 78,
+          "errorCode": null
+        },
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "provider": "openai",
+          "model": "gpt-5.6-luna",
+          "promptVersion": "v0-05-interpretation-2",
+          "providerSchemaVersion": 1,
+          "durationMs": 2437,
+          "inputTokens": 3204,
+          "outputTokens": 63,
+          "errorCode": null
+        }
+      ],
+      "passed": true,
+      "failures": [],
+      "measures": [
+        {
+          "measure": "action",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "ask-content",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "authoritative-criterion-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "brief-projection",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "concept-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion-history",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "forbidden-meaning",
+          "passed": true,
+          "failures": []
+        }
+      ]
+    },
+    {
+      "case": "exact-model-lookup",
+      "run": 2,
+      "action": "search",
+      "brief": [],
+      "attempts": [
+        {
+          "stage": "context_action",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "provider": "openai",
+          "model": "gpt-5.6-luna",
+          "promptVersion": "v0-05-context-action-1",
+          "providerSchemaVersion": 1,
+          "durationMs": 1761,
+          "inputTokens": 456,
+          "outputTokens": 72,
+          "errorCode": null
+        },
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "provider": "openai",
+          "model": "gpt-5.6-luna",
+          "promptVersion": "v0-05-interpretation-2",
+          "providerSchemaVersion": 1,
+          "durationMs": 2602,
+          "inputTokens": 3208,
+          "outputTokens": 73,
+          "errorCode": null
+        }
+      ],
+      "passed": true,
+      "failures": [],
+      "measures": [
+        {
+          "measure": "action",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "ask-content",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "authoritative-criterion-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "brief-projection",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "concept-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion-history",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "forbidden-meaning",
+          "passed": true,
+          "failures": []
+        }
+      ]
+    },
+    {
+      "case": "exact-model-lookup",
+      "run": 3,
+      "action": "search",
+      "brief": [],
+      "attempts": [
+        {
+          "stage": "context_action",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "provider": "openai",
+          "model": "gpt-5.6-luna",
+          "promptVersion": "v0-05-context-action-1",
+          "providerSchemaVersion": 1,
+          "durationMs": 2426,
+          "inputTokens": 453,
+          "outputTokens": 72,
+          "errorCode": null
+        },
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "provider": "openai",
+          "model": "gpt-5.6-luna",
+          "promptVersion": "v0-05-interpretation-2",
+          "providerSchemaVersion": 1,
+          "durationMs": 2085,
+          "inputTokens": 3205,
+          "outputTokens": 59,
+          "errorCode": null
+        }
+      ],
+      "passed": true,
+      "failures": [],
+      "measures": [
+        {
+          "measure": "action",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "ask-content",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "authoritative-criterion-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "brief-projection",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "concept-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion-history",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "forbidden-meaning",
+          "passed": true,
+          "failures": []
+        }
+      ]
+    },
+    {
+      "case": "explicit-change-to-indifference",
+      "run": 1,
+      "action": "search",
+      "brief": [],
+      "attempts": [
+        {
+          "stage": "context_action",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "provider": "openai",
+          "model": "gpt-5.6-luna",
+          "promptVersion": "v0-05-context-action-1",
+          "providerSchemaVersion": 1,
+          "durationMs": 1579,
+          "inputTokens": 584,
+          "outputTokens": 58,
+          "errorCode": null
+        },
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "provider": "openai",
+          "model": "gpt-5.6-luna",
+          "promptVersion": "v0-05-interpretation-2",
+          "providerSchemaVersion": 1,
+          "durationMs": 3121,
+          "inputTokens": 3354,
+          "outputTokens": 140,
+          "errorCode": null
+        }
+      ],
+      "passed": true,
+      "failures": [],
+      "measures": [
+        {
+          "measure": "action",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "ask-content",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "authoritative-criterion-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "brief-projection",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "concept-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion-history",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:width-indifference:brief-visibility",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:width-indifference:concept",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:width-indifference:lifecycle",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:width-indifference:semantic-value",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:width-indifference:strength",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:width-indifference:target-semantics",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "forbidden-meaning",
+          "passed": true,
+          "failures": []
+        }
+      ]
+    },
+    {
+      "case": "explicit-change-to-indifference",
+      "run": 2,
+      "passed": false,
+      "failures": [
+        "[execution] context_action:structured_output_validation_failed",
+        "[action] action none not in ask|search"
+      ],
+      "measures": [
+        {
+          "measure": "execution",
+          "passed": false,
+          "failures": ["context_action:structured_output_validation_failed"]
+        },
+        {
+          "measure": "action",
+          "passed": false,
+          "failures": ["action none not in ask|search"]
+        },
+        {
+          "measure": "ask-content",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "authoritative-criterion-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "brief-projection",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "concept-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion-history",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:width-indifference:brief-visibility",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:width-indifference:concept",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:width-indifference:lifecycle",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:width-indifference:semantic-value",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:width-indifference:strength",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:width-indifference:target-semantics",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "forbidden-meaning",
+          "passed": true,
+          "failures": []
+        }
+      ],
+      "brief": [],
+      "attempts": [
+        {
+          "stage": "context_action",
+          "attemptOrdinal": 1,
+          "status": "malformed",
+          "provider": "openai",
+          "model": "gpt-5.6-luna",
+          "promptVersion": "v0-05-context-action-1",
+          "providerSchemaVersion": 1,
+          "durationMs": 3829,
+          "inputTokens": 585,
+          "outputTokens": 187,
+          "errorCode": "structured_output_validation_failed"
+        },
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "provider": "openai",
+          "model": "gpt-5.6-luna",
+          "promptVersion": "v0-05-interpretation-2",
+          "providerSchemaVersion": 1,
+          "durationMs": 2547,
+          "inputTokens": 3352,
+          "outputTokens": 137,
+          "errorCode": null
+        }
+      ]
+    },
+    {
+      "case": "explicit-change-to-indifference",
+      "run": 3,
+      "action": "search",
+      "brief": [],
+      "attempts": [
+        {
+          "stage": "context_action",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "provider": "openai",
+          "model": "gpt-5.6-luna",
+          "promptVersion": "v0-05-context-action-1",
+          "providerSchemaVersion": 1,
+          "durationMs": 1516,
+          "inputTokens": 588,
+          "outputTokens": 53,
+          "errorCode": null
+        },
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "provider": "openai",
+          "model": "gpt-5.6-luna",
+          "promptVersion": "v0-05-interpretation-2",
+          "providerSchemaVersion": 1,
+          "durationMs": 3328,
+          "inputTokens": 3355,
+          "outputTokens": 127,
+          "errorCode": null
+        }
+      ],
+      "passed": true,
+      "failures": [],
+      "measures": [
+        {
+          "measure": "action",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "ask-content",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "authoritative-criterion-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "brief-projection",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "concept-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion-history",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:width-indifference:brief-visibility",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:width-indifference:concept",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:width-indifference:lifecycle",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:width-indifference:semantic-value",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:width-indifference:strength",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:width-indifference:target-semantics",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "forbidden-meaning",
+          "passed": true,
+          "failures": []
+        }
+      ]
+    },
+    {
+      "case": "underspecified-size",
+      "run": 1,
+      "passed": false,
+      "failures": [
+        "[execution] context_action:structured_output_validation_failed",
+        "[action] action none not in ask",
+        "[authoritative-criterion-set] unexpected authoritative criteria: Size: Overall product size or bulk",
+        "[brief-projection] brief criterion set does not equal the labelled visible authoritative set",
+        "[concept-set] unexpected task-local concept: Size: Overall product size or bulk",
+        "[criterion-history] unexpected historical criteria: b0f244bb-cd9b-4908-bbc1-ede443781ab6"
+      ],
+      "measures": [
+        {
+          "measure": "execution",
+          "passed": false,
+          "failures": ["context_action:structured_output_validation_failed"]
+        },
+        {
+          "measure": "action",
+          "passed": false,
+          "failures": ["action none not in ask"]
+        },
+        {
+          "measure": "ask-content",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "authoritative-criterion-set",
+          "passed": false,
+          "failures": [
+            "unexpected authoritative criteria: Size: Overall product size or bulk"
+          ]
+        },
+        {
+          "measure": "brief-projection",
+          "passed": false,
+          "failures": [
+            "brief criterion set does not equal the labelled visible authoritative set"
+          ]
+        },
+        {
+          "measure": "concept-set",
+          "passed": false,
+          "failures": [
+            "unexpected task-local concept: Size: Overall product size or bulk"
+          ]
+        },
+        {
+          "measure": "criterion-history",
+          "passed": false,
+          "failures": [
+            "unexpected historical criteria: b0f244bb-cd9b-4908-bbc1-ede443781ab6"
+          ]
+        },
+        {
+          "measure": "forbidden-meaning",
+          "passed": true,
+          "failures": []
+        }
+      ],
+      "brief": [
+        {
+          "conceptLabel": "Size",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "not too big"
+          }
+        }
+      ],
+      "attempts": [
+        {
+          "stage": "context_action",
+          "attemptOrdinal": 1,
+          "status": "malformed",
+          "provider": "openai",
+          "model": "gpt-5.6-luna",
+          "promptVersion": "v0-05-context-action-1",
+          "providerSchemaVersion": 1,
+          "durationMs": 2375,
+          "inputTokens": 728,
+          "outputTokens": 166,
+          "errorCode": "structured_output_validation_failed"
+        },
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "provider": "openai",
+          "model": "gpt-5.6-luna",
+          "promptVersion": "v0-05-interpretation-2",
+          "providerSchemaVersion": 1,
+          "durationMs": 3070,
+          "inputTokens": 3205,
+          "outputTokens": 181,
+          "errorCode": null
+        }
+      ]
+    },
+    {
+      "case": "underspecified-size",
+      "run": 2,
+      "passed": false,
+      "failures": [
+        "[execution] context_action:structured_output_validation_failed",
+        "[action] action none not in ask"
+      ],
+      "measures": [
+        {
+          "measure": "execution",
+          "passed": false,
+          "failures": ["context_action:structured_output_validation_failed"]
+        },
+        {
+          "measure": "action",
+          "passed": false,
+          "failures": ["action none not in ask"]
+        },
+        {
+          "measure": "ask-content",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "authoritative-criterion-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "brief-projection",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "concept-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion-history",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "forbidden-meaning",
+          "passed": true,
+          "failures": []
+        }
+      ],
+      "brief": [],
+      "attempts": [
+        {
+          "stage": "context_action",
+          "attemptOrdinal": 1,
+          "status": "malformed",
+          "provider": "openai",
+          "model": "gpt-5.6-luna",
+          "promptVersion": "v0-05-context-action-1",
+          "providerSchemaVersion": 1,
+          "durationMs": 2877,
+          "inputTokens": 457,
+          "outputTokens": 230,
+          "errorCode": "structured_output_validation_failed"
+        },
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "provider": "openai",
+          "model": "gpt-5.6-luna",
+          "promptVersion": "v0-05-interpretation-2",
+          "providerSchemaVersion": 1,
+          "durationMs": 3031,
+          "inputTokens": 3209,
+          "outputTokens": 151,
+          "errorCode": null
+        }
+      ]
+    },
+    {
+      "case": "underspecified-size",
+      "run": 3,
+      "passed": false,
+      "failures": [
+        "[execution] context_action:structured_output_validation_failed",
+        "[action] action none not in ask",
+        "[authoritative-criterion-set] unexpected authoritative criteria: Overall size: How large the product is overall.",
+        "[brief-projection] brief criterion set does not equal the labelled visible authoritative set",
+        "[concept-set] unexpected task-local concept: Overall size: How large the product is overall.",
+        "[criterion-history] unexpected historical criteria: 076d2cab-df35-4ecd-8fb9-00b007e74b32"
+      ],
+      "measures": [
+        {
+          "measure": "execution",
+          "passed": false,
+          "failures": ["context_action:structured_output_validation_failed"]
+        },
+        {
+          "measure": "action",
+          "passed": false,
+          "failures": ["action none not in ask"]
+        },
+        {
+          "measure": "ask-content",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "authoritative-criterion-set",
+          "passed": false,
+          "failures": [
+            "unexpected authoritative criteria: Overall size: How large the product is overall."
+          ]
+        },
+        {
+          "measure": "brief-projection",
+          "passed": false,
+          "failures": [
+            "brief criterion set does not equal the labelled visible authoritative set"
+          ]
+        },
+        {
+          "measure": "concept-set",
+          "passed": false,
+          "failures": [
+            "unexpected task-local concept: Overall size: How large the product is overall."
+          ]
+        },
+        {
+          "measure": "criterion-history",
+          "passed": false,
+          "failures": [
+            "unexpected historical criteria: 076d2cab-df35-4ecd-8fb9-00b007e74b32"
+          ]
+        },
+        {
+          "measure": "forbidden-meaning",
+          "passed": true,
+          "failures": []
+        }
+      ],
+      "brief": [
+        {
+          "conceptLabel": "Overall size",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "not too big"
+          }
+        }
+      ],
+      "attempts": [
+        {
+          "stage": "context_action",
+          "attemptOrdinal": 1,
+          "status": "malformed",
+          "provider": "openai",
+          "model": "gpt-5.6-luna",
+          "promptVersion": "v0-05-context-action-1",
+          "providerSchemaVersion": 1,
+          "durationMs": 3799,
+          "inputTokens": 726,
+          "outputTokens": 156,
+          "errorCode": "structured_output_validation_failed"
+        },
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "provider": "openai",
+          "model": "gpt-5.6-luna",
+          "promptVersion": "v0-05-interpretation-2",
+          "providerSchemaVersion": 1,
+          "durationMs": 5197,
+          "inputTokens": 3209,
+          "outputTokens": 325,
+          "errorCode": null
+        }
+      ]
+    },
+    {
+      "case": "quoted-prompt-injection",
+      "run": 1,
+      "action": "search",
+      "brief": [
+        {
+          "conceptLabel": "Colour",
+          "strength": "hard",
+          "targetSemantics": "categorical",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "categorical",
+            "operator": "include",
+            "values": ["red"]
+          }
+        }
+      ],
+      "attempts": [
+        {
+          "stage": "context_action",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "provider": "openai",
+          "model": "gpt-5.6-luna",
+          "promptVersion": "v0-05-context-action-1",
+          "providerSchemaVersion": 1,
+          "durationMs": 1986,
+          "inputTokens": 742,
+          "outputTokens": 67,
+          "errorCode": null
+        },
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "provider": "openai",
+          "model": "gpt-5.6-luna",
+          "promptVersion": "v0-05-interpretation-2",
+          "providerSchemaVersion": 1,
+          "durationMs": 4039,
+          "inputTokens": 3225,
+          "outputTokens": 224,
+          "errorCode": null
+        }
+      ],
+      "passed": true,
+      "failures": [],
+      "measures": [
+        {
+          "measure": "action",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "ask-content",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "authoritative-criterion-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "brief-projection",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "concept-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion-history",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:red-colour:brief-visibility",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:red-colour:concept",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:red-colour:semantic-value",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:red-colour:strength",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:red-colour:target-semantics",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "forbidden-meaning",
+          "passed": true,
+          "failures": []
+        }
+      ]
+    },
+    {
+      "case": "quoted-prompt-injection",
+      "run": 2,
+      "action": "search",
+      "brief": [
+        {
+          "conceptLabel": "Colour",
+          "strength": "hard",
+          "targetSemantics": "categorical",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "categorical",
+            "operator": "include",
+            "values": ["red"]
+          }
+        }
+      ],
+      "attempts": [
+        {
+          "stage": "context_action",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "provider": "openai",
+          "model": "gpt-5.6-luna",
+          "promptVersion": "v0-05-context-action-1",
+          "providerSchemaVersion": 1,
+          "durationMs": 1520,
+          "inputTokens": 749,
+          "outputTokens": 59,
+          "errorCode": null
+        },
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "provider": "openai",
+          "model": "gpt-5.6-luna",
+          "promptVersion": "v0-05-interpretation-2",
+          "providerSchemaVersion": 1,
+          "durationMs": 3846,
+          "inputTokens": 3234,
+          "outputTokens": 242,
+          "errorCode": null
+        }
+      ],
+      "passed": true,
+      "failures": [],
+      "measures": [
+        {
+          "measure": "action",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "ask-content",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "authoritative-criterion-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "brief-projection",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "concept-set",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion-history",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:red-colour:brief-visibility",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:red-colour:concept",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:red-colour:semantic-value",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:red-colour:strength",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:red-colour:target-semantics",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "forbidden-meaning",
+          "passed": true,
+          "failures": []
+        }
+      ]
+    },
+    {
+      "case": "quoted-prompt-injection",
+      "run": 3,
+      "action": "search",
+      "brief": [
+        {
+          "conceptLabel": "Colour",
+          "strength": "hard",
+          "targetSemantics": "categorical",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "categorical",
+            "operator": "include",
+            "values": ["red"]
+          }
+        },
+        {
+          "conceptLabel": "Product type",
+          "strength": "hard",
+          "targetSemantics": "categorical",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "categorical",
+            "operator": "include",
+            "values": ["mug"]
+          }
+        }
+      ],
+      "attempts": [
+        {
+          "stage": "context_action",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "provider": "openai",
+          "model": "gpt-5.6-luna",
+          "promptVersion": "v0-05-context-action-1",
+          "providerSchemaVersion": 1,
+          "durationMs": 2065,
+          "inputTokens": 1027,
+          "outputTokens": 61,
+          "errorCode": null
+        },
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "provider": "openai",
+          "model": "gpt-5.6-luna",
+          "promptVersion": "v0-05-interpretation-2",
+          "providerSchemaVersion": 1,
+          "durationMs": 6089,
+          "inputTokens": 3229,
+          "outputTokens": 390,
+          "errorCode": null
+        }
+      ],
+      "passed": false,
+      "failures": [
+        "[authoritative-criterion-set] unexpected authoritative criteria: Product type: The type of product requested.",
+        "[brief-projection] brief criterion set does not equal the labelled visible authoritative set",
+        "[concept-set] unexpected task-local concept: Product type: The type of product requested.",
+        "[criterion-history] unexpected historical criteria: 9d39c0f0-b56a-4f2a-9d33-eb0cc6fa155d"
+      ],
+      "measures": [
+        {
+          "measure": "action",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "ask-content",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "authoritative-criterion-set",
+          "passed": false,
+          "failures": [
+            "unexpected authoritative criteria: Product type: The type of product requested."
+          ]
+        },
+        {
+          "measure": "brief-projection",
+          "passed": false,
+          "failures": [
+            "brief criterion set does not equal the labelled visible authoritative set"
+          ]
+        },
+        {
+          "measure": "concept-set",
+          "passed": false,
+          "failures": [
+            "unexpected task-local concept: Product type: The type of product requested."
+          ]
+        },
+        {
+          "measure": "criterion-history",
+          "passed": false,
+          "failures": [
+            "unexpected historical criteria: 9d39c0f0-b56a-4f2a-9d33-eb0cc6fa155d"
+          ]
+        },
+        {
+          "measure": "criterion:red-colour:brief-visibility",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:red-colour:concept",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:red-colour:semantic-value",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:red-colour:strength",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "criterion:red-colour:target-semantics",
+          "passed": true,
+          "failures": []
+        },
+        {
+          "measure": "forbidden-meaning",
+          "passed": true,
+          "failures": []
+        }
+      ]
+    }
+  ]
+}

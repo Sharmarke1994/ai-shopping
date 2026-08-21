@@ -44,6 +44,10 @@ import {
 } from "./persistence/context-actions";
 import { resolveStoredShoppingInput } from "./persistence/resolved-input";
 import { validateContextActionCapabilities } from "./contracts";
+import {
+  CONTEXT_ACTION_PROMPT_VERSION,
+  INTERPRETATION_PROMPT_VERSION,
+} from "./prompts";
 
 export type ContextAcquisitionResult =
   | Readonly<{
@@ -168,7 +172,7 @@ async function interpretAndApply(options: {
         snapshotRevision: state.task.currentRevision,
         status: "input_too_large",
         errorCode: error.code,
-        metadata: localFailureMetadata("v0-05-interpretation-1", 1),
+        metadata: localFailureMetadata(INTERPRETATION_PROMPT_VERSION, 1),
       });
       return {
         status: "failed",
@@ -343,7 +347,7 @@ async function selectAndPersistAction(options: {
         snapshotRevision: state.task.currentRevision,
         status: "input_too_large",
         errorCode: error.code,
-        metadata: localFailureMetadata("v0-05-context-action-1", 1),
+        metadata: localFailureMetadata(CONTEXT_ACTION_PROMPT_VERSION, 1),
       });
       return {
         status: "failed",

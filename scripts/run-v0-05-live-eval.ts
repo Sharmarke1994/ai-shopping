@@ -17,6 +17,7 @@ import {
   createOpenAIContextAcquisitionModel,
   V0_05_OPENAI_DEFAULT_CONFIG,
 } from "../src/features/context-acquisition/openai-adapter";
+import { withMinimumCompletedCallInterval } from "../src/features/context-acquisition/evals/live-pacing";
 import {
   CONTEXT_ACTION_PROMPT_VERSION,
   INTERPRETATION_PROMPT_VERSION,
@@ -32,13 +33,17 @@ import { migrateDatabase } from "../src/infrastructure/database/migrate";
 import { contextAcquisitionAttempts } from "../src/infrastructure/database/schema";
 
 const RUNS_PER_CASE = 3;
+const MINIMUM_MODEL_CALL_INTERVAL_MS = 35_000;
 const disposableDatabasePattern = /^ai_shopping_test_[a-f0-9]{32}$/;
 const disposable = await createDisposableEvalDatabase();
 const connection = disposable.connection;
 const results: V005LiveEvalRunResult[] = [];
 
 try {
-  const model = createOpenAIContextAcquisitionModel();
+  const model = withMinimumCompletedCallInterval(
+    createOpenAIContextAcquisitionModel(),
+    MINIMUM_MODEL_CALL_INTERVAL_MS,
+  );
   for (const testCase of V0_05_GOLDEN_CASES) {
     for (let run = 1; run <= RUNS_PER_CASE; run += 1) {
       const task = await createShoppingTask(connection.db);
@@ -125,6 +130,7 @@ const report = createV005LiveEvalReport({
     reasoningEffort: V0_05_OPENAI_DEFAULT_CONFIG.reasoningEffort,
     timeoutMs: V0_05_OPENAI_DEFAULT_CONFIG.timeoutMs,
     maxOutputTokens: V0_05_OPENAI_DEFAULT_CONFIG.maxOutputTokens,
+    minimumModelCallIntervalMs: MINIMUM_MODEL_CALL_INTERVAL_MS,
     interpretationPromptVersion: INTERPRETATION_PROMPT_VERSION,
     contextActionPromptVersion: CONTEXT_ACTION_PROMPT_VERSION,
     providerSchemaVersion: 1,

@@ -1,4 +1,8 @@
-import OpenAI, { APIConnectionError } from "openai";
+import OpenAI, {
+  APIConnectionError,
+  APIConnectionTimeoutError,
+  APIUserAbortError,
+} from "openai";
 import { zodTextFormat } from "openai/helpers/zod";
 import type { Response } from "openai/resources/responses/responses";
 import type { ZodType } from "zod";
@@ -152,20 +156,23 @@ async function callStructuredOutput<T>(options: {
         fallbackMetadata: emptyMetadata(),
       });
     } catch (error) {
-      const timedOut =
-        error instanceof Error &&
-        (error.name === "AbortError" || error.name === "TimeoutError");
+      const timedOut = isProviderTimeout(error);
+      const retryDelayMs = providerRetryDelayMs(error);
       if (
         transportAttempt === 1 &&
         !timedOut &&
         isRetryableProviderError(error) &&
-        performance.now() < deadline
+        retryDelayMs !== null &&
+        retryDelayMs < deadline - performance.now()
       ) {
+        if (retryDelayMs > 0) await wait(retryDelayMs);
         continue;
       }
       return {
         status: timedOut ? "timed_out" : "provider_failed",
-        errorCode: timedOut ? "provider_timeout" : "provider_request_failed",
+        errorCode: timedOut
+          ? "provider_timeout"
+          : sanitizedProviderErrorCode(error),
         metadata: emptyMetadata(),
       };
     }
@@ -181,12 +188,77 @@ export function isRetryableProviderError(error: unknown) {
   if (typeof error !== "object" || error === null) return false;
   if (error instanceof APIConnectionError) return true;
   const status = "status" in error ? error.status : undefined;
+  const code = "code" in error ? error.code : undefined;
+  if (status === 429 && code === "insufficient_quota") return false;
   return (
     status === 408 ||
     status === 409 ||
     status === 429 ||
     (typeof status === "number" && status >= 500 && status <= 599)
   );
+}
+
+function isProviderTimeout(error: unknown) {
+  return (
+    error instanceof APIUserAbortError ||
+    error instanceof APIConnectionTimeoutError ||
+    (error instanceof Error &&
+      (error.name === "AbortError" || error.name === "TimeoutError"))
+  );
+}
+
+function sanitizedProviderErrorCode(error: unknown) {
+  if (error instanceof APIConnectionError) return "provider_connection_failed";
+  if (typeof error !== "object" || error === null)
+    return "provider_request_failed";
+  const status = "status" in error ? error.status : undefined;
+  const code = "code" in error ? error.code : undefined;
+  if (status === 429 && code === "insufficient_quota")
+    return "provider_quota_exhausted";
+  if (status === 429) return "provider_rate_limited";
+  if (status === 401) return "provider_authentication_failed";
+  if (status === 403) return "provider_permission_denied";
+  if (status === 400 || status === 404 || status === 422)
+    return "provider_request_rejected";
+  if (typeof status === "number" && status >= 500 && status <= 599)
+    return "provider_unavailable";
+  return "provider_request_failed";
+}
+
+function providerRetryDelayMs(error: unknown) {
+  if (!isRetryableProviderError(error)) return null;
+  if (error instanceof APIConnectionError) return 0;
+  if (typeof error !== "object" || error === null) return 0;
+  const headers =
+    "headers" in error &&
+    typeof error.headers === "object" &&
+    error.headers !== null &&
+    "get" in error.headers &&
+    typeof error.headers.get === "function"
+      ? (error.headers as Readonly<{
+          get(name: string): string | null | undefined;
+        }>)
+      : null;
+  const retryAfterMs = headers?.get("retry-after-ms");
+  if (retryAfterMs !== null && retryAfterMs !== undefined) {
+    const milliseconds = Number(retryAfterMs);
+    if (Number.isFinite(milliseconds) && milliseconds >= 0)
+      return Math.ceil(milliseconds);
+  }
+  const retryAfter = headers?.get("retry-after");
+  if (retryAfter !== null && retryAfter !== undefined) {
+    const seconds = Number(retryAfter);
+    if (Number.isFinite(seconds) && seconds >= 0)
+      return Math.ceil(seconds * 1_000);
+    const timestamp = Date.parse(retryAfter);
+    if (Number.isFinite(timestamp)) return Math.max(0, timestamp - Date.now());
+  }
+  const status = "status" in error ? error.status : undefined;
+  return status === 429 ? 1_000 : 0;
+}
+
+function wait(milliseconds: number) {
+  return new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
 }
 
 export function parseOpenAIResponse<T>(options: {

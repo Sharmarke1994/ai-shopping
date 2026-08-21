@@ -14,8 +14,16 @@ type EvaluatedContextAction =
     }>
   | Readonly<{ action: "search" | "show_refine" }>;
 type ExpectedBound = Readonly<{ amount: string; inclusive: boolean }>;
+type ExpectedQualitativeOrdinal = Readonly<{
+  relations: readonly ("more" | "less" | "at_least" | "at_most")[];
+  anchorMeaning: readonly string[];
+}>;
 type ExpectedSemanticValue =
-  | Readonly<{ kind: "qualitative"; meaning: readonly string[] }>
+  | Readonly<{
+      kind: "qualitative";
+      textMeaning: readonly string[];
+      ordinalAlternatives: readonly ExpectedQualitativeOrdinal[];
+    }>
   | Readonly<{
       kind: "measurement_range";
       lower: ExpectedBound | null;
@@ -45,7 +53,7 @@ type GoldenCriterionExpectation = Readonly<{
     "range" | "stretch" | "categorical" | "qualitative" | "indifferent";
   semanticValue: ExpectedSemanticValue;
   visibleInBrief: boolean;
-  lifecycle?: "supersedes_seed";
+  lifecycle?: "replaces_seed_with_indifference";
 }>;
 
 export type V005GoldenCase = Readonly<{
@@ -82,7 +90,17 @@ export const V0_05_GOLDEN_CASES: readonly V005GoldenCase[] = [
         targetSemantics: "qualitative",
         semanticValue: {
           kind: "qualitative",
-          meaning: ["lightweight", "light weight", "low weight", "light"],
+          textMeaning: ["lightweight", "light weight", "low weight", "light"],
+          ordinalAlternatives: [
+            {
+              relations: ["more", "at_least"],
+              anchorMeaning: ["lightweight", "lightness", "light weight"],
+            },
+            {
+              relations: ["less", "at_most"],
+              anchorMeaning: ["weight", "mass"],
+            },
+          ],
         },
         visibleInBrief: true,
       },
@@ -99,7 +117,23 @@ export const V0_05_GOLDEN_CASES: readonly V005GoldenCase[] = [
         targetSemantics: "qualitative",
         semanticValue: {
           kind: "qualitative",
-          meaning: ["breathable", "breathability", "airflow", "ventilation"],
+          textMeaning: [
+            "breathable",
+            "breathability",
+            "airflow",
+            "ventilation",
+          ],
+          ordinalAlternatives: [
+            {
+              relations: ["more", "at_least"],
+              anchorMeaning: [
+                "breathable",
+                "breathability",
+                "airflow",
+                "ventilation",
+              ],
+            },
+          ],
         },
         visibleInBrief: true,
       },
@@ -150,12 +184,30 @@ export const V0_05_GOLDEN_CASES: readonly V005GoldenCase[] = [
         targetSemantics: "qualitative",
         semanticValue: {
           kind: "qualitative",
-          meaning: [
+          textMeaning: [
             "visually light",
             "visual lightness",
             "low visual weight",
             "airy appearance",
             "low visual bulk",
+          ],
+          ordinalAlternatives: [
+            {
+              relations: ["more", "at_least"],
+              anchorMeaning: [
+                "visually light",
+                "visual lightness",
+                "airy appearance",
+              ],
+            },
+            {
+              relations: ["less", "at_most"],
+              anchorMeaning: [
+                "visual weight",
+                "visual bulk",
+                "appearance bulk",
+              ],
+            },
           ],
         },
         visibleInBrief: true,
@@ -205,7 +257,13 @@ export const V0_05_GOLDEN_CASES: readonly V005GoldenCase[] = [
         targetSemantics: "qualitative",
         semanticValue: {
           kind: "qualitative",
-          meaning: ["comfort", "comfortable"],
+          textMeaning: ["comfort", "comfortable"],
+          ordinalAlternatives: [
+            {
+              relations: ["more", "at_least"],
+              anchorMeaning: ["comfort", "comfortable"],
+            },
+          ],
         },
         visibleInBrief: true,
       },
@@ -223,12 +281,24 @@ export const V0_05_GOLDEN_CASES: readonly V005GoldenCase[] = [
         targetSemantics: "qualitative",
         semanticValue: {
           kind: "qualitative",
-          meaning: [
+          textMeaning: [
             "noise cancellation",
             "noise cancelling",
             "noise canceling",
             "active noise reduction",
             "anc",
+          ],
+          ordinalAlternatives: [
+            {
+              relations: ["more", "at_least"],
+              anchorMeaning: [
+                "noise cancellation",
+                "noise cancelling",
+                "noise canceling",
+                "active noise reduction",
+                "anc",
+              ],
+            },
           ],
         },
         visibleInBrief: true,
@@ -295,7 +365,7 @@ export const V0_05_GOLDEN_CASES: readonly V005GoldenCase[] = [
         targetSemantics: "indifferent",
         semanticValue: { kind: "indifferent" },
         visibleInBrief: false,
-        lifecycle: "supersedes_seed",
+        lifecycle: "replaces_seed_with_indifference",
       },
     ],
     forbiddenConceptTerms: [],
@@ -680,7 +750,7 @@ export function evaluateGoldenCase(options: {
   }
 
   for (const expected of options.testCase.expectedCriteria) {
-    if (expected.lifecycle !== "supersedes_seed") continue;
+    if (expected.lifecycle !== "replaces_seed_with_indifference") continue;
     const lifecycleMeasure = `criterion:${expected.key}:lifecycle`;
     passMeasure(lifecycleMeasure);
     const current = matched.get(expected.key)?.criterion;
@@ -697,14 +767,14 @@ export function evaluateGoldenCase(options: {
     }
     if (
       current.id === predecessor.id ||
-      current.lineageId !== predecessor.lineageId ||
-      persistedPredecessor.lifecycle !== "superseded" ||
-      persistedPredecessor.supersededById !== current.id ||
+      current.lineageId === predecessor.lineageId ||
+      persistedPredecessor.lifecycle !== "removed" ||
+      persistedPredecessor.supersededById !== null ||
       persistedPredecessor.endedRevision !== current.createdRevision
     )
       fail(
         lifecycleMeasure,
-        "seeded criterion was not replaced through one coherent supersession lineage",
+        "seeded explicit lineage was not removed when the new indifference lineage became active",
       );
   }
 
@@ -883,17 +953,24 @@ function compareSemanticValue(
   switch (expected.kind) {
     case "qualitative":
       if (actual.kind !== "qualitative") return [];
-      return [
-        ...(actual.mode === "text"
-          ? []
-          : [`expected qualitative text mode, received ${actual.mode}`]),
-        ...(actual.text !== undefined &&
-        matchesAnyPositiveMeaning(actual.text, expected.meaning)
+      if (actual.mode === "text")
+        return actual.text !== undefined &&
+          matchesAnyPositiveMeaning(actual.text, expected.textMeaning)
           ? []
           : [
-              `qualitative value does not preserve ${expected.meaning.join("|")}`,
-            ]),
-      ];
+              `qualitative text does not preserve ${expected.textMeaning.join("|")}`,
+            ];
+      if (actual.relation === undefined || actual.anchor === undefined)
+        return ["qualitative ordinal is missing relation or anchor"];
+      return expected.ordinalAlternatives.some(
+        (alternative) =>
+          alternative.relations.includes(actual.relation!) &&
+          matchesAnyPositiveMeaning(actual.anchor!, alternative.anchorMeaning),
+      )
+        ? []
+        : [
+            `qualitative ordinal ${actual.relation}:${actual.anchor} does not preserve an allowed direction`,
+          ];
     case "measurement_range":
       if (actual.kind !== "measurement_range") return [];
       return [

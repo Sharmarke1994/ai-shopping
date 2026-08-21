@@ -145,6 +145,12 @@ not average an invented criterion away.
 - Quoted prompt injection: treat quoted listing text as data and preserve only
   the shopper's explicit red-colour request.
 
+Qualitative truth may use text or a directionally equivalent ordinal. An
+ordinal passes only when both its relation and anchor preserve the labelled
+meaning—for example, less weight or more lightness, never more weight. This is
+the two-variant wire contract already accepted in V0-05, not a relaxation of
+criterion meaning.
+
 The live report records case/run denominators, action, authoritative brief,
 latency/usage diagnostics in persistence, and failures separately. A live pass
 is release evidence, not permission to weaken the deterministic state engine.
@@ -156,9 +162,10 @@ strength, target semantics, semantic-value kind, and relevant value details
 (including categorical direction, measurement bounds/units, and conditional
 money target/stretch). It also compares the structured brief with the
 authoritative current state. The width change case additionally inspects the
-persisted criterion history: the seeded maximum must be superseded in the same
-lineage by active indifference, and that indifference must remain hidden from
-the brief. Removal alone is not a pass. Protected ASK cases also inspect the
+persisted criterion history: the seeded explicit lineage must be removed at the
+same revision that a new active indifference lineage is created, matching the
+frozen V0-04 concept-level indifference contract. Indifference must remain
+hidden from the brief. Protected ASK cases also inspect the
 persisted prompt, rationale, and visible options so an unrelated or
 unsupported question cannot pass merely because its action kind is `ASK`.
 Positive qualitative and stretch meanings reject locally negated wording.
@@ -172,6 +179,13 @@ command evaluates and records the actual authoritative state even when action
 selection fails after interpretation. It remains credential-gated and must not
 be run or reported as passing until the corrected gate has been independently
 reviewed.
+
+The non-CI live runner waits 35 seconds after one top-level model call finishes
+before starting the next. Measuring from completion also covers any bounded
+internal retry. This conservative pacing preserves the release
+model/configuration while keeping fresh-project request and token limits from
+masquerading as semantic failures; production request scheduling is outside
+this eval-only mechanism.
 
 ### State semantics
 

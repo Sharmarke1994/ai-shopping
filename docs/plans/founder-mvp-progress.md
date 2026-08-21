@@ -1,6 +1,6 @@
 # Founder MVP progress
 
-**Updated:** 2026-08-21 19:46 Europe/London
+**Updated:** 2026-08-21 20:38 Europe/London
 **Durable goal:** Deliver a polished founder-usable AI shopping MVP whose live
 understanding, market retrieval, evidence-aware evaluation, refinement, saving,
 and comparison are meaningfully better than beginning with Google.
@@ -12,10 +12,11 @@ and comparison are meaningfully better than beginning with Google.
 - Current branch: `codex/v0-05-implementation`
 - Current branch base: merged V0-05 planning checkpoint `6cd0ec8`.
 - Draft [PR #9](https://github.com/Sharmarke1994/ai-shopping/pull/9) is the
-  current checkpoint. Independent review of `8e6c64b` requested one bounded
-  correction pass; implementation commit `ca05f07` resolves it. Current head
-  `3407d40` is pushed, clean, independently re-reviewed, and green. The only
-  remaining release evidence is the credential-gated live gate.
+  current checkpoint. Pushed head `b448b32` is mergeable and exact-head GitHub
+  quality, persistence, and browser-smoke checks are green. A bounded
+  evidence-driven correction is currently uncommitted: provider error/retry
+  classification, conservative live-eval pacing, prompt versions, and semantic
+  evaluator accuracy. V0-06 has not started.
 - Closed checkpoint: PR #8, `V0-05: plan AI interpretation and context
   acquisition`, squash-merged after quality, persistence, and browser-smoke
   passed on corrected head `2439cfa`.
@@ -40,14 +41,24 @@ and comparison are meaningfully better than beginning with Google.
 ## Current work
 
 V0-05 implementation is feature-complete on
-`codex/v0-05-implementation`. The first independent implementation review is
-reconciled at `ca05f07`, the adversarial follow-up is reconciled, and exact-head
-GitHub CI is green at `3407d40`. The credential-gated live gate was attempted
-against an isolated local PostgreSQL 17 database on 2026-08-21. All 21 runs
-failed before inference with `provider_request_failed`; a separate sanitised
-connectivity diagnostic identified OpenAI HTTP 429 `insufficient_quota`. This
-is provider billing/quota evidence, not a semantic-model result. A funded API
-project and a fresh 21-run report remain required.
+`codex/v0-05-implementation`. The first independent implementation review and
+adversarial follow-up are reconciled, and exact-head GitHub CI is green at
+`b448b32`. The funded live gate has now produced two honest failing reports:
+
+- Terra release configuration, before pacing: 1/21 passed. Most calls were
+  contaminated by the fresh-project 3 RPM / 10k TPM / rolling request allowance,
+  so this is not a valid semantic-quality denominator.
+- Luna diagnostic configuration, paced: 10/21 passed. It exposed eight
+  structured-output validation failures, one provider failure, and repeatable
+  semantic over-interpretation. It is diagnostic evidence only, never a
+  substitute for the approved Terra release configuration.
+
+The resulting bounded correction classifies quota/rate-limit/SDK timeout
+failures accurately, honours only same-deadline `Retry-After`, waits 35 seconds
+after each completed live-eval model call, aligns qualitative ordinal and
+indifference lifecycle evaluation with accepted contracts, and tightens prompt
+contracts without weakening validation. A fresh paced 21-run Terra report is
+still required after its provider allowance recovers.
 The bounded slice now includes:
 
 - strict JSON-safe provider input and output wire boundaries;
@@ -89,10 +100,11 @@ The bounded slice now includes:
   state on success or failure and emits one coherent sanitised JSON + Markdown
   report.
 
-Next within this checkpoint: enable usable OpenAI API billing/credits for the
-project, rotate the key that was disclosed in chat, replace the Keychain value,
-and rerun the 21-call live gate against the guarded local database. Do not begin
-retrieval inside this branch.
+Next within this checkpoint: commit and push the bounded correction, obtain
+exact-head green CI, rotate the key that was disclosed in chat and replace its
+Keychain value, then rerun the paced 21-run Terra gate against the guarded local
+database after the rolling allowance recovers. Do not begin retrieval inside
+this branch.
 
 ## Next validated checkpoints
 
@@ -116,9 +128,11 @@ retrieval inside this branch.
 
 Credential presence in the current shell at this checkpoint:
 
-- `OPENAI_API_KEY`: stored in macOS Keychain service `ai-shopping-openai`, but
-  the associated project returned HTTP 429 `insufficient_quota` on 2026-08-21.
-  Enable API billing/credits and rotate the chat-disclosed key before rerunning.
+- `OPENAI_API_KEY`: stored in macOS Keychain service `ai-shopping-openai`. The
+  project is funded and successful model calls are confirmed. Terra currently
+  has fresh-project limits of 3 RPM, 10k TPM, and a rolling request allowance;
+  the unpaced run exhausted that allowance. Wait for recovery before its next
+  21-run gate. Rotate the chat-disclosed key and replace the Keychain value.
   The key value must never be written to the repository, reports, or shell
   history.
 - `DATABASE_URL`: missing — blocks local PostgreSQL integration/live task runs in
@@ -176,6 +190,25 @@ non-trivial paid commitment is required.
   interpretation call received `provider_request_failed`. A separate minimal
   Responses API diagnostic returned 429 `insufficient_quota`, so this report
   must not be treated as a model-quality result.
+- After funding, the unpaced Terra run emitted
+  `artifacts/evals/v0-05/2026-08-21T18-55-42.849Z.*`: 1/21 passed, with provider
+  rate-limit failures contaminating most runs. Direct rate-limit evidence showed
+  Terra at 3 RPM / 10k TPM and a rolling request allowance. The report is kept
+  as failure evidence, not claimed as a semantic release result.
+- The paced Luna diagnostic emitted
+  `artifacts/evals/v0-05/2026-08-21T19-34-21.982Z.*`: 10/21 passed. All cap,
+  exact-lookup, and quoted-injection runs except one over-broad product-type
+  interpretation passed; explicit indifference passed 2/3. Eight attempts were
+  strict structured-output validation failures, one was a provider failure, and
+  the remainder exposed duplicate conditional-budget truth, unresolved-size
+  over-interpretation, and non-specific qualitative text. Prompt versions 3/2
+  address these observed contract failures without loosening the schemas.
+- Current uncommitted correction verification: formatting, lint, typecheck,
+  119/119 unit/component tests, production build, 6/6 Playwright tests, no
+  migration drift, no production dependency vulnerabilities, and
+  `git diff --check` all pass. Local PostgreSQL functional cases pass; the sole
+  local suite mismatch is the intentional exact PostgreSQL 17.6 CI pin versus
+  Homebrew PostgreSQL 17.11.
 - Local shell currently runs Node 24.19.0 and emits the expected engine warning;
   the repository contract and CI pin Node 22.18.0.
 - Working tree was clean when the implementation branch was created from merged
@@ -198,12 +231,17 @@ as follows:
 6. Continue the first incomplete item under **Current work**. Do not restart
    accepted planning, redo completed checkpoints, or begin a later layer while
    the current checkpoint has a known material failure.
-7. V0-05 draft PR #9 is green and independently re-reviewed at current head
-   `3407d40`. Do not merge or begin retrieval/V0-06 until a funded API project
-   produces a genuine 21/21 live report and that evidence is reviewed.
+7. V0-05 draft PR #9 is green at pushed head `b448b32`, with a bounded
+   live-evidence correction pending locally. Finish, commit, push, and obtain
+   exact-head CI. Do not merge or begin retrieval/V0-06 until the approved Terra
+   configuration produces a genuine paced 21/21 live report and that evidence
+   is reviewed.
 8. Do not claim the live gate passed without an artifact under
    `artifacts/evals/v0-05/` showing 21/21 protected runs. Missing credentials are
    a documented external blocker, not permission to substitute fake evidence.
+   The Luna 10/21 report is diagnostic only. Before rerunning Terra, allow its
+   rolling request allowance to recover; the runner itself now paces from each
+   completed top-level call.
 9. Update this file whenever a checkpoint is committed, merged, blocked, or
    materially re-scoped. Include exact commit/PR/check state and credential
    requirements.

@@ -283,6 +283,49 @@ describe("V0-05 human-labelled golden evaluator", () => {
     );
   });
 
+  it("accepts only directionally equivalent qualitative ordinals", () => {
+    const valid = validCapState();
+    valid.activeCriteria[0]!.criterion.semanticValue = {
+      schemaVersion: 1,
+      kind: "qualitative",
+      mode: "ordinal",
+      relation: "less",
+      anchor: "weight",
+    };
+    valid.activeCriteria[1]!.criterion.semanticValue = {
+      schemaVersion: 1,
+      kind: "qualitative",
+      mode: "ordinal",
+      relation: "more",
+      anchor: "airflow",
+    };
+    expect(
+      evaluate({
+        caseName: "light-breathable-cap",
+        current: valid,
+        action: "search",
+      }).failures,
+    ).toEqual([]);
+
+    const reversed = validCapState();
+    reversed.activeCriteria[0]!.criterion.semanticValue = {
+      schemaVersion: 1,
+      kind: "qualitative",
+      mode: "ordinal",
+      relation: "more",
+      anchor: "weight",
+    };
+    expect(
+      evaluate({
+        caseName: "light-breathable-cap",
+        current: reversed,
+        action: "search",
+      }).failures,
+    ).toContain(
+      "[criterion:lightweight:semantic-value] qualitative ordinal more:weight does not preserve an allowed direction",
+    );
+  });
+
   it("rejects negated qualitative meaning and a negated stretch condition", () => {
     const cap = validCapState();
     const weight = cap.activeCriteria[0]!.criterion;
@@ -300,7 +343,7 @@ describe("V0-05 human-labelled golden evaluator", () => {
       }).failures,
     ).toEqual(
       expect.arrayContaining([
-        expect.stringContaining("qualitative value does not preserve"),
+        expect.stringContaining("qualitative text does not preserve"),
       ]),
     );
 
@@ -469,7 +512,7 @@ describe("V0-05 human-labelled golden evaluator", () => {
     );
   });
 
-  it("requires a persisted supersession into authoritative hidden indifference", () => {
+  it("requires explicit lineages to be removed when hidden indifference takes over", () => {
     const width = concept({
       index: 20,
       label: "Overall width",
@@ -493,13 +536,13 @@ describe("V0-05 human-labelled golden evaluator", () => {
         unit: "cm",
       },
       createdRevision: 1n,
-      lifecycle: "superseded",
+      lifecycle: "removed",
       endedRevision: 2n,
-      supersededById: successorId,
+      supersededById: null,
     });
     const successor = criterion({
       index: 21,
-      lineageIndex: 20,
+      lineageIndex: 21,
       concept: width,
       strength: null,
       targetSemantics: "indifferent",
@@ -532,20 +575,20 @@ describe("V0-05 human-labelled golden evaluator", () => {
     expect(valid.failures).toEqual([]);
     expect(projectShoppingBrief(current).items).toHaveLength(0);
 
-    const removed = {
+    const incorrectlySuperseded = {
       ...predecessor,
-      lifecycle: "removed" as const,
-      supersededById: null,
+      lifecycle: "superseded" as const,
+      supersededById: successorId,
     };
     const invalid = evaluate({
       caseName: "explicit-change-to-indifference",
       baseline,
       current,
-      history: [removed, successor],
+      history: [incorrectlySuperseded, successor],
       action: "search",
     });
     expect(invalid.failures).toContain(
-      "[criterion:width-indifference:lifecycle] seeded criterion was not replaced through one coherent supersession lineage",
+      "[criterion:width-indifference:lifecycle] seeded explicit lineage was not removed when the new indifference lineage became active",
     );
   });
 

@@ -157,7 +157,11 @@ describe("OpenAI context-acquisition adapter", () => {
     const model = createTestModel(async () => {
       calls += 1;
       if (calls === 1)
-        throw Object.assign(new Error("rate limited"), { status: 429 });
+        throw Object.assign(new Error("rate limited"), {
+          status: 429,
+          code: "rate_limit_exceeded",
+          headers: new Headers({ "retry-after": "0" }),
+        });
       return completedNoChangeResponse();
     });
     const result = await model.interpret({
@@ -166,6 +170,51 @@ describe("OpenAI context-acquisition adapter", () => {
     });
     expect(result.status).toBe("completed");
     expect(calls).toBe(2);
+  });
+
+  it("does not spend its retry when a rate-limit delay exceeds the deadline", async () => {
+    let calls = 0;
+    const model = createTestModel(async () => {
+      calls += 1;
+      throw Object.assign(new Error("daily request limit"), {
+        status: 429,
+        code: "rate_limit_exceeded",
+        headers: new Headers({ "retry-after": "60" }),
+      });
+    });
+
+    const result = await model.interpret({
+      providerInputSchemaVersion: 1,
+      payload: {},
+    });
+
+    expect(result).toMatchObject({
+      status: "provider_failed",
+      errorCode: "provider_rate_limited",
+    });
+    expect(calls).toBe(1);
+  });
+
+  it("treats insufficient quota as terminal and diagnostically distinct", async () => {
+    let calls = 0;
+    const model = createTestModel(async () => {
+      calls += 1;
+      throw Object.assign(new Error("quota exhausted"), {
+        status: 429,
+        code: "insufficient_quota",
+      });
+    });
+
+    const result = await model.interpret({
+      providerInputSchemaVersion: 1,
+      payload: {},
+    });
+
+    expect(result).toMatchObject({
+      status: "provider_failed",
+      errorCode: "provider_quota_exhausted",
+    });
+    expect(calls).toBe(1);
   });
 
   it("retries one known OpenAI transport failure", async () => {
@@ -187,6 +236,28 @@ describe("OpenAI context-acquisition adapter", () => {
 
     expect(result.status).toBe("completed");
     expect(calls).toBe(2);
+  });
+
+  it.each([
+    new OpenAI.APIUserAbortError(),
+    new OpenAI.APIConnectionTimeoutError(),
+  ])("does not retry an official SDK timeout %s", async (error) => {
+    let calls = 0;
+    const model = createTestModel(async () => {
+      calls += 1;
+      throw error;
+    });
+
+    const result = await model.interpret({
+      providerInputSchemaVersion: 1,
+      payload: {},
+    });
+
+    expect(result).toMatchObject({
+      status: "timed_out",
+      errorCode: "provider_timeout",
+    });
+    expect(calls).toBe(1);
   });
 
   it.each([
