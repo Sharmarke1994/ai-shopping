@@ -1,6 +1,6 @@
 # Founder MVP progress
 
-**Updated:** 2026-08-21 17:47 Europe/London
+**Updated:** 2026-08-21 18:02 Europe/London
 **Durable goal:** Deliver a polished founder-usable AI shopping MVP whose live
 understanding, market retrieval, evidence-aware evaluation, refinement, saving,
 and comparison are meaningfully better than beginning with Google.
@@ -11,8 +11,9 @@ and comparison are meaningfully better than beginning with Google.
 - Merged `main`: `6cd0ec83ec6e5c807ecc57de83c0c9a99b2e2ce0`
 - Current branch: `codex/v0-05-implementation`
 - Current branch base: merged V0-05 planning checkpoint `6cd0ec8`.
-- Current V0-05 implementation commit: `bf62eb1`, with durable progress update
-  `8ae4b86`; pushed for review as draft PR #9.
+- Current V0-05 implementation review head: `66e1a59`, pushed as draft
+  [PR #9](https://github.com/Sharmarke1994/ai-shopping/pull/9). It is clean
+  and mergeable; the required independent implementation review is next.
 - Closed checkpoint: PR #8, `V0-05: plan AI interpretation and context
   acquisition`, squash-merged after quality, persistence, and browser-smoke
   passed on corrected head `2439cfa`.
@@ -37,7 +38,9 @@ and comparison are meaningfully better than beginning with Google.
 ## Current work
 
 V0-05 implementation is feature-complete on
-`codex/v0-05-implementation` and is in final review/CI evidence collection.
+`codex/v0-05-implementation`. Draft PR #9 is green and awaits its required
+independent implementation review; live-model acceptance evidence remains
+credential-gated.
 The bounded slice now includes:
 
 - strict JSON-safe provider input and output wire boundaries;
@@ -66,10 +69,10 @@ The bounded slice now includes:
 - an interactive same-task real-model harness and seven protected live cases,
   each configured for three release-model runs.
 
-Next within this checkpoint: let GitHub run the 53-test PostgreSQL suite on
-PostgreSQL 17.6, reconcile any review/CI findings, and run the 21-call live
-gate when `OPENAI_API_KEY` plus database URLs are available. Do not begin
-retrieval inside this branch.
+Next within this checkpoint: conduct the required independent implementation
+review, reconcile any material finding, and run the 21-call live gate when
+`OPENAI_API_KEY` plus database URLs are available. Do not begin retrieval
+inside this branch.
 
 ## Next validated checkpoints
 
@@ -123,9 +126,9 @@ non-trivial paid commitment is required.
   the suite is ready for GitHub persistence CI.
 - First PR #9 persistence CI exposed a missing `@` alias in the database-only
   Vitest configuration before it could execute tests. The focused configuration
-  correction at `54806ce` passed its replacement GitHub run: quality,
-  53/53 PostgreSQL integration tests, and 6/6 browser tests are green. The
-  current documentation-only evidence update will receive its own CI status.
+  correction at `54806ce` passed its replacement GitHub run. The current exact
+  PR head `66e1a59` also passed GitHub Actions run `32505346894`: quality,
+  53/53 PostgreSQL integration tests, and 6/6 browser tests are green.
 - The live release command is `pnpm eval:v0-05:live`; it is intentionally not
   claimed as passing until all 21 real-model runs execute with zero protected
   invariant violations. `pnpm harness:v0-05` is the interactive proof command.
@@ -151,9 +154,10 @@ as follows:
 6. Continue the first incomplete item under **Current work**. Do not restart
    accepted planning, redo completed checkpoints, or begin a later layer while
    the current checkpoint has a known material failure.
-7. If V0-05 has not yet been pushed, run the full local gates, commit the
-   bounded diff, push `codex/v0-05-implementation`, and open a draft PR. If the
-   PR exists, inspect its exact head and all three CI jobs before editing.
+7. V0-05 is pushed as draft PR #9 at `66e1a59`, with all three GitHub checks
+   green. Conduct the independent review before merge; do not begin retrieval
+   or V0-06 while that review is outstanding. If it has changed, inspect the
+   exact PR head and all three CI jobs before editing.
 8. Do not claim the live gate passed without an artifact under
    `artifacts/evals/v0-05/` showing 21/21 protected runs. Missing credentials are
    a documented external blocker, not permission to substitute fake evidence.
