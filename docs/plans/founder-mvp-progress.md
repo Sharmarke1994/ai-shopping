@@ -1,6 +1,6 @@
 # Founder MVP progress
 
-**Updated:** 2026-08-21 18:47 Europe/London
+**Updated:** 2026-08-21 18:50 Europe/London
 **Durable goal:** Deliver a polished founder-usable AI shopping MVP whose live
 understanding, market retrieval, evidence-aware evaluation, refinement, saving,
 and comparison are meaningfully better than beginning with Google.
@@ -13,8 +13,8 @@ and comparison are meaningfully better than beginning with Google.
 - Current branch base: merged V0-05 planning checkpoint `6cd0ec8`.
 - Draft [PR #9](https://github.com/Sharmarke1994/ai-shopping/pull/9) is the
   current checkpoint. Independent review of `8e6c64b` requested one bounded
-  correction pass; implementation commit `ca05f07` resolves it and awaits push,
-  exact-head CI, and independent re-review.
+  correction pass; implementation commit `ca05f07` resolves it. Review head
+  `1d048af` is pushed, clean, and green; independent re-review is next.
 - Closed checkpoint: PR #8, `V0-05: plan AI interpretation and context
   acquisition`, squash-merged after quality, persistence, and browser-smoke
   passed on corrected head `2439cfa`.
@@ -40,8 +40,8 @@ and comparison are meaningfully better than beginning with Google.
 
 V0-05 implementation is feature-complete on
 `codex/v0-05-implementation`. The first independent implementation review is
-reconciled at `ca05f07`; exact-head GitHub CI and independent re-review remain.
-Live-model acceptance evidence remains credential-gated.
+reconciled at `ca05f07`, and exact-head GitHub CI is green at `1d048af`.
+Independent re-review and credential-gated live-model evidence remain.
 The bounded slice now includes:
 
 - strict JSON-safe provider input and output wire boundaries;
@@ -83,10 +83,9 @@ The bounded slice now includes:
   state on success or failure and emits one coherent sanitised JSON + Markdown
   report.
 
-Next within this checkpoint: push the correction, verify all three exact-head
-GitHub jobs, and obtain independent re-review. Run the 21-call live gate only
-when `OPENAI_API_KEY` plus a guarded `TEST_DATABASE_URL` are available. Do not
-begin retrieval inside this branch.
+Next within this checkpoint: obtain independent re-review. Run the 21-call live
+gate only when `OPENAI_API_KEY` plus a guarded `TEST_DATABASE_URL` are
+available. Do not begin retrieval inside this branch.
 
 ## Next validated checkpoints
 
@@ -151,7 +150,9 @@ non-trivial paid commitment is required.
   unbound V2 transaction path, and over-broad status-less retries. `ca05f07`
   resolves all four. A Sol High adversarial pass additionally found ASK-content,
   negated-meaning, failed-run-state, injected-client retry, and exact-5xx gaps;
-  those are resolved in the same correction commit. Exact-head CI is pending.
+  those are resolved in the same correction commit. GitHub Actions run
+  `32509855120` is green at exact review head `1d048af`: quality, 55/55
+  PostgreSQL tests, and 6/6 browser tests passed.
 - The live release command is `pnpm eval:v0-05:live`; it is intentionally not
   claimed as passing until all 21 real-model runs execute with zero protected
   invariant violations. `pnpm harness:v0-05` is the interactive proof command.
@@ -177,9 +178,8 @@ as follows:
 6. Continue the first incomplete item under **Current work**. Do not restart
    accepted planning, redo completed checkpoints, or begin a later layer while
    the current checkpoint has a known material failure.
-7. V0-05 draft PR #9 has correction commit `ca05f07` locally. Push it, inspect
-   the exact PR head and all three CI jobs, then obtain independent re-review.
-   Do not merge or begin retrieval/V0-06 before that re-review.
+7. V0-05 draft PR #9 is green at review head `1d048af`. Obtain independent
+   re-review. Do not merge or begin retrieval/V0-06 before that re-review.
 8. Do not claim the live gate passed without an artifact under
    `artifacts/evals/v0-05/` showing 21/21 protected runs. Missing credentials are
    a documented external blocker, not permission to substitute fake evidence.
