@@ -123,8 +123,9 @@ non-trivial paid commitment is required.
   the suite is ready for GitHub persistence CI.
 - First PR #9 persistence CI exposed a missing `@` alias in the database-only
   Vitest configuration before it could execute tests. The focused configuration
-  correction is awaiting its replacement CI run; quality and browser-smoke were
-  green on the prior head.
+  correction at `54806ce` passed its replacement GitHub run: quality,
+  53/53 PostgreSQL integration tests, and 6/6 browser tests are green. The
+  current documentation-only evidence update will receive its own CI status.
 - The live release command is `pnpm eval:v0-05:live`; it is intentionally not
   claimed as passing until all 21 real-model runs execute with zero protected
   invariant violations. `pnpm harness:v0-05` is the interactive proof command.
