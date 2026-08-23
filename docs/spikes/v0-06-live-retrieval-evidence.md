@@ -1,8 +1,10 @@
 # V0-06 live retrieval evidence
 
-**Run date:** 23 August 2026  
-**Provider:** Serper Google Shopping  
-**Market:** GB / GBP / en-GB  
+**Run date:** 23 August 2026
+
+**Provider:** Serper Google Shopping
+
+**Market:** GB / GBP / en-GB
 **Branch boundary:** experimental retrieval spike; no persistence, assessment,
 ranking, reactions, comparison, or UI
 
