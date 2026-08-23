@@ -176,7 +176,7 @@ export class SerperShoppingAdapter implements ShoppingSearchProvider {
     }
 
     return providerSearchResultSchema.parse({
-      listings,
+      listings: listings.slice(0, query.limit),
       diagnostics: {
         receivedResultCount: envelope.data.shopping.length,
         rejectedResultCount,

@@ -105,6 +105,31 @@ describe("Serper shopping adapter", () => {
     });
   });
 
+  it("enforces the requested candidate budget when Serper over-returns", async () => {
+    const shopping = Array.from({ length: 40 }, (_, index) => ({
+      position: index + 1,
+      title: `Result ${index + 1}`,
+      link: `https://shop.example/products/${index + 1}`,
+      source: "Example Sports",
+      price: "£20.00",
+      productId: `product-${index + 1}`,
+    }));
+    const provider = new SerperShoppingAdapter({
+      apiKey: "test-key",
+      fetchImpl: vi.fn(async () =>
+        Promise.resolve(
+          new Response(JSON.stringify({ shopping }), { status: 200 }),
+        ),
+      ) as unknown as typeof fetch,
+    });
+
+    const result = await provider.search(query());
+
+    expect(result.diagnostics.receivedResultCount).toBe(40);
+    expect(result.listings).toHaveLength(8);
+    expect(result.listings.at(-1)?.sourceRank).toBe(8);
+  });
+
   it("fails without leaking a provider response body", async () => {
     const provider = new SerperShoppingAdapter({
       apiKey: "secret-key",

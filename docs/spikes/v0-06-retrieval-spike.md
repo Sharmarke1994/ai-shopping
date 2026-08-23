@@ -1,6 +1,11 @@
 # V0-06 live-retrieval spike
 
-**Status:** Experimental branch only; V0-05 remains the release checkpoint.
+**Status:** Experimental branch only; live Serper evidence collected; V0-05
+remains the release checkpoint.
+
+Serper is provisionally accepted for founder-MVP retrieval experiments, subject
+to the limitations recorded in
+[`v0-06-live-retrieval-evidence.md`](./v0-06-live-retrieval-evidence.md).
 
 ## Learning boundary
 
