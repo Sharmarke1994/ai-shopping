@@ -1,274 +1,162 @@
 # Founder MVP progress
 
-**Updated:** 2026-08-21 21:32 Europe/London
+**Updated:** 2026-08-23 23:05 Europe/London
 **Durable goal:** Deliver a polished founder-usable AI shopping MVP whose live
 understanding, market retrieval, evidence-aware evaluation, refinement, saving,
 and comparison are meaningfully better than beginning with Google.
 
-## Repository checkpoint
+## Authoritative checkpoints
 
-- Repository: `Sharmarke1994/ai-shopping`
-- Merged `main`: `6cd0ec83ec6e5c807ecc57de83c0c9a99b2e2ce0`
-- Current branch: `codex/v0-05-implementation`
-- Current branch base: merged V0-05 planning checkpoint `6cd0ec8`.
-- Draft [PR #9](https://github.com/Sharmarke1994/ai-shopping/pull/9) is the
-  current checkpoint. Reviewed correction `ca119db` is pushed, mergeable, and
-  green in GitHub Actions run `32519693077`; a second bounded correction is
-  pending local commit after a genuine paced Terra report. V0-06 has not
-  started.
-- Closed checkpoint: PR #8, `V0-05: plan AI interpretation and context
-  acquisition`, squash-merged after quality, persistence, and browser-smoke
-  passed on corrected head `2439cfa`.
-- Authoritative execution brief: `docs/plans/founder-usable-mvp.md`
+- Repository: `Sharmarke1994/ai-shopping`.
+- Founder-MVP execution brief: `docs/plans/founder-usable-mvp.md`.
+- Isolated product-progress worktree:
+  `/Users/alchemist32/Documents/AI Shopping/ai-shopping-v0-06-spike`.
+- Experimental branch: `codex/v0-06-retrieval-spike`.
+- Current pushed V0-06 head: `a3f6e33dc30954467db9a6f8c4d70cc7711f9c6b`.
+- Original V0-05 checkout and draft PR #9 remain separate, unmodified, unmerged,
+  and formally unaccepted. Its last instructed checkpoint is `9c33018`; the
+  latest known Terra release gate completed 19/21, with both failures at the
+  provider connection layer and all model-completed runs semantically passing.
+  The 21/21 Terra rule has not been weakened and Luna remains diagnostic only.
+- Nothing on this experimental branch may be merged automatically. Each
+  coherent layer is committed and pushed for recoverability while work
+  continues toward the founder-usable product.
 
-## Completed work
+## Completed foundation
 
-- Durable product, architecture, research, evaluation, and V0 planning docs.
-- V0-01 runnable Next.js/TypeScript foundation and repository quality gates.
-- V0-02 polished fixture-driven responsive consumer shopping shell and visual
-  evidence.
-- V0-03 typed semantic domain and PostgreSQL persistence for tasks, inputs,
-  messages, concepts, criteria, provenance, revisions, and fail-closed reads.
-- V0-04 deterministic state transitions, CAS, idempotent receipts, change of
-  mind, indifference, undo, historical validation, and brief projection.
-- Initial V0-05 planning document on PR #8, including separated interpretation
-  and context-action stages, state-engine firewall, eval methodology, and a
-  local conversation proof target.
-- Founder-MVP continuity brief and progress ledger added as the required first
-  commit of the sustained execution phase.
+- V0-01: runnable Next.js/TypeScript foundation and repository quality gates.
+- V0-02: responsive fixture-driven premium consumer shopping shell.
+- V0-03: typed semantic domain and PostgreSQL persistence for task state,
+  inputs, concepts, criteria, provenance, revisions, and fail-closed reads.
+- V0-04: deterministic state transitions, CAS, idempotent receipts, change of
+  mind, indifference, undo, historical reconstruction, and brief projection.
+- V0-05 implementation checkpoint: strict AI interpretation/action proposals,
+  V0-04 validation firewall, ASK/answer persistence, provider diagnostics,
+  deterministic and live evals. Formal release acceptance remains separate.
+
+## Completed V0-06 experimental layers
+
+### Layer 1 — authoritative state to live retrieval
+
+Pushed at `9e55cf810fecdd3e9b4a122f8ae1ee63e7f6d6e6`.
+
+- Loads one coherent repeatable-read snapshot of persisted current state.
+- Projects the deterministic `ShoppingBrief`; no hand-built brief in the main
+  proof path.
+- Builds at most three distinct UK-first query hypotheses while keeping market
+  vocabulary outside shopper truth.
+- Retrieves normalized live Serper Google Shopping listings for GB / GBP /
+  en-GB.
+- Real running-cap and shelving proofs succeeded. Serper is provisionally
+  accepted for founder testing, not permanent procurement.
+- Serper's UK Shopping links are usually Google intermediary pages. A bounded
+  probe found no safe redirect unwrapping. Direct merchant destinations remain
+  a later evidence-stage experiment; no brittle crawler was introduced.
+
+### Layer 2 — exact retrieval persistence
+
+Pushed at `a3f6e33dc30954467db9a6f8c4d70cc7711f9c6b`.
+
+- Persists each authoritative SearchRun plan atomically before external calls.
+- Stores normalized hypotheses and criterion bases, immutable queries, one
+  terminal receipt per query, and exact task/run/query-scoped listing rows.
+- Records provider calls outside long transactions and commits each settled
+  query in a short transaction.
+- Derives `running`, `succeeded`, `partial`, or `failed` from terminal receipts.
+- Treats malformed provider results as isolated query failures.
+- Stores bounded failure codes, never raw provider exceptions or payloads.
+- Preserves multiple merchant offers even when Serper gives them the same
+  catalogue `productId`; no ProductIdentity or fuzzy deduplication exists yet.
+- Exact retries are idempotent and lock the run across multi-table reads so a
+  concurrent final receipt cannot produce a torn view.
+- Loaded runs validate task, action, revision, market, hypotheses, queries,
+  receipts, listings, counts, status, and timestamps fail-closed.
+- Migration `0007_bumpy_gorgon.sql` is additive and revokes private-table access
+  from PUBLIC and Supabase client roles.
 
 ## Current work
 
-V0-05 implementation is feature-complete on
-`codex/v0-05-implementation`. The first independent implementation review and
-adversarial follow-up are reconciled, and exact-head GitHub CI is green at
-`ca119db`. The funded live gate has now produced three honest failing reports:
+Layer 3 is next: normal conversation-to-search orchestration, then the first
+honest live consumer route. The accepted narrow design is:
 
-- Terra release configuration, before pacing: 1/21 passed. Most calls were
-  contaminated by the fresh-project 3 RPM / 10k TPM / rolling request allowance,
-  so this is not a valid semantic-quality denominator.
-- Luna diagnostic configuration, paced: 10/21 passed. It exposed eight
-  structured-output validation failures, one provider failure, and repeatable
-  semantic over-interpretation. It is diagnostic evidence only, never a
-  substitute for the approved Terra release configuration.
-- Terra release configuration, completion-paced: 15/21 passed. It confirmed
-  that rate limiting is controlled but exposed one true provider timeout, one
-  overly narrow evaluator synonym (`less heavy`), two conditional-stretch
-  conditions incorrectly promoted to Beauty criteria, and two failure-to-ask
-  decisions when comfort versus ANC priority was explicitly unsettled.
-
-The resulting bounded correction classifies quota/rate-limit/SDK timeout
-failures accurately, honours only same-deadline `Retry-After`, waits 35 seconds
-after each completed live-eval model call, aligns qualitative ordinal and
-indifference lifecycle evaluation with accepted contracts, and tightens prompt
-contracts without weakening validation. The latest report supports one more
-bounded correction: accept semantically equivalent less-heaviness, keep a
-conditional stretch condition inside its money criterion, and ask which
-preference leads when that stated ambiguity materially changes judgement. The
-45-second provider timeout is retained as transport evidence rather than
-silently relaxed. A fresh paced 21-run Terra report is still required after its
-provider allowance recovers.
-The bounded slice now includes:
-
-- strict JSON-safe provider input and output wire boundaries;
-- deterministic semantic-identity lowering into V0-04;
-- stage-two independence from diagnostic ambiguities;
-- receipt-bound idempotent action selection and fail-closed receipt recovery;
-- backward-compatible question-answer/fingerprint V2 for open text and
-  single-select, immutable single use, and stale rejection;
-- conservative labelled strength fixtures;
-- accurate diagnostic trace wording;
-- repeatable three-run protected live gates and a multi-turn live harness proof.
-
-- strict provider-wire schemas, JSON-safe bounded inputs, deterministic
-  lowering, and an official OpenAI Responses adapter;
-- one same-deadline retry for explicitly retryable provider transport failures,
-  with refusal, incomplete, malformed, timeout, and failed statuses kept
-  distinct;
-- receipt-bound interpretation/action orchestration with V0-04 CAS,
-  fail-closed crash recovery, bounded stale reinterpretation, and application
-  capability checks;
-- immutable context actions/questions, atomic question-answer V2 bindings,
-  exact V1/V2 fingerprints, server option IDs, and no public unbound V2 write
-  path;
-- minimal stage-specific attempt diagnostics, private PostgreSQL migrations,
-  and fail-closed action/receipt reads;
-- an interactive same-task real-model harness and seven protected live cases,
-  each configured for three release-model runs.
-- typed exhaustion after two action-selection revision races, with no stale
-  question/action persisted;
-- a closed V2 boundary: generic public and transaction input writers reject V2,
-  while the module-private insert executes only inside the atomic question
-  answer + binding transaction;
-- explicit provider retries limited to reviewed HTTP/SDK transient failures,
-  with OpenAI SDK retries disabled at every request boundary;
-- a semantic release evaluator that checks exact strengths, targets, values,
-  units/operators, indifference and lifecycle history, unexpected truth,
-  relevant ASK content, and locally negated meanings;
-- a guarded disposable `TEST_DATABASE_URL` run that evaluates actual persisted
-  state on success or failure and emits one coherent sanitised JSON + Markdown
-  report.
-
-Next within this checkpoint: commit/push this bounded correction, obtain
-exact-head CI, then rerun the paced 21-run Terra gate against the guarded local
-database after the rolling allowance recovers. The user will manage API-key
-rotation separately. Do not begin retrieval inside this branch.
+1. Add a V0-06-owned immutable `shopping_task_subjects` binding from a task to
+   its real persisted initial user message. The subject is not a criterion.
+2. Keep the SEARCH-causing input separately as trigger provenance. In an
+   ASK → answer → SEARCH flow, the answer is the trigger but the initial shopper
+   message remains the shopping subject.
+3. Load `{subject, trigger, current state, deterministic brief, SEARCH action}`
+   in one coherent snapshot and persist the search plan before provider calls.
+4. Add an explicit idempotent retrieval-trigger identity before any paid POST
+   can be retried after a lost HTTP response.
+5. Build a separate `/live` consumer path; retain `/` as the fixture regression
+   harness. Live cards must show factual retrieved fields only and must not
+   invent suitability, trade-offs, ranking, or deduplication before those layers
+   exist.
 
 ## Next validated checkpoints
 
-1. V0-05 live interpretation/context acquisition: provider wire schemas,
-   lowering, OpenAI adapter, independent ASK/SEARCH selector, persistent action
-   artifacts, question-answer V2, diagnostics, deterministic/PostgreSQL tests,
-   live evals, and local conversational harness.
-2. UK-first live retrieval and task/run-scoped `CandidateListing` persistence,
-   using a small query portfolio and conservative normalisation.
-3. Evidence, observations, criterion assessments, and useful qualitative result
-   ordering with visible uncertainty.
-4. Real result UI plus save, exact-listing rejection, natural refinement, and
-   re-search.
-5. Shortlist and 2–4 product comparison against current shopper criteria.
-6. Full live consumer UI integration, desktop/mobile screenshot iteration,
-   founder journeys, unrelated-category generalisation, and hardening.
-7. Founder handoff: testing guide, environment variables, limitations, exact
-   run command, URL, and highest-value real-world questions.
+1. Normal message → ASK or SEARCH and ASK → answer → SEARCH orchestration with
+   stable subject/trigger provenance and exact retries.
+2. Founder-usable `/live` route with task creation, visible current brief,
+   clarification, retrieval progress, factual real results, partial/failure
+   states, and refresh-safe exact-run loading.
+3. Exact-listing save/reject plus natural refinement and re-search. Bare reject
+   remains task-local to the acted-on listing and undoable.
+4. Bounded evidence acquisition, evidence-backed observations, criterion-level
+   assessment, suitability judgement, and visible unknowns.
+5. Shortlist and 2–4 item comparison against the shopper's current criteria.
+6. Responsive visual iteration, unrelated-category founder journeys, resilience,
+   security/privacy review, and founder handoff.
 
-## Blockers and credentials
+## Credentials and blockers
 
-Credential presence in the current shell at this checkpoint:
+- `SERPER_API_KEY` is stored only in macOS Keychain service
+  `ai-shopping-serper`. Never print it or write it to the repository. Live
+  Serper retrieval has already succeeded.
+- The OpenAI key is stored separately in Keychain service
+  `ai-shopping-openai`. It belongs to the isolated V0-05 release verification
+  and must not be copied into repository files or logs.
+- Local PostgreSQL is running on loopback with guarded base database
+  `ai_shopping_test`; test commands pass the URL only to the process. The local
+  server is 17.11 while the repository deliberately pins CI to 17.6.
+- The full local database suite therefore reports one expected version-pin
+  assertion failure; all 66 functional database tests pass. Do not weaken the
+  pin to make the local result green.
+- Direct merchant URLs, public deployment/auth, and any second paid provider are
+  unresolved product/security decisions. They are not blockers for the private
+  local founder loop.
 
-- `OPENAI_API_KEY`: stored in macOS Keychain service `ai-shopping-openai`. The
-  project is funded and successful model calls are confirmed. Terra currently
-  has fresh-project limits of 3 RPM, 10k TPM, and a rolling request allowance;
-  the unpaced run exhausted that allowance. Wait for recovery before its next
-  21-run gate. The user will manage key rotation separately. The key value must
-  never be written to the repository, reports, or shell history.
-- `DATABASE_URL`: missing — blocks local PostgreSQL integration/live task runs in
-  this shell. GitHub persistence CI is green. A Supabase project named
-  `ai-shopping` was previously created, but its connection string is not present
-  in this shell.
-- `DIRECT_DATABASE_URL`: missing.
-- `TEST_DATABASE_URL`: not persisted as a shell secret. Local PostgreSQL 17.11
-  is installed and running, with test-only base database `ai_shopping_test`.
-  Supply its local loopback URL only to the command invocation. The live eval
-  creates and drops its own guarded disposable database and never falls back to
-  `DATABASE_URL`.
-- `SERPAPI_API_KEY`: missing.
-- `SERPER_API_KEY`: missing.
-- GitHub CLI authentication: working as `Sharmarke1994`.
+## Latest verification
 
-The retrieval provider remains deliberately unselected. Do not begin a provider
-spike or V0-06 work until V0-05 reaches 21/21 and independent review accepts it.
+At pushed Layer-2 head `a3f6e33`:
 
-## Latest verification state
-
-- PR #8 corrected head `2439cfa`: quality green, persistence green,
-  browser-smoke green; merged as `6cd0ec8`.
-- Corrected implementation `ca05f07`: formatting, lint, typecheck, 112 deterministic
-  unit/component tests, production build, six Playwright browser tests,
-  migration drift generation, `git diff --check`, and production dependency
-  audit all pass locally.
-- Twelve V0-05 PostgreSQL integration cases bring the suite to 55 tests. They cover
-  context-action/question persistence, atomic V2 answers, migration/security
-  shape, exact coordinator retries, two action-selection races, rejection of
-  unbound V2 transaction writes, ASK → answer → SEARCH, and change of mind.
-  Local execution is unavailable because this shell has no disposable database;
-  the suite is ready for GitHub persistence CI.
-- First PR #9 persistence CI exposed a missing `@` alias in the database-only
-  Vitest configuration before it could execute tests. The focused configuration
-  correction at `54806ce` passed its replacement GitHub run. The current exact
-  PR head `66e1a59` also passed GitHub Actions run `32505346894`: quality,
-  53/53 PostgreSQL integration tests, and 6/6 browser tests are green.
-- Independent review of `8e6c64b` found four bounded issues: second action-stage
-  stale exhaustion, insufficient semantic live-gate assertions, an exported
-  unbound V2 transaction path, and over-broad status-less retries. `ca05f07`
-  resolves all four. A Sol High adversarial pass additionally found ASK-content,
-  negated-meaning, failed-run-state, injected-client retry, and exact-5xx gaps;
-  those are resolved in the same correction commit. GitHub Actions run
-  `32509855120` is green at exact review head `1d048af`: quality, 55/55
-  PostgreSQL tests, and 6/6 browser tests passed.
-- The live release command is `pnpm eval:v0-05:live`; it is intentionally not
-  claimed as passing until all 21 real-model runs execute with zero protected
-  invariant violations. `pnpm harness:v0-05` is the interactive proof command.
-- Local PostgreSQL 17.11 is installed through Homebrew, running on loopback, and
-  validated as user `alchemist32` against `ai_shopping_test`. The 2026-08-21
-  live attempt produced sanitised JSON and Markdown reports under
-  `artifacts/evals/v0-05/2026-08-21T18-45-40.719Z.*`; 0/21 passed because every
-  interpretation call received `provider_request_failed`. A separate minimal
-  Responses API diagnostic returned 429 `insufficient_quota`, so this report
-  must not be treated as a model-quality result.
-- After funding, the unpaced Terra run emitted
-  `artifacts/evals/v0-05/2026-08-21T18-55-42.849Z.*`: 1/21 passed, with provider
-  rate-limit failures contaminating most runs. Direct rate-limit evidence showed
-  Terra at 3 RPM / 10k TPM and a rolling request allowance. The report is kept
-  as failure evidence, not claimed as a semantic release result.
-- The paced Luna diagnostic emitted
-  `artifacts/evals/v0-05/2026-08-21T19-34-21.982Z.*`: 10/21 passed. All cap,
-  exact-lookup, and quoted-injection runs except one over-broad product-type
-  interpretation passed; explicit indifference passed 2/3. Eight attempts were
-  strict structured-output validation failures, one was a provider failure, and
-  the remainder exposed duplicate conditional-budget truth, unresolved-size
-  over-interpretation, and non-specific qualitative text. Prompt versions 3/2
-  address these observed contract failures without loosening the schemas.
-- The corrected completion-paced Terra run emitted
-  `artifacts/evals/v0-05/2026-08-21T20-30-38.474Z.*`: 15/21 passed. It is the
-  first fully paced Terra denominator and proves rate-limit control, but is not
-  acceptance evidence: one interpretation timed out, two shelving outputs
-  invented a Beauty criterion from a stretch condition, two headphone actions
-  searched instead of asking which preference leads, and one qualitative
-  ordinal used `less:heavy`. The associated source correction raises prompt
-  versions to interpretation 4 / context action 3 and accepts only that
-  directionally equivalent qualitative synonym; it does not relax the timeout,
-  action, or unexpected-criterion gates.
-- Correction `ca119db` verification: formatting, lint, typecheck,
-  119/119 unit/component tests, production build, 6/6 Playwright tests, no
-  migration drift, no production dependency vulnerabilities, and
-  `git diff --check` all pass. GitHub Actions run `32519693077` is green for
-  quality, 55/55 PostgreSQL integration tests, and browser-smoke. Local
-  PostgreSQL functional cases pass; the sole local suite mismatch is the
-  intentional exact PostgreSQL 17.6 CI pin versus Homebrew PostgreSQL 17.11.
-- Local shell currently runs Node 24.19.0 and emits the expected engine warning;
-  the repository contract and CI pin Node 22.18.0.
-- Working tree was clean when the implementation branch was created from merged
-  main.
+- `pnpm db:generate`: no unexplained schema drift.
+- `pnpm check`: formatting, lint, generated route types, TypeScript, 131/131
+  deterministic unit/component tests, and production build pass.
+- Focused retrieval persistence PostgreSQL suite: 7/7 pass.
+- Full PostgreSQL suite: 66 functional tests pass; only the intentional
+  PostgreSQL 17.6-vs-local-17.11 version assertion fails.
+- Production dependency audit: no known vulnerabilities.
+- `git diff --check`: pass.
+- Secret-value scan: pass.
+- Independent Layer-2 rereview: approved with no material blocker after the
+  run-lock and catalogue-ID corrections.
 
 ## Exact resume instructions
 
-If execution stops because of usage exhaustion or a new Codex session, resume
-as follows:
-
-1. Read `AGENTS.md` completely.
-2. Read `docs/plans/founder-usable-mvp.md` completely; it is the durable product
-   and execution authority for this phase.
-3. Read this file completely and trust the newest committed update over older
-   chat history.
-4. Run `git status --short`, `git branch --show-current`, `git rev-parse HEAD`,
-   `git rev-parse main`, and inspect the current GitHub PR/check status before
-   changing files.
-5. Preserve V0-03/V0-04 architecture and all hard invariants in `AGENTS.md`.
-6. Continue the first incomplete item under **Current work**. Do not restart
-   accepted planning, redo completed checkpoints, or begin a later layer while
-   the current checkpoint has a known material failure.
-7. V0-05 draft PR #9 contains reviewed correction `ca119db`, green in run
-   `32519693077`, plus a local post-Terra correction awaiting commit/push. Do
-   not merge or begin retrieval/V0-06 until the approved Terra configuration
-   produces a genuine paced 21/21 live report and that evidence is reviewed.
-8. Do not claim the live gate passed without an artifact under
-   `artifacts/evals/v0-05/` showing 21/21 protected runs. Missing credentials are
-   a documented external blocker, not permission to substitute fake evidence.
-   The Luna 10/21 report is diagnostic only. The Terra 15/21 report is failure
-   evidence, not acceptance; commit its bounded correction, then allow the
-   rolling request allowance to recover before rerunning. The runner itself
-   paces from each completed top-level call. The user will manage API-key
-   rotation separately; use the currently configured key without printing it.
-9. Update this file whenever a checkpoint is committed, merged, blocked, or
-   materially re-scoped. Include exact commit/PR/check state and credential
-   requirements.
-10. Keep checkpoints bounded; run the applicable full repository gates, perform
-   a deliberate second review, commit, push, and keep the tree clean.
-11. Continue autonomously through founder-MVP checkpoints. Stop for user input
-   only for a required credential, material paid-vendor decision,
-   consequential product decision, security/privacy implication, destructive
-   migration, or fundamental conflict with accepted architecture.
-12. Do not declare completion until every acceptance condition in section 42 of
-    `docs/plans/founder-usable-mvp.md` is actually satisfied and the founder
-    handoff has been produced.
+1. Work only in
+   `/Users/alchemist32/Documents/AI Shopping/ai-shopping-v0-06-spike` on
+   `codex/v0-06-retrieval-spike`; confirm the branch and clean tree first.
+2. Read this file and only the Layer-3-relevant V0-05 persistence/coordinator,
+   retrieval context, and live UI seams. Do not reopen accepted V0-03/V0-04
+   architecture.
+3. Preserve the original V0-05 checkout and draft PR #9 exactly; do not merge it
+   and do not weaken its Terra gate.
+4. Implement the stable task subject / current trigger distinction first, with
+   database constraints, exact retries, cross-task/stale rejection, and an
+   ASK → answer → SEARCH integration test.
+5. Add durable retrieval-trigger idempotency before issuing paid provider calls
+   from an HTTP request.
+6. TEST → COMMIT → PUSH each coherent layer, update this ledger, and continue.
+7. Do not merge automatically. Stop only for a real credential, paid-vendor,
+   security/privacy, consequential product, or accepted-architecture blocker.
