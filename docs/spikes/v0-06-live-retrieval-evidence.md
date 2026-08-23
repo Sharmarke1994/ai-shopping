@@ -5,8 +5,9 @@
 **Provider:** Serper Google Shopping
 
 **Market:** GB / GBP / en-GB
-**Branch boundary:** experimental retrieval spike; no persistence, assessment,
-ranking, reactions, comparison, or UI
+**Branch boundary:** experimental retrieval spike; existing authoritative
+task-state persistence is read, but no SearchRun/CandidateListing persistence,
+assessment, ranking, reactions, comparison, or UI is added
 
 ## Verdict
 
@@ -21,6 +22,85 @@ only purchase/evidence source. Its Shopping links are Google intermediary URLs,
 not direct merchant URLs; delivery and availability were absent; dimensions and
 experiential properties such as clamp comfort remain unknown; and cross-query
 duplication is material.
+
+## Persisted V0-05 to live-retrieval proof
+
+The spike now proves the intended seam rather than manually assembling a brief:
+
+1. create and record a real persisted shopping task and shopper message;
+2. run that input through the actual V0-05 coordinator and persistence boundary
+   with a deterministic model double, producing a validated state-application
+   receipt and persisted `SEARCH` action;
+3. reload current authoritative state, verify that the receipt and current
+   `SEARCH` belong to the same task/input/application and revision, and project a
+   fresh deterministic `ShoppingBrief`;
+4. build `RetrievalContextV1` and a query portfolio without mutating the task;
+5. execute the portfolio against live Serper Google Shopping in GB/GBP/en-GB.
+
+The deterministic model double isolates the persisted-state/retrieval seam; it
+does not claim a second live V0-05 model evaluation. The proof runs in a guarded
+disposable database which is migrated from empty and dropped afterward.
+
+Focused PostgreSQL tests also prove that cross-task sources, non-message inputs,
+and a `SEARCH` selected before later authoritative truth are rejected. The
+successful path compares state before and after query generation to prove that
+`race cap` remains a retrieval hypothesis rather than becoming a criterion.
+
+This is deliberately a one-message proof, not a claim that product-subject
+identity is solved. V0-05 can persist a later free-text refinement as another
+`message`, but the current state model cannot distinguish that refinement from a
+complete shopping subject. The automatic boundary therefore must not be treated
+as production-ready for multi-turn tasks until a first-class current
+ShoppingSubject/source contract exists. Question answers and direct brief edits
+already fail closed rather than being misrepresented as the subject.
+
+Run with:
+
+```sh
+pnpm proof:v0-06:persisted-live cap
+pnpm proof:v0-06:persisted-live shelving
+```
+
+Both commands require `SERPER_API_KEY` and the already-guarded
+`TEST_DATABASE_URL`.
+
+### Persisted running-cap proof
+
+The persisted current state was revision 1 with exactly two active brief items:
+`Breathability = breathable` and `Weight = lightweight`. It generated:
+
+1. `I need a light breathable cap for running in hot weather.`
+2. `I need a light breathable cap for running in hot weather. lightweight`
+3. `I need a light breathable cap for running in hot weather. race cap`
+
+Each live query returned 40 raw rows and the bounded adapter accepted eight.
+Across the 24 accepted listings there were 12 unique provider IDs and seven
+repeated-ID groups. Merchant, GBP price and image were present on all 24;
+delivery and availability were present on none. Useful products included the
+Kiprun Ultralight Cap from Decathlon (£9.99), Runr Doha Airflow Technical
+Running Hat (£25.99), Harrier Trail Running Summer Cap (£23.19), adidas Adizero
+caps, and ASICS Ultra Lightweight Running Cap. The pool is credible for recall,
+but is not yet a suitability judgement.
+
+### Persisted shelving proof
+
+The persisted current state was revision 1 with four independently typed brief
+items: maximum width 60 cm, maximum depth 30 cm, target budget £30 and excluded
+colour white. It generated:
+
+1. `I need a slim shelving unit around £30, max 60cm wide, max 30cm deep, no white.`
+2. the same source plus `under 60 cm under 30 cm` from the authoritative brief;
+3. the same source plus the retrieval-only term `narrow bookcase`.
+
+Each query returned 40 raw rows and eight were accepted. The 24 accepted rows
+contained 22 unique provider IDs. All had merchant, GBP price and image; none
+had delivery or availability. The literal pool mixed useful furniture with
+garage/storage noise. Brief expansion found options such as the Essentials
+Small Narrow Bookcase (£27) but still returned over-budget products. `narrow
+bookcase` produced a more consumer-relevant pool, including Furniture Edit's
+Essentials Small Narrow Bookcase (£23.49), while still surfacing a white shelf
+that later evidence and assessment must reject. This confirms why query recall
+and suitability must remain separate disciplines.
 
 ## Exact live cases
 
@@ -132,14 +212,38 @@ stage can investigate it.
 - **Provider behaviour:** `num: 8` did not constrain Serper's raw Shopping array;
   the adapter must enforce its own candidate budget.
 
+## Direct-merchant destination experiment
+
+The current Serper Shopping response offers no clean merchant destination. A
+bounded `HEAD` request to one exact returned Google Shopping URL produced HTTP
+200 with no `Location`; the URL is a rendered Google product/offer surface, not
+a redirect. Its parameters contain opaque offer/catalog identifiers rather than
+an encoded merchant URL. Serper exposes no separate direct-link or offer field
+on this response. Parsing Google HTML or matching a second general-search result
+by title would be brittle and was deliberately rejected.
+
+One narrow, unproven follow-up exists for the later evidence stage:
+[SearchApi's Google Product Page API](https://www.searchapi.io/docs/google-product-page)
+documents lookup by Google catalog `product_id`, and its
+[Google Product Offers API](https://www.searchapi.io/docs/google-product-offers)
+documents merchant offer links. Serper's `productId` matched the returned URL's
+`catalogid` in the inspected sample, and SearchApi supports
+[GB market targeting](https://www.searchapi.io/docs/parameters/google-shopping/gl).
+This would require a second provider, two calls for each shortlisted product,
+seller/price reconciliation and a separate credential. It was not executed and
+is not part of the retrieval boundary. SerpApi's former Google Product endpoint
+is explicitly shut down, so it is not a viable fallback.
+
 ## Product conclusion
 
 Serper is credible as the provisional source for learning about query recall and
-building an initial candidate pool. It is not yet evidence that the final product
-beats Google: the next layers must resolve merchant destinations, obtain
-decision-critical facts, preserve unknowns, and evaluate suitability separately.
+building an initial candidate pool. Real persisted V0-05 state now drives that
+pool without allowing retrieval vocabulary to become shopper truth. This is
+still not evidence that the final product beats Google: the next layers must
+resolve merchant destinations, obtain decision-critical facts, preserve
+unknowns, and evaluate suitability separately.
 
-The next smallest product step after independent review is to feed an actual
-V0-05 authoritative subject and structured brief into this boundary and measure
-literal-versus-expanded useful-candidate recall. Persistence and ranking remain
-outside this spike.
+The next smallest product step after independent review is a narrow evidence
+experiment on a deliberately small shortlist, including one live direct-offer
+lookup experiment before adopting a second provider. SearchRun/CandidateListing
+persistence and ranking remain outside this spike.
