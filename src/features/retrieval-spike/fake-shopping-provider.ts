@@ -6,6 +6,8 @@ import {
 } from "./contracts";
 
 export class FakeShoppingProvider implements ShoppingSearchProvider {
+  readonly provider = "fixture" as const;
+
   constructor(private readonly now: () => Date = () => new Date()) {}
 
   async search(query: SearchQuery) {

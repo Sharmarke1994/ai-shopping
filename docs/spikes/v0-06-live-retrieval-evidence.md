@@ -5,9 +5,11 @@
 **Provider:** Serper Google Shopping
 
 **Market:** GB / GBP / en-GB
-**Branch boundary:** experimental retrieval spike; existing authoritative
-task-state persistence is read, but no SearchRun/CandidateListing persistence,
-assessment, ranking, reactions, comparison, or UI is added
+**Evidence-run boundary:** these live requests read authoritative task state but
+did not themselves persist a SearchRun or CandidateListing. A later bounded
+branch layer adds exact task-local retrieval persistence without changing these
+recorded requests. Assessment, ranking, reactions, comparison, and UI remain
+outside this evidence run.
 
 ## Verdict
 
@@ -243,7 +245,7 @@ still not evidence that the final product beats Google: the next layers must
 resolve merchant destinations, obtain decision-critical facts, preserve
 unknowns, and evaluate suitability separately.
 
-The next smallest product step after independent review is a narrow evidence
-experiment on a deliberately small shortlist, including one live direct-offer
-lookup experiment before adopting a second provider. SearchRun/CandidateListing
-persistence and ranking remain outside this spike.
+The next smallest product step after independent review is to connect the now
+persisted exact candidate pool to a narrow evidence experiment on a deliberately
+small shortlist, including one live direct-offer lookup experiment before
+adopting a second provider. Ranking remains outside this evidence report.

@@ -65,6 +65,7 @@ describe("retrieval-spike execution", () => {
     const result = await executeSearchQueryPortfolio({
       portfolio: input,
       provider: {
+        provider: "fixture",
         search: (query) =>
           query.purpose === "market_language"
             ? Promise.reject(new Error("provider unavailable"))
@@ -76,6 +77,70 @@ describe("retrieval-spike execution", () => {
       "completed",
       "failed",
     ]);
+    expect(result.listings).toHaveLength(1);
+  });
+
+  it("isolates a fulfilled provider result with mismatched lineage", async () => {
+    const input = portfolio();
+    const fake = new FakeShoppingProvider();
+    const result = await executeSearchQueryPortfolio({
+      portfolio: input,
+      provider: {
+        provider: "fixture",
+        search: async (query) => {
+          const response = await fake.search(query);
+          if (query.purpose !== "market_language") return response;
+          return {
+            ...response,
+            listings: response.listings.map((listing) => ({
+              ...listing,
+              queryId: input.queries[0]!.id,
+            })),
+          };
+        },
+      },
+    });
+
+    expect(result.queries.map((query) => query.status)).toEqual([
+      "completed",
+      "failed",
+    ]);
+    expect(result.queries[1]).toMatchObject({
+      status: "failed",
+      errorCode: "invalid_provider_result",
+    });
+    expect(result.listings).toHaveLength(1);
+  });
+
+  it("isolates fulfilled provider diagnostics that cannot account for listings", async () => {
+    const input = portfolio();
+    const fake = new FakeShoppingProvider();
+    const result = await executeSearchQueryPortfolio({
+      portfolio: input,
+      provider: {
+        provider: "fixture",
+        search: async (query) => {
+          const response = await fake.search(query);
+          if (query.purpose !== "market_language") return response;
+          return {
+            ...response,
+            diagnostics: {
+              receivedResultCount: 1,
+              rejectedResultCount: 1,
+            },
+          };
+        },
+      },
+    });
+
+    expect(result.queries.map((query) => query.status)).toEqual([
+      "completed",
+      "failed",
+    ]);
+    expect(result.queries[1]).toMatchObject({
+      status: "failed",
+      errorCode: "invalid_provider_result",
+    });
     expect(result.listings).toHaveLength(1);
   });
 });

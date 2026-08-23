@@ -9,11 +9,14 @@ to the limitations recorded in
 
 ## Learning boundary
 
-This spike proves the smallest useful path from an authoritative shopping
-subject and structured brief to a small query portfolio and normalized UK
-Shopping listings. It does not persist a `SearchRun`, establish the final V0-06
-architecture, or implement evidence, assessment, ranking, reactions, comparison,
-or UI work.
+The original live spike proved the smallest useful path from an authoritative
+shopping subject and structured brief to a small query portfolio and normalized
+UK Shopping listings. The subsequent bounded persistence layer now stores the
+exact task-local `SearchRun`, its hypotheses and queries, terminal per-query
+execution receipts, and exact `CandidateListing` offer rows. This remains an
+experimental founder-MVP boundary rather than the final V0-06 architecture; it
+does not implement evidence, assessment, ranking, reactions, comparison, or UI
+work.
 
 The exact shopping subject is context, not a `DecisionCriterion`. A
 `market_vocabulary` hypothesis is explicitly retrieval theory. Neither has a

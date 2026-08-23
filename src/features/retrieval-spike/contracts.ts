@@ -111,22 +111,96 @@ export const searchQuerySchema = z.strictObject({
   limit: z.number().int().min(1).max(20),
 });
 
-export const searchQueryPortfolioSchema = z.strictObject({
-  run: searchRunSchema,
-  hypotheses: z.array(searchHypothesisSchema).min(1).max(3).readonly(),
-  queries: z.array(searchQuerySchema).min(1).max(3).readonly(),
-});
+export const searchQueryPortfolioSchema = z
+  .strictObject({
+    run: searchRunSchema,
+    hypotheses: z.array(searchHypothesisSchema).min(1).max(3).readonly(),
+    queries: z.array(searchQuerySchema).min(1).max(3).readonly(),
+  })
+  .superRefine((portfolio, refinement) => {
+    const hypothesisIds = new Set<string>();
+    for (const [index, hypothesis] of portfolio.hypotheses.entries()) {
+      if (hypothesis.runId !== portfolio.run.id) {
+        refinement.addIssue({
+          code: "custom",
+          path: ["hypotheses", index, "runId"],
+          message: "Hypothesis must belong to the portfolio run",
+        });
+      }
+      if (hypothesisIds.has(hypothesis.id)) {
+        refinement.addIssue({
+          code: "custom",
+          path: ["hypotheses", index, "id"],
+          message: "Hypothesis IDs must be unique",
+        });
+      }
+      hypothesisIds.add(hypothesis.id);
+    }
+
+    const queryIds = new Set<string>();
+    const referencedHypotheses = new Set<string>();
+    for (const [index, query] of portfolio.queries.entries()) {
+      const sameMarket =
+        query.market.country === portfolio.run.market.country &&
+        query.market.language === portfolio.run.market.language &&
+        query.market.currency === portfolio.run.market.currency;
+      if (
+        query.runId !== portfolio.run.id ||
+        query.taskId !== portfolio.run.taskId ||
+        query.taskRevision !== portfolio.run.taskRevision ||
+        !sameMarket
+      ) {
+        refinement.addIssue({
+          code: "custom",
+          path: ["queries", index],
+          message: "Query task, revision, run and market must match its run",
+        });
+      }
+      if (!hypothesisIds.has(query.hypothesisId)) {
+        refinement.addIssue({
+          code: "custom",
+          path: ["queries", index, "hypothesisId"],
+          message: "Query must reference a hypothesis in this run",
+        });
+      }
+      if (referencedHypotheses.has(query.hypothesisId)) {
+        refinement.addIssue({
+          code: "custom",
+          path: ["queries", index, "hypothesisId"],
+          message: "Each hypothesis may drive only one bounded query",
+        });
+      }
+      referencedHypotheses.add(query.hypothesisId);
+      if (queryIds.has(query.id)) {
+        refinement.addIssue({
+          code: "custom",
+          path: ["queries", index, "id"],
+          message: "Query IDs must be unique",
+        });
+      }
+      queryIds.add(query.id);
+    }
+    if (referencedHypotheses.size !== hypothesisIds.size) {
+      refinement.addIssue({
+        code: "custom",
+        path: ["hypotheses"],
+        message: "Every hypothesis must drive exactly one query",
+      });
+    }
+  });
 
 const observedMoneySchema = z.strictObject({
   amountMinor: z.number().int().nonnegative(),
   currency: z.literal("GBP"),
 });
 
+export const shoppingProviderSchema = z.enum(["serper", "fixture"]);
+
 export const candidateListingSchema = z.strictObject({
   taskId: shoppingTaskIdSchema,
   runId: searchRunIdSchema,
   queryId: searchQueryIdSchema,
-  provider: z.enum(["serper", "fixture"]),
+  provider: shoppingProviderSchema,
   providerResultId: z.string().min(1).max(500),
   sourceRank: z.number().int().positive(),
   surface: z.literal("shopping"),
@@ -147,10 +221,26 @@ export const providerSearchDiagnosticsSchema = z.strictObject({
   rejectedResultCount: z.number().int().nonnegative(),
 });
 
-export const providerSearchResultSchema = z.strictObject({
-  listings: z.array(candidateListingSchema).readonly(),
-  diagnostics: providerSearchDiagnosticsSchema,
-});
+export const providerSearchResultSchema = z
+  .strictObject({
+    listings: z.array(candidateListingSchema).readonly(),
+    diagnostics: providerSearchDiagnosticsSchema,
+  })
+  .superRefine((result, refinement) => {
+    const acceptedResultCount =
+      result.diagnostics.receivedResultCount -
+      result.diagnostics.rejectedResultCount;
+    if (
+      acceptedResultCount < 0 ||
+      result.listings.length > acceptedResultCount
+    ) {
+      refinement.addIssue({
+        code: "custom",
+        path: ["diagnostics"],
+        message: "Provider diagnostics do not account for returned listings",
+      });
+    }
+  });
 
 export type RetrievalContextV1 = z.infer<typeof retrievalContextV1Schema>;
 export type SearchQuery = z.infer<typeof searchQuerySchema>;
@@ -159,5 +249,6 @@ export type CandidateListing = z.infer<typeof candidateListingSchema>;
 export type ProviderSearchResult = z.infer<typeof providerSearchResultSchema>;
 
 export interface ShoppingSearchProvider {
+  readonly provider: z.infer<typeof shoppingProviderSchema>;
   search(query: SearchQuery): Promise<ProviderSearchResult>;
 }

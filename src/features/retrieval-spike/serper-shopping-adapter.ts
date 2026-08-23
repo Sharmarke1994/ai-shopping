@@ -81,6 +81,8 @@ export type SerperShoppingAdapterOptions = Readonly<{
 }>;
 
 export class SerperShoppingAdapter implements ShoppingSearchProvider {
+  readonly provider = "serper" as const;
+
   readonly #apiKey: string;
   readonly #fetch: typeof fetch;
   readonly #timeoutMs: number;

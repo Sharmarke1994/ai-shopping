@@ -29,6 +29,7 @@ describe("shopping-state and context-acquisition migration shape", () => {
       order by table_name
     `);
     expect(tables.map((row) => row.table_name)).toEqual([
+      "candidate_listings",
       "concept_definitions",
       "context_acquisition_attempts",
       "context_action_answers",
@@ -36,6 +37,11 @@ describe("shopping-state and context-acquisition migration shape", () => {
       "context_question_options",
       "criterion_sources",
       "decision_criteria",
+      "search_hypotheses",
+      "search_hypothesis_basis_criteria",
+      "search_queries",
+      "search_query_executions",
+      "search_runs",
       "shopping_tasks",
       "state_change_applications",
       "task_inputs",
@@ -56,7 +62,7 @@ describe("shopping-state and context-acquisition migration shape", () => {
       'select count(*)::integer as count from "drizzle"."migrations"',
     );
     const after = afterRows[0]?.count;
-    expect(before).toBe(7);
+    expect(before).toBe(8);
     expect(after).toBe(before);
   });
 
@@ -159,9 +165,9 @@ describe("shopping-state and context-acquisition migration shape", () => {
     >(`
       select
         has_schema_privilege('anon', 'shopping_private', 'USAGE') as anon_schema,
-        has_table_privilege('anon', 'shopping_private.context_actions', 'SELECT') as anon_table,
+        has_table_privilege('anon', 'shopping_private.candidate_listings', 'SELECT') as anon_table,
         has_schema_privilege('authenticated', 'shopping_private', 'USAGE') as authenticated_schema,
-        has_table_privilege('authenticated', 'shopping_private.context_acquisition_attempts', 'SELECT') as authenticated_table
+        has_table_privilege('authenticated', 'shopping_private.search_runs', 'SELECT') as authenticated_table
     `);
     expect(privileges).toEqual({
       anon_schema: false,
@@ -196,12 +202,12 @@ describe("shopping-state and context-acquisition migration shape", () => {
     expect(definitions).toContain("status = 'completed'::text");
   });
 
-  it("contains no premature product or candidate persistence", async () => {
+  it("contains no premature product-identity, evidence, judgement, or reaction persistence", async () => {
     const rows = await connection.client.unsafe<{ table_name: string }[]>(`
       select table_name
       from information_schema.tables
       where table_schema = 'shopping_private'
-        and table_name ~ '(product|candidate|search|observation|assessment|judgement)'
+        and table_name ~ '(product_identity|observation|evidence|assessment|judgement|reaction)'
     `);
     expect(rows).toEqual([]);
   });

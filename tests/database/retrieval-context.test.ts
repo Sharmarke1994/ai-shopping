@@ -19,6 +19,7 @@ import { recordTaskInput } from "../../src/features/shopping-state/persistence/i
 import { loadCurrentShoppingState } from "../../src/features/shopping-state/persistence/state-loaders";
 import { applyStatePatch } from "../../src/features/shopping-state/persistence/state-transitions";
 import { createShoppingTask } from "../../src/features/shopping-state/persistence/tasks";
+import type { ShoppingDatabase } from "../../src/infrastructure/database/clients";
 import {
   createTestDatabaseConnection,
   resetShoppingState,
@@ -310,5 +311,86 @@ describe("persisted V0-05 state to retrieval context", () => {
       selectedAtRevision: 1n,
       currentRevision: 2n,
     });
+  });
+
+  it("returns one coherent historical snapshot when truth advances concurrently", async () => {
+    const { task, source } = await acquireCapSearch();
+    const writer = createTestDatabaseConnection("retrieval-snapshot-writer");
+    try {
+      const context = await connection.db.transaction(
+        async (reader) => {
+          expect(
+            (await loadCurrentShoppingState(reader, task.id)).task
+              .currentRevision,
+          ).toBe(1n);
+
+          const laterInput = await recordTaskInput({
+            db: writer.db,
+            taskId: task.id,
+            clientActionId: "concurrent-colour-truth",
+            request: {
+              inputSchemaVersion: 1,
+              expectedRevision: 1n,
+              kind: "message",
+              body: "No white",
+            },
+          });
+          await applyStatePatch(writer.db, {
+            applicationSchemaVersion: 1,
+            applicationKind: "patch",
+            taskId: task.id,
+            expectedRevision: 1n,
+            source: { kind: "user_explicit", inputId: laterInput.input.id },
+            patch: {
+              schemaVersion: 1,
+              outcome: "change",
+              operations: [
+                {
+                  op: "create_concept",
+                  localRef: "colour",
+                  label: "Colour",
+                  definition: "Colours the shopper excludes",
+                  valueFamily: "categorical",
+                  canonicalUnit: null,
+                },
+                {
+                  op: "add_criterion",
+                  concept: { kind: "created", localRef: "colour" },
+                  target: {
+                    strength: "hard",
+                    targetSemantics: "categorical",
+                    semanticValue: {
+                      schemaVersion: 1,
+                      kind: "categorical",
+                      operator: "exclude",
+                      values: ["white"],
+                    },
+                  },
+                },
+              ],
+            },
+          });
+
+          return loadRetrievalContextFromPersistedState({
+            db: reader as unknown as ShoppingDatabase,
+            taskId: task.id,
+            subjectInputId: source.input.id,
+          });
+        },
+        { isolationLevel: "repeatable read", accessMode: "read only" },
+      );
+
+      expect(context.revision).toBe(1n);
+      expect(
+        context.brief.items.map((item) => item.conceptLabel),
+      ).not.toContain("Colour");
+      const fresh = await loadCurrentShoppingState(connection.db, task.id);
+      expect(fresh.task.currentRevision).toBe(2n);
+      expect(
+        projectShoppingBrief(fresh).items.map((item) => item.conceptLabel),
+      ).toContain("Colour");
+    } finally {
+      await writer.close();
+    }
   });
 });

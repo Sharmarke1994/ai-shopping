@@ -18,6 +18,7 @@ export type QueryExecution =
   | Readonly<{
       status: "failed";
       query: SearchQuery;
+      errorCode: "provider_failed" | "invalid_provider_result";
       error: string;
     }>;
 
@@ -41,13 +42,41 @@ export async function executeSearchQueryPortfolio(options: {
       return {
         status: "failed",
         query,
+        errorCode: "provider_failed",
         error:
           result.reason instanceof Error
-            ? result.reason.message
+            ? result.reason.message.trim().slice(0, 500) ||
+              "Provider request failed"
             : "Unknown provider failure",
       };
     }
-    const providerResult = providerSearchResultSchema.parse(result.value);
+    const parsed = providerSearchResultSchema.safeParse(result.value);
+    if (!parsed.success) {
+      return {
+        status: "failed",
+        query,
+        errorCode: "invalid_provider_result",
+        error: "Provider returned a malformed shopping result",
+      };
+    }
+    const providerResult = parsed.data;
+    if (
+      providerResult.listings.length > query.limit ||
+      providerResult.listings.some(
+        (listing) =>
+          listing.taskId !== query.taskId ||
+          listing.runId !== query.runId ||
+          listing.queryId !== query.id ||
+          listing.provider !== options.provider.provider,
+      )
+    ) {
+      return {
+        status: "failed",
+        query,
+        errorCode: "invalid_provider_result",
+        error: "Provider result lineage does not match the invoked query",
+      };
+    }
     return {
       status: "completed",
       query,

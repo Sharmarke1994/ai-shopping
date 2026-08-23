@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { searchQueryPortfolioSchema } from "./contracts";
 import { buildSearchQueryPortfolio } from "./query-strategy";
 
 const ids = [
@@ -110,5 +111,20 @@ describe("retrieval-spike query strategy", () => {
     expect(() => buildSearchQueryPortfolio(input)).toThrow(
       "Market-vocabulary basis must reference an active brief item",
     );
+  });
+
+  it("rejects query lineage that diverges from its run snapshot", () => {
+    let cursor = 0;
+    const portfolio = buildSearchQueryPortfolio(context(), {
+      createId: () => ids[cursor++]!,
+    });
+    const broken = {
+      ...portfolio,
+      queries: portfolio.queries.map((query, index) =>
+        index === 0 ? { ...query, taskRevision: 3n } : query,
+      ),
+    };
+
+    expect(searchQueryPortfolioSchema.safeParse(broken).success).toBe(false);
   });
 });
