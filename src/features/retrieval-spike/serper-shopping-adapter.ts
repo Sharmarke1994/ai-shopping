@@ -82,6 +82,7 @@ export type SerperShoppingAdapterOptions = Readonly<{
 
 export class SerperShoppingAdapter implements ShoppingSearchProvider {
   readonly provider = "serper" as const;
+  readonly maxRequestDurationMs: number;
 
   readonly #apiKey: string;
   readonly #fetch: typeof fetch;
@@ -94,7 +95,13 @@ export class SerperShoppingAdapter implements ShoppingSearchProvider {
     }
     this.#apiKey = options.apiKey;
     this.#fetch = options.fetchImpl ?? fetch;
-    this.#timeoutMs = options.timeoutMs ?? 12_000;
+    this.#timeoutMs = z
+      .number()
+      .int()
+      .min(100)
+      .max(30_000)
+      .parse(options.timeoutMs ?? 12_000);
+    this.maxRequestDurationMs = this.#timeoutMs;
     this.#now = options.now ?? (() => new Date());
   }
 

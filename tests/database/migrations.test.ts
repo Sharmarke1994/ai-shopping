@@ -42,6 +42,7 @@ describe("shopping-state and context-acquisition migration shape", () => {
       "search_queries",
       "search_query_executions",
       "search_runs",
+      "shopping_task_subjects",
       "shopping_tasks",
       "state_change_applications",
       "task_inputs",
@@ -62,7 +63,7 @@ describe("shopping-state and context-acquisition migration shape", () => {
       'select count(*)::integer as count from "drizzle"."migrations"',
     );
     const after = afterRows[0]?.count;
-    expect(before).toBe(8);
+    expect(before).toBe(9);
     expect(after).toBe(before);
   });
 
@@ -154,26 +155,55 @@ describe("shopping-state and context-acquisition migration shape", () => {
     );
   });
 
+  it("binds immutable subjects and one leased run to each SEARCH action", async () => {
+    const constraints = await connection.client.unsafe<
+      { conname: string; definition: string }[]
+    >(`
+      select conname, pg_get_constraintdef(oid) as definition
+      from pg_constraint
+      where conname in (
+        'shopping_task_subjects_exact_message_fk',
+        'search_runs_task_context_action_unique',
+        'search_runs_lease_shape'
+      )
+      order by conname
+    `);
+    expect(constraints).toHaveLength(3);
+    const definitions = constraints.map((row) => row.definition).join(" ");
+    expect(definitions).toContain(
+      "FOREIGN KEY (task_id, task_input_id, user_message_id)",
+    );
+    expect(definitions).toContain("UNIQUE (task_id, context_action_id)");
+    expect(definitions).toContain("lease_token IS NULL");
+    expect(definitions).toContain("status = 'running'::text");
+  });
+
   it("does not expose the private schema to client roles", async () => {
     const [privileges] = await connection.client.unsafe<
       {
         anon_schema: boolean;
         anon_table: boolean;
+        anon_subject_table: boolean;
         authenticated_schema: boolean;
         authenticated_table: boolean;
+        authenticated_subject_table: boolean;
       }[]
     >(`
       select
         has_schema_privilege('anon', 'shopping_private', 'USAGE') as anon_schema,
         has_table_privilege('anon', 'shopping_private.candidate_listings', 'SELECT') as anon_table,
+        has_table_privilege('anon', 'shopping_private.shopping_task_subjects', 'SELECT') as anon_subject_table,
         has_schema_privilege('authenticated', 'shopping_private', 'USAGE') as authenticated_schema,
-        has_table_privilege('authenticated', 'shopping_private.search_runs', 'SELECT') as authenticated_table
+        has_table_privilege('authenticated', 'shopping_private.search_runs', 'SELECT') as authenticated_table,
+        has_table_privilege('authenticated', 'shopping_private.shopping_task_subjects', 'SELECT') as authenticated_subject_table
     `);
     expect(privileges).toEqual({
       anon_schema: false,
       anon_table: false,
+      anon_subject_table: false,
       authenticated_schema: false,
       authenticated_table: false,
+      authenticated_subject_table: false,
     });
   });
 

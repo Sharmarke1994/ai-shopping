@@ -43,18 +43,17 @@ The deterministic model double isolates the persisted-state/retrieval seam; it
 does not claim a second live V0-05 model evaluation. The proof runs in a guarded
 disposable database which is migrated from empty and dropped afterward.
 
-Focused PostgreSQL tests also prove that cross-task sources, non-message inputs,
-and a `SEARCH` selected before later authoritative truth are rejected. The
-successful path compares state before and after query generation to prove that
-`race cap` remains a retrieval hypothesis rather than becoming a criterion.
+The successful path compares state before and after query generation to prove
+that `race cap` remains a retrieval hypothesis rather than becoming a criterion.
 
-This is deliberately a one-message proof, not a claim that product-subject
-identity is solved. V0-05 can persist a later free-text refinement as another
-`message`, but the current state model cannot distinguish that refinement from a
-complete shopping subject. The automatic boundary therefore must not be treated
-as production-ready for multi-turn tasks until a first-class current
-ShoppingSubject/source contract exists. Question answers and direct brief edits
-already fail closed rather than being misrepresented as the subject.
+That evidence run was deliberately a one-message proof. The later Layer-3
+checkpoint now makes the missing distinction explicit: a task is immutably bound
+to its exact initial persisted shopper message, while the input whose application
+owns the current SEARCH action is separate trigger provenance. PostgreSQL tests
+prove cross-task and stale combinations fail closed, and prove initial message →
+ASK → persisted answer → state update → SEARCH with the initial message still the
+subject and the answer recorded as trigger. This does not retroactively change
+the live evidence recorded below.
 
 Run with:
 

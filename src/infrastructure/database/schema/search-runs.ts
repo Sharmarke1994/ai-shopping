@@ -25,6 +25,11 @@ export const searchRuns = shoppingPrivate.table(
     provider: text("provider").notNull(),
     queryStrategyVersion: text("query_strategy_version").notNull(),
     status: text("status").notNull(),
+    leaseToken: uuid("lease_token"),
+    leaseExpiresAt: timestamp("lease_expires_at", {
+      mode: "date",
+      withTimezone: true,
+    }),
     startedAt: timestamp("started_at", {
       mode: "date",
       withTimezone: true,
@@ -43,6 +48,10 @@ export const searchRuns = shoppingPrivate.table(
       table.taskId,
       table.id,
       table.provider,
+    ),
+    unique("search_runs_task_context_action_unique").on(
+      table.taskId,
+      table.contextActionId,
     ),
     foreignKey({
       name: "search_runs_task_fk",
@@ -82,6 +91,10 @@ export const searchRuns = shoppingPrivate.table(
     check(
       "search_runs_status_time_shape",
       sql`(${table.status} = 'running' and ${table.finishedAt} is null) or (${table.status} in ('succeeded', 'partial', 'failed') and ${table.finishedAt} is not null and ${table.finishedAt} >= ${table.startedAt})`,
+    ),
+    check(
+      "search_runs_lease_shape",
+      sql`(${table.leaseToken} is null and ${table.leaseExpiresAt} is null) or (${table.status} = 'running' and ${table.leaseToken} is not null and ${table.leaseExpiresAt} is not null)`,
     ),
   ],
 );

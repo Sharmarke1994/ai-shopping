@@ -1,41 +1,44 @@
+import { and, eq } from "drizzle-orm";
 import { projectShoppingBrief } from "@/domain/shopping-state/brief";
+import { PersistedDataCorruptionError } from "@/domain/shopping-state/errors";
+import {
+  contextActionIdSchema,
+  shoppingTaskIdSchema,
+  stateChangeApplicationIdSchema,
+  taskInputIdSchema,
+} from "@/domain/shopping-state/ids";
 import {
   currentShoppingStateSchema,
   type CurrentShoppingState,
 } from "@/domain/shopping-state/shopping-state";
-import {
-  shoppingTaskIdSchema,
-  taskInputIdSchema,
-} from "@/domain/shopping-state/ids";
-import type { ShoppingDatabase } from "@/infrastructure/database/clients";
-import {
-  resolvedShoppingInputV1Schema,
-  type ResolvedShoppingInputV1,
-} from "@/features/context-acquisition/contracts";
-import { loadContextActionByApplication } from "@/features/context-acquisition/persistence/context-actions";
-import { resolveStoredShoppingInput } from "@/features/context-acquisition/persistence/resolved-input";
+import { loadContextActionByIdInTransaction } from "@/features/context-acquisition/persistence/context-actions";
 import { loadCurrentShoppingState } from "@/features/shopping-state/persistence/state-loaders";
-import { loadValidatedStateApplicationBySourceInput } from "@/features/shopping-state/persistence/state-transitions";
+import { loadValidatedStateApplicationBySourceInputInTransaction } from "@/features/shopping-state/persistence/state-transitions";
+import type { ShoppingDatabase } from "@/infrastructure/database/clients";
+import { stateChangeApplications } from "@/infrastructure/database/schema";
 import { retrievalContextV1Schema, type RetrievalContextV1 } from "./contracts";
+import {
+  loadShoppingSubjectInTransaction,
+  ShoppingSubjectNotFoundError,
+  type PersistedShoppingSubject,
+} from "./persistence/shopping-subjects";
 
-export class RetrievalSubjectInputKindError extends Error {
-  constructor(readonly inputKind: ResolvedShoppingInputV1["kind"]) {
-    super(
-      `Retrieval subject must be a persisted shopper message, not ${inputKind}`,
-    );
-    this.name = "RetrievalSubjectInputKindError";
-  }
-}
+export type PersistedRetrievalContextEnvelopeV1 = Readonly<{
+  contextActionId: ReturnType<typeof contextActionIdSchema.parse>;
+  stateApplicationId: ReturnType<typeof stateChangeApplicationIdSchema.parse>;
+  triggerInputId: ReturnType<typeof taskInputIdSchema.parse>;
+  context: RetrievalContextV1;
+}>;
 
-export class RetrievalSourceApplicationNotFoundError extends Error {
-  constructor(readonly sourceInputId: string) {
-    super(`No validated state application exists for ${sourceInputId}`);
-    this.name = "RetrievalSourceApplicationNotFoundError";
+export class RetrievalContextActionNotFoundError extends Error {
+  constructor(readonly contextActionId: string) {
+    super(`Retrieval context action ${contextActionId} was not found`);
+    this.name = "RetrievalContextActionNotFoundError";
   }
 }
 
 export class RetrievalActionNotSearchError extends Error {
-  constructor(readonly action: "missing" | "ask" | "show_refine") {
+  constructor(readonly action: "ask" | "show_refine") {
     super(`Retrieval requires a persisted SEARCH action, received ${action}`);
     this.name = "RetrievalActionNotSearchError";
   }
@@ -53,18 +56,26 @@ export class StaleRetrievalSearchActionError extends Error {
   }
 }
 
+function corrupt(contextActionId: string, message: string): never {
+  throw new PersistedDataCorruptionError({
+    recordType: "RetrievalAuthoritySnapshot",
+    recordId: contextActionId,
+    cause: new Error(message),
+  });
+}
+
 function buildRetrievalContextFromCurrentState(options: {
   state: CurrentShoppingState;
-  subjectInputId: unknown;
-  subject: ResolvedShoppingInputV1;
+  subject: PersistedShoppingSubject;
   marketVocabulary?: unknown;
 }): RetrievalContextV1 {
   const state = currentShoppingStateSchema.parse(options.state);
-  const subject = resolvedShoppingInputV1Schema.parse(options.subject);
-  if (subject.kind !== "message") {
-    throw new RetrievalSubjectInputKindError(subject.kind);
+  if (options.subject.taskId !== state.task.id) {
+    return corrupt(
+      options.subject.taskId,
+      "Shopping subject and state belong to different tasks",
+    );
   }
-  const subjectInputId = taskInputIdSchema.parse(options.subjectInputId);
   const brief = projectShoppingBrief(state);
 
   return retrievalContextV1Schema.parse({
@@ -73,61 +84,105 @@ function buildRetrievalContextFromCurrentState(options: {
     revision: state.task.currentRevision,
     market: state.task.market,
     shoppingSubject: {
-      text: subject.body,
-      sourceInputId: subjectInputId,
+      text: options.subject.body,
+      sourceInputId: options.subject.sourceInputId,
     },
     brief,
     marketVocabulary: options.marketVocabulary ?? [],
   });
 }
 
+/**
+ * Loads one coherent authority snapshot. The immutable task subject identifies
+ * what is being shopped for; the SEARCH action's state application identifies
+ * which later shopper turn triggered this retrieval.
+ */
 export async function loadRetrievalContextFromPersistedState(options: {
   db: ShoppingDatabase;
   taskId: unknown;
-  subjectInputId: unknown;
+  contextActionId: unknown;
   marketVocabulary?: unknown;
-}): Promise<RetrievalContextV1> {
+}): Promise<PersistedRetrievalContextEnvelopeV1> {
   const taskId = shoppingTaskIdSchema.parse(options.taskId);
-  const subjectInputId = taskInputIdSchema.parse(options.subjectInputId);
+  const contextActionId = contextActionIdSchema.parse(options.contextActionId);
+
   return options.db.transaction(
     async (tx) => {
-      const application = await loadValidatedStateApplicationBySourceInput(
+      const action = await loadContextActionByIdInTransaction({
         tx,
         taskId,
-        subjectInputId,
+        contextActionId,
+      });
+      if (action === null) {
+        throw new RetrievalContextActionNotFoundError(contextActionId);
+      }
+      if (action.action !== "search") {
+        throw new RetrievalActionNotSearchError(action.action);
+      }
+
+      const [applicationRow] = await tx
+        .select({
+          id: stateChangeApplications.id,
+          sourceTaskInputId: stateChangeApplications.sourceTaskInputId,
+        })
+        .from(stateChangeApplications)
+        .where(
+          and(
+            eq(stateChangeApplications.taskId, taskId),
+            eq(stateChangeApplications.id, action.stateChangeApplicationId),
+          ),
+        )
+        .limit(1);
+      if (applicationRow === undefined) {
+        return corrupt(
+          contextActionId,
+          "SEARCH action has no same-task state application",
+        );
+      }
+      const triggerInputId = taskInputIdSchema.parse(
+        applicationRow.sourceTaskInputId,
       );
-      if (application === null) {
-        throw new RetrievalSourceApplicationNotFoundError(subjectInputId);
+      const application =
+        await loadValidatedStateApplicationBySourceInputInTransaction(
+          tx,
+          taskId,
+          triggerInputId,
+        );
+      if (
+        application === null ||
+        application.application.id !== action.stateChangeApplicationId ||
+        application.application.resultingRevision > action.selectedAtRevision
+      ) {
+        return corrupt(
+          contextActionId,
+          "SEARCH action, trigger input, and state application are incoherent",
+        );
       }
+
       const state = await loadCurrentShoppingState(tx, taskId);
-      const subject = await resolveStoredShoppingInput({
-        db: tx,
-        taskId,
-        inputId: subjectInputId,
-      });
-      const action = await loadContextActionByApplication({
-        db: tx,
-        taskId,
-        stateChangeApplicationId: application.application.id,
-      });
-      if (action === null || action.action !== "search") {
-        throw new RetrievalActionNotSearchError(action?.action ?? "missing");
-      }
       if (action.selectedAtRevision !== state.task.currentRevision) {
         throw new StaleRetrievalSearchActionError(
           action.selectedAtRevision,
           state.task.currentRevision,
         );
       }
+      const subject = await loadShoppingSubjectInTransaction({ tx, taskId });
+      if (subject === null) throw new ShoppingSubjectNotFoundError(taskId);
 
-      return buildRetrievalContextFromCurrentState({
-        state,
-        subjectInputId,
-        subject,
-        ...(options.marketVocabulary === undefined
-          ? {}
-          : { marketVocabulary: options.marketVocabulary }),
-      });
+      return {
+        contextActionId,
+        stateApplicationId: stateChangeApplicationIdSchema.parse(
+          application.application.id,
+        ),
+        triggerInputId,
+        context: buildRetrievalContextFromCurrentState({
+          state,
+          subject,
+          ...(options.marketVocabulary === undefined
+            ? {}
+            : { marketVocabulary: options.marketVocabulary }),
+        }),
+      };
     },
     { isolationLevel: "repeatable read", accessMode: "read only" },
   );

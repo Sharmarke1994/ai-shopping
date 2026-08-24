@@ -11,9 +11,9 @@ import type {
 } from "../src/features/context-acquisition/provider-wire";
 import { loadRetrievalContextFromPersistedState } from "../src/features/retrieval-spike/context-from-persisted-state";
 import { executeSearchQueryPortfolio } from "../src/features/retrieval-spike/execution";
+import { recordInitialShoppingSubject } from "../src/features/retrieval-spike/persistence/shopping-subjects";
 import { buildSearchQueryPortfolio } from "../src/features/retrieval-spike/query-strategy";
 import { SerperShoppingAdapter } from "../src/features/retrieval-spike/serper-shopping-adapter";
-import { recordTaskInput } from "../src/features/shopping-state/persistence/inputs-and-messages";
 import { createShoppingTask } from "../src/features/shopping-state/persistence/tasks";
 import { requireTestDatabaseEnvironment } from "../src/infrastructure/config/environment";
 import { createDatabaseConnection } from "../src/infrastructure/database/clients";
@@ -253,7 +253,7 @@ try {
   });
 
   const task = await createShoppingTask(connection.db);
-  const source = await recordTaskInput({
+  const source = await recordInitialShoppingSubject({
     db: connection.db,
     taskId: task.id,
     clientActionId: `persisted-retrieval-proof:${proofCase.name}:${randomUUID()}`,
@@ -282,10 +282,10 @@ try {
     );
   }
 
-  const context = await loadRetrievalContextFromPersistedState({
+  const retrievalAuthority = await loadRetrievalContextFromPersistedState({
     db: connection.db,
     taskId: task.id,
-    subjectInputId: acquired.stateApplication.application.sourceTaskInputId,
+    contextActionId: acquired.action.id,
     marketVocabulary: [
       {
         term: proofCase.fixture.marketTerm,
@@ -294,7 +294,7 @@ try {
       },
     ],
   });
-  const portfolio = buildSearchQueryPortfolio(context);
+  const portfolio = buildSearchQueryPortfolio(retrievalAuthority.context);
   const retrieval = await executeSearchQueryPortfolio({
     portfolio,
     provider: new SerperShoppingAdapter({ apiKey }),
@@ -311,7 +311,7 @@ try {
           contextActionId: acquired.action.id,
           action: acquired.action.action,
         },
-        context,
+        retrievalAuthority,
         portfolio,
         queryExecutions: retrieval.queries,
         listings: retrieval.listings,

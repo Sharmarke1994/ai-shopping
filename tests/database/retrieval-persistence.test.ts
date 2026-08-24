@@ -11,8 +11,9 @@ import {
   recordSearchQueryExecution,
   SearchPlanAuthorityError,
   SearchQueryExecutionConflictError,
-  SearchRunConflictError,
+  SearchTriggerConflictError,
 } from "../../src/features/retrieval-spike/persistence/search-runs";
+import { recordInitialShoppingSubject } from "../../src/features/retrieval-spike/persistence/shopping-subjects";
 import { buildSearchQueryPortfolio } from "../../src/features/retrieval-spike/query-strategy";
 import { recordTaskInput } from "../../src/features/shopping-state/persistence/inputs-and-messages";
 import { applyStatePatch } from "../../src/features/shopping-state/persistence/state-transitions";
@@ -62,7 +63,7 @@ describe("retrieval persistence", () => {
 
   async function authority() {
     const task = await createShoppingTask(connection.db);
-    const source = await recordTaskInput({
+    const source = await recordInitialShoppingSubject({
       db: connection.db,
       taskId: task.id,
       clientActionId: "retrieval-persistence-source",
@@ -123,10 +124,10 @@ describe("retrieval persistence", () => {
     const criterionId = application.brief.items[0]?.criterionId;
     if (criterionId === undefined)
       throw new Error("Expected a brief criterion");
-    const context = await loadRetrievalContextFromPersistedState({
+    const retrievalAuthority = await loadRetrievalContextFromPersistedState({
       db: connection.db,
       taskId: task.id,
-      subjectInputId: source.input.id,
+      contextActionId: action.action.id,
       marketVocabulary: [
         {
           term: "race cap",
@@ -135,7 +136,7 @@ describe("retrieval persistence", () => {
         },
       ],
     });
-    const portfolio = buildSearchQueryPortfolio(context, {
+    const portfolio = buildSearchQueryPortfolio(retrievalAuthority.context, {
       now: () => runStartedAt,
     });
     return { task, source, application, action: action.action, portfolio };
@@ -296,7 +297,7 @@ describe("retrieval persistence", () => {
         provider: "serper",
         portfolio,
       }),
-    ).rejects.toBeInstanceOf(SearchRunConflictError);
+    ).rejects.toBeInstanceOf(SearchTriggerConflictError);
 
     const query = portfolio.queries[0]!;
     const sharedProviderProductId = "shared-google-catalog-id";

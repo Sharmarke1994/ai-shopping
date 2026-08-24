@@ -1,6 +1,6 @@
 # Founder MVP progress
 
-**Updated:** 2026-08-23 23:05 Europe/London
+**Updated:** 2026-08-24 16:16 Europe/London
 **Durable goal:** Deliver a polished founder-usable AI shopping MVP whose live
 understanding, market retrieval, evidence-aware evaluation, refinement, saving,
 and comparison are meaningfully better than beginning with Google.
@@ -12,11 +12,15 @@ and comparison are meaningfully better than beginning with Google.
 - Isolated product-progress worktree:
   `/Users/alchemist32/Documents/AI Shopping/ai-shopping-v0-06-spike`.
 - Experimental branch: `codex/v0-06-retrieval-spike`.
-- Current pushed V0-06 head: `a3f6e33dc30954467db9a6f8c4d70cc7711f9c6b`.
+- Latest completed pushed checkpoint: Layer 2 plus its durable ledger at
+  `775311e7670519ab14c9d078cb14398961a0f8ff`. Layer 3 is represented by the
+  commit containing this ledger update; do not try to embed that commit's own
+  future SHA here.
 - Original V0-05 checkout and draft PR #9 remain separate, unmodified, unmerged,
   and formally unaccepted. Its last instructed checkpoint is `9c33018`; the
-  latest known Terra release gate completed 19/21, with both failures at the
-  provider connection layer and all model-completed runs semantically passing.
+  latest Terra release gate completed 14/21 on 24 August 2026. All seven failed
+  runs were provider-only connection/timeout failures and all 14 completed runs
+  passed the protected semantic measures.
   The 21/21 Terra rule has not been weakened and Luna remains diagnostic only.
 - Nothing on this experimental branch may be merged automatically. Each
   coherent layer is committed and pushed for recoverability while work
@@ -74,29 +78,46 @@ Pushed at `a3f6e33dc30954467db9a6f8c4d70cc7711f9c6b`.
 - Migration `0007_bumpy_gorgon.sql` is additive and revokes private-table access
   from PUBLIC and Supabase client roles.
 
+### Layer 3 — subject/trigger authority and resumable retrieval
+
+Implemented in the checkpoint containing this ledger; pending independent
+review and intentionally unmerged.
+
+- Binds each task once to the exact persisted initial V1 shopper message as its
+  immutable `ShoppingSubject`; later criteria and answers never replace it.
+- Keeps the persisted SEARCH-causing input as separate trigger provenance. The
+  tested ASK → answer → SEARCH path retains the initial message as subject while
+  recording the answer input as trigger.
+- Loads subject, trigger application, current task/revision, deterministic brief,
+  SEARCH action, and market in one repeatable-read authority snapshot.
+- Uses the persisted SEARCH `ContextActionId` as the durable logical retrieval
+  trigger and enforces one SearchRun per task/action above generated run IDs.
+- Uses a short PostgreSQL-clock lease with token fencing. Concurrent retries
+  return the same in-progress run; expired leases resume only queries without a
+  terminal receipt.
+- Persists each completed or failed query receipt immediately. Exact retries of
+  terminal runs return stored evidence without another provider call.
+- Checks current task authority before each new paid call. A response already
+  authorized at revision R may persist as historical R evidence if truth changes
+  in flight; no subsequent query starts after the newer revision is observed.
+- Exactly-once charging cannot be guaranteed if a provider accepts a request and
+  the process dies before its receipt commits. The lease is deliberately left to
+  expire after ambiguous post-call failures so an immediate retry cannot double
+  issue; provider-side idempotency would be required to remove that final window.
+- Migration `0008_melodic_wallop.sql` adds only the immutable subject binding,
+  one-run-per-action uniqueness, and paired lease fields, with private-table
+  privileges revoked.
+
 ## Current work
 
-Layer 3 is next: normal conversation-to-search orchestration, then the first
-honest live consumer route. The accepted narrow design is:
-
-1. Add a V0-06-owned immutable `shopping_task_subjects` binding from a task to
-   its real persisted initial user message. The subject is not a criterion.
-2. Keep the SEARCH-causing input separately as trigger provenance. In an
-   ASK → answer → SEARCH flow, the answer is the trigger but the initial shopper
-   message remains the shopping subject.
-3. Load `{subject, trigger, current state, deterministic brief, SEARCH action}`
-   in one coherent snapshot and persist the search plan before provider calls.
-4. Add an explicit idempotent retrieval-trigger identity before any paid POST
-   can be retried after a lost HTTP response.
-5. Build a separate `/live` consumer path; retain `/` as the fixture regression
-   harness. Live cards must show factual retrieved fields only and must not
-   invent suitability, trade-offs, ranking, or deduplication before those layers
-   exist.
+Layer 3 implementation and verification are complete. The branch must now stop
+for independent review. No `/live` route, result UI, save/reject, refinement,
+evidence, assessment, ranking, comparison, auth, or deployment work has started.
 
 ## Next validated checkpoints
 
-1. Normal message → ASK or SEARCH and ASK → answer → SEARCH orchestration with
-   stable subject/trigger provenance and exact retries.
+1. Independent review and acceptance of the Layer-3 subject/trigger and
+   idempotent resume boundary.
 2. Founder-usable `/live` route with task creation, visible current brief,
    clarification, retrieval progress, factual real results, partial/failure
    states, and refresh-safe exact-run loading.
@@ -120,43 +141,37 @@ honest live consumer route. The accepted narrow design is:
   `ai_shopping_test`; test commands pass the URL only to the process. The local
   server is 17.11 while the repository deliberately pins CI to 17.6.
 - The full local database suite therefore reports one expected version-pin
-  assertion failure; all 66 functional database tests pass. Do not weaken the
-  pin to make the local result green.
+  assertion failure. Do not weaken the pin to make the local result green.
 - Direct merchant URLs, public deployment/auth, and any second paid provider are
   unresolved product/security decisions. They are not blockers for the private
   local founder loop.
 
 ## Latest verification
 
-At pushed Layer-2 head `a3f6e33`:
-
-- `pnpm db:generate`: no unexplained schema drift.
-- `pnpm check`: formatting, lint, generated route types, TypeScript, 131/131
-  deterministic unit/component tests, and production build pass.
-- Focused retrieval persistence PostgreSQL suite: 7/7 pass.
-- Full PostgreSQL suite: 66 functional tests pass; only the intentional
-  PostgreSQL 17.6-vs-local-17.11 version assertion fails.
+- `pnpm check`: formatting, lint, generated route types, strict TypeScript,
+  131/131 deterministic unit/component tests, production build — pass.
+- Focused Layer-3 PostgreSQL suites: 23/23 pass across authority snapshots,
+  retrieval persistence, and orchestration.
+- Full PostgreSQL suite: 78 functional tests pass; the sole failure is the
+  intentional PostgreSQL 17.6 pin against local Homebrew 17.11.
+- `pnpm test:e2e`: 6/6 browser smoke tests pass; no UI changed in Layer 3.
+- Second `pnpm db:generate`: no schema drift after migration 0008.
 - Production dependency audit: no known vulnerabilities.
-- `git diff --check`: pass.
-- Secret-value scan: pass.
-- Independent Layer-2 rereview: approved with no material blocker after the
-  run-lock and catalogue-ID corrections.
+- `git diff --check` and changed-value secret scan: pass.
+- Independent Layer-3 read-only review: no material implementation blocker;
+  the unavoidable post-provider/pre-receipt crash ambiguity is documented.
 
 ## Exact resume instructions
 
 1. Work only in
    `/Users/alchemist32/Documents/AI Shopping/ai-shopping-v0-06-spike` on
    `codex/v0-06-retrieval-spike`; confirm the branch and clean tree first.
-2. Read this file and only the Layer-3-relevant V0-05 persistence/coordinator,
-   retrieval context, and live UI seams. Do not reopen accepted V0-03/V0-04
-   architecture.
+2. Read this file and inspect the Layer-3 commit/independent review status. Do not
+   reopen accepted V0-03/V0-04 architecture.
 3. Preserve the original V0-05 checkout and draft PR #9 exactly; do not merge it
    and do not weaken its Terra gate.
-4. Implement the stable task subject / current trigger distinction first, with
-   database constraints, exact retries, cross-task/stale rejection, and an
-   ASK → answer → SEARCH integration test.
-5. Add durable retrieval-trigger idempotency before issuing paid provider calls
-   from an HTTP request.
-6. TEST → COMMIT → PUSH each coherent layer, update this ledger, and continue.
-7. Do not merge automatically. Stop only for a real credential, paid-vendor,
-   security/privacy, consequential product, or accepted-architecture blocker.
+4. Do not change Layer 3 or start `/live` while independent review is pending.
+5. If review finds a material issue, make only the bounded correction and rerun
+   the affected/full gates.
+6. Do not merge automatically. After acceptance, the next bounded product layer
+   is the honest live consumer route described above.

@@ -10,10 +10,12 @@ The approved product and architecture knowledge base, V0-01 runnable foundation,
 accepted V0-02 fixture-driven consumer shell, V0-03 semantic persistence, and
 V0-04 deterministic state-transition engine are merged. Gate 1 and Gate 2 are
 closed. The independently reviewed V0-05 AI interpretation/context-acquisition
-plan is merged, and its bounded implementation is the current checkpoint.
-Retrieval, product/candidate state, judgement, and later integrations remain out
-of scope until this checkpoint is accepted. Do not broaden a task because later
-work is documented.
+plan is merged. Its bounded implementation remains a formal draft-PR release
+checkpoint and must not be merged without acceptance. Isolated V0-06 retrieval
+experiments may be developed and pushed in parallel, but they must remain
+unmerged and cheap to rebase until V0-05 is accepted; they do not authorize
+judgement or later product layers. Do not broaden a task because later work is
+documented.
 
 ## Hard invariants
 

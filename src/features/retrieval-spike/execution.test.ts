@@ -66,6 +66,7 @@ describe("retrieval-spike execution", () => {
       portfolio: input,
       provider: {
         provider: "fixture",
+        maxRequestDurationMs: 0,
         search: (query) =>
           query.purpose === "market_language"
             ? Promise.reject(new Error("provider unavailable"))
@@ -87,6 +88,7 @@ describe("retrieval-spike execution", () => {
       portfolio: input,
       provider: {
         provider: "fixture",
+        maxRequestDurationMs: 0,
         search: async (query) => {
           const response = await fake.search(query);
           if (query.purpose !== "market_language") return response;
@@ -119,6 +121,7 @@ describe("retrieval-spike execution", () => {
       portfolio: input,
       provider: {
         provider: "fixture",
+        maxRequestDurationMs: 0,
         search: async (query) => {
           const response = await fake.search(query);
           if (query.purpose !== "market_language") return response;

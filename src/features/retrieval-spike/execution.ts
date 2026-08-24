@@ -28,29 +28,14 @@ export type RetrievalExecution = Readonly<{
   listings: readonly CandidateListing[];
 }>;
 
-export async function executeSearchQueryPortfolio(options: {
-  portfolio: unknown;
+export async function executeSearchQuery(options: {
+  query: SearchQuery;
   provider: ShoppingSearchProvider;
-}): Promise<RetrievalExecution> {
-  const portfolio = searchQueryPortfolioSchema.parse(options.portfolio);
-  const settled = await Promise.allSettled(
-    portfolio.queries.map((query) => options.provider.search(query)),
-  );
-  const queries: QueryExecution[] = settled.map((result, index) => {
-    const query = portfolio.queries[index]!;
-    if (result.status === "rejected") {
-      return {
-        status: "failed",
-        query,
-        errorCode: "provider_failed",
-        error:
-          result.reason instanceof Error
-            ? result.reason.message.trim().slice(0, 500) ||
-              "Provider request failed"
-            : "Unknown provider failure",
-      };
-    }
-    const parsed = providerSearchResultSchema.safeParse(result.value);
+}): Promise<QueryExecution> {
+  const query = options.query;
+  try {
+    const value = await options.provider.search(query);
+    const parsed = providerSearchResultSchema.safeParse(value);
     if (!parsed.success) {
       return {
         status: "failed",
@@ -84,7 +69,29 @@ export async function executeSearchQueryPortfolio(options: {
       receivedResultCount: providerResult.diagnostics.receivedResultCount,
       rejectedResultCount: providerResult.diagnostics.rejectedResultCount,
     };
-  });
+  } catch (error) {
+    return {
+      status: "failed",
+      query,
+      errorCode: "provider_failed",
+      error:
+        error instanceof Error
+          ? error.message.trim().slice(0, 500) || "Provider request failed"
+          : "Unknown provider failure",
+    };
+  }
+}
+
+export async function executeSearchQueryPortfolio(options: {
+  portfolio: unknown;
+  provider: ShoppingSearchProvider;
+}): Promise<RetrievalExecution> {
+  const portfolio = searchQueryPortfolioSchema.parse(options.portfolio);
+  const queries = await Promise.all(
+    portfolio.queries.map((query) =>
+      executeSearchQuery({ query, provider: options.provider }),
+    ),
+  );
   return {
     portfolio,
     queries,

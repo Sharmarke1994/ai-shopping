@@ -57,6 +57,13 @@
       "when": 1787520985997,
       "tag": "0007_bumpy_gorgon",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1787584205324,
+      "tag": "0008_melodic_wallop",
+      "breakpoints": true
     }
   ]
 }

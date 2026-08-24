@@ -7,6 +7,7 @@ import {
 
 export class FakeShoppingProvider implements ShoppingSearchProvider {
   readonly provider = "fixture" as const;
+  readonly maxRequestDurationMs = 0;
 
   constructor(private readonly now: () => Date = () => new Date()) {}
 

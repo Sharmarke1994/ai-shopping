@@ -96,10 +96,26 @@ export class SearchRunConflictError extends Error {
   }
 }
 
+export class SearchTriggerConflictError extends Error {
+  constructor(readonly contextActionId: string) {
+    super(
+      `SEARCH action ${contextActionId} already owns a different retrieval plan`,
+    );
+    this.name = "SearchTriggerConflictError";
+  }
+}
+
 export class SearchQueryExecutionConflictError extends Error {
   constructor(readonly queryId: string) {
     super(`Search query ${queryId} already has a different terminal receipt`);
     this.name = "SearchQueryExecutionConflictError";
+  }
+}
+
+export class SearchRunExecutionLeaseError extends Error {
+  constructor(readonly runId: string) {
+    super(`Search run ${runId} is owned by a different execution lease`);
+    this.name = "SearchRunExecutionLeaseError";
   }
 }
 
@@ -149,6 +165,36 @@ function normalizedListings(listings: readonly CandidateListing[]) {
         left.url.localeCompare(right.url),
     )
     .map((listing) => structuredClone(listing));
+}
+
+function logicalPortfolioIdentity(portfolio: SearchQueryPortfolio) {
+  const hypothesisOrdinalById = new Map(
+    portfolio.hypotheses.map((hypothesis, ordinal) => [hypothesis.id, ordinal]),
+  );
+  return {
+    run: {
+      taskId: portfolio.run.taskId,
+      taskRevision: portfolio.run.taskRevision,
+      market: portfolio.run.market,
+      queryStrategyVersion: portfolio.run.queryStrategyVersion,
+    },
+    hypotheses: portfolio.hypotheses.map((hypothesis) => ({
+      kind: hypothesis.kind,
+      rationale: hypothesis.rationale,
+      sourceTextIsBasis: hypothesis.sourceTextIsBasis,
+      basisCriterionIds: hypothesis.basisCriterionIds,
+    })),
+    queries: portfolio.queries.map((query) => ({
+      hypothesisOrdinal: hypothesisOrdinalById.get(query.hypothesisId),
+      taskId: query.taskId,
+      taskRevision: query.taskRevision,
+      purpose: query.purpose,
+      text: query.text,
+      market: query.market,
+      surface: query.surface,
+      limit: query.limit,
+    })),
+  };
 }
 
 function stripPersistedListing(
@@ -209,6 +255,12 @@ async function loadSearchRunInTransaction(
       recordId: runId,
       parse: () => runStatusSchema.parse(runRow.status),
     });
+    if (
+      (runRow.leaseToken === null) !== (runRow.leaseExpiresAt === null) ||
+      (status !== "running" && runRow.leaseToken !== null)
+    ) {
+      return corrupt(runId, "Run lease fields are incoherent");
+    }
     const contextActionId = persisted({
       recordType: "SearchRun",
       recordId: runId,
@@ -612,8 +664,73 @@ async function loadExactExistingPlan(options: {
   return existing;
 }
 
+async function loadExistingPlanByTrigger(options: {
+  tx: ShoppingTransaction;
+  taskId: ReturnType<typeof shoppingTaskIdSchema.parse>;
+  contextActionId: ReturnType<typeof contextActionIdSchema.parse>;
+  lock?: boolean;
+}) {
+  const query = options.tx
+    .select({ runId: searchRuns.id })
+    .from(searchRuns)
+    .where(
+      and(
+        eq(searchRuns.taskId, options.taskId),
+        eq(searchRuns.contextActionId, options.contextActionId),
+      ),
+    )
+    .limit(1);
+  const rows = options.lock === false ? await query : await query.for("share");
+  const [row] = rows;
+  if (row === undefined) return null;
+  const run = await loadSearchRunInTransaction(
+    options.tx,
+    options.taskId,
+    searchRunIdSchema.parse(row.runId),
+  );
+  if (run === null) {
+    return corrupt(row.runId, "Trigger-owned run disappeared while loading");
+  }
+  return run;
+}
+
+function exactLogicalTriggerWinner(options: {
+  existing: PersistedSearchRun;
+  portfolio: SearchQueryPortfolio;
+  provider: ReturnType<typeof shoppingProviderSchema.parse>;
+  contextActionId: ReturnType<typeof contextActionIdSchema.parse>;
+}) {
+  if (options.existing.status !== "running") return options.existing;
+  if (
+    options.existing.provider !== options.provider ||
+    !isDeepStrictEqual(
+      logicalPortfolioIdentity(options.existing.portfolio),
+      logicalPortfolioIdentity(options.portfolio),
+    )
+  ) {
+    throw new SearchTriggerConflictError(options.contextActionId);
+  }
+  return options.existing;
+}
+
 export async function persistSearchPlan(options: {
   db: ShoppingDatabase;
+  contextActionId: unknown;
+  provider: unknown;
+  portfolio: unknown;
+}): Promise<{ created: boolean; run: PersistedSearchRun }> {
+  return options.db.transaction((tx) =>
+    persistSearchPlanInTransaction({
+      tx,
+      contextActionId: options.contextActionId,
+      provider: options.provider,
+      portfolio: options.portfolio,
+    }),
+  );
+}
+
+export async function persistSearchPlanInTransaction(options: {
+  tx: ShoppingTransaction;
   contextActionId: unknown;
   provider: unknown;
   portfolio: unknown;
@@ -622,7 +739,24 @@ export async function persistSearchPlan(options: {
   const contextActionId = contextActionIdSchema.parse(options.contextActionId);
   const provider = shoppingProviderSchema.parse(options.provider);
 
-  return options.db.transaction(async (tx) => {
+  const tx = options.tx;
+  return (async () => {
+    const triggerWinner = await loadExistingPlanByTrigger({
+      tx,
+      taskId: portfolio.run.taskId,
+      contextActionId,
+    });
+    if (triggerWinner !== null) {
+      return {
+        created: false,
+        run: exactLogicalTriggerWinner({
+          existing: triggerWinner,
+          portfolio,
+          provider,
+          contextActionId,
+        }),
+      };
+    }
     const existing = await loadExactExistingPlan({
       tx,
       portfolio,
@@ -639,6 +773,23 @@ export async function persistSearchPlan(options: {
       .limit(1);
     if (taskRow === undefined) {
       throw new SearchPlanAuthorityError("Search plan task does not exist");
+    }
+
+    const actionWinner = await loadExistingPlanByTrigger({
+      tx,
+      taskId: portfolio.run.taskId,
+      contextActionId,
+    });
+    if (actionWinner !== null) {
+      return {
+        created: false,
+        run: exactLogicalTriggerWinner({
+          existing: actionWinner,
+          portfolio,
+          provider,
+          contextActionId,
+        }),
+      };
     }
 
     const winner = await loadExactExistingPlan({
@@ -725,7 +876,7 @@ export async function persistSearchPlan(options: {
     );
     if (run === null) throw new Error("Inserted search run was not visible");
     return { created: true, run };
-  });
+  })();
 }
 
 function storedExecutionMatches(options: {
@@ -774,6 +925,31 @@ export async function recordSearchQueryExecution(options: {
   startedAt: Date;
   finishedAt: Date;
   providerRequestId?: string | null;
+  expectedLeaseToken?: unknown;
+}): Promise<{ created: boolean; run: PersistedSearchRun }> {
+  return options.db.transaction((tx) =>
+    recordSearchQueryExecutionInTransaction({
+      tx,
+      execution: options.execution,
+      startedAt: options.startedAt,
+      finishedAt: options.finishedAt,
+      ...(options.providerRequestId === undefined
+        ? {}
+        : { providerRequestId: options.providerRequestId }),
+      ...(options.expectedLeaseToken === undefined
+        ? {}
+        : { expectedLeaseToken: options.expectedLeaseToken }),
+    }),
+  );
+}
+
+export async function recordSearchQueryExecutionInTransaction(options: {
+  tx: ShoppingTransaction;
+  execution: QueryExecution;
+  startedAt: Date;
+  finishedAt: Date;
+  providerRequestId?: string | null;
+  expectedLeaseToken?: unknown;
 }): Promise<{ created: boolean; run: PersistedSearchRun }> {
   const execution = queryExecutionInputSchema.parse(options.execution);
   const startedAt = z.date().parse(options.startedAt);
@@ -784,14 +960,22 @@ export async function recordSearchQueryExecution(options: {
     .max(240)
     .nullable()
     .parse(options.providerRequestId ?? null);
+  const expectedLeaseToken =
+    options.expectedLeaseToken === undefined
+      ? undefined
+      : z.uuid().parse(options.expectedLeaseToken);
   if (finishedAt < startedAt) {
     throw new TypeError("Query execution finished before it started");
   }
 
-  return options.db.transaction(async (tx) => {
+  const tx = options.tx;
+  return (async () => {
     const query = execution.query;
     const [lockedRun] = await tx
-      .select({ status: searchRuns.status })
+      .select({
+        status: searchRuns.status,
+        leaseToken: searchRuns.leaseToken,
+      })
       .from(searchRuns)
       .where(
         and(
@@ -827,6 +1011,12 @@ export async function recordSearchQueryExecution(options: {
         throw new SearchQueryExecutionConflictError(query.id);
       }
       return { created: false, run };
+    }
+    if (
+      lockedRun.leaseToken !== (expectedLeaseToken ?? null) ||
+      (lockedRun.leaseToken === null && expectedLeaseToken !== undefined)
+    ) {
+      throw new SearchRunExecutionLeaseError(query.runId);
     }
     if (run.status !== "running") {
       throw new SearchQueryExecutionConflictError(query.id);
@@ -923,7 +1113,12 @@ export async function recordSearchQueryExecution(options: {
       );
       await tx
         .update(searchRuns)
-        .set({ status, finishedAt: latestFinishedAt })
+        .set({
+          status,
+          finishedAt: latestFinishedAt,
+          leaseToken: null,
+          leaseExpiresAt: null,
+        })
         .where(
           and(
             eq(searchRuns.taskId, query.taskId),
@@ -939,7 +1134,7 @@ export async function recordSearchQueryExecution(options: {
     );
     if (stored === null) throw new Error("Updated search run was not visible");
     return { created: true, run: stored };
-  });
+  })();
 }
 
 export async function loadPersistedSearchRun(options: {
@@ -951,6 +1146,37 @@ export async function loadPersistedSearchRun(options: {
   const runId = searchRunIdSchema.parse(options.runId);
   return options.db.transaction(
     (tx) => loadSearchRunInTransaction(tx, taskId, runId),
+    { isolationLevel: "repeatable read", accessMode: "read only" },
+  );
+}
+
+export async function loadPersistedSearchRunInTransaction(options: {
+  tx: ShoppingTransaction;
+  taskId: unknown;
+  runId: unknown;
+}): Promise<PersistedSearchRun | null> {
+  return loadSearchRunInTransaction(
+    options.tx,
+    shoppingTaskIdSchema.parse(options.taskId),
+    searchRunIdSchema.parse(options.runId),
+  );
+}
+
+export async function loadPersistedSearchRunByTrigger(options: {
+  db: ShoppingDatabase;
+  taskId: unknown;
+  contextActionId: unknown;
+}): Promise<PersistedSearchRun | null> {
+  const taskId = shoppingTaskIdSchema.parse(options.taskId);
+  const contextActionId = contextActionIdSchema.parse(options.contextActionId);
+  return options.db.transaction(
+    (tx) =>
+      loadExistingPlanByTrigger({
+        tx,
+        taskId,
+        contextActionId,
+        lock: false,
+      }),
     { isolationLevel: "repeatable read", accessMode: "read only" },
   );
 }

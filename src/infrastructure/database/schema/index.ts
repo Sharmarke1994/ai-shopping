@@ -13,6 +13,7 @@ export { searchQueries } from "./search-queries";
 export { searchQueryExecutions } from "./search-query-executions";
 export { searchRuns } from "./search-runs";
 export { shoppingPrivate } from "./shopping-private";
+export { shoppingTaskSubjects } from "./shopping-task-subjects";
 export { shoppingTasks } from "./shopping-tasks";
 export { stateChangeApplications } from "./state-change-applications";
 export { taskInputs } from "./task-inputs";

@@ -250,5 +250,7 @@ export type ProviderSearchResult = z.infer<typeof providerSearchResultSchema>;
 
 export interface ShoppingSearchProvider {
   readonly provider: z.infer<typeof shoppingProviderSchema>;
+  /** Hard upper bound enforced by the adapter for one provider request. */
+  readonly maxRequestDurationMs: number;
   search(query: SearchQuery): Promise<ProviderSearchResult>;
 }
