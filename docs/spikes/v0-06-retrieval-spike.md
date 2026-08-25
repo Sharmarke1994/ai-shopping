@@ -16,8 +16,10 @@ exact task-local `SearchRun`, its hypotheses and queries, terminal per-query
 execution receipts, and exact `CandidateListing` offer rows. Layer 3 adds the
 immutable initial-message subject, separate SEARCH trigger provenance, and a
 fenced resume boundary keyed above generated SearchRun IDs. This remains an
-experimental founder-MVP boundary rather than the final V0-06 architecture; it
-does not implement evidence, assessment, ranking, reactions, comparison, or UI.
+experimental founder-MVP boundary rather than the final V0-06 architecture. A
+later bounded `/live` checkpoint now consumes it through a normal consumer
+application path; evidence, assessment, ranking, reactions and comparison
+remain unimplemented.
 
 The exact shopping subject is context, not a `DecisionCriterion`. A
 `market_vocabulary` hypothesis is explicitly retrieval theory. Neither has a

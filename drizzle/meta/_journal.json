@@ -64,6 +64,13 @@
       "when": 1787584205324,
       "tag": "0008_melodic_wallop",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1787659642355,
+      "tag": "0009_easy_arachne",
+      "breakpoints": true
     }
   ]
 }

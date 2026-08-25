@@ -5,6 +5,7 @@ export { contextActions, contextQuestionOptions } from "./context-actions";
 export { contextAcquisitionAttempts } from "./context-acquisition-attempts";
 export { criterionSources } from "./criterion-sources";
 export { decisionCriteria } from "./decision-criteria";
+export { founderLiveSessions } from "./founder-live-sessions";
 export {
   searchHypotheses,
   searchHypothesisBasisCriteria,

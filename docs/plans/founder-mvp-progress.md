@@ -1,6 +1,6 @@
 # Founder MVP progress
 
-**Updated:** 2026-08-24 16:16 Europe/London
+**Updated:** 2026-08-25 14:45 Europe/London
 **Durable goal:** Deliver a polished founder-usable AI shopping MVP whose live
 understanding, market retrieval, evidence-aware evaluation, refinement, saving,
 and comparison are meaningfully better than beginning with Google.
@@ -12,10 +12,10 @@ and comparison are meaningfully better than beginning with Google.
 - Isolated product-progress worktree:
   `/Users/alchemist32/Documents/AI Shopping/ai-shopping-v0-06-spike`.
 - Experimental branch: `codex/v0-06-retrieval-spike`.
-- Latest completed pushed checkpoint: Layer 2 plus its durable ledger at
-  `775311e7670519ab14c9d078cb14398961a0f8ff`. Layer 3 is represented by the
-  commit containing this ledger update; do not try to embed that commit's own
-  future SHA here.
+- Latest independently accepted pushed checkpoint: Layer 3 at
+  `870356f5642923618186e794419d39116f62e54c`. The first `/live` founder flow is
+  represented by the commit containing this ledger update; do not try to embed
+  that commit's own future SHA here.
 - Original V0-05 checkout and draft PR #9 remain separate, unmodified, unmerged,
   and formally unaccepted. Its last instructed checkpoint is `9c33018`; the
   latest Terra release gate completed 14/21 on 24 August 2026. All seven failed
@@ -108,25 +108,49 @@ review and intentionally unmerged.
   one-run-per-action uniqueness, and paired lease fields, with private-table
   privileges revoked.
 
+### Layer 4 — first honest live founder flow
+
+Implemented in the checkpoint containing this ledger; pending founder and
+independent review and intentionally unmerged.
+
+- Adds a dedicated calm consumer `/live` route while preserving `/` as the V0-02
+  fixture regression surface.
+- Creates one real GB / GBP / en-GB task, records its immutable subject, runs the
+  real V0-05 coordinator, renders the deterministic brief, supports persisted
+  ASK answers, and executes/resumes the accepted Layer-3 SEARCH boundary.
+- Uses one narrow private founder-session row to bind browser retry keys to
+  server-owned task/action/input identities and to recover an interrupted
+  context turn. No auth, account, global preference or client-selected domain
+  ID was introduced.
+- Loads completed persisted runs on refresh without OpenAI/Serper dependency
+  construction or another provider call. Active and interrupted work has an
+  explicit safe recovery path.
+- Renders only factual persisted listing fields. It does not claim suitability,
+  ranking, product facts, confidence or recommendation.
+- Migration `0009_easy_arachne.sql` adds only the local founder-session binding
+  and revokes private-table access from PUBLIC and Supabase client roles.
+- Real application proof: a light breathable running-cap request produced two
+  explicit brief items, two successful Serper query receipts and 16 persisted
+  UK listing rows. Multiple refreshes left exactly one task, subject and run.
+- Durable evidence is in `docs/spikes/v0-06-live-founder-flow.md`.
+
 ## Current work
 
-Layer 3 implementation and verification are complete. The branch must now stop
-for independent review. No `/live` route, result UI, save/reject, refinement,
-evidence, assessment, ranking, comparison, auth, or deployment work has started.
+The first `/live` founder flow and its real OpenAI → Serper proof are complete.
+The branch must now stop for founder and independent visual/product review.
+Save/reject, refinement, evidence, assessment, ranking, comparison, auth and
+deployment have not started.
 
 ## Next validated checkpoints
 
-1. Independent review and acceptance of the Layer-3 subject/trigger and
-   idempotent resume boundary.
-2. Founder-usable `/live` route with task creation, visible current brief,
-   clarification, retrieval progress, factual real results, partial/failure
-   states, and refresh-safe exact-run loading.
-3. Exact-listing save/reject plus natural refinement and re-search. Bare reject
+1. Founder and independent review of the first `/live` vertical product flow,
+   including the real rendered cap results and narrow/mobile behaviour.
+2. Exact-listing save/reject plus natural refinement and re-search. Bare reject
    remains task-local to the acted-on listing and undoable.
-4. Bounded evidence acquisition, evidence-backed observations, criterion-level
+3. Bounded evidence acquisition, evidence-backed observations, criterion-level
    assessment, suitability judgement, and visible unknowns.
-5. Shortlist and 2–4 item comparison against the shopper's current criteria.
-6. Responsive visual iteration, unrelated-category founder journeys, resilience,
+4. Shortlist and 2–4 item comparison against the shopper's current criteria.
+5. Responsive visual iteration, unrelated-category founder journeys, resilience,
    security/privacy review, and founder handoff.
 
 ## Credentials and blockers
@@ -149,13 +173,15 @@ evidence, assessment, ranking, comparison, auth, or deployment work has started.
 ## Latest verification
 
 - `pnpm check`: formatting, lint, generated route types, strict TypeScript,
-  131/131 deterministic unit/component tests, production build — pass.
-- Focused Layer-3 PostgreSQL suites: 23/23 pass across authority snapshots,
-  retrieval persistence, and orchestration.
-- Full PostgreSQL suite: 78 functional tests pass; the sole failure is the
+  140/140 deterministic unit/component tests, production build — pass.
+- Full PostgreSQL suite: 84 functional tests pass; the sole failure is the
   intentional PostgreSQL 17.6 pin against local Homebrew 17.11.
-- `pnpm test:e2e`: 6/6 browser smoke tests pass; no UI changed in Layer 3.
-- Second `pnpm db:generate`: no schema drift after migration 0008.
+- `pnpm test:e2e`: 8/8 Chromium tests pass, including `/live` direct + refresh
+  and mobile ASK → answer → SEARCH.
+- Second `pnpm db:generate`: no schema drift after migration 0009.
+- Real `/live` proof: one task, one subject, one run, two terminal query receipts
+  and 16 persisted Serper listings; desktop and 390 × 844 rendered inspection
+  has no horizontal overflow or console warning/error.
 - Production dependency audit: no known vulnerabilities.
 - `git diff --check` and changed-value secret scan: pass.
 - Independent Layer-3 read-only review: no material implementation blocker;
@@ -166,12 +192,15 @@ evidence, assessment, ranking, comparison, auth, or deployment work has started.
 1. Work only in
    `/Users/alchemist32/Documents/AI Shopping/ai-shopping-v0-06-spike` on
    `codex/v0-06-retrieval-spike`; confirm the branch and clean tree first.
-2. Read this file and inspect the Layer-3 commit/independent review status. Do not
-   reopen accepted V0-03/V0-04 architecture.
+2. Read this file and `docs/spikes/v0-06-live-founder-flow.md`; inspect the
+   first-live-flow commit and exact-head PR #10 CI. Do not reopen accepted
+   V0-03/V0-04 or Layer-3 architecture.
 3. Preserve the original V0-05 checkout and draft PR #9 exactly; do not merge it
    and do not weaken its Terra gate.
-4. Do not change Layer 3 or start `/live` while independent review is pending.
+4. Keep PR #10 draft and unmerged. Do not start Save/reject, refinement,
+   evidence, judgement, ranking, shortlist or comparison while review is
+   pending.
 5. If review finds a material issue, make only the bounded correction and rerun
    the affected/full gates.
 6. Do not merge automatically. After acceptance, the next bounded product layer
-   is the honest live consumer route described above.
+   is exact-listing save/reject plus natural refinement and re-search.
