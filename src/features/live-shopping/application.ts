@@ -30,6 +30,7 @@ import type {
   ShoppingTransaction,
 } from "@/infrastructure/database/clients";
 import {
+  contextActionAnswers,
   founderLiveSessions,
   shoppingTasks,
   taskInputs,
@@ -456,11 +457,29 @@ export async function retryLiveShoppingContext(options: {
   const sessionId = liveSessionIdSchema.parse(options.sessionId);
   const recovery = await options.dependencies.db.transaction(async (tx) => {
     const session = await loadSessionInTransaction({ tx, sessionId });
-    if (
-      session.pendingTaskInputId !== null ||
-      session.currentContextActionId !== null
-    ) {
+    if (session.pendingTaskInputId !== null) {
       return null;
+    }
+    if (session.currentContextActionId !== null) {
+      const action = await loadContextActionByIdInTransaction({
+        tx,
+        taskId: session.taskId,
+        contextActionId: session.currentContextActionId,
+      });
+      if (action?.action !== "ask") return null;
+      const [answer] = await tx
+        .select({ inputId: contextActionAnswers.answerTaskInputId })
+        .from(contextActionAnswers)
+        .where(
+          and(
+            eq(contextActionAnswers.taskId, session.taskId),
+            eq(contextActionAnswers.contextActionId, action.id),
+          ),
+        )
+        .limit(1);
+      return answer === undefined
+        ? null
+        : { taskId: session.taskId, inputId: answer.inputId };
     }
     const subject = await loadShoppingSubjectInTransaction({
       tx,
@@ -509,24 +528,49 @@ function briefEmphasis(strength: "hard" | "strong_preference" | "preference") {
       : ("preference" as const);
 }
 
-function displayListings(
+export function displayListings(
   run: NonNullable<Awaited<ReturnType<typeof loadPersistedSearchRunByTrigger>>>,
 ) {
+  const queryOrdinals = new Map(
+    run.portfolio.queries.map((query, ordinal) => [query.id, ordinal]),
+  );
+  const orderedListings = [...run.listings].sort((left, right) => {
+    const queryOrder =
+      (queryOrdinals.get(left.queryId) ?? Number.MAX_SAFE_INTEGER) -
+      (queryOrdinals.get(right.queryId) ?? Number.MAX_SAFE_INTEGER);
+    if (queryOrder !== 0) return queryOrder;
+    if (left.sourceRank !== right.sourceRank) {
+      return left.sourceRank - right.sourceRank;
+    }
+    return (
+      left.providerResultId.localeCompare(right.providerResultId) ||
+      (left.merchant ?? "").localeCompare(right.merchant ?? "") ||
+      left.canonicalUrl.localeCompare(right.canonicalUrl) ||
+      left.id.localeCompare(right.id)
+    );
+  });
   const grouped = new Map<
     string,
-    { listing: (typeof run.listings)[number]; count: number }
+    {
+      listing: (typeof run.listings)[number];
+      queryIds: Set<string>;
+    }
   >();
-  for (const listing of run.listings) {
+  for (const listing of orderedListings) {
     const key = JSON.stringify([
       listing.providerResultId,
       listing.merchant,
       listing.priceText,
+      listing.canonicalUrl,
     ]);
     const existing = grouped.get(key);
-    if (existing === undefined) grouped.set(key, { listing, count: 1 });
-    else existing.count += 1;
+    if (existing === undefined) {
+      grouped.set(key, { listing, queryIds: new Set([listing.queryId]) });
+    } else {
+      existing.queryIds.add(listing.queryId);
+    }
   }
-  return [...grouped.values()].map(({ listing, count }) => ({
+  return [...grouped.values()].map(({ listing, queryIds }) => ({
     displayId: createHash("sha256")
       .update(listing.id)
       .digest("hex")
@@ -546,7 +590,7 @@ function displayListings(
     destinationLabel: "View on Google Shopping" as const,
     deliveryText: listing.deliveryText,
     availabilityText: listing.availabilityText,
-    foundAcrossQueries: count,
+    foundAcrossQueries: queryIds.size,
   }));
 }
 
@@ -576,7 +620,28 @@ export async function loadLiveShoppingSession(options: {
       if (session.currentContextActionId !== null && action === null) {
         throw new Error("Live session current action is missing");
       }
-      return { action, brief: projectShoppingBrief(state), session, subject };
+      const answeredAskInputId =
+        action?.action === "ask"
+          ? ((
+              await tx
+                .select({ inputId: contextActionAnswers.answerTaskInputId })
+                .from(contextActionAnswers)
+                .where(
+                  and(
+                    eq(contextActionAnswers.taskId, session.taskId),
+                    eq(contextActionAnswers.contextActionId, action.id),
+                  ),
+                )
+                .limit(1)
+            )[0]?.inputId ?? null)
+          : null;
+      return {
+        action,
+        answeredAskInputId,
+        brief: projectShoppingBrief(state),
+        session,
+        subject,
+      };
     },
     { isolationLevel: "repeatable read", accessMode: "read only" },
   );
@@ -605,6 +670,16 @@ export async function loadLiveShoppingSession(options: {
         kind: "understanding_failed",
         notice:
           "We couldn't finish understanding that turn. Your shopping state is safe.",
+        retryable: true,
+      },
+    });
+  }
+  if (snapshot.answeredAskInputId !== null) {
+    return liveShoppingViewSchema.parse({
+      ...common,
+      action: {
+        kind: "understanding_failed",
+        notice: "Your answer is saved. Continue to finish updating the brief.",
         retryable: true,
       },
     });

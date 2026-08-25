@@ -61,15 +61,35 @@ task, one founder session, one immutable subject, one SearchRun, two planned
 queries, two terminal query executions and 16 listing rows. Refresh is a
 read-only load and does not construct dependencies for OpenAI or Serper.
 
+### Post-review founder journeys
+
+A second live pass tested headphones. “Wireless over-ear headphones around
+£150. I wear glasses and care about both clamp comfort and ANC” went directly
+to SEARCH. The brief preserved price, ANC, glasses/clamp comfort, wireless and
+over-ear preferences, but the factual retrieval rows ranged from £44.99 to £349.
+That is honest retrieval evidence and also a clear product limitation: without
+assessment/judgement, an around-£150 preference does not yet control which rows
+feel useful.
+
+A more explicit unresolved-priority request — “comfort and ANC both matter,
+but I have not decided which matters more” — produced a real ASK: whether
+comfort with glasses or strongest ANC should lead. This confirms that the live
+question path works, while showing that clarification sensitivity and result
+usefulness need founder evaluation rather than being inferred from plumbing.
+
 ## Consumer presentation boundary
 
 - Product cards show only persisted title, image, merchant, observed price,
   optional observed delivery/availability and destination.
 - There is no score, ranking, suitability, evidence assessment, recommendation,
   product identity or fuzzy deduplication.
-- Exact rows sharing the same provider result ID, merchant and observed price
-  are collapsed only for presentation and retain a count. Different merchants
-  or prices remain distinct offers.
+- Exact rows sharing the same provider result ID, merchant, observed price and
+  canonical URL are collapsed only for presentation. The visible overlap label
+  counts distinct query IDs, never duplicate rows within one query. Different
+  merchants, prices or canonical URLs remain distinct offers.
+- Storefront order is deterministic and intentional: persisted query-portfolio
+  ordinal first, then provider source rank. Random query UUID ordering never
+  decides which products appear above “show more”.
 - The first 12 rows are shown initially with an explicit “show more” control;
   this is pagination, not a shortlist or judgement.
 - Partial runs retain successful rows; terminal failures and provider failures
@@ -79,8 +99,11 @@ read-only load and does not construct dependencies for OpenAI or Serper.
 
 - Application integration tests cover one task/subject, exact lost-response
   retry, direct SEARCH, ASK → answer → SEARCH, immutable subject versus answer
-  trigger, refresh load, no repeated provider call, partial results and
-  task-scoped retry keys.
+  trigger, the answer-commit/session-pointer crash window, refresh load, no
+  repeated provider call, partial results and task-scoped retry keys.
+- A focused presentation regression uses deliberately reverse-sorting query
+  UUIDs and duplicate rows to prove portfolio/source-rank order and
+  distinct-query overlap semantics.
 - Client-contract tests reject authoritative IDs/revisions and protect the
   server-only Serper boundary.
 - Chromium tests exercise direct search plus refresh on desktop and the

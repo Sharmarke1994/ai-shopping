@@ -125,6 +125,14 @@ independent review and intentionally unmerged.
 - Loads completed persisted runs on refresh without OpenAI/Serper dependency
   construction or another provider call. Active and interrupted work has an
   explicit safe recovery path.
+- Recovers the exact persisted answer when a process stops after the V2 ASK
+  answer commits but before the founder-session pending pointer commits. The
+  saved answer becomes pending work and the old question is not presented as
+  answerable again.
+- Orders visible listings by the persisted query-portfolio ordinal and then
+  provider source rank, rather than random query UUID order. Presentation-only
+  overlap counts distinct query IDs and uses canonical URL as an additional
+  conservative grouping boundary.
 - Renders only factual persisted listing fields. It does not claim suitability,
   ranking, product facts, confidence or recommendation.
 - Migration `0009_easy_arachne.sql` adds only the local founder-session binding
@@ -132,12 +140,18 @@ independent review and intentionally unmerged.
 - Real application proof: a light breathable running-cap request produced two
   explicit brief items, two successful Serper query receipts and 16 persisted
   UK listing rows. Multiple refreshes left exactly one task, subject and run.
+- Post-review founder use also exercised headphones. An explicit unresolved
+  comfort-versus-ANC priority produced the intended ASK. A less explicit
+  around-£150 request searched directly and returned factual rows from £44.99
+  to £349, demonstrating that retrieval works but suitability/price judgement
+  is now the dominant visible product gap.
 - Durable evidence is in `docs/spikes/v0-06-live-founder-flow.md`.
 
 ## Current work
 
-The first `/live` founder flow and its real OpenAI → Serper proof are complete.
-The branch must now stop for founder and independent visual/product review.
+The first `/live` founder flow, its bounded independent-review corrections and
+its real OpenAI → Serper proof are complete. The branch must now stop for
+founder and independent visual/product review.
 Save/reject, refinement, evidence, assessment, ranking, comparison, auth and
 deployment have not started.
 
@@ -173,8 +187,8 @@ deployment have not started.
 ## Latest verification
 
 - `pnpm check`: formatting, lint, generated route types, strict TypeScript,
-  140/140 deterministic unit/component tests, production build — pass.
-- Full PostgreSQL suite: 84 functional tests pass; the sole failure is the
+  141/141 deterministic unit/component tests, production build — pass.
+- Full PostgreSQL suite: 85 functional tests pass; the sole failure is the
   intentional PostgreSQL 17.6 pin against local Homebrew 17.11.
 - `pnpm test:e2e`: 8/8 Chromium tests pass, including `/live` direct + refresh
   and mobile ASK → answer → SEARCH.

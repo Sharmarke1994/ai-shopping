@@ -15,6 +15,8 @@ import {
   startLiveShopping,
   type LiveShoppingDependencies,
 } from "../../src/features/live-shopping/application";
+import { recordContextActionAnswer } from "../../src/features/context-acquisition/persistence/context-action-answers";
+import { loadContextActionByIdInTransaction } from "../../src/features/context-acquisition/persistence/context-actions";
 import type {
   ContextAcquisitionModel,
   ModelCallMetadata,
@@ -320,6 +322,90 @@ describe("founder live-shopping application", () => {
     expect(answerBinding).toBeDefined();
     expect(authority.context.shoppingSubject.text).toBe(answered.subject);
     expect(authority.triggerInputId).toBe(answerBinding?.answerTaskInputId);
+  });
+
+  it("recovers when an ASK answer commits before the founder session pending pointer", async () => {
+    const model = askThenSearchModel();
+    const counted = countedProvider();
+    const dependencies = {
+      db: connection.db,
+      model,
+      provider: counted.provider,
+    } satisfies LiveShoppingDependencies;
+    const sessionId = "8937609b-1fe7-4829-a1d9-cff7897747ce";
+    const initial = await startLiveShopping({
+      dependencies,
+      input: {
+        operation: "start",
+        sessionId,
+        turnId: "4932ad18-58c0-451b-a80a-68c31a05a32d",
+        message: "A visually light shelving unit for a narrow alcove",
+      },
+    });
+    expect(initial.action.kind).toBe("ask");
+
+    const [session] = await connection.db
+      .select()
+      .from(founderLiveSessions)
+      .where(eq(founderLiveSessions.id, sessionId));
+    if (session?.currentContextActionId === null || session === undefined) {
+      throw new Error("Expected current ASK action");
+    }
+    const action = await connection.db.transaction((tx) =>
+      loadContextActionByIdInTransaction({
+        tx,
+        taskId: session.taskId,
+        contextActionId: session.currentContextActionId!,
+      }),
+    );
+    if (action?.action !== "ask") throw new Error("Expected persisted ASK");
+
+    const recorded = await recordContextActionAnswer({
+      db: connection.db,
+      taskId: session.taskId,
+      clientActionId: "live:8d17e07b-58b4-4580-ac2b-871fa4e6e790",
+      request: {
+        inputSchemaVersion: 2,
+        expectedRevision: action.selectedAtRevision,
+        kind: "question_answer",
+        questionId: action.id,
+        answer: {
+          mode: "single_select",
+          optionId: action.question.options[0]!.id,
+        },
+      },
+    });
+    expect(recorded.created).toBe(true);
+
+    const interrupted = await loadLiveShoppingSession({
+      db: connection.db,
+      sessionId,
+    });
+    expect(interrupted.action).toMatchObject({
+      kind: "understanding_failed",
+      retryable: true,
+    });
+
+    const recovered = await retryLiveShoppingContext({
+      dependencies,
+      sessionId,
+    });
+    expect(recovered.action.kind).toBe("search");
+    expect(recovered.subject).toBe(
+      "A visually light shelving unit for a narrow alcove",
+    );
+    expect(recovered.brief).toEqual([
+      expect.objectContaining({ label: "Maximum width", emphasis: "must" }),
+    ]);
+    expect(
+      await connection.db.select().from(contextActionAnswers),
+    ).toHaveLength(1);
+    const [recoveredSession] = await connection.db
+      .select()
+      .from(founderLiveSessions)
+      .where(eq(founderLiveSessions.id, sessionId));
+    expect(recoveredSession?.pendingTaskInputId).toBeNull();
+    expect(recoveredSession?.currentContextActionId).not.toBe(action.id);
   });
 
   it("loads a completed task on refresh without calling either external provider", async () => {
