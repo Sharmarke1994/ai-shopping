@@ -12,10 +12,11 @@ and comparison are meaningfully better than beginning with Google.
 - Isolated product-progress worktree:
   `/Users/alchemist32/Documents/AI Shopping/ai-shopping-v0-06-spike`.
 - Experimental branch: `codex/v0-06-retrieval-spike`.
-- Latest independently accepted pushed checkpoint: Layer 3 at
-  `870356f5642923618186e794419d39116f62e54c`. The first `/live` founder flow is
-  represented by the commit containing this ledger update; do not try to embed
-  that commit's own future SHA here.
+- Latest product checkpoint: recursive founder shopping at
+  `b158e1e7b828fe097cb1fbc5663a7f13c93165ae`, followed only by the docs-only
+  checkpoint commit containing this ledger update. It is pushed in draft PR #10
+  and awaits independent review. Layer 3 remains the latest independently
+  accepted checkpoint at `870356f5642923618186e794419d39116f62e54c`.
 - Original V0-05 checkout and draft PR #9 remain separate, unmodified, unmerged,
   and formally unaccepted. Its last instructed checkpoint is `9c33018`; the
   latest Terra release gate completed 14/21 on 24 August 2026. All seven failed
