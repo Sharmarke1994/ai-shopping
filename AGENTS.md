@@ -13,10 +13,12 @@ closed. The independently reviewed V0-05 AI interpretation/context-acquisition
 plan is merged. Its bounded implementation remains a formal draft-PR release
 checkpoint and must not be merged without acceptance. The isolated V0-06 branch
 now includes an unmerged recursive founder-shopping checkpoint: authoritative
-refinement, exact saves, retrieval persistence and bounded observed
-hard-conflict triage. It remains cheap to rebase until V0-05 is accepted and
-does not authorize product evidence, suitability judgement, ranking,
-comparison or later layers. Do not broaden a task because later work is
+refinement, exact saves, retrieval persistence, verified merchant-destination
+provenance, bounded observed hard-conflict triage and a small view-only listing
+evidence projection that keeps unsupported criteria unverified. It remains
+cheap to rebase until V0-05 is accepted. Full evidence acquisition, persisted
+product observations, suitability judgement, comparison and later layers still
+require their own bounded work. Do not broaden a task because later work is
 documented.
 
 ## Hard invariants

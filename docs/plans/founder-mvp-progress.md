@@ -1,6 +1,6 @@
 # Founder MVP progress
 
-**Updated:** 2026-08-26 16:46 Europe/London
+**Updated:** 2026-08-26 23:41 Europe/London
 **Durable goal:** Deliver a polished founder-usable AI shopping MVP whose live
 understanding, market retrieval, evidence-aware evaluation, refinement, saving,
 and comparison are meaningfully better than beginning with Google.
@@ -12,11 +12,11 @@ and comparison are meaningfully better than beginning with Google.
 - Isolated product-progress worktree:
   `/Users/alchemist32/Documents/AI Shopping/ai-shopping-v0-06-spike`.
 - Experimental branch: `codex/v0-06-retrieval-spike`.
-- Latest product checkpoint: recursive founder shopping at
-  `b158e1e7b828fe097cb1fbc5663a7f13c93165ae`, followed only by the docs-only
-  checkpoint commit containing this ledger update. It is pushed in draft PR #10
-  and awaits independent review. Layer 3 remains the latest independently
-  accepted checkpoint at `870356f5642923618186e794419d39116f62e54c`.
+- Latest product checkpoint: honest listing evidence and verified merchant
+  destinations at `b112430`, followed only by the docs checkpoint containing
+  this ledger update. It belongs in draft PR #10 and awaits exact-head CI and
+  independent review. Layer 3 remains the latest independently accepted
+  checkpoint at `870356f5642923618186e794419d39116f62e54c`.
 - Original V0-05 checkout and draft PR #9 remain separate, unmodified, unmerged,
   and formally unaccepted. Its last instructed checkpoint is `9c33018`; the
   latest Terra release gate completed 14/21 on 24 August 2026. All seven failed
@@ -176,20 +176,49 @@ Implemented in the current unmerged checkpoint.
 - Durable evidence is in
   `docs/spikes/v0-06-recursive-founder-evidence.md`.
 
+### Layer 6 — verified destinations and honest listing evidence
+
+Implemented at `b112430`; experimental, unmerged and awaiting independent
+review.
+
+- Enriches a bounded number of Google Shopping rows through an exact
+  title/merchant organic lookup under the existing provider deadline.
+- Accepts only retailer-like HTTPS pages with matching merchant host, strong
+  title coverage and discriminative brand/model identity. Generic products,
+  Google pages, aggregators, search/category pages and host mismatches keep the
+  honest Google Shopping fallback.
+- Stores destination provenance as `shopping_result` or `verified_organic` and
+  keeps the original Shopping source. Migration `0011` backfills existing
+  direct rows and enforces URL/provenance coherence.
+- Presentation-only exact title/merchant/price grouping removes six duplicate
+  rows in the latest 24-row pool without deleting source rows or creating
+  `ProductIdentity`.
+- Withholds explicit wired titles when wireless is hard, while titles that say
+  neither remain unknown.
+- Shows directly observed price/wireless support separately from unverified
+  comfort, battery, reviews, shape and brand quality. There is no fabricated
+  suitability score or recommendation.
+- Real same-task proof reached revision 6, exercised relaxation, preference
+  changes, use-case acquisition, ASK/answer, save, refresh and exact unsave.
+- Durable evidence and responsive screenshots are in
+  `docs/spikes/v0-06-recursive-founder-evidence.md` and
+  `artifacts/screenshots/v0-06-recursive/`.
+
 ## Current work
 
-The recursive `/live` founder loop, exact saves, query-strategy correction,
-bounded hard-conflict triage and live ergonomic-mouse proof are implemented.
-The current checkpoint is being packaged for exact-head CI and independent
-review. Reject/undo, product evidence, assessment, ranking, comparison, auth and
-deployment have not started.
+The recursive `/live` founder loop now includes exact saves, query-strategy v3,
+bounded hard-conflict triage, verified merchant destinations and an honest
+SERP-field evidence projection. The current checkpoint is being packaged for
+exact-head CI and independent review. Reject/undo, persisted product
+observations, full criterion assessment, comparative judgement, shortlist,
+comparison, auth and deployment have not started.
 
 ## Next validated checkpoints
 
 1. Founder and independent review of the recursive `/live` loop, real mouse
    evidence, exact saves and rendered desktop/mobile behaviour.
-2. Bounded evidence acquisition, evidence-backed observations, criterion-level
-   assessment, suitability judgement, and visible unknowns.
+2. Selective evidence acquisition for a small promising pool, followed by
+   persisted evidence-backed observations and criterion-level assessment.
 3. Bare reject/undo, kept task-local to the acted-on listing without preference
    learning.
 4. Shortlist and 2–4 item comparison against the shopper's current criteria.
@@ -210,24 +239,27 @@ deployment have not started.
 - The full local database suite therefore reports one expected version-pin
   assertion failure. Do not weaken the pin to make the local result green.
 - Public deployment/auth and any second paid provider remain unresolved
-  product/security decisions. Merchant-direct URLs are supported when Serper
-  supplies a validated destination, but live UK coverage is currently 0/24.
+  product/security decisions. The bounded Serper organic experiment produced
+  two useful visible direct destinations in the latest UK run; it can spend up
+  to nine additional lookups per three-query run and should move post-triage at
+  shortlist scale before broader founder use.
 
 ## Latest verification
 
 - `pnpm check`: formatting, lint, generated route types, strict TypeScript,
-  149/149 deterministic unit/component tests, production build — pass.
-- Full PostgreSQL suite: 88 functional tests pass; the sole failure is the
+  156/156 deterministic unit/component tests, production build — pass.
+- Full PostgreSQL suite: 89 functional tests pass; the sole failure is the
   intentional PostgreSQL 17.6 pin against local Homebrew 17.11.
 - `pnpm test:e2e`: 8/8 Chromium tests pass, including `/live` direct + refresh
   plus save → refine → new SearchRun → refresh and mobile ASK → answer → SEARCH.
 - Second `pnpm db:generate`: no schema drift after migration 0010.
-- Real recursive `/live` proof: one task at revision 3, three inputs, immutable
-  subject, three SearchRuns, two saved listings and 24 exact rows in the current
-  three-query run; 18 remained visible after six direct conflicts were withheld.
-- Desktop and 390 × 844 rendered inspection: long requests remain inspectable
-  without displacing the current product pool; no horizontal overflow or
-  browser console warning/error was observed.
+- Real recursive `/live` proof: one task at revision 6, immutable subject,
+  purpose-labelled three-query current run, 24 exact rows, 18 exact offer
+  groups, 13 direct-conflict rows withheld, two useful visible merchant pages,
+  ASK/answer, exact save, refresh and exact unsave.
+- Desktop and 390 × 844 rendered inspection: evidence/unknown labels remain
+  readable, direct/source links retain hierarchy and mobile has no horizontal
+  overflow.
 - Production dependency audit: no known vulnerabilities.
 - `git diff --check` and changed-value secret scan: pass.
 - Independent Layer-3 read-only review: no material implementation blocker;
@@ -243,10 +275,11 @@ deployment have not started.
    #10 CI. Do not reopen accepted V0-03/V0-04 or Layer-3 architecture.
 3. Preserve the original V0-05 checkout and draft PR #9 exactly; do not merge it
    and do not weaken its Terra gate.
-4. Keep PR #10 draft and unmerged. Do not start reject/undo, evidence,
-   judgement, ranking, shortlist or comparison while review is pending.
+4. Keep PR #10 draft and unmerged. Do not start reject/undo, full evidence
+   acquisition, comparative judgement, shortlist or comparison while this
+   checkpoint's CI/review is pending.
 5. If review finds a material issue, make only the bounded correction and rerun
    the affected/full gates.
 6. Do not merge automatically. After acceptance, the next bounded product layer
-   is evidence-backed candidate understanding and criterion assessment for a
-   small pool, with unknowns kept visible.
+   is selective source evidence and persisted candidate observations/criterion
+   assessments for a small pool, with unknowns kept visible.
