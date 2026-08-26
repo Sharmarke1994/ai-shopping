@@ -7,7 +7,11 @@ import type { CandidateListing } from "@/features/retrieval-spike/contracts";
 export type HardCriterionTriage = Readonly<{
   criterionId: string;
   state: "meets" | "conflicts" | "unknown";
-  reason: "observed_price" | "explicit_exclusion" | "not_directly_comparable";
+  reason:
+    | "observed_price"
+    | "explicit_exclusion"
+    | "explicit_categorical_contradiction"
+    | "not_directly_comparable";
 }>;
 
 function normalized(value: string) {
@@ -57,6 +61,36 @@ function triageHardCriterion(
       criterionId: item.criterionId,
       state: excluded ? "conflicts" : "unknown",
       reason: excluded ? "explicit_exclusion" : "not_directly_comparable",
+    };
+  }
+  const wirelessBoolean =
+    value.kind === "boolean"
+      ? value.value
+      : value.kind === "categorical" &&
+          value.operator === "include" &&
+          value.values.length === 1
+        ? normalized(value.values[0]!) === "yes"
+          ? true
+          : normalized(value.values[0]!) === "no"
+            ? false
+            : null
+        : null;
+  if (
+    wirelessBoolean !== null &&
+    normalized(item.conceptLabel).includes("wireless")
+  ) {
+    const observedTitle = normalized(listing.title);
+    const explicitlyWired = hasExplicitPhrase(observedTitle, "wired");
+    const explicitlyWireless = hasExplicitPhrase(observedTitle, "wireless");
+    const conflicts =
+      (wirelessBoolean && explicitlyWired && !explicitlyWireless) ||
+      (!wirelessBoolean && explicitlyWireless);
+    return {
+      criterionId: item.criterionId,
+      state: conflicts ? "conflicts" : "unknown",
+      reason: conflicts
+        ? "explicit_categorical_contradiction"
+        : "not_directly_comparable",
     };
   }
   return {

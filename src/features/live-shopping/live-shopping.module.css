@@ -637,6 +637,35 @@
   font-size: 18px;
 }
 
+.evidenceSummary {
+  display: grid;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgb(23 26 23 / 8%);
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+  gap: 7px;
+}
+
+.evidenceSummary p {
+  margin: 0;
+}
+
+.evidenceSummary strong {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--forest);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.evidenceSummary .evidenceConflict,
+.evidenceSummary .evidenceConflict strong {
+  color: #7b342c;
+}
+
 .productLink {
   display: flex;
   margin-top: auto;

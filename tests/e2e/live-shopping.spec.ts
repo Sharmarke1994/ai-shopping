@@ -12,7 +12,7 @@ test("shops recursively, saves an option, and restores the same task", async ({
   await expect(
     page.getByRole("heading", { name: "Products found for your brief" }),
   ).toBeVisible();
-  await expect(page.getByText("Breathability")).toBeVisible();
+  await expect(page.getByText("Breathability", { exact: true })).toBeVisible();
   await expect(page.getByRole("article")).toHaveCount(2);
   await expect(
     page.getByRole("link", { name: "View at Fixture Outfitters" }).first(),
@@ -68,7 +68,7 @@ test("runs a deterministic ASK to answer to SEARCH on mobile", async ({
   await expect(
     page.getByRole("heading", { name: "Products found for your brief" }),
   ).toBeVisible();
-  await expect(page.getByText("Maximum width")).toBeVisible();
+  await expect(page.getByText("Maximum width", { exact: true })).toBeVisible();
   await expect(page.getByText("maximum 60 cm")).toBeVisible();
   await expect(page.getByRole("article")).toHaveCount(2);
 });

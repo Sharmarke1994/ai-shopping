@@ -48,6 +48,7 @@ import {
   type LiveShoppingView,
 } from "./contracts";
 import { triageListingAgainstHardCriteria } from "./hard-constraint-triage";
+import { summarizeListingEvidence } from "./listing-evidence";
 import {
   loadSavedCandidateListingsInTransaction,
   saveCandidateListing,
@@ -699,21 +700,40 @@ export function displayListings(
   >();
   for (const listing of eligibleForPresentation) {
     const key = JSON.stringify([
-      listing.providerResultId,
-      listing.merchant,
+      listing.title.trim().replace(/\s+/g, " ").toLocaleLowerCase("en-GB"),
+      listing.merchant?.trim().replace(/\s+/g, " ").toLocaleLowerCase("en-GB"),
       listing.priceText,
-      listing.canonicalUrl,
     ]);
     const existing = grouped.get(key);
     if (existing === undefined) {
       grouped.set(key, { listing, queryIds: new Set([listing.queryId]) });
     } else {
       existing.queryIds.add(listing.queryId);
+      if (
+        existing.listing.merchantDestinationUrl === null &&
+        listing.merchantDestinationUrl !== null
+      ) {
+        existing.listing = listing;
+      }
     }
   }
+  const assessedGroups = [...grouped.values()]
+    .map((group) => ({
+      ...group,
+      evidence: summarizeListingEvidence({
+        brief: options.brief,
+        listing: group.listing,
+      }),
+    }))
+    .sort(
+      (left, right) =>
+        Number(right.evidence.hasDirectNonPriceSupport) -
+          Number(left.evidence.hasDirectNonPriceSupport) ||
+        right.queryIds.size - left.queryIds.size,
+    );
   return {
     withheldConflictCount: directlyConflicting.length,
-    listings: [...grouped.values()].map(({ listing, queryIds }) => ({
+    listings: assessedGroups.map(({ listing, queryIds, evidence }) => ({
       candidateListingId: listing.id,
       displayId: createHash("sha256")
         .update(listing.id)
@@ -748,6 +768,12 @@ export function displayListings(
       deliveryText: listing.deliveryText,
       availabilityText: listing.availabilityText,
       foundAcrossQueries: queryIds.size,
+      evidence: {
+        directlyEvidenced: evidence.directlyEvidenced,
+        contradictions: evidence.contradictions,
+        unverifiedLabels: evidence.unverifiedLabels,
+        additionalUnverifiedCount: evidence.additionalUnverifiedCount,
+      },
       saved: options.savedListingIds.has(listing.id),
     })),
   };
@@ -828,6 +854,10 @@ export async function loadLiveShoppingSession(options: {
     })),
     savedListings: snapshot.saved.map(({ listing }) => {
       const direct = listing.merchantDestinationUrl;
+      const evidence = summarizeListingEvidence({
+        brief: snapshot.brief,
+        listing,
+      });
       return {
         candidateListingId: listing.id,
         displayId: createHash("sha256")
@@ -852,6 +882,12 @@ export async function loadLiveShoppingSession(options: {
         deliveryText: listing.deliveryText,
         availabilityText: listing.availabilityText,
         foundAcrossQueries: 1,
+        evidence: {
+          directlyEvidenced: evidence.directlyEvidenced,
+          contradictions: evidence.contradictions,
+          unverifiedLabels: evidence.unverifiedLabels,
+          additionalUnverifiedCount: evidence.additionalUnverifiedCount,
+        },
         saved: true,
       };
     }),

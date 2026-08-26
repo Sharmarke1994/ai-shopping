@@ -39,6 +39,8 @@ function listing(options: {
       options.merchantDestinationUrl === undefined
         ? options.canonicalUrl
         : options.merchantDestinationUrl,
+    merchantDestinationSource:
+      options.merchantDestinationUrl === null ? null : "shopping_result",
     merchant: "Example merchant",
     price: { amountMinor: 2500, currency: "GBP" as const },
     priceText: "£25.00",
@@ -119,16 +121,20 @@ describe("live product presentation", () => {
           providerResultId: "shared-catalogue-row",
           rank: 1,
           title: "Shared product",
-          canonicalUrl: "https://example.test/shared",
+          canonicalUrl:
+            "https://www.google.com/search?ibp=oshop&q=literal&catalogid=shared",
+          merchantDestinationUrl: null,
         }),
         listing({
           id: "50000000-0000-4000-8000-000000000002",
           executionId: "60000000-0000-4000-8000-000000000001",
           queryId: literalQueryId,
-          providerResultId: "shared-catalogue-row",
+          providerResultId: "different-opaque-provider-id",
           rank: 1,
-          title: "Shared product duplicate",
-          canonicalUrl: "https://example.test/shared",
+          title: "Shared product",
+          canonicalUrl:
+            "https://www.google.com/search?ibp=oshop&q=literal&catalogid=shared",
+          merchantDestinationUrl: null,
         }),
         listing({
           id: "50000000-0000-4000-8000-000000000003",
@@ -155,7 +161,9 @@ describe("live product presentation", () => {
           providerResultId: "shared-catalogue-row",
           rank: 2,
           title: "Shared product",
-          canonicalUrl: "https://example.test/shared",
+          canonicalUrl:
+            "https://www.google.com/search?ibp=oshop&q=expanded&catalogid=shared",
+          merchantDestinationUrl: "https://merchant.example/shared",
         }),
       ],
     });
@@ -177,6 +185,9 @@ describe("live product presentation", () => {
       "Expanded query first result",
     ]);
     expect(presented.listings[0]?.foundAcrossQueries).toBe(2);
+    expect(presented.listings[0]?.destinationUrl).toBe(
+      "https://merchant.example/shared",
+    );
   });
 
   it("prefers a trustworthy merchant destination and falls back to the preserved source", () => {

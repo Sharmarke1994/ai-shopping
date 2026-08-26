@@ -166,6 +166,7 @@ describe("retrieval persistence", () => {
       url: `${canonicalUrl}?offer=${encodeURIComponent(options.providerResultId)}`,
       canonicalUrl,
       merchantDestinationUrl: canonicalUrl,
+      merchantDestinationSource: "shopping_result",
       merchant: options.merchant ?? "Runner Shop",
       price: { amountMinor: 2499, currency: "GBP" },
       priceText: "£24.99",

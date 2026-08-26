@@ -42,10 +42,11 @@ export const persistedSearchQueryExecutionSchema = z.discriminatedUnion(
   ],
 );
 
-export const persistedCandidateListingSchema = candidateListingSchema.extend({
-  id: candidateListingIdSchema,
-  queryExecutionId: searchQueryExecutionIdSchema,
-});
+export const persistedCandidateListingSchema =
+  candidateListingSchema.safeExtend({
+    id: candidateListingIdSchema,
+    queryExecutionId: searchQueryExecutionIdSchema,
+  });
 
 export const persistedSearchRunSchema = z.strictObject({
   contextActionId: contextActionIdSchema,

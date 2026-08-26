@@ -4,6 +4,7 @@ import {
   parseObservedGbpPrice,
   SerperShoppingAdapter,
   SerperShoppingError,
+  verifyOrganicMerchantDestination,
 } from "./serper-shopping-adapter";
 
 function query() {
@@ -164,6 +165,158 @@ describe("Serper shopping adapter", () => {
       const result = await provider.search(query());
       expect(result.listings[0]?.merchantDestinationUrl).toBeNull();
     }
+  });
+
+  it("adds a verified exact-title merchant page for the leading Google listing", async () => {
+    const fetchSpy = vi.fn(
+      async (input: string | URL | Request, init?: RequestInit) => {
+        void init;
+        if (String(input).endsWith("/shopping")) {
+          return new Response(
+            JSON.stringify({
+              shopping: [
+                {
+                  position: 1,
+                  title: "Trust Bayo II Ergonomic Wireless Mouse",
+                  link: "https://www.google.co.uk/search?ibp=oshop&q=trust+bayo",
+                  source: "Argos",
+                  price: "£25.99",
+                  productId: "trust-bayo-ii",
+                },
+              ],
+            }),
+            { status: 200 },
+          );
+        }
+        return new Response(
+          JSON.stringify({
+            organic: [
+              {
+                position: 1,
+                title:
+                  "Buy Trust Bayo II Ergonomic Wireless Mouse - Black - Argos",
+                link: "https://www.argos.co.uk/product/6827043?srsltid=tracking",
+              },
+            ],
+          }),
+          { status: 200 },
+        );
+      },
+    );
+    const fetchImpl = fetchSpy as unknown as typeof fetch;
+    const provider = new SerperShoppingAdapter({
+      apiKey: "test-key",
+      fetchImpl,
+    });
+
+    const result = await provider.search(query());
+
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(result.listings[0]).toMatchObject({
+      merchantDestinationUrl: "https://www.argos.co.uk/product/6827043",
+      merchantDestinationSource: "verified_organic",
+    });
+
+    const repeated = await provider.search(query());
+    expect(repeated.listings[0]?.merchantDestinationUrl).toBe(
+      "https://www.argos.co.uk/product/6827043",
+    );
+    expect(fetchImpl).toHaveBeenCalledTimes(3);
+  });
+
+  it("rejects comparison, search and merchant-mismatched destinations", () => {
+    const candidate = {
+      candidateTitle: "Trust Bayo II Ergonomic Wireless Mouse",
+      merchant: "Argos",
+      resultTitle: "Trust Bayo II Ergonomic Wireless Mouse",
+    };
+    expect(
+      verifyOrganicMerchantDestination({
+        ...candidate,
+        resultUrl: "https://www.pricespy.co.uk/product/trust-bayo-ii-wireless",
+      }),
+    ).toBeNull();
+    expect(
+      verifyOrganicMerchantDestination({
+        ...candidate,
+        resultUrl: "https://www.argos.co.uk/search/trust-bayo-ii",
+      }),
+    ).toBeNull();
+    expect(
+      verifyOrganicMerchantDestination({
+        ...candidate,
+        resultUrl: "https://www.amazon.co.uk/dp/example",
+      }),
+    ).toBeNull();
+    expect(
+      verifyOrganicMerchantDestination({
+        candidateTitle: "Ergonomic 2.4G Wireless Mouse",
+        merchant: "Amazon.co.uk - Amazon.co.uk-Seller",
+        resultTitle:
+          "Phefop Portable Ergonomic 2.4G Wireless Mouse Rechargeable",
+        resultUrl: "https://www.amazon.co.uk/dp/example",
+      }),
+    ).toBeNull();
+  });
+
+  it("bounds organic lookups to three distinct leading merchants", async () => {
+    const fetchSpy = vi.fn(
+      async (input: string | URL | Request, init?: RequestInit) => {
+        void init;
+        if (String(input).endsWith("/shopping")) {
+          return new Response(
+            JSON.stringify({
+              shopping: [
+                {
+                  title: "A one",
+                  link: "https://google.com/a",
+                  source: "A Shop",
+                },
+                {
+                  title: "A two",
+                  link: "https://google.com/b",
+                  source: "A Shop",
+                },
+                {
+                  title: "B one",
+                  link: "https://google.com/c",
+                  source: "B Shop",
+                },
+                {
+                  title: "C one",
+                  link: "https://google.com/d",
+                  source: "C Shop",
+                },
+                {
+                  title: "D one",
+                  link: "https://google.com/e",
+                  source: "D Shop",
+                },
+              ],
+            }),
+            { status: 200 },
+          );
+        }
+        return new Response(JSON.stringify({ organic: [] }), { status: 200 });
+      },
+    );
+    const fetchImpl = fetchSpy as unknown as typeof fetch;
+    const provider = new SerperShoppingAdapter({
+      apiKey: "test-key",
+      fetchImpl,
+    });
+
+    await provider.search(query());
+
+    expect(fetchImpl).toHaveBeenCalledTimes(4);
+    const organicBodies = fetchSpy.mock.calls
+      .slice(1)
+      .map(([, init]) => JSON.parse(String(init?.body)).q);
+    expect(organicBodies).toEqual([
+      '"A one" A Shop',
+      '"B one" B Shop',
+      '"C one" C Shop',
+    ]);
   });
 
   it("keeps ambiguous/non-GBP price text but does not manufacture money", () => {

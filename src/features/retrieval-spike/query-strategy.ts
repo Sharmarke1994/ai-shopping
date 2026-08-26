@@ -13,7 +13,8 @@ import {
 
 const QUERY_LIMIT = 8;
 const QUERY_TEXT_LIMIT = 240;
-const COMMERCIAL_QUERY_TEXT_LIMIT = 200;
+const COMMERCIAL_QUERY_TEXT_LIMIT = 180;
+const MAX_QUERY_ADDITIONS = 5;
 
 function compactWhitespace(value: string) {
   return value.trim().replace(/\s+/g, " ");
@@ -46,6 +47,23 @@ function briefSearchPhrase(item: BriefItemV1, context: RetrievalContextV1) {
     return item.semanticValue.values
       .map((value) => `-"${compactWhitespace(value).replaceAll('"', "")}"`)
       .join(" ");
+  }
+  if (
+    item.semanticValue.kind === "categorical" &&
+    item.semanticValue.operator === "include" &&
+    item.semanticValue.values.length === 1
+  ) {
+    const value = compactWhitespace(item.semanticValue.values[0]!);
+    if (value.toLocaleLowerCase("en-GB") === "yes") {
+      return compactWhitespace(item.conceptLabel);
+    }
+    if (value.toLocaleLowerCase("en-GB") === "no") {
+      return `-"${compactWhitespace(item.conceptLabel).replaceAll('"', "")}"`;
+    }
+  }
+  if (item.semanticValue.kind === "boolean") {
+    const label = compactWhitespace(item.conceptLabel);
+    return item.semanticValue.value ? label : `-"${label.replaceAll('"', "")}"`;
   }
   const rendered = formatBriefItem(item, context.market)
     .replace(/^Strong preference:\s*/i, "")
@@ -88,13 +106,23 @@ function commercialSubject(subject: string) {
   return compactWhitespace(firstSentence).slice(0, 110);
 }
 
+function conciseCommercialSubject(subject: string) {
+  return commercialSubject(subject)
+    .replace(
+      /^(?:i\s+(?:need|want|would like)|(?:please\s+)?find me|looking for)\s+(?:an?|some)?\s*/i,
+      "",
+    )
+    .trim();
+}
+
 function briefDrivenQuery(
   subject: string,
   items: readonly BriefItemV1[],
   context: RetrievalContextV1,
 ) {
-  let text = commercialSubject(subject);
+  let text = conciseCommercialSubject(subject);
   const basisCriterionIds: BriefItemV1["criterionId"][] = [];
+  let additionCount = 0;
   for (const item of items) {
     const phrase = briefSearchPhrase(item, context);
     if (
@@ -105,10 +133,12 @@ function briefDrivenQuery(
     ) {
       continue;
     }
+    if (additionCount >= MAX_QUERY_ADDITIONS) break;
     const next = `${text} ${phrase}`;
     if (next.length > COMMERCIAL_QUERY_TEXT_LIMIT) continue;
     text = next;
     basisCriterionIds.push(item.criterionId);
+    additionCount += 1;
   }
   return { text, basisCriterionIds };
 }
@@ -176,9 +206,22 @@ export function buildSearchQueryPortfolio(
   });
 
   const prioritized = prioritizedBriefItems(context);
-  const constraintItems = prioritized.filter(
-    ({ strength }) => strength !== "preference",
+  const directlySearchableHardItems = prioritized.filter(
+    (item) =>
+      item.strength === "hard" &&
+      [
+        "money",
+        "money_stretch",
+        "measurement",
+        "measurement_range",
+        "categorical",
+        "boolean",
+      ].includes(item.semanticValue.kind),
   );
+  const constraintItems = [
+    ...directlySearchableHardItems,
+    ...prioritized.filter(({ strength }) => strength === "strong_preference"),
+  ];
   const briefQuery = briefDrivenQuery(subject, constraintItems, context);
   addQuery({
     kind: "brief_expansion",
@@ -193,19 +236,10 @@ export function buildSearchQueryPortfolio(
   const preferenceItems = prioritized.filter(
     ({ strength }) => strength === "preference",
   );
-  if (preferenceItems.length > 0) {
+  if (preferenceItems.length > 0 && context.marketVocabulary.length === 0) {
     const preferenceQuery = briefDrivenQuery(
       subject,
-      [
-        ...prioritized.filter(
-          (item) =>
-            item.strength === "hard" &&
-            ["money", "money_stretch", "categorical"].includes(
-              item.semanticValue.kind,
-            ),
-        ),
-        ...preferenceItems,
-      ],
+      [...directlySearchableHardItems, ...preferenceItems],
       context,
     );
     addQuery({
@@ -229,7 +263,7 @@ export function buildSearchQueryPortfolio(
       kind: "market_vocabulary",
       purpose: "market_language",
       text: appendDistinct(
-        subject,
+        conciseCommercialSubject(subject),
         context.marketVocabulary.map((seed) => seed.term),
       ),
       rationale: context.marketVocabulary
@@ -247,7 +281,7 @@ export function buildSearchQueryPortfolio(
       taskId: context.taskId,
       taskRevision: context.revision,
       market: context.market,
-      queryStrategyVersion: "retrieval-spike-v2",
+      queryStrategyVersion: "retrieval-spike-v3",
       startedAt: now(),
     },
     hypotheses,

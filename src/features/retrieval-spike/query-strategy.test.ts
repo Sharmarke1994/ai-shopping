@@ -185,6 +185,20 @@ describe("retrieval-spike query strategy", () => {
               values: ["Amazon Basics"],
             },
           },
+          {
+            ...base.brief.items[0]!,
+            criterionId: "22222222-2222-4222-8222-222222222232",
+            lineageId: "44444444-4444-4444-8444-444444444432",
+            conceptId: "55555555-5555-4555-8555-555555555532",
+            conceptLabel: "Wireless connectivity",
+            strength: "hard" as const,
+            targetSemantics: "categorical" as const,
+            semanticValue: {
+              schemaVersion: 1 as const,
+              kind: "boolean" as const,
+              value: true,
+            },
+          },
         ],
       },
     };
@@ -197,9 +211,11 @@ describe("retrieval-spike query strategy", () => {
       ({ purpose }) => purpose === "brief_recall",
     );
 
-    expect(portfolio.run.queryStrategyVersion).toBe("retrieval-spike-v2");
+    expect(portfolio.run.queryStrategyVersion).toBe("retrieval-spike-v3");
     expect(expanded?.text).toContain("under £50");
     expect(expanded?.text).toContain('-"Amazon Basics"');
+    expect(expanded?.text).toContain("Wireless connectivity");
+    expect(expanded?.text).not.toContain("Wireless connectivity: yes");
     expect(portfolio.hypotheses[1]?.basisCriterionIds).toEqual(
       expect.arrayContaining([
         "22222222-2222-4222-8222-222222222230",

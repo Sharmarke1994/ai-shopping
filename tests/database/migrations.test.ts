@@ -65,7 +65,7 @@ describe("shopping-state and context-acquisition migration shape", () => {
       'select count(*)::integer as count from "drizzle"."migrations"',
     );
     const after = afterRows[0]?.count;
-    expect(before).toBe(11);
+    expect(before).toBe(12);
     expect(after).toBe(before);
   });
 
@@ -219,6 +219,20 @@ describe("shopping-state and context-acquisition migration shape", () => {
       authenticated_live_session_table: false,
       authenticated_saved_table: false,
     });
+  });
+
+  it("binds every merchant destination to explicit provenance", async () => {
+    const [constraint] = await connection.client.unsafe<
+      { definition: string }[]
+    >(`
+      select pg_get_constraintdef(oid) as definition
+      from pg_constraint
+      where conname = 'candidate_listings_destination_provenance_shape'
+    `);
+    expect(constraint?.definition).toContain(
+      "merchant_destination_source = ANY",
+    );
+    expect(constraint?.definition).toContain("verified_organic");
   });
 
   it("keeps actions receipt-bound and attempts terminally coherent", async () => {

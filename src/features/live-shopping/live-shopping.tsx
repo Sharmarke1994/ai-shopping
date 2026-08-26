@@ -207,6 +207,29 @@ function ProductCard({
             <span>{listing.availabilityText}</span>
           ) : null}
         </div>
+        <div className={styles.evidenceSummary}>
+          {listing.evidence.contradictions.length > 0 ? (
+            <p className={styles.evidenceConflict}>
+              <strong>Conflicts with current brief</strong>
+              {listing.evidence.contradictions.join(" · ")}
+            </p>
+          ) : null}
+          {listing.evidence.directlyEvidenced.length > 0 ? (
+            <p>
+              <strong>Listing evidence</strong>
+              {listing.evidence.directlyEvidenced.join(" · ")}
+            </p>
+          ) : null}
+          {listing.evidence.unverifiedLabels.length > 0 ? (
+            <p>
+              <strong>Still unverified</strong>
+              {listing.evidence.unverifiedLabels.join(", ")}
+              {listing.evidence.additionalUnverifiedCount > 0
+                ? ` +${listing.evidence.additionalUnverifiedCount}`
+                : ""}
+            </p>
+          ) : null}
+        </div>
         <a
           href={listing.destinationUrl}
           target="_blank"
@@ -302,7 +325,8 @@ function SearchResults({
           <h2>Products found for your brief</h2>
           <p>
             Factual Google Shopping listings from {search.completedQueryCount}{" "}
-            of {search.queryCount} focused searches. No suitability ranking yet.
+            of {search.queryCount} focused searches. Directly evidenced
+            must-haves appear first; unsupported suitability stays unverified.
           </p>
         </div>
       </div>

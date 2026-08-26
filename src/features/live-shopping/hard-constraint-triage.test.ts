@@ -78,6 +78,7 @@ function listing(overrides: {
     url: "https://shop.example/shelf",
     canonicalUrl: "https://shop.example/shelf",
     merchantDestinationUrl: "https://shop.example/shelf",
+    merchantDestinationSource: "shopping_result",
     merchant: "Example Retailer",
     price: overrides.price ?? { amountMinor: 4500, currency: "GBP" },
     priceText: "£45",
@@ -132,6 +133,42 @@ describe("hard-constraint result triage", () => {
     expect(result.criteria[1]).toMatchObject({
       state: "conflicts",
       reason: "explicit_exclusion",
+    });
+  });
+
+  it("withholds an explicitly wired listing when wireless is a hard requirement", () => {
+    const base = brief();
+    const wirelessBrief = shoppingBriefV1Schema.parse({
+      ...base,
+      items: [
+        ...base.items,
+        {
+          criterionId: "20000000-0000-4000-8000-000000000004",
+          lineageId: "30000000-0000-4000-8000-000000000004",
+          conceptId: "40000000-0000-4000-8000-000000000004",
+          conceptLabel: "Wireless connectivity",
+          conceptDefinition: "Whether the mouse connects without a cable",
+          strength: "hard",
+          targetSemantics: "categorical",
+          semanticValue: {
+            schemaVersion: 1,
+            kind: "boolean",
+            value: true,
+          },
+        },
+      ],
+    });
+
+    const result = triageListingAgainstHardCriteria({
+      brief: wirelessBrief,
+      listing: listing({ title: "TECKNET Ergonomic Wired Mouse" }),
+    });
+
+    expect(result.hasDirectConflict).toBe(true);
+    expect(result.criteria.at(-1)).toEqual({
+      criterionId: "20000000-0000-4000-8000-000000000004",
+      state: "conflicts",
+      reason: "explicit_categorical_contradiction",
     });
   });
 });

@@ -85,7 +85,11 @@ export const searchRunSchema = z.strictObject({
   taskId: shoppingTaskIdSchema,
   taskRevision: taskRevisionSchema,
   market: marketContextSchema,
-  queryStrategyVersion: z.enum(["retrieval-spike-v1", "retrieval-spike-v2"]),
+  queryStrategyVersion: z.enum([
+    "retrieval-spike-v1",
+    "retrieval-spike-v2",
+    "retrieval-spike-v3",
+  ]),
   startedAt: z.date(),
 });
 
@@ -203,26 +207,43 @@ export const httpUrlSchema = z
 
 export const shoppingProviderSchema = z.enum(["serper", "fixture"]);
 
-export const candidateListingSchema = z.strictObject({
-  taskId: shoppingTaskIdSchema,
-  runId: searchRunIdSchema,
-  queryId: searchQueryIdSchema,
-  provider: shoppingProviderSchema,
-  providerResultId: z.string().min(1).max(500),
-  sourceRank: z.number().int().positive(),
-  surface: z.literal("shopping"),
-  title: z.string().min(1).max(1_000),
-  url: httpUrlSchema,
-  canonicalUrl: httpUrlSchema,
-  merchantDestinationUrl: httpUrlSchema.nullable(),
-  merchant: z.string().min(1).max(500).nullable(),
-  price: observedMoneySchema.nullable(),
-  priceText: z.string().min(1).max(120).nullable(),
-  imageUrl: httpUrlSchema.nullable(),
-  deliveryText: z.string().min(1).max(500).nullable(),
-  availabilityText: z.string().min(1).max(500).nullable(),
-  retrievedAt: z.date(),
-});
+export const candidateListingSchema = z
+  .strictObject({
+    taskId: shoppingTaskIdSchema,
+    runId: searchRunIdSchema,
+    queryId: searchQueryIdSchema,
+    provider: shoppingProviderSchema,
+    providerResultId: z.string().min(1).max(500),
+    sourceRank: z.number().int().positive(),
+    surface: z.literal("shopping"),
+    title: z.string().min(1).max(1_000),
+    url: httpUrlSchema,
+    canonicalUrl: httpUrlSchema,
+    merchantDestinationUrl: httpUrlSchema.nullable(),
+    merchantDestinationSource: z
+      .enum(["shopping_result", "verified_organic"])
+      .nullable()
+      .default(null),
+    merchant: z.string().min(1).max(500).nullable(),
+    price: observedMoneySchema.nullable(),
+    priceText: z.string().min(1).max(120).nullable(),
+    imageUrl: httpUrlSchema.nullable(),
+    deliveryText: z.string().min(1).max(500).nullable(),
+    availabilityText: z.string().min(1).max(500).nullable(),
+    retrievedAt: z.date(),
+  })
+  .superRefine((listing, refinement) => {
+    if (
+      (listing.merchantDestinationUrl === null) !==
+      (listing.merchantDestinationSource === null)
+    ) {
+      refinement.addIssue({
+        code: "custom",
+        path: ["merchantDestinationSource"],
+        message: "Merchant destination URL and provenance must appear together",
+      });
+    }
+  });
 
 export const providerSearchDiagnosticsSchema = z.strictObject({
   receivedResultCount: z.number().int().nonnegative(),
