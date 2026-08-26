@@ -27,6 +27,7 @@ export class FakeShoppingProvider implements ShoppingSearchProvider {
             title: `Fixture result for ${query.text}`,
             url: `https://example.test/products/${slug}`,
             canonicalUrl: `https://example.test/products/${slug}`,
+            merchantDestinationUrl: `https://example.test/products/${slug}`,
             merchant: "Fixture Outfitters",
             price: { amountMinor: 2499, currency: "GBP" },
             priceText: "£24.99",

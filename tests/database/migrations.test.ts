@@ -38,6 +38,7 @@ describe("shopping-state and context-acquisition migration shape", () => {
       "criterion_sources",
       "decision_criteria",
       "founder_live_sessions",
+      "saved_candidate_listings",
       "search_hypotheses",
       "search_hypothesis_basis_criteria",
       "search_queries",
@@ -64,7 +65,7 @@ describe("shopping-state and context-acquisition migration shape", () => {
       'select count(*)::integer as count from "drizzle"."migrations"',
     );
     const after = afterRows[0]?.count;
-    expect(before).toBe(10);
+    expect(before).toBe(11);
     expect(after).toBe(before);
   });
 
@@ -186,10 +187,12 @@ describe("shopping-state and context-acquisition migration shape", () => {
         anon_table: boolean;
         anon_subject_table: boolean;
         anon_live_session_table: boolean;
+        anon_saved_table: boolean;
         authenticated_schema: boolean;
         authenticated_table: boolean;
         authenticated_subject_table: boolean;
         authenticated_live_session_table: boolean;
+        authenticated_saved_table: boolean;
       }[]
     >(`
       select
@@ -197,20 +200,24 @@ describe("shopping-state and context-acquisition migration shape", () => {
         has_table_privilege('anon', 'shopping_private.candidate_listings', 'SELECT') as anon_table,
         has_table_privilege('anon', 'shopping_private.shopping_task_subjects', 'SELECT') as anon_subject_table,
         has_table_privilege('anon', 'shopping_private.founder_live_sessions', 'SELECT') as anon_live_session_table,
+        has_table_privilege('anon', 'shopping_private.saved_candidate_listings', 'SELECT') as anon_saved_table,
         has_schema_privilege('authenticated', 'shopping_private', 'USAGE') as authenticated_schema,
         has_table_privilege('authenticated', 'shopping_private.search_runs', 'SELECT') as authenticated_table,
         has_table_privilege('authenticated', 'shopping_private.shopping_task_subjects', 'SELECT') as authenticated_subject_table,
-        has_table_privilege('authenticated', 'shopping_private.founder_live_sessions', 'SELECT') as authenticated_live_session_table
+        has_table_privilege('authenticated', 'shopping_private.founder_live_sessions', 'SELECT') as authenticated_live_session_table,
+        has_table_privilege('authenticated', 'shopping_private.saved_candidate_listings', 'SELECT') as authenticated_saved_table
     `);
     expect(privileges).toEqual({
       anon_schema: false,
       anon_table: false,
       anon_subject_table: false,
       anon_live_session_table: false,
+      anon_saved_table: false,
       authenticated_schema: false,
       authenticated_table: false,
       authenticated_subject_table: false,
       authenticated_live_session_table: false,
+      authenticated_saved_table: false,
     });
   });
 

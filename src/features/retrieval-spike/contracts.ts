@@ -85,7 +85,7 @@ export const searchRunSchema = z.strictObject({
   taskId: shoppingTaskIdSchema,
   taskRevision: taskRevisionSchema,
   market: marketContextSchema,
-  queryStrategyVersion: z.literal("retrieval-spike-v1"),
+  queryStrategyVersion: z.enum(["retrieval-spike-v1", "retrieval-spike-v2"]),
   startedAt: z.date(),
 });
 
@@ -194,6 +194,13 @@ const observedMoneySchema = z.strictObject({
   currency: z.literal("GBP"),
 });
 
+export const httpUrlSchema = z
+  .url()
+  .max(4_000)
+  .refine((value) => ["http:", "https:"].includes(new URL(value).protocol), {
+    message: "Expected an HTTP or HTTPS URL",
+  });
+
 export const shoppingProviderSchema = z.enum(["serper", "fixture"]);
 
 export const candidateListingSchema = z.strictObject({
@@ -205,12 +212,13 @@ export const candidateListingSchema = z.strictObject({
   sourceRank: z.number().int().positive(),
   surface: z.literal("shopping"),
   title: z.string().min(1).max(1_000),
-  url: z.url(),
-  canonicalUrl: z.url(),
+  url: httpUrlSchema,
+  canonicalUrl: httpUrlSchema,
+  merchantDestinationUrl: httpUrlSchema.nullable(),
   merchant: z.string().min(1).max(500).nullable(),
   price: observedMoneySchema.nullable(),
   priceText: z.string().min(1).max(120).nullable(),
-  imageUrl: z.url().nullable(),
+  imageUrl: httpUrlSchema.nullable(),
   deliveryText: z.string().min(1).max(500).nullable(),
   availabilityText: z.string().min(1).max(500).nullable(),
   retrievedAt: z.date(),

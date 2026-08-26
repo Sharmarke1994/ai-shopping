@@ -127,4 +127,85 @@ describe("retrieval-spike query strategy", () => {
 
     expect(searchQueryPortfolioSchema.safeParse(broken).success).toBe(false);
   });
+
+  it("spends the bounded query on hard constraints before weaker preferences", () => {
+    let cursor = 0;
+    const base = context();
+    const input = {
+      ...base,
+      shoppingSubject: {
+        ...base.shoppingSubject,
+        text: "I need a computer mouse for long work days. I have tried several ordinary mice and would like sensible options without wasting time on generic marketplace noise.",
+      },
+      brief: {
+        ...base.brief,
+        items: [
+          ...Array.from({ length: 4 }, (_, index) => ({
+            ...base.brief.items[0]!,
+            criterionId: `22222222-2222-4222-8222-22222222222${index + 2}`,
+            lineageId: `44444444-4444-4444-8444-44444444444${index + 2}`,
+            conceptId: `55555555-5555-4555-8555-55555555555${index + 2}`,
+            conceptLabel: `Weak preference ${index + 1}`,
+            strength: "preference" as const,
+            semanticValue: {
+              schemaVersion: 1 as const,
+              kind: "qualitative" as const,
+              mode: "text" as const,
+              text: `optional comfort detail ${index + 1}`,
+            },
+          })),
+          {
+            ...base.brief.items[0]!,
+            criterionId: "22222222-2222-4222-8222-222222222230",
+            lineageId: "44444444-4444-4444-8444-444444444430",
+            conceptId: "55555555-5555-4555-8555-555555555530",
+            conceptLabel: "Budget",
+            strength: "hard" as const,
+            targetSemantics: "range" as const,
+            semanticValue: {
+              schemaVersion: 1 as const,
+              kind: "money" as const,
+              mode: "ceiling" as const,
+              amountMinor: 5000,
+              currency: "GBP" as const,
+            },
+          },
+          {
+            ...base.brief.items[0]!,
+            criterionId: "22222222-2222-4222-8222-222222222231",
+            lineageId: "44444444-4444-4444-8444-444444444431",
+            conceptId: "55555555-5555-4555-8555-555555555531",
+            conceptLabel: "Brand exclusion",
+            strength: "hard" as const,
+            targetSemantics: "categorical" as const,
+            semanticValue: {
+              schemaVersion: 1 as const,
+              kind: "categorical" as const,
+              operator: "exclude" as const,
+              values: ["Amazon Basics"],
+            },
+          },
+        ],
+      },
+    };
+    const untouched = structuredClone(input);
+
+    const portfolio = buildSearchQueryPortfolio(input, {
+      createId: () => ids[cursor++]!,
+    });
+    const expanded = portfolio.queries.find(
+      ({ purpose }) => purpose === "brief_recall",
+    );
+
+    expect(portfolio.run.queryStrategyVersion).toBe("retrieval-spike-v2");
+    expect(expanded?.text).toContain("under £50");
+    expect(expanded?.text).toContain('-"Amazon Basics"');
+    expect(portfolio.hypotheses[1]?.basisCriterionIds).toEqual(
+      expect.arrayContaining([
+        "22222222-2222-4222-8222-222222222230",
+        "22222222-2222-4222-8222-222222222231",
+      ]),
+    );
+    expect(input).toEqual(untouched);
+  });
 });

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { candidateListingIdSchema } from "@/domain/shopping-state/ids";
 
 export const liveSessionIdSchema = z.uuid().brand<"LiveSessionId">();
 export const liveTurnIdSchema = z.uuid().brand<"LiveTurnId">();
@@ -29,6 +30,19 @@ export const answerLiveShoppingRequestSchema = z.strictObject({
   ]),
 });
 
+export const refineLiveShoppingRequestSchema = z.strictObject({
+  operation: z.literal("refine"),
+  sessionId: liveSessionIdSchema,
+  turnId: liveTurnIdSchema,
+  message: shopperTextSchema,
+});
+
+export const saveLiveListingRequestSchema = z.strictObject({
+  operation: z.enum(["save_listing", "unsave_listing"]),
+  sessionId: liveSessionIdSchema,
+  candidateListingId: candidateListingIdSchema,
+});
+
 export const retryLiveContextRequestSchema = z.strictObject({
   operation: z.literal("retry_context"),
   sessionId: liveSessionIdSchema,
@@ -42,6 +56,8 @@ export const resumeLiveSearchRequestSchema = z.strictObject({
 export const liveShoppingMutationSchema = z.discriminatedUnion("operation", [
   startLiveShoppingRequestSchema,
   answerLiveShoppingRequestSchema,
+  refineLiveShoppingRequestSchema,
+  saveLiveListingRequestSchema,
   retryLiveContextRequestSchema,
   resumeLiveSearchRequestSchema,
 ]);
@@ -53,22 +69,27 @@ const liveBriefItemSchema = z.strictObject({
 });
 
 const liveListingSchema = z.strictObject({
+  candidateListingId: candidateListingIdSchema,
   displayId: z.string(),
   title: z.string(),
   merchant: z.string().nullable(),
   priceText: z.string().nullable(),
   imageUrl: z.url().nullable(),
   destinationUrl: z.url(),
-  destinationLabel: z.literal("View on Google Shopping"),
+  destinationLabel: z.string().min(1).max(120),
+  sourceUrl: z.url().nullable(),
+  sourceLabel: z.literal("View Google Shopping source").nullable(),
   deliveryText: z.string().nullable(),
   availabilityText: z.string().nullable(),
   foundAcrossQueries: z.number().int().positive(),
+  saved: z.boolean(),
 });
 
 const liveSearchSchema = z.strictObject({
   status: z.enum(["running", "succeeded", "partial", "failed"]),
   queryCount: z.number().int().positive(),
   completedQueryCount: z.number().int().nonnegative(),
+  withheldConflictCount: z.number().int().nonnegative(),
   listings: z.array(liveListingSchema),
 });
 
@@ -81,6 +102,7 @@ export const liveShoppingViewSchema = z.strictObject({
   sessionId: liveSessionIdSchema,
   subject: z.string(),
   brief: z.array(liveBriefItemSchema),
+  savedListings: z.array(liveListingSchema),
   action: z.discriminatedUnion("kind", [
     z.strictObject({
       ...actionBase,

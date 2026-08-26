@@ -9,9 +9,15 @@ import {
   vi,
 } from "vitest";
 import {
+  conceptDefinitionIdSchema,
+  criterionIdSchema,
+} from "../../src/domain/shopping-state/ids";
+import {
   answerLiveShoppingQuestion,
   loadLiveShoppingSession,
+  refineLiveShopping,
   retryLiveShoppingContext,
+  setLiveListingSaved,
   startLiveShopping,
   type LiveShoppingDependencies,
 } from "../../src/features/live-shopping/application";
@@ -28,9 +34,11 @@ import type {
 import type { ShoppingSearchProvider } from "../../src/features/retrieval-spike/contracts";
 import { FakeShoppingProvider } from "../../src/features/retrieval-spike/fake-shopping-provider";
 import { loadRetrievalContextFromPersistedState } from "../../src/features/retrieval-spike/context-from-persisted-state";
+import { loadCurrentShoppingState } from "../../src/features/shopping-state/persistence/state-loaders";
 import {
   contextActionAnswers,
   founderLiveSessions,
+  savedCandidateListings,
   searchRuns,
   shoppingTasks,
   shoppingTaskSubjects,
@@ -117,6 +125,35 @@ const widthChange: InterpretationProviderWireV1 = {
   ambiguities: [],
 };
 
+const waterproofChange: InterpretationProviderWireV1 = {
+  providerSchemaVersion: 1,
+  outcome: "change",
+  operations: [
+    {
+      op: "create_concept",
+      localRef: "water_resistance",
+      label: "Water resistance",
+      definition: "Whether the cap should resist rain",
+      valueFamily: "boolean",
+      canonicalUnit: null,
+    },
+    {
+      op: "add_criterion",
+      concept: { kind: "created", localRef: "water_resistance" },
+      target: {
+        strength: "strong_preference",
+        targetSemantics: "exact",
+        semanticValue: {
+          schemaVersion: 1,
+          kind: "boolean",
+          value: true,
+        },
+      },
+    },
+  ],
+  ambiguities: [],
+};
+
 const noChange: InterpretationProviderWireV1 = {
   providerSchemaVersion: 1,
   outcome: "no_change",
@@ -145,6 +182,20 @@ const ask: ContextActionProviderWireV1 = {
   rationale: null,
 };
 
+const waterproofQuestion: ContextActionProviderWireV1 = {
+  providerSchemaVersion: 1,
+  action: "ask",
+  question: {
+    prompt: "Should rain protection be a must-have or a preference?",
+    responseMode: "single_select",
+    options: ["Must-have", "Strong preference"],
+    expectedImpact: "retrieval",
+    whyNow: "This changes how narrowly the next product search should filter.",
+    canSearchWithoutAnswer: true,
+  },
+  rationale: null,
+};
+
 function directModel(): ContextAcquisitionModel {
   return {
     interpret: vi.fn(() => completed(capChange)),
@@ -168,6 +219,114 @@ function askThenSearchModel(): ContextAcquisitionModel {
           : ask,
       ),
     ),
+  };
+}
+
+function recursiveCapModel(): ContextAcquisitionModel {
+  return {
+    interpret: vi.fn((input) => {
+      const source = input.payload.source as { body?: string };
+      return completed(
+        source.body?.toLocaleLowerCase("en-GB").includes("waterproof")
+          ? waterproofChange
+          : capChange,
+      );
+    }),
+    selectAction: vi.fn(() => completed(search)),
+  };
+}
+
+function recursiveAskModel(): ContextAcquisitionModel {
+  return {
+    interpret: vi.fn((input) => {
+      const source = input.payload.source as { kind?: string; body?: string };
+      if (source.kind === "question_answer") return completed(noChange);
+      return completed(
+        source.body?.toLocaleLowerCase("en-GB").includes("waterproof")
+          ? waterproofChange
+          : capChange,
+      );
+    }),
+    selectAction: vi.fn((input) => {
+      const source = input.payload.source as { kind?: string; body?: string };
+      if (source.kind === "question_answer") return completed(search);
+      return completed(
+        source.body?.toLocaleLowerCase("en-GB").includes("waterproof")
+          ? waterproofQuestion
+          : search,
+      );
+    }),
+  };
+}
+
+function brandChangeOfMindModel(): ContextAcquisitionModel {
+  return {
+    interpret: vi.fn((input) => {
+      const source = input.payload.source as { body?: string };
+      if (source.body?.toLocaleLowerCase("en-GB").includes("doesn't matter")) {
+        const concepts = input.payload.concepts as {
+          id: string;
+          label: string;
+        }[];
+        const activeCriteria = input.payload.activeCriteria as {
+          id: string;
+          conceptId: string;
+        }[];
+        const concept = concepts.find(
+          ({ label }) => label === "Brand reputation",
+        );
+        const criterion = activeCriteria.find(
+          ({ conceptId }) => conceptId === concept?.id,
+        );
+        if (concept === undefined || criterion === undefined) {
+          throw new Error("Expected the current brand criterion");
+        }
+        return completed<InterpretationProviderWireV1>({
+          providerSchemaVersion: 1,
+          outcome: "change",
+          operations: [
+            {
+              op: "mark_indifferent",
+              concept: {
+                kind: "existing",
+                conceptId: conceptDefinitionIdSchema.parse(concept.id),
+              },
+              replacesCriterionIds: [criterionIdSchema.parse(criterion.id)],
+            },
+          ],
+          ambiguities: [],
+        });
+      }
+      return completed<InterpretationProviderWireV1>({
+        providerSchemaVersion: 1,
+        outcome: "change",
+        operations: [
+          {
+            op: "create_concept",
+            localRef: "brand_reputation",
+            label: "Brand reputation",
+            definition: "Whether the manufacturer should be established",
+            valueFamily: "qualitative",
+            canonicalUnit: null,
+          },
+          {
+            op: "add_criterion",
+            concept: { kind: "created", localRef: "brand_reputation" },
+            target: {
+              strength: "hard",
+              targetSemantics: "qualitative",
+              semanticValue: {
+                schemaVersion: 1,
+                kind: "qualitative_text",
+                text: "established reputable brand",
+              },
+            },
+          },
+        ],
+        ambiguities: [],
+      });
+    }),
+    selectAction: vi.fn(() => completed(search)),
   };
 }
 
@@ -435,6 +594,204 @@ describe("founder live-shopping application", () => {
     expect(counted.calls).toHaveLength(callsAfterCompletion);
   });
 
+  it("refines one authoritative task, preserves earlier truth and saved products, and retries exactly", async () => {
+    const counted = countedProvider();
+    const dependencies = {
+      db: connection.db,
+      model: recursiveCapModel(),
+      provider: counted.provider,
+    } satisfies LiveShoppingDependencies;
+    const sessionId = "e5b5cce0-241a-41bc-9f72-5339f1bdc1f8";
+    const first = await startLiveShopping({
+      dependencies,
+      input: {
+        operation: "start",
+        sessionId,
+        turnId: "059152f4-fbbd-480f-b310-6003f2ea3f10",
+        message: "A light breathable cap for running in hot weather",
+      },
+    });
+    if (first.action.kind !== "search" || first.action.search === null) {
+      throw new Error("Expected initial search results");
+    }
+    const candidateListingId =
+      first.action.search.listings[0]?.candidateListingId;
+    if (candidateListingId === undefined) {
+      throw new Error("Expected a candidate listing");
+    }
+
+    const saved = await setLiveListingSaved({
+      dependencies,
+      input: { operation: "save_listing", sessionId, candidateListingId },
+    });
+    await setLiveListingSaved({
+      dependencies,
+      input: { operation: "save_listing", sessionId, candidateListingId },
+    });
+    expect(saved.savedListings).toEqual([
+      expect.objectContaining({ candidateListingId, saved: true }),
+    ]);
+    expect(
+      await connection.db.select().from(savedCandidateListings),
+    ).toHaveLength(1);
+
+    const refinement = {
+      operation: "refine" as const,
+      sessionId,
+      turnId: "92f536f0-5529-4823-ab4c-6198770d5a77",
+      message: "Make waterproofing important too",
+    };
+    const refined = await refineLiveShopping({
+      dependencies,
+      input: refinement,
+    });
+    expect(refined.subject).toBe(
+      "A light breathable cap for running in hot weather",
+    );
+    expect(refined.brief.map(({ label }) => label)).toEqual([
+      "Breathability",
+      "Water resistance",
+    ]);
+    expect(refined.savedListings).toEqual([
+      expect.objectContaining({ candidateListingId, saved: true }),
+    ]);
+    expect(await connection.db.select().from(searchRuns)).toHaveLength(2);
+    const callsAfterRefinement = counted.calls.length;
+
+    const exactRetry = await refineLiveShopping({
+      dependencies,
+      input: refinement,
+    });
+    expect(exactRetry).toEqual(refined);
+    expect(counted.calls).toHaveLength(callsAfterRefinement);
+    expect(await connection.db.select().from(searchRuns)).toHaveLength(2);
+
+    const refreshed = await loadLiveShoppingSession({
+      db: connection.db,
+      sessionId,
+    });
+    expect(refreshed).toEqual(refined);
+
+    const unsaved = await setLiveListingSaved({
+      dependencies,
+      input: { operation: "unsave_listing", sessionId, candidateListingId },
+    });
+    expect(unsaved.savedListings).toEqual([]);
+    expect(await connection.db.select().from(savedCandidateListings)).toEqual(
+      [],
+    );
+
+    const otherSessionId = "31bd9398-c1fc-4880-be3b-b7d30a3f704a";
+    await startLiveShopping({
+      dependencies,
+      input: {
+        operation: "start",
+        sessionId: otherSessionId,
+        turnId: "468207ad-f04f-470a-8565-2ab3e1b723ed",
+        message: "Another breathable cap",
+      },
+    });
+    await expect(
+      setLiveListingSaved({
+        dependencies,
+        input: {
+          operation: "save_listing",
+          sessionId: otherSessionId,
+          candidateListingId,
+        },
+      }),
+    ).rejects.toThrow("not available in this shopping task");
+  });
+
+  it("allows a post-result refinement to ASK, then answers and searches without replacing the subject", async () => {
+    const counted = countedProvider();
+    const dependencies = {
+      db: connection.db,
+      model: recursiveAskModel(),
+      provider: counted.provider,
+    } satisfies LiveShoppingDependencies;
+    const sessionId = "216488f2-d369-42f5-9b1e-78a26ac98c6f";
+    await startLiveShopping({
+      dependencies,
+      input: {
+        operation: "start",
+        sessionId,
+        turnId: "9715a60c-3b30-44a6-9010-497996c4fd51",
+        message: "A breathable running cap",
+      },
+    });
+    const asked = await refineLiveShopping({
+      dependencies,
+      input: {
+        operation: "refine",
+        sessionId,
+        turnId: "ffda8ed4-56bf-44f3-ab7c-535721515c7e",
+        message: "Make waterproofing important too",
+      },
+    });
+    expect(asked.action).toMatchObject({
+      kind: "ask",
+      prompt: "Should rain protection be a must-have or a preference?",
+    });
+    expect(asked.brief.map(({ label }) => label)).toEqual([
+      "Breathability",
+      "Water resistance",
+    ]);
+
+    const answered = await answerLiveShoppingQuestion({
+      dependencies,
+      input: {
+        operation: "answer",
+        sessionId,
+        turnId: "ce893466-1ba9-4379-82d1-7d527fd8caa4",
+        answer: { mode: "single_select", optionOrdinal: 1 },
+      },
+    });
+    expect(answered.action.kind).toBe("search");
+    expect(answered.subject).toBe("A breathable running cap");
+    expect(await connection.db.select().from(searchRuns)).toHaveLength(2);
+  });
+
+  it("represents explicit indifference without leaving contradictory active brand truth", async () => {
+    const counted = countedProvider();
+    const dependencies = {
+      db: connection.db,
+      model: brandChangeOfMindModel(),
+      provider: counted.provider,
+    } satisfies LiveShoppingDependencies;
+    const sessionId = "47dd4b02-0023-4774-80ed-6b08257a293f";
+    await startLiveShopping({
+      dependencies,
+      input: {
+        operation: "start",
+        sessionId,
+        turnId: "49d5a077-436d-462c-9e90-6ddfcb78f5d3",
+        message: "An ergonomic mouse from an established reputable brand",
+      },
+    });
+    const changed = await refineLiveShopping({
+      dependencies,
+      input: {
+        operation: "refine",
+        sessionId,
+        turnId: "793ec61a-0573-4be3-8d2d-38b18cb6e364",
+        message: "Actually brand doesn't matter anymore",
+      },
+    });
+    expect(changed.brief).toEqual([]);
+    const [session] = await connection.db
+      .select()
+      .from(founderLiveSessions)
+      .where(eq(founderLiveSessions.id, sessionId));
+    if (session === undefined) throw new Error("Expected session");
+    const state = await loadCurrentShoppingState(connection.db, session.taskId);
+    expect(state.activeCriteria).toHaveLength(1);
+    expect(state.activeCriteria[0]?.criterion.semanticValue.kind).toBe(
+      "indifferent",
+    );
+    expect(await connection.db.select().from(searchRuns)).toHaveLength(2);
+  });
+
   it("recovers an interrupted interpretation from the persisted initial subject", async () => {
     const sessionId = "f0fb47f4-ecc7-4584-bba0-92daffc68e04";
     const failedModel: ContextAcquisitionModel = {
@@ -515,7 +872,7 @@ describe("founder live-shopping application", () => {
     expect(result.action.search?.listings[0]).toMatchObject({
       merchant: "Fixture Outfitters",
       priceText: "£24.99",
-      destinationLabel: "View on Google Shopping",
+      destinationLabel: "View at Fixture Outfitters",
     });
   });
 

@@ -29,6 +29,7 @@ export const candidateListings = shoppingPrivate.table(
     title: text("title").notNull(),
     url: text("url").notNull(),
     canonicalUrl: text("canonical_url").notNull(),
+    merchantDestinationUrl: text("merchant_destination_url"),
     merchant: text("merchant"),
     priceAmountMinor: integer("price_amount_minor"),
     priceCurrencyCode: text("price_currency_code"),
@@ -108,7 +109,7 @@ export const candidateListings = shoppingPrivate.table(
     ),
     check(
       "candidate_listings_url_shape",
-      sql`char_length(${table.url}) between 1 and 4000 and ${table.url} ~ '^https?://' and char_length(${table.canonicalUrl}) between 1 and 4000 and ${table.canonicalUrl} ~ '^https?://'`,
+      sql`char_length(${table.url}) between 1 and 4000 and ${table.url} ~ '^https?://' and char_length(${table.canonicalUrl}) between 1 and 4000 and ${table.canonicalUrl} ~ '^https?://' and (${table.merchantDestinationUrl} is null or (char_length(${table.merchantDestinationUrl}) between 1 and 4000 and ${table.merchantDestinationUrl} ~ '^https?://'))`,
     ),
     check(
       "candidate_listings_optional_text_bounds",

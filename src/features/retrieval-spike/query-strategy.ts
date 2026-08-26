@@ -13,6 +13,7 @@ import {
 
 const QUERY_LIMIT = 8;
 const QUERY_TEXT_LIMIT = 240;
+const COMMERCIAL_QUERY_TEXT_LIMIT = 200;
 
 function compactWhitespace(value: string) {
   return value.trim().replace(/\s+/g, " ");
@@ -38,11 +39,78 @@ function appendDistinct(base: string, additions: readonly string[]) {
 }
 
 function briefSearchPhrase(item: BriefItemV1, context: RetrievalContextV1) {
+  if (
+    item.semanticValue.kind === "categorical" &&
+    item.semanticValue.operator === "exclude"
+  ) {
+    return item.semanticValue.values
+      .map((value) => `-"${compactWhitespace(value).replaceAll('"', "")}"`)
+      .join(" ");
+  }
   const rendered = formatBriefItem(item, context.market)
     .replace(/^Strong preference:\s*/i, "")
     .replace(/^Prefer\s+/i, "")
     .replace(/^Maximum\s+/i, "under ");
-  return compactWhitespace(rendered);
+  const compact = compactWhitespace(rendered);
+  if (compact.length <= 80) return compact;
+  const bounded = compact.slice(0, 80);
+  return bounded.slice(0, bounded.lastIndexOf(" "));
+}
+
+function decisionPriority(item: BriefItemV1) {
+  const strength =
+    item.strength === "hard"
+      ? 0
+      : item.strength === "strong_preference"
+        ? 10
+        : 20;
+  const comparability = ["money", "money_stretch", "categorical"].includes(
+    item.semanticValue.kind,
+  )
+    ? 0
+    : 1;
+  return strength + comparability;
+}
+
+function prioritizedBriefItems(context: RetrievalContextV1) {
+  return context.brief.items
+    .map((item, ordinal) => ({ item, ordinal }))
+    .sort(
+      (left, right) =>
+        decisionPriority(left.item) - decisionPriority(right.item) ||
+        left.ordinal - right.ordinal,
+    )
+    .map(({ item }) => item);
+}
+
+function commercialSubject(subject: string) {
+  const firstSentence = subject.split(/[.!?](?:\s|$)/, 1)[0] ?? subject;
+  return compactWhitespace(firstSentence).slice(0, 110);
+}
+
+function briefDrivenQuery(
+  subject: string,
+  items: readonly BriefItemV1[],
+  context: RetrievalContextV1,
+) {
+  let text = commercialSubject(subject);
+  const basisCriterionIds: BriefItemV1["criterionId"][] = [];
+  for (const item of items) {
+    const phrase = briefSearchPhrase(item, context);
+    if (
+      phrase.length === 0 ||
+      text
+        .toLocaleLowerCase("en-GB")
+        .includes(phrase.toLocaleLowerCase("en-GB"))
+    ) {
+      continue;
+    }
+    const next = `${text} ${phrase}`;
+    if (next.length > COMMERCIAL_QUERY_TEXT_LIMIT) continue;
+    text = next;
+    basisCriterionIds.push(item.criterionId);
+  }
+  return { text, basisCriterionIds };
 }
 
 export type QueryStrategyOptions = Readonly<{
@@ -101,28 +169,57 @@ export function buildSearchQueryPortfolio(
   addQuery({
     kind: "literal",
     purpose: "literal_precision",
-    text: subject,
+    text: commercialSubject(subject),
     rationale: "Preserve the shopper's own wording as the precision baseline.",
     sourceTextIsBasis: true,
     basisCriterionIds: [],
   });
 
-  const briefPhrases = context.brief.items
-    .slice(0, 4)
-    .map((item) => briefSearchPhrase(item, context));
+  const prioritized = prioritizedBriefItems(context);
+  const constraintItems = prioritized.filter(
+    ({ strength }) => strength !== "preference",
+  );
+  const briefQuery = briefDrivenQuery(subject, constraintItems, context);
   addQuery({
     kind: "brief_expansion",
     purpose: "brief_recall",
-    text: appendDistinct(subject, briefPhrases),
+    text: briefQuery.text,
     rationale:
-      "Add only active authoritative brief values to improve recall without rewriting user truth.",
+      "Add hard requirements and strong preferences in decision priority order without rewriting user truth.",
     sourceTextIsBasis: true,
-    basisCriterionIds: context.brief.items
-      .slice(0, 4)
-      .map((item) => item.criterionId),
+    basisCriterionIds: briefQuery.basisCriterionIds,
   });
 
-  if (context.marketVocabulary.length > 0) {
+  const preferenceItems = prioritized.filter(
+    ({ strength }) => strength === "preference",
+  );
+  if (preferenceItems.length > 0) {
+    const preferenceQuery = briefDrivenQuery(
+      subject,
+      [
+        ...prioritized.filter(
+          (item) =>
+            item.strength === "hard" &&
+            ["money", "money_stretch", "categorical"].includes(
+              item.semanticValue.kind,
+            ),
+        ),
+        ...preferenceItems,
+      ],
+      context,
+    );
+    addQuery({
+      kind: "brief_expansion",
+      purpose: "brief_recall",
+      text: preferenceQuery.text,
+      rationale:
+        "Explore explicit product preferences separately while retaining directly searchable must-haves.",
+      sourceTextIsBasis: true,
+      basisCriterionIds: preferenceQuery.basisCriterionIds,
+    });
+  }
+
+  if (context.marketVocabulary.length > 0 && queries.length < 3) {
     const basisCriterionIds = [
       ...new Set(
         context.marketVocabulary.flatMap((seed) => seed.basisCriterionIds),
@@ -150,7 +247,7 @@ export function buildSearchQueryPortfolio(
       taskId: context.taskId,
       taskRevision: context.revision,
       market: context.market,
-      queryStrategyVersion: "retrieval-spike-v1",
+      queryStrategyVersion: "retrieval-spike-v2",
       startedAt: now(),
     },
     hypotheses,

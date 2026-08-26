@@ -13,6 +13,7 @@ import type { ContextAcquisitionModel } from "@/features/context-acquisition/mod
 import { acquireShoppingContext } from "@/features/context-acquisition/coordinator";
 import { recordContextActionAnswer } from "@/features/context-acquisition/persistence/context-action-answers";
 import {
+  loadContextActionByApplication,
   loadContextActionByIdInTransaction,
   type PersistedContextAction,
 } from "@/features/context-acquisition/persistence/context-actions";
@@ -24,6 +25,8 @@ import {
 } from "@/features/retrieval-spike/persistence/shopping-subjects";
 import { executeOrResumeRetrieval } from "@/features/retrieval-spike/retrieval-orchestrator";
 import { loadCurrentShoppingState } from "@/features/shopping-state/persistence/state-loaders";
+import { recordTaskInput } from "@/features/shopping-state/persistence/inputs-and-messages";
+import { loadValidatedStateApplicationBySourceInput } from "@/features/shopping-state/persistence/state-transitions";
 import { mapTaskInput } from "@/features/shopping-state/persistence/mappers";
 import type {
   ShoppingDatabase,
@@ -39,9 +42,17 @@ import {
   answerLiveShoppingRequestSchema,
   liveSessionIdSchema,
   liveShoppingViewSchema,
+  refineLiveShoppingRequestSchema,
+  saveLiveListingRequestSchema,
   startLiveShoppingRequestSchema,
   type LiveShoppingView,
 } from "./contracts";
+import { triageListingAgainstHardCriteria } from "./hard-constraint-triage";
+import {
+  loadSavedCandidateListingsInTransaction,
+  saveCandidateListing,
+  unsaveCandidateListing,
+} from "./saved-listings";
 
 const sessionRowSchema = z.strictObject({
   id: liveSessionIdSchema,
@@ -450,6 +461,122 @@ export async function answerLiveShoppingQuestion(options: {
   });
 }
 
+export async function refineLiveShopping(options: {
+  dependencies: LiveShoppingDependencies;
+  input: unknown;
+}) {
+  const input = refineLiveShoppingRequestSchema.parse(options.input);
+  const current = await options.dependencies.db.transaction(async (tx) => {
+    const session = await loadSessionInTransaction({
+      tx,
+      sessionId: input.sessionId,
+    });
+    if (session.pendingTaskInputId !== null) {
+      throw new LiveShoppingRetryConflictError();
+    }
+    const action =
+      session.currentContextActionId === null
+        ? null
+        : await loadContextActionByIdInTransaction({
+            tx,
+            taskId: session.taskId,
+            contextActionId: session.currentContextActionId,
+          });
+    if (action?.action !== "search" && action?.action !== "show_refine") {
+      throw new LiveShoppingQuestionUnavailableError();
+    }
+    const state = await loadCurrentShoppingState(tx, session.taskId);
+    const existingTurn = await loadExistingTurn({
+      tx,
+      taskId: session.taskId,
+      turnId: input.turnId,
+    });
+    return { session, revision: state.task.currentRevision, existingTurn };
+  });
+  const recorded = await recordTaskInput({
+    db: options.dependencies.db,
+    taskId: current.session.taskId,
+    clientActionId: clientActionId(input.turnId),
+    request: {
+      inputSchemaVersion: 1,
+      expectedRevision:
+        current.existingTurn?.expectedRevision ?? current.revision,
+      kind: "message",
+      body: input.message,
+    },
+  });
+  if (!recorded.created) {
+    const application = await loadValidatedStateApplicationBySourceInput(
+      options.dependencies.db,
+      current.session.taskId,
+      recorded.input.id,
+    );
+    if (application !== null) {
+      const action = await loadContextActionByApplication({
+        db: options.dependencies.db,
+        taskId: current.session.taskId,
+        stateChangeApplicationId: application.application.id,
+      });
+      if (
+        action !== null &&
+        current.session.currentContextActionId === action.id
+      ) {
+        return loadLiveShoppingSession({
+          db: options.dependencies.db,
+          sessionId: current.session.id,
+        });
+      }
+      if (
+        action !== null &&
+        current.session.currentContextActionId !== null &&
+        current.session.updatedAt >= action.createdAt
+      ) {
+        return loadLiveShoppingSession({
+          db: options.dependencies.db,
+          sessionId: current.session.id,
+        });
+      }
+    }
+  }
+  await markPendingInput({
+    db: options.dependencies.db,
+    sessionId: current.session.id,
+    taskId: current.session.taskId,
+    inputId: recorded.input.id,
+  });
+  return completePendingContext({
+    dependencies: options.dependencies,
+    sessionId: current.session.id,
+  });
+}
+
+export async function setLiveListingSaved(options: {
+  dependencies: Pick<LiveShoppingDependencies, "db">;
+  input: unknown;
+}) {
+  const input = saveLiveListingRequestSchema.parse(options.input);
+  const session = await options.dependencies.db.transaction((tx) =>
+    loadSessionInTransaction({ tx, sessionId: input.sessionId }),
+  );
+  if (input.operation === "save_listing") {
+    await saveCandidateListing({
+      db: options.dependencies.db,
+      taskId: session.taskId,
+      candidateListingId: input.candidateListingId,
+    });
+  } else {
+    await unsaveCandidateListing({
+      db: options.dependencies.db,
+      taskId: session.taskId,
+      candidateListingId: input.candidateListingId,
+    });
+  }
+  return loadLiveShoppingSession({
+    db: options.dependencies.db,
+    sessionId: session.id,
+  });
+}
+
 export async function retryLiveShoppingContext(options: {
   dependencies: LiveShoppingDependencies;
   sessionId: unknown;
@@ -530,6 +657,10 @@ function briefEmphasis(strength: "hard" | "strong_preference" | "preference") {
 
 export function displayListings(
   run: NonNullable<Awaited<ReturnType<typeof loadPersistedSearchRunByTrigger>>>,
+  options: {
+    brief: ReturnType<typeof projectShoppingBrief>;
+    savedListingIds: ReadonlySet<string>;
+  },
 ) {
   const queryOrdinals = new Map(
     run.portfolio.queries.map((query, ordinal) => [query.id, ordinal]),
@@ -549,6 +680,16 @@ export function displayListings(
       left.id.localeCompare(right.id)
     );
   });
+  const directlyConflicting = orderedListings.filter(
+    (listing) =>
+      triageListingAgainstHardCriteria({
+        brief: options.brief,
+        listing,
+      }).hasDirectConflict,
+  );
+  const eligibleForPresentation = orderedListings.filter(
+    (listing) => !directlyConflicting.includes(listing),
+  );
   const grouped = new Map<
     string,
     {
@@ -556,7 +697,7 @@ export function displayListings(
       queryIds: Set<string>;
     }
   >();
-  for (const listing of orderedListings) {
+  for (const listing of eligibleForPresentation) {
     const key = JSON.stringify([
       listing.providerResultId,
       listing.merchant,
@@ -570,28 +711,46 @@ export function displayListings(
       existing.queryIds.add(listing.queryId);
     }
   }
-  return [...grouped.values()].map(({ listing, queryIds }) => ({
-    displayId: createHash("sha256")
-      .update(listing.id)
-      .digest("hex")
-      .slice(0, 16),
-    title: listing.title,
-    merchant: listing.merchant,
-    priceText:
-      listing.priceText ??
-      (listing.price === null
-        ? null
-        : new Intl.NumberFormat("en-GB", {
-            style: "currency",
-            currency: "GBP",
-          }).format(listing.price.amountMinor / 100)),
-    imageUrl: listing.imageUrl,
-    destinationUrl: listing.url,
-    destinationLabel: "View on Google Shopping" as const,
-    deliveryText: listing.deliveryText,
-    availabilityText: listing.availabilityText,
-    foundAcrossQueries: queryIds.size,
-  }));
+  return {
+    withheldConflictCount: directlyConflicting.length,
+    listings: [...grouped.values()].map(({ listing, queryIds }) => ({
+      candidateListingId: listing.id,
+      displayId: createHash("sha256")
+        .update(listing.id)
+        .digest("hex")
+        .slice(0, 16),
+      title: listing.title,
+      merchant: listing.merchant,
+      priceText:
+        listing.priceText ??
+        (listing.price === null
+          ? null
+          : new Intl.NumberFormat("en-GB", {
+              style: "currency",
+              currency: "GBP",
+            }).format(listing.price.amountMinor / 100)),
+      imageUrl: listing.imageUrl,
+      destinationUrl: listing.merchantDestinationUrl ?? listing.url,
+      destinationLabel:
+        listing.merchantDestinationUrl === null
+          ? "View on Google Shopping"
+          : `View at ${(listing.merchant ?? "retailer").slice(0, 100)}`,
+      sourceUrl:
+        listing.merchantDestinationUrl === null ||
+        listing.merchantDestinationUrl === listing.url
+          ? null
+          : listing.url,
+      sourceLabel:
+        listing.merchantDestinationUrl === null ||
+        listing.merchantDestinationUrl === listing.url
+          ? null
+          : ("View Google Shopping source" as const),
+      deliveryText: listing.deliveryText,
+      availabilityText: listing.availabilityText,
+      foundAcrossQueries: queryIds.size,
+      saved: options.savedListingIds.has(listing.id),
+    })),
+  };
 }
 
 export async function loadLiveShoppingSession(options: {
@@ -609,6 +768,10 @@ export async function loadLiveShoppingSession(options: {
       if (subject === null)
         throw new LiveShoppingSessionNotFoundError(sessionId);
       const state = await loadCurrentShoppingState(tx, session.taskId);
+      const saved = await loadSavedCandidateListingsInTransaction({
+        tx,
+        taskId: session.taskId,
+      });
       const action =
         session.currentContextActionId === null
           ? null
@@ -641,6 +804,7 @@ export async function loadLiveShoppingSession(options: {
         brief: projectShoppingBrief(state),
         session,
         subject,
+        saved,
       };
     },
     { isolationLevel: "repeatable read", accessMode: "read only" },
@@ -662,6 +826,35 @@ export async function loadLiveShoppingSession(options: {
       value: formatBriefItem(item, snapshot.brief.market),
       emphasis: briefEmphasis(item.strength),
     })),
+    savedListings: snapshot.saved.map(({ listing }) => {
+      const direct = listing.merchantDestinationUrl;
+      return {
+        candidateListingId: listing.id,
+        displayId: createHash("sha256")
+          .update(listing.id)
+          .digest("hex")
+          .slice(0, 16),
+        title: listing.title,
+        merchant: listing.merchant,
+        priceText: listing.priceText,
+        imageUrl: listing.imageUrl,
+        destinationUrl: direct ?? listing.url,
+        destinationLabel:
+          direct === null
+            ? "View on Google Shopping"
+            : `View at ${(listing.merchant ?? "retailer").slice(0, 100)}`,
+        sourceUrl:
+          direct === null || direct === listing.url ? null : listing.url,
+        sourceLabel:
+          direct === null || direct === listing.url
+            ? null
+            : ("View Google Shopping source" as const),
+        deliveryText: listing.deliveryText,
+        availabilityText: listing.availabilityText,
+        foundAcrossQueries: 1,
+        saved: true,
+      };
+    }),
   };
   if (snapshot.session.pendingTaskInputId !== null) {
     return liveShoppingViewSchema.parse({
@@ -734,12 +927,21 @@ export async function loadLiveShoppingSession(options: {
       search:
         run === null
           ? null
-          : {
-              status: run.status,
-              queryCount: run.portfolio.queries.length,
-              completedQueryCount: run.queryExecutions.length,
-              listings: displayListings(run),
-            },
+          : (() => {
+              const presented = displayListings(run, {
+                brief: snapshot.brief,
+                savedListingIds: new Set(
+                  snapshot.saved.map(({ listing }) => listing.id),
+                ),
+              });
+              return {
+                status: run.status,
+                queryCount: run.portfolio.queries.length,
+                completedQueryCount: run.queryExecutions.length,
+                withheldConflictCount: presented.withheldConflictCount,
+                listings: presented.listings,
+              };
+            })(),
     },
   });
 }

@@ -1,5 +1,6 @@
 import {
   candidateListingSchema,
+  httpUrlSchema,
   providerSearchResultSchema,
   searchQuerySchema,
   type CandidateListing,
@@ -14,10 +15,10 @@ const SERPER_SHOPPING_ENDPOINT = "https://google.serper.dev/shopping";
 const serperShoppingItemSchema = z.looseObject({
   position: z.number().int().positive().optional(),
   title: z.string().min(1),
-  link: z.url(),
+  link: httpUrlSchema,
   source: z.string().min(1).optional(),
   price: z.union([z.string().min(1), z.number().finite()]).optional(),
-  imageUrl: z.url().optional(),
+  imageUrl: httpUrlSchema.optional(),
   productId: z.union([z.string(), z.number()]).optional(),
   delivery: z.string().min(1).optional(),
 });
@@ -51,6 +52,19 @@ function canonicaliseListingUrl(rawUrl: string) {
   }
   if (url.pathname !== "/") url.pathname = url.pathname.replace(/\/+$/, "");
   return url.toString();
+}
+
+function merchantDestinationUrl(rawUrl: string) {
+  const url = new URL(rawUrl);
+  const hostname = url.hostname.toLocaleLowerCase("en-GB");
+  const googleOwnedHost =
+    /(^|\.)google\.[a-z.]+$/i.test(hostname) ||
+    hostname === "googleusercontent.com" ||
+    hostname.endsWith(".googleusercontent.com") ||
+    hostname === "g.co" ||
+    hostname.endsWith(".g.co") ||
+    hostname === "goo.gl";
+  return googleOwnedHost ? null : url.toString();
 }
 
 export function parseObservedGbpPrice(
@@ -173,6 +187,7 @@ export class SerperShoppingAdapter implements ShoppingSearchProvider {
           title: item.title,
           url: item.link,
           canonicalUrl: canonicaliseListingUrl(item.link),
+          merchantDestinationUrl: merchantDestinationUrl(item.link),
           merchant: item.source ?? null,
           price: parseObservedGbpPrice(item.price),
           priceText: priceText(item.price),

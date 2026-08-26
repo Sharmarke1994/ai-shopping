@@ -165,6 +165,7 @@ describe("retrieval persistence", () => {
       title: options.title ?? "Lightweight Race Cap",
       url: `${canonicalUrl}?offer=${encodeURIComponent(options.providerResultId)}`,
       canonicalUrl,
+      merchantDestinationUrl: canonicalUrl,
       merchant: options.merchant ?? "Runner Shop",
       price: { amountMinor: 2499, currency: "GBP" },
       priceText: "£24.99",

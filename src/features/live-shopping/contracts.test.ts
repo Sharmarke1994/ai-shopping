@@ -21,6 +21,24 @@ describe("live shopping browser contract", () => {
     });
   });
 
+  it("accepts bounded same-task refinement and task-scoped save operations", () => {
+    expect(
+      liveShoppingMutationSchema.parse({
+        operation: "refine",
+        sessionId: "4318c9d8-2460-4cc2-9861-91dcf681a23e",
+        turnId: "7d307e5f-cd17-464d-b21c-f4c85c431a83",
+        message: "Make waterproofing important too",
+      }),
+    ).toMatchObject({ operation: "refine" });
+    expect(
+      liveShoppingMutationSchema.parse({
+        operation: "save_listing",
+        sessionId: "4318c9d8-2460-4cc2-9861-91dcf681a23e",
+        candidateListingId: "8a0e451f-0471-4693-81d2-761c19a6ea7d",
+      }),
+    ).toMatchObject({ operation: "save_listing" });
+  });
+
   it.each([
     "taskId",
     "revision",

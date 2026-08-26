@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("runs a direct persisted shopping request and restores it after refresh", async ({
+test("shops recursively, saves an option, and restores the same task", async ({
   page,
 }) => {
   await page.goto("/live");
@@ -15,8 +15,26 @@ test("runs a direct persisted shopping request and restores it after refresh", a
   await expect(page.getByText("Breathability")).toBeVisible();
   await expect(page.getByRole("article")).toHaveCount(2);
   await expect(
-    page.getByRole("link", { name: "View on Google Shopping" }).first(),
+    page.getByRole("link", { name: "View at Fixture Outfitters" }).first(),
   ).toHaveAttribute("href", /^https:\/\/example\.test\/products\//);
+
+  await page.getByRole("button", { name: "Save", exact: true }).first().click();
+  await expect(
+    page.getByRole("heading", {
+      name: "Keep interesting options while you refine",
+    }),
+  ).toBeVisible();
+  await page
+    .getByLabel("Refine what you’re looking for")
+    .fill("Make waterproofing important too");
+  await page.getByRole("button", { name: "Update and search again" }).click();
+  await expect(
+    page.getByText("Water resistance", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Strong preference: Water resistance: yes", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("article")).toHaveCount(3);
 
   const restoredUrl = page.url();
   expect(restoredUrl).toContain("session=");
@@ -24,7 +42,10 @@ test("runs a direct persisted shopping request and restores it after refresh", a
   await expect(
     page.getByRole("heading", { name: "Products found for your brief" }),
   ).toBeVisible();
-  await expect(page.getByRole("article")).toHaveCount(2);
+  await expect(
+    page.getByText("Water resistance", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("article")).toHaveCount(3);
 });
 
 test("runs a deterministic ASK to answer to SEARCH on mobile", async ({

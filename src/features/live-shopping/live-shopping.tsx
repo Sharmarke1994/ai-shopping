@@ -9,7 +9,8 @@ import {
 import styles from "./live-shopping.module.css";
 
 const sessionStorageKey = "consider-live-session-v1";
-const pendingStartStorageKey = "consider-live-pending-start-v1";
+const pendingMutationStorageKey = "consider-live-pending-mutation-v1";
+const lastInitialRequestStorageKey = "consider-live-last-initial-request-v1";
 
 type StartOperation = Readonly<{
   operation: "start";
@@ -17,6 +18,24 @@ type StartOperation = Readonly<{
   turnId: string;
   message: string;
 }>;
+
+function pendingMutationForSession(raw: string | null, sessionId: string) {
+  if (raw === null) return null;
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      typeof parsed === "object" &&
+      parsed !== null &&
+      "sessionId" in parsed &&
+      parsed.sessionId === sessionId
+    ) {
+      return parsed;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
 
 class ShoppingApiError extends Error {
   constructor(
@@ -71,7 +90,7 @@ function rememberSession(sessionId: string) {
 
 function forgetSession() {
   localStorage.removeItem(sessionStorageKey);
-  localStorage.removeItem(pendingStartStorageKey);
+  localStorage.removeItem(pendingMutationStorageKey);
   const url = new URL(window.location.href);
   url.searchParams.delete("session");
   window.history.replaceState(null, "", url);
@@ -144,12 +163,16 @@ function Brief({ view }: { view: LiveShoppingView }) {
   );
 }
 
+type LiveListing = LiveShoppingView["savedListings"][number];
+
 function ProductCard({
   listing,
+  busy,
+  onToggleSaved,
 }: {
-  listing: NonNullable<
-    Extract<LiveShoppingView["action"], { kind: "search" }>["search"]
-  >["listings"][number];
+  listing: LiveListing;
+  busy: boolean;
+  onToggleSaved: (listing: LiveListing) => void;
 }) {
   const [imageFailed, setImageFailed] = useState(false);
   return (
@@ -193,6 +216,23 @@ function ProductCard({
           {listing.destinationLabel}
           <span aria-hidden="true">↗</span>
         </a>
+        {listing.sourceUrl !== null ? (
+          <a
+            href={listing.sourceUrl}
+            target="_blank"
+            rel="noreferrer"
+            className={styles.sourceLink}
+          >
+            {listing.sourceLabel}
+          </a>
+        ) : null}
+        <button
+          className={listing.saved ? styles.savedButton : styles.saveButton}
+          onClick={() => onToggleSaved(listing)}
+          disabled={busy}
+        >
+          {listing.saved ? "Saved ✓" : "Save"}
+        </button>
       </div>
     </article>
   );
@@ -203,11 +243,13 @@ function SearchResults({
   busy,
   onResume,
   onNewSearch,
+  onToggleSaved,
 }: {
   view: LiveShoppingView;
   busy: boolean;
   onResume: () => void;
   onNewSearch: () => void;
+  onToggleSaved: (listing: LiveListing) => void;
 }) {
   const [showAll, setShowAll] = useState(false);
   if (view.action.kind !== "search") return null;
@@ -263,12 +305,17 @@ function SearchResults({
             of {search.queryCount} focused searches. No suitability ranking yet.
           </p>
         </div>
-        <button className={styles.textButton} onClick={onNewSearch}>
-          New search
-        </button>
       </div>
       {view.action.notice ? (
         <div className={styles.notice}>{view.action.notice}</div>
+      ) : null}
+      {search.withheldConflictCount > 0 ? (
+        <div className={styles.constraintNotice}>
+          {search.withheldConflictCount}{" "}
+          {search.withheldConflictCount === 1 ? "listing was" : "listings were"}{" "}
+          withheld because an observed price or explicit title conflicted with a
+          must-have.
+        </div>
       ) : null}
       {search.listings.length === 0 ? (
         <div className={styles.noListings}>
@@ -278,7 +325,12 @@ function SearchResults({
       ) : (
         <div className={styles.productGrid}>
           {visibleListings.map((listing) => (
-            <ProductCard key={listing.displayId} listing={listing} />
+            <ProductCard
+              key={listing.displayId}
+              listing={listing}
+              busy={busy}
+              onToggleSaved={onToggleSaved}
+            />
           ))}
         </div>
       )}
@@ -296,10 +348,41 @@ function SearchResults({
   );
 }
 
+function SavedProducts({
+  view,
+  busy,
+  onToggleSaved,
+}: {
+  view: LiveShoppingView;
+  busy: boolean;
+  onToggleSaved: (listing: LiveListing) => void;
+}) {
+  if (view.savedListings.length === 0) return null;
+  return (
+    <section className={styles.savedSection}>
+      <div>
+        <p className={styles.eyebrow}>Saved for this purchase</p>
+        <h2>Keep interesting options while you refine</h2>
+      </div>
+      <div className={styles.savedGrid}>
+        {view.savedListings.map((listing) => (
+          <ProductCard
+            key={"saved:" + listing.candidateListingId}
+            listing={listing}
+            busy={busy}
+            onToggleSaved={onToggleSaved}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export function LiveShopping() {
   const [view, setView] = useState<LiveShoppingView | null>(null);
   const [request, setRequest] = useState("");
   const [openAnswer, setOpenAnswer] = useState("");
+  const [refinement, setRefinement] = useState("");
   const [restoring, setRestoring] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -310,7 +393,7 @@ export function LiveShopping() {
     setView(next);
     setError(null);
     setPendingOperation(null);
-    localStorage.removeItem(pendingStartStorageKey);
+    localStorage.removeItem(pendingMutationStorageKey);
   }, []);
 
   const runMutation = useCallback(
@@ -318,6 +401,10 @@ export function LiveShopping() {
       setBusy(true);
       setError(null);
       setPendingOperation(operation);
+      localStorage.setItem(
+        pendingMutationStorageKey,
+        JSON.stringify(operation),
+      );
       try {
         acceptView(await mutate(operation));
       } catch (cause) {
@@ -352,24 +439,33 @@ export function LiveShopping() {
       }
       rememberSession(sessionId);
       setBusy(true);
+      const pending = pendingMutationForSession(
+        localStorage.getItem(pendingMutationStorageKey),
+        sessionId,
+      );
       try {
-        acceptView(await loadSession(sessionId));
+        const loaded = await loadSession(sessionId);
+        if (pending === null) {
+          acceptView(loaded);
+        } else {
+          setView(loaded);
+          setPendingOperation(pending);
+          acceptView(await mutate(pending));
+        }
       } catch (cause: unknown) {
-        const pendingRaw = localStorage.getItem(pendingStartStorageKey);
         if (
           cause instanceof ShoppingApiError &&
           cause.status === 404 &&
-          pendingRaw
+          pending !== null &&
+          "operation" in pending &&
+          pending.operation === "start"
         ) {
           try {
-            const pending = JSON.parse(pendingRaw) as StartOperation;
-            if (pending.sessionId === sessionId) {
-              setPendingOperation(pending);
-              acceptView(await mutate(pending));
-              return;
-            }
+            setPendingOperation(pending);
+            acceptView(await mutate(pending));
+            return;
           } catch {
-            localStorage.removeItem(pendingStartStorageKey);
+            localStorage.removeItem(pendingMutationStorageKey);
           }
         }
         if (cause instanceof ShoppingApiError && cause.status === 404) {
@@ -414,7 +510,7 @@ export function LiveShopping() {
       message: request,
     };
     rememberSession(operation.sessionId);
-    localStorage.setItem(pendingStartStorageKey, JSON.stringify(operation));
+    localStorage.setItem(lastInitialRequestStorageKey, request);
     void runMutation(operation);
   };
 
@@ -443,10 +539,32 @@ export function LiveShopping() {
     forgetSession();
     autoResumeKey.current = null;
     setView(null);
-    setRequest("");
+    setRequest(localStorage.getItem(lastInitialRequestStorageKey) ?? "");
     setOpenAnswer("");
+    setRefinement("");
     setError(null);
     setPendingOperation(null);
+  };
+
+  const refine = (event: FormEvent) => {
+    event.preventDefault();
+    if (view === null || refinement.trim().length === 0 || busy) return;
+    void runMutation({
+      operation: "refine",
+      sessionId: view.sessionId,
+      turnId: crypto.randomUUID(),
+      message: refinement,
+    });
+    setRefinement("");
+  };
+
+  const toggleSaved = (listing: LiveListing) => {
+    if (view === null || busy) return;
+    void runMutation({
+      operation: listing.saved ? "unsave_listing" : "save_listing",
+      sessionId: view.sessionId,
+      candidateListingId: listing.candidateListingId,
+    });
   };
 
   return (
@@ -514,10 +632,22 @@ export function LiveShopping() {
             <div className={styles.subjectBar}>
               <div>
                 <span>Your request</span>
-                <p>{view.subject}</p>
+                <p
+                  className={
+                    view.subject.length > 220 ? styles.subjectLong : undefined
+                  }
+                >
+                  {view.subject}
+                </p>
+                {view.subject.length > 220 ? (
+                  <details className={styles.subjectDetails}>
+                    <summary>Read the full request</summary>
+                    <p>{view.subject}</p>
+                  </details>
+                ) : null}
               </div>
               <button className={styles.textButton} onClick={newSearch}>
-                Start over
+                Start a different purchase
               </button>
             </div>
 
@@ -618,6 +748,38 @@ export function LiveShopping() {
                 })
               }
               onNewSearch={newSearch}
+              onToggleSaved={toggleSaved}
+            />
+            {view.action.kind === "search" &&
+            view.action.search !== null &&
+            view.action.search.status !== "running" ? (
+              <form className={styles.refineComposer} onSubmit={refine}>
+                <label htmlFor="refine-request">
+                  Refine what you’re looking for
+                </label>
+                <div>
+                  <textarea
+                    id="refine-request"
+                    value={refinement}
+                    onChange={(event) => setRefinement(event.target.value)}
+                    placeholder="These brands are too obscure. Keep everything else, but favour chunkier wireless options…"
+                    rows={3}
+                    disabled={busy}
+                  />
+                  <button className={styles.primaryButton} disabled={busy}>
+                    Update and search again
+                  </button>
+                </div>
+                <p>
+                  Your original request stays intact. Only this new turn can
+                  update the current brief.
+                </p>
+              </form>
+            ) : null}
+            <SavedProducts
+              view={view}
+              busy={busy}
+              onToggleSaved={toggleSaved}
             />
           </div>
           <Brief view={view} />
@@ -626,7 +788,8 @@ export function LiveShopping() {
       <footer className={styles.footer}>
         <span>Consider is a working prototype.</span>
         <span>
-          Product links currently open Google Shopping intermediary pages.
+          Direct retailer links appear when supplied; otherwise we preserve the
+          Google Shopping source.
         </span>
       </footer>
     </main>

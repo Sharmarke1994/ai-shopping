@@ -1,6 +1,6 @@
 # Founder MVP progress
 
-**Updated:** 2026-08-25 14:45 Europe/London
+**Updated:** 2026-08-26 16:46 Europe/London
 **Durable goal:** Deliver a polished founder-usable AI shopping MVP whose live
 understanding, market retrieval, evidence-aware evaluation, refinement, saving,
 and comparison are meaningfully better than beginning with Google.
@@ -147,22 +147,50 @@ independent review and intentionally unmerged.
   is now the dominant visible product gap.
 - Durable evidence is in `docs/spikes/v0-06-live-founder-flow.md`.
 
+### Layer 5 — recursive refinement, saves and retrieval triage
+
+Implemented in the current unmerged checkpoint.
+
+- Adds natural same-task refinement through the real V0-05 coordinator. The
+  original subject remains immutable while each new shopper turn can patch the
+  current authoritative brief and trigger a new SearchRun.
+- Adds exact task-local save/unsave persistence. Saved listing provenance
+  survives later runs and refresh without becoming a ProductIdentity,
+  preference or recommendation.
+- Uses three distinct query jobs—concise literal precision, directly searchable
+  hard/strong constraints and unresolved preferences—with exact criterion-basis
+  lineage for included phrases only.
+- Adds deliberately narrow pre-judgement triage for observed hard price-ceiling
+  conflicts and explicit multiword categorical exclusions. Unsupported product
+  properties remain unknown; there is still no suitability ranking.
+- Carries a merchant-direct destination only when the provider supplies a
+  validated non-Google HTTP(S) URL. The real UK mouse run supplied none, so the
+  UI honestly retained Google Shopping fallbacks.
+- Real founder proof stayed on one task through three revisions and three
+  SearchRuns, preserved two saved offers, generated a 3-query/24-row current
+  pool, withheld six direct conflicts and reloaded without another provider
+  call.
+- Long natural requests are clamped with an explicit full-request disclosure so
+  results remain dominant while the original words remain inspectable.
+- Durable evidence is in
+  `docs/spikes/v0-06-recursive-founder-evidence.md`.
+
 ## Current work
 
-The first `/live` founder flow, its bounded independent-review corrections and
-its real OpenAI → Serper proof are complete. The branch must now stop for
-founder and independent visual/product review.
-Save/reject, refinement, evidence, assessment, ranking, comparison, auth and
+The recursive `/live` founder loop, exact saves, query-strategy correction,
+bounded hard-conflict triage and live ergonomic-mouse proof are implemented.
+The current checkpoint is being packaged for exact-head CI and independent
+review. Reject/undo, product evidence, assessment, ranking, comparison, auth and
 deployment have not started.
 
 ## Next validated checkpoints
 
-1. Founder and independent review of the first `/live` vertical product flow,
-   including the real rendered cap results and narrow/mobile behaviour.
-2. Exact-listing save/reject plus natural refinement and re-search. Bare reject
-   remains task-local to the acted-on listing and undoable.
-3. Bounded evidence acquisition, evidence-backed observations, criterion-level
+1. Founder and independent review of the recursive `/live` loop, real mouse
+   evidence, exact saves and rendered desktop/mobile behaviour.
+2. Bounded evidence acquisition, evidence-backed observations, criterion-level
    assessment, suitability judgement, and visible unknowns.
+3. Bare reject/undo, kept task-local to the acted-on listing without preference
+   learning.
 4. Shortlist and 2–4 item comparison against the shopper's current criteria.
 5. Responsive visual iteration, unrelated-category founder journeys, resilience,
    security/privacy review, and founder handoff.
@@ -180,22 +208,25 @@ deployment have not started.
   server is 17.11 while the repository deliberately pins CI to 17.6.
 - The full local database suite therefore reports one expected version-pin
   assertion failure. Do not weaken the pin to make the local result green.
-- Direct merchant URLs, public deployment/auth, and any second paid provider are
-  unresolved product/security decisions. They are not blockers for the private
-  local founder loop.
+- Public deployment/auth and any second paid provider remain unresolved
+  product/security decisions. Merchant-direct URLs are supported when Serper
+  supplies a validated destination, but live UK coverage is currently 0/24.
 
 ## Latest verification
 
 - `pnpm check`: formatting, lint, generated route types, strict TypeScript,
-  141/141 deterministic unit/component tests, production build — pass.
-- Full PostgreSQL suite: 85 functional tests pass; the sole failure is the
+  149/149 deterministic unit/component tests, production build — pass.
+- Full PostgreSQL suite: 88 functional tests pass; the sole failure is the
   intentional PostgreSQL 17.6 pin against local Homebrew 17.11.
 - `pnpm test:e2e`: 8/8 Chromium tests pass, including `/live` direct + refresh
-  and mobile ASK → answer → SEARCH.
-- Second `pnpm db:generate`: no schema drift after migration 0009.
-- Real `/live` proof: one task, one subject, one run, two terminal query receipts
-  and 16 persisted Serper listings; desktop and 390 × 844 rendered inspection
-  has no horizontal overflow or console warning/error.
+  plus save → refine → new SearchRun → refresh and mobile ASK → answer → SEARCH.
+- Second `pnpm db:generate`: no schema drift after migration 0010.
+- Real recursive `/live` proof: one task at revision 3, three inputs, immutable
+  subject, three SearchRuns, two saved listings and 24 exact rows in the current
+  three-query run; 18 remained visible after six direct conflicts were withheld.
+- Desktop and 390 × 844 rendered inspection: long requests remain inspectable
+  without displacing the current product pool; no horizontal overflow or
+  browser console warning/error was observed.
 - Production dependency audit: no known vulnerabilities.
 - `git diff --check` and changed-value secret scan: pass.
 - Independent Layer-3 read-only review: no material implementation blocker;
@@ -206,15 +237,15 @@ deployment have not started.
 1. Work only in
    `/Users/alchemist32/Documents/AI Shopping/ai-shopping-v0-06-spike` on
    `codex/v0-06-retrieval-spike`; confirm the branch and clean tree first.
-2. Read this file and `docs/spikes/v0-06-live-founder-flow.md`; inspect the
-   first-live-flow commit and exact-head PR #10 CI. Do not reopen accepted
-   V0-03/V0-04 or Layer-3 architecture.
+2. Read this file and
+   `docs/spikes/v0-06-recursive-founder-evidence.md`; inspect the exact-head PR
+   #10 CI. Do not reopen accepted V0-03/V0-04 or Layer-3 architecture.
 3. Preserve the original V0-05 checkout and draft PR #9 exactly; do not merge it
    and do not weaken its Terra gate.
-4. Keep PR #10 draft and unmerged. Do not start Save/reject, refinement,
-   evidence, judgement, ranking, shortlist or comparison while review is
-   pending.
+4. Keep PR #10 draft and unmerged. Do not start reject/undo, evidence,
+   judgement, ranking, shortlist or comparison while review is pending.
 5. If review finds a material issue, make only the bounded correction and rerun
    the affected/full gates.
 6. Do not merge automatically. After acceptance, the next bounded product layer
-   is exact-listing save/reject plus natural refinement and re-search.
+   is evidence-backed candidate understanding and criterion assessment for a
+   small pool, with unknowns kept visible.

@@ -118,6 +118,36 @@ function fixtureModel(): ContextAcquisitionModel {
           ambiguities: [],
         });
       }
+      if (source?.body?.toLocaleLowerCase("en-GB").includes("waterproof")) {
+        return completed<InterpretationProviderWireV1>({
+          providerSchemaVersion: 1,
+          outcome: "change",
+          operations: [
+            {
+              op: "create_concept",
+              localRef: "water_resistance",
+              label: "Water resistance",
+              definition: "Whether the product needs to resist rain",
+              valueFamily: "boolean",
+              canonicalUnit: null,
+            },
+            {
+              op: "add_criterion",
+              concept: { kind: "created", localRef: "water_resistance" },
+              target: {
+                strength: "strong_preference",
+                targetSemantics: "exact",
+                semanticValue: {
+                  schemaVersion: 1,
+                  kind: "boolean",
+                  value: true,
+                },
+              },
+            },
+          ],
+          ambiguities: [],
+        });
+      }
       if (source?.body?.toLocaleLowerCase("en-GB").includes("cap")) {
         return completed<InterpretationProviderWireV1>({
           providerSchemaVersion: 1,

@@ -11,10 +11,12 @@ accepted V0-02 fixture-driven consumer shell, V0-03 semantic persistence, and
 V0-04 deterministic state-transition engine are merged. Gate 1 and Gate 2 are
 closed. The independently reviewed V0-05 AI interpretation/context-acquisition
 plan is merged. Its bounded implementation remains a formal draft-PR release
-checkpoint and must not be merged without acceptance. Isolated V0-06 retrieval
-experiments may be developed and pushed in parallel, but they must remain
-unmerged and cheap to rebase until V0-05 is accepted; they do not authorize
-judgement or later product layers. Do not broaden a task because later work is
+checkpoint and must not be merged without acceptance. The isolated V0-06 branch
+now includes an unmerged recursive founder-shopping checkpoint: authoritative
+refinement, exact saves, retrieval persistence and bounded observed
+hard-conflict triage. It remains cheap to rebase until V0-05 is accepted and
+does not authorize product evidence, suitability judgement, ranking,
+comparison or later layers. Do not broaden a task because later work is
 documented.
 
 ## Hard invariants

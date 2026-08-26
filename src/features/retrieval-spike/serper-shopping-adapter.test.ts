@@ -64,6 +64,10 @@ describe("Serper shopping adapter", () => {
               delivery: "Free delivery",
             },
             { title: "Missing URL" },
+            {
+              title: "Untrusted destination",
+              link: "javascript:alert('not a product page')",
+            },
           ],
         }),
         { status: 200 },
@@ -82,8 +86,8 @@ describe("Serper shopping adapter", () => {
       expect.objectContaining({ method: "POST" }),
     );
     expect(result.diagnostics).toEqual({
-      receivedResultCount: 2,
-      rejectedResultCount: 1,
+      receivedResultCount: 3,
+      rejectedResultCount: 2,
     });
     expect(result.listings).toHaveLength(1);
     expect(result.listings[0]).toMatchObject({
@@ -92,8 +96,74 @@ describe("Serper shopping adapter", () => {
       merchant: "Example Sports",
       price: { amountMinor: 123456, currency: "GBP" },
       canonicalUrl: "https://shop.example/cap?variant=blue",
+      merchantDestinationUrl:
+        "https://shop.example/cap?variant=blue&utm_source=test#g",
       availabilityText: null,
     });
+  });
+
+  it("keeps a Google Shopping intermediary as evidence without pretending it is a merchant link", async () => {
+    const googleUrl =
+      "https://www.google.com/search?ibp=oshop&q=running+cap&prds=catalogid:123";
+    const provider = new SerperShoppingAdapter({
+      apiKey: "test-key",
+      fetchImpl: vi.fn(async () =>
+        Promise.resolve(
+          new Response(
+            JSON.stringify({
+              shopping: [
+                {
+                  position: 1,
+                  title: "Running cap",
+                  link: googleUrl,
+                  source: "Example Sports",
+                  productId: "123",
+                },
+              ],
+            }),
+            { status: 200 },
+          ),
+        ),
+      ) as unknown as typeof fetch,
+    });
+
+    const result = await provider.search(query());
+
+    expect(result.listings[0]).toMatchObject({
+      url: googleUrl,
+      merchantDestinationUrl: null,
+    });
+  });
+
+  it("does not label UK or Google-owned intermediary hosts as retailers", async () => {
+    for (const googleUrl of [
+      "https://www.google.co.uk/search?ibp=oshop&q=running+cap",
+      "https://shopping.googleusercontent.com/offer/123",
+    ]) {
+      const provider = new SerperShoppingAdapter({
+        apiKey: "test-key",
+        fetchImpl: vi.fn(async () =>
+          Promise.resolve(
+            new Response(
+              JSON.stringify({
+                shopping: [
+                  {
+                    position: 1,
+                    title: "Running cap",
+                    link: googleUrl,
+                    source: "Example Sports",
+                  },
+                ],
+              }),
+              { status: 200 },
+            ),
+          ),
+        ) as unknown as typeof fetch,
+      });
+
+      const result = await provider.search(query());
+      expect(result.listings[0]?.merchantDestinationUrl).toBeNull();
+    }
   });
 
   it("keeps ambiguous/non-GBP price text but does not manufacture money", () => {

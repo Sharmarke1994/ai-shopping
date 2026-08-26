@@ -8,8 +8,10 @@ import {
   LiveShoppingSearchUnavailableError,
   LiveShoppingSessionNotFoundError,
   loadLiveShoppingSession,
+  refineLiveShopping,
   resumeLiveShoppingSearch,
   retryLiveShoppingContext,
+  setLiveListingSaved,
   startLiveShopping,
 } from "@/features/live-shopping/application";
 import {
@@ -21,6 +23,7 @@ import {
   createLiveShoppingDatabase,
   createLiveShoppingDependencies,
 } from "@/features/live-shopping/runtime";
+import { SavedListingNotAvailableError } from "@/features/live-shopping/saved-listings";
 
 export const runtime = "nodejs";
 
@@ -45,6 +48,12 @@ function safeError(error: unknown) {
   if (error instanceof LiveShoppingSessionNotFoundError) {
     return response(
       { error: { code: "session_not_found", message: error.message } },
+      404,
+    );
+  }
+  if (error instanceof SavedListingNotAvailableError) {
+    return response(
+      { error: { code: "listing_not_available", message: error.message } },
       404,
     );
   }
@@ -107,28 +116,49 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const input = liveShoppingMutationSchema.parse(await request.json());
-    const dependencies = await createLiveShoppingDependencies();
     switch (input.operation) {
-      case "start":
+      case "start": {
+        const dependencies = await createLiveShoppingDependencies();
         return response(await startLiveShopping({ dependencies, input }));
-      case "answer":
+      }
+      case "answer": {
+        const dependencies = await createLiveShoppingDependencies();
         return response(
           await answerLiveShoppingQuestion({ dependencies, input }),
         );
-      case "retry_context":
+      }
+      case "refine": {
+        const dependencies = await createLiveShoppingDependencies();
+        return response(await refineLiveShopping({ dependencies, input }));
+      }
+      case "save_listing":
+      case "unsave_listing": {
+        const connection = createLiveShoppingDatabase();
+        return response(
+          await setLiveListingSaved({
+            dependencies: { db: connection.db },
+            input,
+          }),
+        );
+      }
+      case "retry_context": {
+        const dependencies = await createLiveShoppingDependencies();
         return response(
           await retryLiveShoppingContext({
             dependencies,
             sessionId: input.sessionId,
           }),
         );
-      case "resume_search":
+      }
+      case "resume_search": {
+        const dependencies = await createLiveShoppingDependencies();
         return response(
           await resumeLiveShoppingSearch({
             dependencies,
             sessionId: input.sessionId,
           }),
         );
+      }
     }
   } catch (error) {
     return safeError(error);

@@ -71,6 +71,13 @@
       "when": 1787659642355,
       "tag": "0009_easy_arachne",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1787674522235,
+      "tag": "0010_polite_vermin",
+      "breakpoints": true
     }
   ]
 }
