@@ -15,8 +15,9 @@ and comparison are meaningfully better than beginning with Google.
 - Latest product checkpoint: exact-source structured retailer review evidence
   at `aa9e1463c668c7bb576d758316bea84654329e5c`, followed only by the docs
   checkpoint containing this ledger update. It belongs in draft PR #10 and
-  awaits exact-head CI and independent review. Layer 3 remains the latest
-  independently accepted checkpoint at
+  awaits independent review. GitHub Quality run `33065000397` passed quality,
+  persistence and browser-smoke on its parent docs head `f3837ec`. Layer 3
+  remains the latest independently accepted checkpoint at
   `870356f5642923618186e794419d39116f62e54c`.
 - Original V0-05 checkout and draft PR #9 remain separate, unmodified, unmerged,
   and formally unaccepted. Its last instructed checkpoint is `9c33018`; the
@@ -218,8 +219,8 @@ awaiting independent review.
 The recursive `/live` founder loop now includes exact saves, query-strategy v3,
 bounded hard-conflict triage, verified merchant destinations, attributable
 retailer ratings and an honest SERP-field evidence projection. The current
-checkpoint is being packaged for exact-head CI and independent review.
-Reject/undo, persisted product
+checkpoint has green GitHub evidence and awaits independent review. Reject/undo,
+persisted product
 observations, full criterion assessment, comparative judgement, shortlist,
 comparison, auth and deployment have not started.
 
@@ -277,6 +278,9 @@ comparison, auth and deployment have not started.
   overflow.
 - Production dependency audit: no known vulnerabilities.
 - `git diff --check` and changed-value secret scan: pass.
+- GitHub Quality run `33065000397` on `f3837ec`: quality, PostgreSQL 17.6
+  persistence and browser-smoke all pass. The following commit is documentation
+  status only.
 - Independent Layer-3 read-only review: no material implementation blocker;
   the unavoidable post-provider/pre-receipt crash ambiguity is documented.
 

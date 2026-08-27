@@ -160,6 +160,8 @@ compact enough to preserve the product image, price and destination hierarchy.
 - `pnpm db:generate`: no unexplained schema drift after migration 0012.
 - Production dependency audit: no known vulnerabilities.
 - `git diff --check` and changed-value secret scan: pass.
+- GitHub Quality run `33065000397` on `f3837ec`: quality, pinned-PostgreSQL
+  persistence and browser-smoke all pass.
 
 ## Honest limitations and next product step
 
