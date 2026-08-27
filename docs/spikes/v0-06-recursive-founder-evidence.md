@@ -164,7 +164,8 @@ compact enough to preserve the product image, price and destination hierarchy.
   accepting three valid shapes.
 - Production dependency audit: no known vulnerabilities.
 - `git diff --check` and changed-value secret scan: pass.
-- GitHub Quality run `33065000397` on `f3837ec`: quality, pinned-PostgreSQL
+- GitHub Quality run `33071030456` on exact head
+  `962f9405655ed84cde0a39b8ea94e01db374b538`: quality, pinned-PostgreSQL
   persistence and browser-smoke all pass.
 
 ## Honest limitations and next product step

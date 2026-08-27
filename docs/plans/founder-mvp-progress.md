@@ -285,9 +285,9 @@ comparison, auth and deployment have not started.
   overflow.
 - Production dependency audit: no known vulnerabilities.
 - `git diff --check` and changed-value secret scan: pass.
-- GitHub Quality run `33065000397` on `f3837ec`: quality, PostgreSQL 17.6
-  persistence and browser-smoke all pass. The following commit is documentation
-  status only.
+- GitHub Quality run `33071030456` on exact head
+  `962f9405655ed84cde0a39b8ea94e01db374b538`: quality, PostgreSQL 17.6
+  persistence and browser-smoke all pass.
 - Independent Layer-3 read-only review: no material implementation blocker;
   the unavoidable post-provider/pre-receipt crash ambiguity is documented.
 
