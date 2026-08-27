@@ -1,6 +1,6 @@
 # Founder MVP progress
 
-**Updated:** 2026-08-26 23:41 Europe/London
+**Updated:** 2026-08-27 11:55 Europe/London
 **Durable goal:** Deliver a polished founder-usable AI shopping MVP whose live
 understanding, market retrieval, evidence-aware evaluation, refinement, saving,
 and comparison are meaningfully better than beginning with Google.
@@ -12,11 +12,12 @@ and comparison are meaningfully better than beginning with Google.
 - Isolated product-progress worktree:
   `/Users/alchemist32/Documents/AI Shopping/ai-shopping-v0-06-spike`.
 - Experimental branch: `codex/v0-06-retrieval-spike`.
-- Latest product checkpoint: honest listing evidence and verified merchant
-  destinations at `b112430`, followed only by the docs checkpoint containing
-  this ledger update. It belongs in draft PR #10 and awaits exact-head CI and
-  independent review. Layer 3 remains the latest independently accepted
-  checkpoint at `870356f5642923618186e794419d39116f62e54c`.
+- Latest product checkpoint: exact-source structured retailer review evidence
+  at `aa9e1463c668c7bb576d758316bea84654329e5c`, followed only by the docs
+  checkpoint containing this ledger update. It belongs in draft PR #10 and
+  awaits exact-head CI and independent review. Layer 3 remains the latest
+  independently accepted checkpoint at
+  `870356f5642923618186e794419d39116f62e54c`.
 - Original V0-05 checkout and draft PR #9 remain separate, unmodified, unmerged,
   and formally unaccepted. Its last instructed checkpoint is `9c33018`; the
   latest Terra release gate completed 14/21 on 24 August 2026. All seven failed
@@ -178,8 +179,9 @@ Implemented in the current unmerged checkpoint.
 
 ### Layer 6 — verified destinations and honest listing evidence
 
-Implemented at `b112430`; experimental, unmerged and awaiting independent
-review.
+Implemented at `b112430` and extended with structured retailer rating evidence
+at `aa9e1463c668c7bb576d758316bea84654329e5c`; experimental, unmerged and
+awaiting independent review.
 
 - Enriches a bounded number of Google Shopping rows through an exact
   title/merchant organic lookup under the existing provider deadline.
@@ -198,6 +200,13 @@ review.
 - Shows directly observed price/wireless support separately from unverified
   comfort, battery, reviews, shape and brand quality. There is no fabricated
   suitability score or recommendation.
+- Preserves a structured rating/count only when it comes from the exact organic
+  result whose title, merchant host and direct product URL already passed the
+  merchant-destination verifier. The UI labels this as retailer evidence; it
+  does not silently turn a 4.6/5 rating into a claim that the shopper's
+  qualitative review preference is satisfied.
+- Migration `0012_overrated_black_cat.sql` stores the rating, count and exact
+  evidence URL together and rejects incomplete or mismatched provenance.
 - Real same-task proof reached revision 6, exercised relaxation, preference
   changes, use-case acquisition, ASK/answer, save, refresh and exact unsave.
 - Durable evidence and responsive screenshots are in
@@ -207,9 +216,10 @@ review.
 ## Current work
 
 The recursive `/live` founder loop now includes exact saves, query-strategy v3,
-bounded hard-conflict triage, verified merchant destinations and an honest
-SERP-field evidence projection. The current checkpoint is being packaged for
-exact-head CI and independent review. Reject/undo, persisted product
+bounded hard-conflict triage, verified merchant destinations, attributable
+retailer ratings and an honest SERP-field evidence projection. The current
+checkpoint is being packaged for exact-head CI and independent review.
+Reject/undo, persisted product
 observations, full criterion assessment, comparative judgement, shortlist,
 comparison, auth and deployment have not started.
 
@@ -217,8 +227,10 @@ comparison, auth and deployment have not started.
 
 1. Founder and independent review of the recursive `/live` loop, real mouse
    evidence, exact saves and rendered desktop/mobile behaviour.
-2. Selective evidence acquisition for a small promising pool, followed by
-   persisted evidence-backed observations and criterion-level assessment.
+2. Selective exact-source evidence acquisition for a small promising pool,
+   followed by persisted evidence-backed observations and criterion-level
+   assessment. Search snippets remain merchant assertions and must not become
+   hard-exclusion evidence or objective comfort claims.
 3. Bare reject/undo, kept task-local to the acted-on listing without preference
    learning.
 4. Shortlist and 2–4 item comparison against the shopper's current criteria.
@@ -240,23 +252,26 @@ comparison, auth and deployment have not started.
   assertion failure. Do not weaken the pin to make the local result green.
 - Public deployment/auth and any second paid provider remain unresolved
   product/security decisions. The bounded Serper organic experiment produced
-  two useful visible direct destinations in the latest UK run; it can spend up
-  to nine additional lookups per three-query run and should move post-triage at
-  shortlist scale before broader founder use.
+  two useful visible direct destinations and structured rating evidence in the
+  latest UK run; it can spend up to nine additional lookups per three-query run
+  and should move post-triage at shortlist scale before broader founder use.
 
 ## Latest verification
 
 - `pnpm check`: formatting, lint, generated route types, strict TypeScript,
-  156/156 deterministic unit/component tests, production build — pass.
+  158/158 deterministic unit/component tests, production build — pass.
 - Full PostgreSQL suite: 89 functional tests pass; the sole failure is the
   intentional PostgreSQL 17.6 pin against local Homebrew 17.11.
 - `pnpm test:e2e`: 8/8 Chromium tests pass, including `/live` direct + refresh
   plus save → refine → new SearchRun → refresh and mobile ASK → answer → SEARCH.
-- Second `pnpm db:generate`: no schema drift after migration 0010.
+- `pnpm db:generate`: no schema drift after migration 0012.
 - Real recursive `/live` proof: one task at revision 6, immutable subject,
   purpose-labelled three-query current run, 24 exact rows, 18 exact offer
-  groups, 13 direct-conflict rows withheld, two useful visible merchant pages,
-  ASK/answer, exact save, refresh and exact unsave.
+  groups, 12 direct-conflict rows withheld, two useful visible merchant pages,
+  five exact rating-evidence rows, ASK/answer, exact save, refresh and exact
+  unsave. Visible cards report Anker 4.3/5 from 52,629 Amazon reviews and Trust
+  4.6/5 from 29 Argos reviews without claiming either meets the shopper's
+  qualitative review criterion.
 - Desktop and 390 × 844 rendered inspection: evidence/unknown labels remain
   readable, direct/source links retain hierarchy and mobile has no horizontal
   overflow.
@@ -276,8 +291,8 @@ comparison, auth and deployment have not started.
 3. Preserve the original V0-05 checkout and draft PR #9 exactly; do not merge it
    and do not weaken its Terra gate.
 4. Keep PR #10 draft and unmerged. Do not start reject/undo, full evidence
-   acquisition, comparative judgement, shortlist or comparison while this
-   checkpoint's CI/review is pending.
+   acquisition, comparative judgement, shortlist or comparison while the
+   current structured-review-evidence checkpoint's CI/review is pending.
 5. If review finds a material issue, make only the bounded correction and rerun
    the affected/full gates.
 6. Do not merge automatically. After acceptance, the next bounded product layer

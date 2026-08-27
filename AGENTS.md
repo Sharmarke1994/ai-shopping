@@ -15,7 +15,9 @@ checkpoint and must not be merged without acceptance. The isolated V0-06 branch
 now includes an unmerged recursive founder-shopping checkpoint: authoritative
 refinement, exact saves, retrieval persistence, verified merchant-destination
 provenance, bounded observed hard-conflict triage and a small view-only listing
-evidence projection that keeps unsupported criteria unverified. It remains
+evidence projection that keeps unsupported criteria unverified. Exact verified
+retailer organic results may now contribute a structured rating/count fact with
+the source URL; that fact is not yet a criterion assessment. It remains
 cheap to rebase until V0-05 is accepted. Full evidence acquisition, persisted
 product observations, suitability judgement, comparison and later layers still
 require their own bounded work. Do not broaden a task because later work is
