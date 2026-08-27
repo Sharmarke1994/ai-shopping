@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { PersistedDataCorruptionError } from "../../src/domain/shopping-state/errors";
@@ -205,6 +206,57 @@ describe("retrieval persistence", () => {
       errorCode: "provider_failed",
       error,
     };
+  }
+
+  async function rawCandidateListing(
+    query: ReturnType<typeof buildSearchQueryPortfolio>["queries"][number],
+    queryExecutionId: string,
+    overrides: Partial<{
+      merchantDestinationUrl: string | null;
+      merchantDestinationSource: string | null;
+      reviewRatingHundredths: number | null;
+      reviewCount: number | null;
+      reviewEvidenceSourceUrl: string | null;
+    }> = {},
+  ) {
+    const id = randomUUID();
+    const values = {
+      merchantDestinationUrl: null,
+      merchantDestinationSource: null,
+      reviewRatingHundredths: null,
+      reviewCount: null,
+      reviewEvidenceSourceUrl: null,
+      ...overrides,
+    };
+    await connection.client.unsafe(
+      `insert into shopping_private.candidate_listings (
+        id, task_id, run_id, query_id, query_execution_id, provider,
+        provider_result_id, source_rank, surface, title, url, canonical_url,
+        merchant_destination_url, merchant_destination_source, merchant,
+        price_amount_minor, price_currency_code, price_text, image_url,
+        delivery_text, availability_text, review_rating_hundredths,
+        review_count, review_evidence_source_url, retrieved_at
+      ) values (
+        $1, $2, $3, $4, $5, 'fixture', $6, 1, 'shopping',
+        'Raw candidate listing', 'https://shopping.example/result',
+        'https://shopping.example/result', $7, $8, 'Example Merchant',
+        2499, 'GBP', '£24.99', null, null, null, $9, $10, $11, $12
+      )`,
+      [
+        id,
+        query.taskId,
+        query.runId,
+        query.id,
+        queryExecutionId,
+        `raw-${id}`,
+        values.merchantDestinationUrl,
+        values.merchantDestinationSource,
+        values.reviewRatingHundredths,
+        values.reviewCount,
+        values.reviewEvidenceSourceUrl,
+        "2026-08-27T12:00:00.000Z",
+      ],
+    );
   }
 
   it("persists the plan before calls and derives a partial terminal run", async () => {
@@ -631,5 +683,104 @@ describe("retrieval persistence", () => {
         runId: portfolio.run.id,
       }),
     ).rejects.toBeInstanceOf(PersistedDataCorruptionError);
+  });
+
+  it("rejects partial nullable provenance tuples at the PostgreSQL boundary", async () => {
+    const { task, action, portfolio } = await authority();
+    await persistSearchPlan({
+      db: connection.db,
+      contextActionId: action.id,
+      provider: "fixture",
+      portfolio,
+    });
+    const query = portfolio.queries[0]!;
+    await recordSearchQueryExecution({
+      db: connection.db,
+      execution: completed(query, []),
+      startedAt: new Date("2026-08-27T12:00:01.000Z"),
+      finishedAt: new Date("2026-08-27T12:00:02.000Z"),
+    });
+    const [receipt] = await connection.db
+      .select({ id: searchQueryExecutions.id })
+      .from(searchQueryExecutions)
+      .where(
+        and(
+          eq(searchQueryExecutions.taskId, task.id),
+          eq(searchQueryExecutions.runId, portfolio.run.id),
+          eq(searchQueryExecutions.queryId, query.id),
+        ),
+      );
+    if (receipt === undefined) throw new Error("Expected query receipt");
+
+    const invalidRows = [
+      {
+        merchantDestinationUrl: "https://merchant.example/item",
+        merchantDestinationSource: null,
+      },
+      {
+        merchantDestinationUrl: null,
+        merchantDestinationSource: "shopping_result",
+      },
+      {
+        reviewRatingHundredths: 460,
+        reviewCount: null,
+        reviewEvidenceSourceUrl: null,
+      },
+      {
+        reviewRatingHundredths: 460,
+        reviewCount: 29,
+        reviewEvidenceSourceUrl: null,
+      },
+      {
+        reviewRatingHundredths: null,
+        reviewCount: null,
+        reviewEvidenceSourceUrl: "https://merchant.example/item",
+      },
+      {
+        merchantDestinationUrl: null,
+        merchantDestinationSource: null,
+        reviewRatingHundredths: 460,
+        reviewCount: 29,
+        reviewEvidenceSourceUrl: "https://merchant.example/item",
+      },
+      {
+        merchantDestinationUrl: "https://merchant.example/item",
+        merchantDestinationSource: "verified_organic",
+        reviewRatingHundredths: 460,
+        reviewCount: 29,
+        reviewEvidenceSourceUrl: "https://other.example/item",
+      },
+      {
+        merchantDestinationUrl: "https://merchant.example/item",
+        merchantDestinationSource: "shopping_result",
+        reviewRatingHundredths: 460,
+        reviewCount: 29,
+        reviewEvidenceSourceUrl: "https://merchant.example/item",
+      },
+    ] as const;
+    for (const invalid of invalidRows) {
+      await expect(
+        rawCandidateListing(query, receipt.id, invalid),
+      ).rejects.toThrow();
+    }
+
+    await expect(
+      rawCandidateListing(query, receipt.id),
+    ).resolves.toBeUndefined();
+    await expect(
+      rawCandidateListing(query, receipt.id, {
+        merchantDestinationUrl: "https://merchant.example/item",
+        merchantDestinationSource: "shopping_result",
+      }),
+    ).resolves.toBeUndefined();
+    await expect(
+      rawCandidateListing(query, receipt.id, {
+        merchantDestinationUrl: "https://merchant.example/item",
+        merchantDestinationSource: "verified_organic",
+        reviewRatingHundredths: 460,
+        reviewCount: 29,
+        reviewEvidenceSourceUrl: "https://merchant.example/item",
+      }),
+    ).resolves.toBeUndefined();
   });
 });

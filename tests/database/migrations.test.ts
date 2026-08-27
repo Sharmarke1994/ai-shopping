@@ -65,7 +65,7 @@ describe("shopping-state and context-acquisition migration shape", () => {
       'select count(*)::integer as count from "drizzle"."migrations"',
     );
     const after = afterRows[0]?.count;
-    expect(before).toBe(13);
+    expect(before).toBe(14);
     expect(after).toBe(before);
   });
 
@@ -233,6 +233,12 @@ describe("shopping-state and context-acquisition migration shape", () => {
       "merchant_destination_source = ANY",
     );
     expect(constraint?.definition).toContain("verified_organic");
+    expect(constraint?.definition).toContain(
+      "merchant_destination_url IS NOT NULL",
+    );
+    expect(constraint?.definition).toContain(
+      "merchant_destination_source IS NOT NULL",
+    );
   });
 
   it("keeps actions receipt-bound and attempts terminally coherent", async () => {

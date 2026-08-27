@@ -117,7 +117,7 @@ export const candidateListings = shoppingPrivate.table(
     ),
     check(
       "candidate_listings_destination_provenance_shape",
-      sql`(${table.merchantDestinationUrl} is null and ${table.merchantDestinationSource} is null) or (${table.merchantDestinationUrl} is not null and ${table.merchantDestinationSource} in ('shopping_result', 'verified_organic'))`,
+      sql`(${table.merchantDestinationUrl} is null and ${table.merchantDestinationSource} is null) or (${table.merchantDestinationUrl} is not null and ${table.merchantDestinationSource} is not null and ${table.merchantDestinationSource} in ('shopping_result', 'verified_organic'))`,
     ),
     check(
       "candidate_listings_optional_text_bounds",
@@ -133,7 +133,7 @@ export const candidateListings = shoppingPrivate.table(
     ),
     check(
       "candidate_listings_review_evidence_shape",
-      sql`(${table.reviewRatingHundredths} is null and ${table.reviewCount} is null and ${table.reviewEvidenceSourceUrl} is null) or (${table.reviewRatingHundredths} between 0 and 500 and ${table.reviewCount} > 0 and ${table.reviewEvidenceSourceUrl} = ${table.merchantDestinationUrl} and ${table.merchantDestinationSource} = 'verified_organic')`,
+      sql`(${table.reviewRatingHundredths} is null and ${table.reviewCount} is null and ${table.reviewEvidenceSourceUrl} is null) or (${table.reviewRatingHundredths} is not null and ${table.reviewCount} is not null and ${table.reviewEvidenceSourceUrl} is not null and ${table.reviewRatingHundredths} between 0 and 500 and ${table.reviewCount} > 0 and ${table.merchantDestinationUrl} is not null and ${table.merchantDestinationSource} is not null and ${table.reviewEvidenceSourceUrl} = ${table.merchantDestinationUrl} and ${table.merchantDestinationSource} = 'verified_organic')`,
     ),
   ],
 );

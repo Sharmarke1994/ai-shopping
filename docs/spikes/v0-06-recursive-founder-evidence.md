@@ -154,10 +154,14 @@ compact enough to preserve the product image, price and destination hierarchy.
 ## Verification
 
 - `pnpm check`: 158/158 deterministic tests and production build pass.
-- PostgreSQL: 89 functional tests pass; the sole local failure is the
+- PostgreSQL: 90 functional tests pass; the sole local failure is the
   intentional PostgreSQL 17.6 pin against local Homebrew 17.11.
 - `pnpm test:e2e`: 8/8 Chromium tests pass.
-- `pnpm db:generate`: no unexplained schema drift after migration 0012.
+- `pnpm db:generate`: no unexplained schema drift after migration 0013.
+- Migration `0013_melodic_roland_deschain.sql` explicitly requires every
+  participating nullable field in populated destination/review branches, and
+  raw PostgreSQL regressions reject eight incomplete or mismatched tuples while
+  accepting three valid shapes.
 - Production dependency audit: no known vulnerabilities.
 - `git diff --check` and changed-value secret scan: pass.
 - GitHub Quality run `33065000397` on `f3837ec`: quality, pinned-PostgreSQL

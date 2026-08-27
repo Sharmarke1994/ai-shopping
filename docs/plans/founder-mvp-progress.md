@@ -16,9 +16,10 @@ and comparison are meaningfully better than beginning with Google.
   at `aa9e1463c668c7bb576d758316bea84654329e5c`, followed only by the docs
   checkpoint containing this ledger update. It belongs in draft PR #10 and
   awaits independent review. GitHub Quality run `33065000397` passed quality,
-  persistence and browser-smoke on its parent docs head `f3837ec`. Layer 3
+  persistence and browser-smoke on its parent docs head `f3837ec`. Layer 4
   remains the latest independently accepted checkpoint at
-  `870356f5642923618186e794419d39116f62e54c`.
+  `370a4ab6be8a99f25d3fb8b6b848a3fcb0589157`; this Layer 4 checkpoint was
+  independently accepted before the current recursive/evidence work.
 - Original V0-05 checkout and draft PR #9 remain separate, unmodified, unmerged,
   and formally unaccepted. Its last instructed checkpoint is `9c33018`; the
   latest Terra release gate completed 14/21 on 24 August 2026. All seven failed
@@ -208,6 +209,9 @@ awaiting independent review.
   qualitative review preference is satisfied.
 - Migration `0012_overrated_black_cat.sql` stores the rating, count and exact
   evidence URL together and rejects incomplete or mismatched provenance.
+- Additive migration `0013_melodic_roland_deschain.sql` makes the populated
+  destination and review branches explicitly require every participating
+  nullable field, closing PostgreSQL CHECK-constraint NULL semantics.
 - Real same-task proof reached revision 6, exercised relaxation, preference
   changes, use-case acquisition, ASK/answer, save, refresh and exact unsave.
 - Durable evidence and responsive screenshots are in
@@ -261,11 +265,14 @@ comparison, auth and deployment have not started.
 
 - `pnpm check`: formatting, lint, generated route types, strict TypeScript,
   158/158 deterministic unit/component tests, production build — pass.
-- Full PostgreSQL suite: 89 functional tests pass; the sole failure is the
+- Full PostgreSQL suite: 90 functional tests pass; the sole failure is the
   intentional PostgreSQL 17.6 pin against local Homebrew 17.11.
 - `pnpm test:e2e`: 8/8 Chromium tests pass, including `/live` direct + refresh
   plus save → refine → new SearchRun → refresh and mobile ASK → answer → SEARCH.
-- `pnpm db:generate`: no schema drift after migration 0012.
+- `pnpm db:generate`: no schema drift after migration 0013.
+- PostgreSQL raw-write regression coverage rejects all eight incomplete or
+  mismatched destination/review provenance tuples while accepting the three
+  valid nullable/verified shapes.
 - Real recursive `/live` proof: one task at revision 6, immutable subject,
   purpose-labelled three-query current run, 24 exact rows, 18 exact offer
   groups, 12 direct-conflict rows withheld, two useful visible merchant pages,
