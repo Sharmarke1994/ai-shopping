@@ -29,6 +29,7 @@ describe("shopping-state and context-acquisition migration shape", () => {
       order by table_name
     `);
     expect(tables.map((row) => row.table_name)).toEqual([
+      "candidate_listings",
       "concept_definitions",
       "context_acquisition_attempts",
       "context_action_answers",
@@ -36,6 +37,14 @@ describe("shopping-state and context-acquisition migration shape", () => {
       "context_question_options",
       "criterion_sources",
       "decision_criteria",
+      "founder_live_sessions",
+      "saved_candidate_listings",
+      "search_hypotheses",
+      "search_hypothesis_basis_criteria",
+      "search_queries",
+      "search_query_executions",
+      "search_runs",
+      "shopping_task_subjects",
       "shopping_tasks",
       "state_change_applications",
       "task_inputs",
@@ -56,7 +65,7 @@ describe("shopping-state and context-acquisition migration shape", () => {
       'select count(*)::integer as count from "drizzle"."migrations"',
     );
     const after = afterRows[0]?.count;
-    expect(before).toBe(7);
+    expect(before).toBe(14);
     expect(after).toBe(before);
   });
 
@@ -148,27 +157,88 @@ describe("shopping-state and context-acquisition migration shape", () => {
     );
   });
 
+  it("binds immutable subjects and one leased run to each SEARCH action", async () => {
+    const constraints = await connection.client.unsafe<
+      { conname: string; definition: string }[]
+    >(`
+      select conname, pg_get_constraintdef(oid) as definition
+      from pg_constraint
+      where conname in (
+        'shopping_task_subjects_exact_message_fk',
+        'search_runs_task_context_action_unique',
+        'search_runs_lease_shape'
+      )
+      order by conname
+    `);
+    expect(constraints).toHaveLength(3);
+    const definitions = constraints.map((row) => row.definition).join(" ");
+    expect(definitions).toContain(
+      "FOREIGN KEY (task_id, task_input_id, user_message_id)",
+    );
+    expect(definitions).toContain("UNIQUE (task_id, context_action_id)");
+    expect(definitions).toContain("lease_token IS NULL");
+    expect(definitions).toContain("status = 'running'::text");
+  });
+
   it("does not expose the private schema to client roles", async () => {
     const [privileges] = await connection.client.unsafe<
       {
         anon_schema: boolean;
         anon_table: boolean;
+        anon_subject_table: boolean;
+        anon_live_session_table: boolean;
+        anon_saved_table: boolean;
         authenticated_schema: boolean;
         authenticated_table: boolean;
+        authenticated_subject_table: boolean;
+        authenticated_live_session_table: boolean;
+        authenticated_saved_table: boolean;
       }[]
     >(`
       select
         has_schema_privilege('anon', 'shopping_private', 'USAGE') as anon_schema,
-        has_table_privilege('anon', 'shopping_private.context_actions', 'SELECT') as anon_table,
+        has_table_privilege('anon', 'shopping_private.candidate_listings', 'SELECT') as anon_table,
+        has_table_privilege('anon', 'shopping_private.shopping_task_subjects', 'SELECT') as anon_subject_table,
+        has_table_privilege('anon', 'shopping_private.founder_live_sessions', 'SELECT') as anon_live_session_table,
+        has_table_privilege('anon', 'shopping_private.saved_candidate_listings', 'SELECT') as anon_saved_table,
         has_schema_privilege('authenticated', 'shopping_private', 'USAGE') as authenticated_schema,
-        has_table_privilege('authenticated', 'shopping_private.context_acquisition_attempts', 'SELECT') as authenticated_table
+        has_table_privilege('authenticated', 'shopping_private.search_runs', 'SELECT') as authenticated_table,
+        has_table_privilege('authenticated', 'shopping_private.shopping_task_subjects', 'SELECT') as authenticated_subject_table,
+        has_table_privilege('authenticated', 'shopping_private.founder_live_sessions', 'SELECT') as authenticated_live_session_table,
+        has_table_privilege('authenticated', 'shopping_private.saved_candidate_listings', 'SELECT') as authenticated_saved_table
     `);
     expect(privileges).toEqual({
       anon_schema: false,
       anon_table: false,
+      anon_subject_table: false,
+      anon_live_session_table: false,
+      anon_saved_table: false,
       authenticated_schema: false,
       authenticated_table: false,
+      authenticated_subject_table: false,
+      authenticated_live_session_table: false,
+      authenticated_saved_table: false,
     });
+  });
+
+  it("binds every merchant destination to explicit provenance", async () => {
+    const [constraint] = await connection.client.unsafe<
+      { definition: string }[]
+    >(`
+      select pg_get_constraintdef(oid) as definition
+      from pg_constraint
+      where conname = 'candidate_listings_destination_provenance_shape'
+    `);
+    expect(constraint?.definition).toContain(
+      "merchant_destination_source = ANY",
+    );
+    expect(constraint?.definition).toContain("verified_organic");
+    expect(constraint?.definition).toContain(
+      "merchant_destination_url IS NOT NULL",
+    );
+    expect(constraint?.definition).toContain(
+      "merchant_destination_source IS NOT NULL",
+    );
   });
 
   it("keeps actions receipt-bound and attempts terminally coherent", async () => {
@@ -196,12 +266,12 @@ describe("shopping-state and context-acquisition migration shape", () => {
     expect(definitions).toContain("status = 'completed'::text");
   });
 
-  it("contains no premature product or candidate persistence", async () => {
+  it("contains no premature product-identity, evidence, judgement, or reaction persistence", async () => {
     const rows = await connection.client.unsafe<{ table_name: string }[]>(`
       select table_name
       from information_schema.tables
       where table_schema = 'shopping_private'
-        and table_name ~ '(product|candidate|search|observation|assessment|judgement)'
+        and table_name ~ '(product_identity|observation|evidence|assessment|judgement|reaction)'
     `);
     expect(rows).toEqual([]);
   });

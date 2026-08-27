@@ -17,6 +17,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/run-database-migrations.ts",
     "harness:v0-05": "tsx scripts/run-v0-05-harness.ts",
+    "harness:v0-06": "tsx scripts/run-v0-06-retrieval-spike.ts",
+    "proof:v0-06:persisted-live": "tsx scripts/run-v0-06-persisted-retrieval-proof.ts",
     "eval:v0-05:live": "tsx scripts/run-v0-05-live-eval.ts",
     "screenshots:v0-02": "node scripts/capture-v0-02-screenshots.mjs",
     "test": "vitest run",

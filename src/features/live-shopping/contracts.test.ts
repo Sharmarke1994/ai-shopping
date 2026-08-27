@@ -1,0 +1,87 @@
+import { readFile } from "node:fs/promises";
+import { describe, expect, it } from "vitest";
+import {
+  liveShoppingMutationSchema,
+  liveShoppingViewSchema,
+} from "./contracts";
+
+describe("live shopping browser contract", () => {
+  it("accepts client retry keys and shopper content only", () => {
+    const parsed = liveShoppingMutationSchema.parse({
+      operation: "answer",
+      sessionId: "4318c9d8-2460-4cc2-9861-91dcf681a23e",
+      turnId: "7d307e5f-cd17-464d-b21c-f4c85c431a83",
+      answer: { mode: "single_select", optionOrdinal: 1 },
+    });
+    expect(parsed.operation).toBe("answer");
+    if (parsed.operation !== "answer") throw new Error("Expected answer");
+    expect(parsed.answer).toEqual({
+      mode: "single_select",
+      optionOrdinal: 1,
+    });
+  });
+
+  it("accepts bounded same-task refinement and task-scoped save operations", () => {
+    expect(
+      liveShoppingMutationSchema.parse({
+        operation: "refine",
+        sessionId: "4318c9d8-2460-4cc2-9861-91dcf681a23e",
+        turnId: "7d307e5f-cd17-464d-b21c-f4c85c431a83",
+        message: "Make waterproofing important too",
+      }),
+    ).toMatchObject({ operation: "refine" });
+    expect(
+      liveShoppingMutationSchema.parse({
+        operation: "save_listing",
+        sessionId: "4318c9d8-2460-4cc2-9861-91dcf681a23e",
+        candidateListingId: "8a0e451f-0471-4693-81d2-761c19a6ea7d",
+      }),
+    ).toMatchObject({ operation: "save_listing" });
+  });
+
+  it.each([
+    "taskId",
+    "revision",
+    "contextActionId",
+    "questionId",
+    "optionId",
+    "runId",
+  ])("rejects client-selected authoritative field %s", (field) => {
+    expect(() =>
+      liveShoppingMutationSchema.parse({
+        operation: "answer",
+        sessionId: "4318c9d8-2460-4cc2-9861-91dcf681a23e",
+        turnId: "7d307e5f-cd17-464d-b21c-f4c85c431a83",
+        answer: { mode: "single_select", optionOrdinal: 1 },
+        [field]: "client-chosen",
+      }),
+    ).toThrow();
+  });
+
+  it("keeps Serper credential names out of the client module boundary", async () => {
+    const clientSources = await Promise.all([
+      readFile("src/features/live-shopping/live-shopping.tsx", "utf8"),
+      readFile("src/features/live-shopping/contracts.ts", "utf8"),
+    ]);
+    expect(clientSources.join("\n")).not.toMatch(
+      /SERPER_API_KEY|ai-shopping-serper|SerperShoppingAdapter/,
+    );
+  });
+
+  it("does not expose the authoritative state revision in the browser view", () => {
+    expect(() =>
+      liveShoppingViewSchema.parse({
+        schemaVersion: 1,
+        sessionId: "4318c9d8-2460-4cc2-9861-91dcf681a23e",
+        subject: "A breathable running cap",
+        revision: "1",
+        brief: [],
+        action: {
+          kind: "understanding_failed",
+          notice: "Safe to retry",
+          retryable: true,
+        },
+      }),
+    ).toThrow();
+  });
+});

@@ -10,10 +10,18 @@ The approved product and architecture knowledge base, V0-01 runnable foundation,
 accepted V0-02 fixture-driven consumer shell, V0-03 semantic persistence, and
 V0-04 deterministic state-transition engine are merged. Gate 1 and Gate 2 are
 closed. The independently reviewed V0-05 AI interpretation/context-acquisition
-plan is merged, and its bounded implementation is the current checkpoint.
-Retrieval, product/candidate state, judgement, and later integrations remain out
-of scope until this checkpoint is accepted. Do not broaden a task because later
-work is documented.
+plan is merged. Its bounded implementation remains a formal draft-PR release
+checkpoint and must not be merged without acceptance. The isolated V0-06 branch
+now includes an unmerged recursive founder-shopping checkpoint: authoritative
+refinement, exact saves, retrieval persistence, verified merchant-destination
+provenance, bounded observed hard-conflict triage and a small view-only listing
+evidence projection that keeps unsupported criteria unverified. Exact verified
+retailer organic results may now contribute a structured rating/count fact with
+the source URL; that fact is not yet a criterion assessment. It remains
+cheap to rebase until V0-05 is accepted. Full evidence acquisition, persisted
+product observations, suitability judgement, comparison and later layers still
+require their own bounded work. Do not broaden a task because later work is
+documented.
 
 ## Hard invariants
 
