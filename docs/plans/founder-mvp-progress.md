@@ -220,13 +220,13 @@ awaiting independent review.
 
 ## Current work
 
-The recursive `/live` founder loop now includes exact saves, query-strategy v3,
-bounded hard-conflict triage, verified merchant destinations, attributable
-retailer ratings and an honest SERP-field evidence projection. The current
-checkpoint has green GitHub evidence and awaits independent review. Reject/undo,
-persisted product
-observations, full criterion assessment, comparative judgement, shortlist,
-comparison, auth and deployment have not started.
+V0-06 is accepted at `d32fbd7ca46d15dc645dacf20617e9c81ca36ac0`.
+V0-07 is now isolated on `codex/v0-07-evidence-assessment` in
+`/Users/alchemist32/Documents/AI Shopping/ai-shopping-v0-07-evidence`.
+`docs/plans/v0-07.md` freezes the evidence-source, typed-observation,
+revision-scoped assessment, selective-research, assessment-ordering and saved
+comparison boundary before implementation. V0-05, PR #9 and V0-06 PR #10
+remain unmodified and unmerged.
 
 ## Next validated checkpoints
 
