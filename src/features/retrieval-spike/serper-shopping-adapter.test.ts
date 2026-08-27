@@ -196,6 +196,8 @@ describe("Serper shopping adapter", () => {
                 title:
                   "Buy Trust Bayo II Ergonomic Wireless Mouse - Black - Argos",
                 link: "https://www.argos.co.uk/product/6827043?srsltid=tracking",
+                rating: 4.6,
+                ratingCount: 29,
               },
             ],
           }),
@@ -215,6 +217,13 @@ describe("Serper shopping adapter", () => {
     expect(result.listings[0]).toMatchObject({
       merchantDestinationUrl: "https://www.argos.co.uk/product/6827043",
       merchantDestinationSource: "verified_organic",
+      reviewEvidence: {
+        kind: "provider_structured_rating",
+        ratingHundredths: 460,
+        scaleHundredths: 500,
+        reviewCount: 29,
+        sourceUrl: "https://www.argos.co.uk/product/6827043",
+      },
     });
 
     const repeated = await provider.search(query());
@@ -257,6 +266,49 @@ describe("Serper shopping adapter", () => {
         resultUrl: "https://www.amazon.co.uk/dp/example",
       }),
     ).toBeNull();
+  });
+
+  it("keeps a verified destination when optional review fields are malformed", async () => {
+    const provider = new SerperShoppingAdapter({
+      apiKey: "test-key",
+      fetchImpl: vi.fn(async (input) =>
+        Promise.resolve(
+          new Response(
+            JSON.stringify(
+              String(input).endsWith("/shopping")
+                ? {
+                    shopping: [
+                      {
+                        title: "Trust Bayo II Ergonomic Wireless Mouse",
+                        link: "https://www.google.co.uk/search?ibp=oshop&q=trust+bayo",
+                        source: "Argos",
+                      },
+                    ],
+                  }
+                : {
+                    organic: [
+                      {
+                        title: "Trust Bayo II Ergonomic Wireless Mouse - Argos",
+                        link: "https://www.argos.co.uk/product/6827043",
+                        rating: "excellent",
+                        ratingCount: -1,
+                      },
+                    ],
+                  },
+            ),
+            { status: 200 },
+          ),
+        ),
+      ) as unknown as typeof fetch,
+    });
+
+    const result = await provider.search(query());
+
+    expect(result.listings[0]).toMatchObject({
+      merchantDestinationUrl: "https://www.argos.co.uk/product/6827043",
+      merchantDestinationSource: "verified_organic",
+      reviewEvidence: null,
+    });
   });
 
   it("bounds organic lookups to three distinct leading merchants", async () => {

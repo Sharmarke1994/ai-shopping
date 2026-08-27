@@ -77,6 +77,7 @@ function listing(title: string) {
     imageUrl: null,
     deliveryText: null,
     availabilityText: null,
+    reviewEvidence: null,
     retrievedAt: new Date("2026-08-26T12:00:00.000Z"),
   });
 }
@@ -89,6 +90,7 @@ describe("listing evidence summary", () => {
         listing: listing("Trust Bayo II Ergonomic Wireless Mouse"),
       }),
     ).toEqual({
+      sourceFacts: [],
       directlyEvidenced: [
         "£25.99 is within your £50 maximum",
         "Listing title says wireless",
@@ -114,6 +116,32 @@ describe("listing evidence summary", () => {
       "Battery life",
     ]);
     expect(result.hasDirectNonPriceSupport).toBe(false);
+  });
+
+  it("shows an attributable retailer rating without claiming it satisfies review quality", () => {
+    const candidate = candidateListingSchema.parse({
+      ...listing("Trust Bayo II Ergonomic Wireless Mouse"),
+      merchant: "Argos",
+      merchantDestinationUrl: "https://www.argos.co.uk/product/6827043",
+      merchantDestinationSource: "verified_organic",
+      reviewEvidence: {
+        kind: "provider_structured_rating",
+        ratingHundredths: 460,
+        scaleHundredths: 500,
+        reviewCount: 29,
+        sourceUrl: "https://www.argos.co.uk/product/6827043",
+      },
+    });
+
+    const result = summarizeListingEvidence({
+      brief: brief(),
+      listing: candidate,
+    });
+
+    expect(result.sourceFacts).toEqual([
+      "Argos result reports 4.6/5 from 29 reviews",
+    ]);
+    expect(result.unverifiedLabels).toContain("Battery life");
   });
 
   it("keeps a direct contradiction explicit for previously saved listings", () => {

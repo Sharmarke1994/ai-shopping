@@ -6,6 +6,7 @@ import type { CandidateListing } from "@/features/retrieval-spike/contracts";
 import { triageListingAgainstHardCriteria } from "./hard-constraint-triage";
 
 export type ListingEvidenceSummary = Readonly<{
+  sourceFacts: readonly string[];
   directlyEvidenced: readonly string[];
   contradictions: readonly string[];
   unverifiedLabels: readonly string[];
@@ -69,6 +70,13 @@ export function summarizeListingEvidence(options: {
   listing: CandidateListing;
 }): ListingEvidenceSummary {
   const triage = triageListingAgainstHardCriteria(options);
+  const merchantLabel = (options.listing.merchant ?? "Retailer").slice(0, 80);
+  const sourceFacts =
+    options.listing.reviewEvidence === null
+      ? []
+      : [
+          `${merchantLabel} result reports ${(options.listing.reviewEvidence.ratingHundredths / 100).toFixed(1)}/5 from ${new Intl.NumberFormat("en-GB").format(options.listing.reviewEvidence.reviewCount)} reviews`,
+        ];
   const criteriaById = new Map<string, BriefItemV1>(
     options.brief.items.map((item) => [item.criterionId, item]),
   );
@@ -120,6 +128,7 @@ export function summarizeListingEvidence(options: {
   );
   const unverifiedLabels = unverified.slice(0, 3);
   return {
+    sourceFacts,
     directlyEvidenced,
     contradictions,
     unverifiedLabels,

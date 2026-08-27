@@ -219,6 +219,7 @@ function stripPersistedListing(
     imageUrl: listing.imageUrl,
     deliveryText: listing.deliveryText,
     availabilityText: listing.availabilityText,
+    reviewEvidence: listing.reviewEvidence,
     retrievedAt: listing.retrievedAt,
   };
 }
@@ -527,6 +528,18 @@ async function loadSearchRunInTransaction(
             imageUrl: row.imageUrl,
             deliveryText: row.deliveryText,
             availabilityText: row.availabilityText,
+            reviewEvidence:
+              row.reviewRatingHundredths === null &&
+              row.reviewCount === null &&
+              row.reviewEvidenceSourceUrl === null
+                ? null
+                : {
+                    kind: "provider_structured_rating",
+                    ratingHundredths: row.reviewRatingHundredths,
+                    scaleHundredths: 500,
+                    reviewCount: row.reviewCount,
+                    sourceUrl: row.reviewEvidenceSourceUrl,
+                  },
             retrievedAt: row.retrievedAt,
           }),
       });
@@ -1087,6 +1100,10 @@ export async function recordSearchQueryExecutionInTransaction(options: {
           imageUrl: listing.imageUrl,
           deliveryText: listing.deliveryText,
           availabilityText: listing.availabilityText,
+          reviewRatingHundredths:
+            listing.reviewEvidence?.ratingHundredths ?? null,
+          reviewCount: listing.reviewEvidence?.reviewCount ?? null,
+          reviewEvidenceSourceUrl: listing.reviewEvidence?.sourceUrl ?? null,
           retrievedAt: listing.retrievedAt,
         })),
       );

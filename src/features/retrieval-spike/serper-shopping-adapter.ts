@@ -32,6 +32,13 @@ const serperOrganicItemSchema = z.looseObject({
   position: z.number().int().positive().optional(),
   title: z.string().min(1),
   link: httpUrlSchema,
+  rating: z.unknown().optional(),
+  ratingCount: z.unknown().optional(),
+});
+
+const serperStructuredReviewSchema = z.strictObject({
+  rating: z.number().finite().min(0).max(5),
+  ratingCount: z.number().int().positive(),
 });
 
 const serperOrganicEnvelopeSchema = z.looseObject({
@@ -232,7 +239,13 @@ export class SerperShoppingAdapter implements ShoppingSearchProvider {
   readonly #fetch: typeof fetch;
   readonly #timeoutMs: number;
   readonly #now: () => Date;
-  readonly #destinationCache = new Map<string, Promise<string | null>>();
+  readonly #destinationCache = new Map<
+    string,
+    Promise<{
+      destinationUrl: string;
+      reviewEvidence: CandidateListing["reviewEvidence"];
+    } | null>
+  >();
 
   constructor(options: SerperShoppingAdapterOptions) {
     if (options.apiKey.trim().length === 0) {
@@ -329,6 +342,7 @@ export class SerperShoppingAdapter implements ShoppingSearchProvider {
           imageUrl: item.imageUrl ?? null,
           deliveryText: item.delivery ?? null,
           availabilityText: null,
+          reviewEvidence: null,
           retrievedAt,
         }),
       );
@@ -361,13 +375,14 @@ export class SerperShoppingAdapter implements ShoppingSearchProvider {
         );
         this.#destinationCache.set(cacheKey, resolution);
       }
-      const directUrl = await resolution;
-      if (directUrl !== null) {
+      const resolved = await resolution;
+      if (resolved !== null) {
         const listingIndex = acceptedListings.indexOf(candidateForDestination);
         acceptedListings[listingIndex] = candidateListingSchema.parse({
           ...candidateForDestination,
-          merchantDestinationUrl: directUrl,
+          merchantDestinationUrl: resolved.destinationUrl,
           merchantDestinationSource: "verified_organic",
+          reviewEvidence: resolved.reviewEvidence,
         });
       }
     }
@@ -417,7 +432,22 @@ export class SerperShoppingAdapter implements ShoppingSearchProvider {
           resultTitle: parsed.data.title,
           resultUrl: parsed.data.link,
         });
-        if (destination !== null) return destination;
+        if (destination !== null) {
+          const review = serperStructuredReviewSchema.safeParse({
+            rating: parsed.data.rating,
+            ratingCount: parsed.data.ratingCount,
+          });
+          const reviewEvidence = review.success
+            ? {
+                kind: "provider_structured_rating" as const,
+                ratingHundredths: Math.round(review.data.rating * 100),
+                scaleHundredths: 500 as const,
+                reviewCount: review.data.ratingCount,
+                sourceUrl: destination,
+              }
+            : null;
+          return { destinationUrl: destination, reviewEvidence };
+        }
       }
       return null;
     } catch {

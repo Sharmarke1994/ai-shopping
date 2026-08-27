@@ -150,6 +150,7 @@ describe("retrieval persistence", () => {
       title?: string;
       merchant?: string;
       canonicalUrl?: string;
+      reviewEvidence?: CandidateListing["reviewEvidence"];
     },
   ): CandidateListing {
     const canonicalUrl =
@@ -166,13 +167,17 @@ describe("retrieval persistence", () => {
       url: `${canonicalUrl}?offer=${encodeURIComponent(options.providerResultId)}`,
       canonicalUrl,
       merchantDestinationUrl: canonicalUrl,
-      merchantDestinationSource: "shopping_result",
+      merchantDestinationSource:
+        options.reviewEvidence === undefined
+          ? "shopping_result"
+          : "verified_organic",
       merchant: options.merchant ?? "Runner Shop",
       price: { amountMinor: 2499, currency: "GBP" },
       priceText: "£24.99",
       imageUrl: "https://merchant.example/images/race-cap.jpg",
       deliveryText: null,
       availabilityText: null,
+      reviewEvidence: options.reviewEvidence ?? null,
       retrievedAt: new Date("2026-08-23T12:00:01.500Z"),
     };
   }
@@ -227,13 +232,29 @@ describe("retrieval persistence", () => {
     const afterSuccess = await recordSearchQueryExecution({
       db: connection.db,
       execution: completed(firstQuery, [
-        listing(firstQuery, { providerResultId: "cap-offer-1" }),
+        listing(firstQuery, {
+          providerResultId: "cap-offer-1",
+          reviewEvidence: {
+            kind: "provider_structured_rating",
+            ratingHundredths: 460,
+            scaleHundredths: 500,
+            reviewCount: 29,
+            sourceUrl: "https://merchant.example/products/race-cap",
+          },
+        }),
       ]),
       startedAt: new Date("2026-08-23T12:00:01.000Z"),
       finishedAt: new Date("2026-08-23T12:00:02.000Z"),
     });
     expect(afterSuccess.run.status).toBe("running");
     expect(afterSuccess.run.listings).toHaveLength(1);
+    expect(afterSuccess.run.listings[0]?.reviewEvidence).toEqual({
+      kind: "provider_structured_rating",
+      ratingHundredths: 460,
+      scaleHundredths: 500,
+      reviewCount: 29,
+      sourceUrl: "https://merchant.example/products/race-cap",
+    });
 
     const afterFailure = await recordSearchQueryExecution({
       db: connection.db,

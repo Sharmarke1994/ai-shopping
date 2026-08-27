@@ -769,6 +769,7 @@ export function displayListings(
       availabilityText: listing.availabilityText,
       foundAcrossQueries: queryIds.size,
       evidence: {
+        sourceFacts: evidence.sourceFacts,
         directlyEvidenced: evidence.directlyEvidenced,
         contradictions: evidence.contradictions,
         unverifiedLabels: evidence.unverifiedLabels,
@@ -883,6 +884,7 @@ export async function loadLiveShoppingSession(options: {
         availabilityText: listing.availabilityText,
         foundAcrossQueries: 1,
         evidence: {
+          sourceFacts: evidence.sourceFacts,
           directlyEvidenced: evidence.directlyEvidenced,
           contradictions: evidence.contradictions,
           unverifiedLabels: evidence.unverifiedLabels,

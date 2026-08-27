@@ -83,6 +83,7 @@ const liveListingSchema = z.strictObject({
   availabilityText: z.string().nullable(),
   foundAcrossQueries: z.number().int().positive(),
   evidence: z.strictObject({
+    sourceFacts: z.array(z.string().min(1).max(160)).max(3),
     directlyEvidenced: z.array(z.string().min(1).max(160)).max(6),
     contradictions: z.array(z.string().min(1).max(160)).max(6),
     unverifiedLabels: z.array(z.string().min(1).max(120)).max(3),

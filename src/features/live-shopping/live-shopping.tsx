@@ -208,6 +208,12 @@ function ProductCard({
           ) : null}
         </div>
         <div className={styles.evidenceSummary}>
+          {listing.evidence.sourceFacts.length > 0 ? (
+            <p>
+              <strong>Retailer evidence</strong>
+              {listing.evidence.sourceFacts.join(" · ")}
+            </p>
+          ) : null}
           {listing.evidence.contradictions.length > 0 ? (
             <p className={styles.evidenceConflict}>
               <strong>Conflicts with current brief</strong>

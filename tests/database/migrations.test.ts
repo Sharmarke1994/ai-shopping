@@ -65,7 +65,7 @@ describe("shopping-state and context-acquisition migration shape", () => {
       'select count(*)::integer as count from "drizzle"."migrations"',
     );
     const after = afterRows[0]?.count;
-    expect(before).toBe(12);
+    expect(before).toBe(13);
     expect(after).toBe(before);
   });
 

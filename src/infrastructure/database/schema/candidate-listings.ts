@@ -38,6 +38,9 @@ export const candidateListings = shoppingPrivate.table(
     imageUrl: text("image_url"),
     deliveryText: text("delivery_text"),
     availabilityText: text("availability_text"),
+    reviewRatingHundredths: integer("review_rating_hundredths"),
+    reviewCount: integer("review_count"),
+    reviewEvidenceSourceUrl: text("review_evidence_source_url"),
     retrievedAt: timestamp("retrieved_at", {
       mode: "date",
       withTimezone: true,
@@ -127,6 +130,10 @@ export const candidateListings = shoppingPrivate.table(
     check(
       "candidate_listings_image_url_shape",
       sql`${table.imageUrl} is null or (char_length(${table.imageUrl}) between 1 and 4000 and ${table.imageUrl} ~ '^https?://')`,
+    ),
+    check(
+      "candidate_listings_review_evidence_shape",
+      sql`(${table.reviewRatingHundredths} is null and ${table.reviewCount} is null and ${table.reviewEvidenceSourceUrl} is null) or (${table.reviewRatingHundredths} between 0 and 500 and ${table.reviewCount} > 0 and ${table.reviewEvidenceSourceUrl} = ${table.merchantDestinationUrl} and ${table.merchantDestinationSource} = 'verified_organic')`,
     ),
   ],
 );

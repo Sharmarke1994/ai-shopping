@@ -207,6 +207,14 @@ export const httpUrlSchema = z
 
 export const shoppingProviderSchema = z.enum(["serper", "fixture"]);
 
+export const structuredReviewEvidenceSchema = z.strictObject({
+  kind: z.literal("provider_structured_rating"),
+  ratingHundredths: z.number().int().min(0).max(500),
+  scaleHundredths: z.literal(500),
+  reviewCount: z.number().int().positive(),
+  sourceUrl: httpUrlSchema,
+});
+
 export const candidateListingSchema = z
   .strictObject({
     taskId: shoppingTaskIdSchema,
@@ -230,6 +238,7 @@ export const candidateListingSchema = z
     imageUrl: httpUrlSchema.nullable(),
     deliveryText: z.string().min(1).max(500).nullable(),
     availabilityText: z.string().min(1).max(500).nullable(),
+    reviewEvidence: structuredReviewEvidenceSchema.nullable().default(null),
     retrievedAt: z.date(),
   })
   .superRefine((listing, refinement) => {
@@ -241,6 +250,18 @@ export const candidateListingSchema = z
         code: "custom",
         path: ["merchantDestinationSource"],
         message: "Merchant destination URL and provenance must appear together",
+      });
+    }
+    if (
+      listing.reviewEvidence !== null &&
+      (listing.merchantDestinationSource !== "verified_organic" ||
+        listing.merchantDestinationUrl !== listing.reviewEvidence.sourceUrl)
+    ) {
+      refinement.addIssue({
+        code: "custom",
+        path: ["reviewEvidence"],
+        message:
+          "Structured review evidence must come from the exact verified merchant destination",
       });
     }
   });
