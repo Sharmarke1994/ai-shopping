@@ -1,0 +1,121 @@
+import { z } from "zod";
+import {
+  criterionAssessmentStatusSchema,
+  evidenceSourceRoleSchema,
+  productObservationValueV1Schema,
+} from "./contracts";
+
+export const PRODUCT_UNDERSTANDING_PROVIDER_SCHEMA_VERSION = 1 as const;
+
+const localRefSchema = z.string().regex(/^[a-z][a-z0-9_]{0,63}$/);
+
+export const evidenceSourceInputSchema = z.strictObject({
+  ordinal: z.number().int().min(0).max(19),
+  role: evidenceSourceRoleSchema,
+  kind: z.enum(["listing_field", "organic_result", "listing_image"]),
+  title: z.string().min(1).max(500),
+  url: z.url().max(4_000),
+  excerpt: z.string().min(1).max(1_000).nullable(),
+});
+
+export const criterionInputSchema = z.strictObject({
+  ordinal: z.number().int().min(0).max(49),
+  label: z.string().min(1).max(200),
+  definition: z.string().min(1).max(500),
+  strength: z.enum(["hard", "strong_preference", "preference"]),
+  targetSemantics: z.enum([
+    "exact",
+    "range",
+    "around",
+    "stretch",
+    "categorical",
+    "qualitative",
+    "comparative",
+  ]),
+  value: z.record(z.string(), z.unknown()),
+});
+
+export const productUnderstandingInputV1Schema = z.strictObject({
+  schemaVersion: z.literal(1),
+  market: z.strictObject({
+    country: z.literal("GB"),
+    language: z.literal("en-GB"),
+    currency: z.literal("GBP"),
+  }),
+  candidate: z.strictObject({
+    title: z.string().min(1).max(1_000),
+    merchant: z.string().min(1).max(500).nullable(),
+    observedPriceText: z.string().min(1).max(120).nullable(),
+  }),
+  criteria: z.array(criterionInputSchema).max(50),
+  sources: z.array(evidenceSourceInputSchema).min(1).max(20),
+});
+
+const proposedObservationSchema = z.strictObject({
+  localRef: localRefSchema,
+  sourceOrdinal: z.number().int().min(0).max(19),
+  criterionOrdinal: z.number().int().min(0).max(49).nullable(),
+  support: z.enum(["supported", "ambiguous"]),
+  observationKind: z.enum(["source_assertion", "visual_inference"]),
+  propertyLabel: z.string().min(1).max(120),
+  claim: z.string().min(1).max(500),
+  value: productObservationValueV1Schema,
+  derivation: z.enum(["model_text", "model_visual"]),
+});
+
+const proposedAssessmentSchema = z.strictObject({
+  criterionOrdinal: z.number().int().min(0).max(49),
+  status: criterionAssessmentStatusSchema,
+  relation: z.string().min(1).max(120),
+  explanation: z.string().min(1).max(500),
+  observationRefs: z.array(localRefSchema).max(20),
+});
+
+export const productUnderstandingProviderWireV1Schema = z
+  .strictObject({
+    providerSchemaVersion: z.literal(
+      PRODUCT_UNDERSTANDING_PROVIDER_SCHEMA_VERSION,
+    ),
+    observations: z.array(proposedObservationSchema).max(50),
+    assessments: z.array(proposedAssessmentSchema).max(50),
+  })
+  .superRefine((value, context) => {
+    const refs = new Set<string>();
+    for (const [index, observation] of value.observations.entries()) {
+      if (refs.has(observation.localRef)) {
+        context.addIssue({
+          code: "custom",
+          path: ["observations", index, "localRef"],
+          message: "Observation references must be unique",
+        });
+      }
+      refs.add(observation.localRef);
+    }
+    const assessed = new Set<number>();
+    for (const [index, assessment] of value.assessments.entries()) {
+      if (assessed.has(assessment.criterionOrdinal)) {
+        context.addIssue({
+          code: "custom",
+          path: ["assessments", index, "criterionOrdinal"],
+          message: "Each criterion may be assessed only once",
+        });
+      }
+      assessed.add(assessment.criterionOrdinal);
+      for (const ref of assessment.observationRefs) {
+        if (!refs.has(ref)) {
+          context.addIssue({
+            code: "custom",
+            path: ["assessments", index, "observationRefs"],
+            message: "Assessments may reference only emitted observations",
+          });
+        }
+      }
+    }
+  });
+
+export type ProductUnderstandingInputV1 = z.infer<
+  typeof productUnderstandingInputV1Schema
+>;
+export type ProductUnderstandingProviderWireV1 = z.infer<
+  typeof productUnderstandingProviderWireV1Schema
+>;
