@@ -14,10 +14,10 @@ and comparison are meaningfully better than beginning with Google.
 - Active branch: `codex/v0-07-evidence-assessment`, stacked on independently
   accepted V0-06 `d32fbd7ca46d15dc645dacf20617e9c81ca36ac0`.
 - Latest product implementation checkpoint:
-  the bounded V0-07 money/presentation correction pass is being finalized in
-  stacked draft PR #11. It preserves the evidence/assessment decision-support
-  boundaries; the final pushed SHA and exact-head CI must be recorded here
-  before independent review.
+  `f4d0a649b4e44f77ac47c335a8c86bf8987b40fa`, the bounded V0-07
+  money/presentation correction pass in stacked draft PR #11. It preserves the
+  evidence/assessment decision-support boundaries; exact-head CI for this SHA
+  is still required before independent review.
   V0-06 remains draft PR #10 and is not merged.
 - Original V0-05 checkout and draft PR #9 remain separate, unmodified, unmerged,
   and formally unaccepted. Its last instructed checkpoint is `9c33018`; the
@@ -242,8 +242,9 @@ awaiting independent review.
 ## Current work
 
 V0-06 is accepted at `d32fbd7ca46d15dc645dacf20617e9c81ca36ac0`.
-V0-07 is implemented on `codex/v0-07-evidence-assessment` in stacked draft PR
-#11. The current correction pass adds deterministic evidence admission,
+V0-07 is implemented at `f4d0a649b4e44f77ac47c335a8c86bf8987b40fa` on
+`codex/v0-07-evidence-assessment` in stacked draft PR #11. The current
+correction pass adds deterministic evidence admission,
 target-distance and absolute-ceiling semantics, comparative stretch guards,
 source-aware boolean assessment guards, and conservative exact-offer
 presentation grouping while preserving bounded selective research, typed
