@@ -14,10 +14,10 @@ and comparison are meaningfully better than beginning with Google.
 - Active branch: `codex/v0-07-evidence-assessment`, stacked on independently
   accepted V0-06 `d32fbd7ca46d15dc645dacf20617e9c81ca36ac0`.
 - Latest product implementation checkpoint:
-  the bounded V0-07 correction pass is being finalized in stacked draft PR
-  #11. It hardens the evidence/assessment/decision-support slice without
-  changing the accepted V0-03/V0-06 boundaries. The final pushed handoff SHA
-  and exact-head CI run must be recorded here before independent review.
+  `601bbb7faad17ec9708408528c339ffcbb68339c`, the bounded V0-07 correction
+  pass in stacked draft PR #11. It hardens the evidence/assessment/
+  decision-support slice without changing the accepted V0-03/V0-06 boundaries.
+  Exact-head CI for this SHA is still required before independent review.
   V0-06 remains draft PR #10 and is not merged.
 - Original V0-05 checkout and draft PR #9 remain separate, unmodified, unmerged,
   and formally unaccepted. Its last instructed checkpoint is `9c33018`; the
@@ -233,8 +233,9 @@ awaiting independent review.
 ## Current work
 
 V0-06 is accepted at `d32fbd7ca46d15dc645dacf20617e9c81ca36ac0`.
-V0-07 is implemented on `codex/v0-07-evidence-assessment` in stacked draft PR
-#11. The current correction pass adds deterministic evidence admission,
+V0-07 is implemented at `601bbb7faad17ec9708408528c339ffcbb68339c` on
+`codex/v0-07-evidence-assessment` in stacked draft PR #11. The current
+correction pass adds deterministic evidence admission,
 target-distance semantics, and source-aware boolean assessment guards while
 preserving bounded selective research, typed observations, revision-scoped
 assessments, deterministic ordering, top-option support and exact saved-listing
