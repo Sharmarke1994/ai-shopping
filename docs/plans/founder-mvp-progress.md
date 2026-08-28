@@ -1,6 +1,6 @@
 # Founder MVP progress
 
-**Updated:** 2026-08-27 11:55 Europe/London
+**Updated:** 2026-08-28 Europe/London
 **Durable goal:** Deliver a polished founder-usable AI shopping MVP whose live
 understanding, market retrieval, evidence-aware evaluation, refinement, saving,
 and comparison are meaningfully better than beginning with Google.
@@ -9,17 +9,15 @@ and comparison are meaningfully better than beginning with Google.
 
 - Repository: `Sharmarke1994/ai-shopping`.
 - Founder-MVP execution brief: `docs/plans/founder-usable-mvp.md`.
-- Isolated product-progress worktree:
-  `/Users/alchemist32/Documents/AI Shopping/ai-shopping-v0-06-spike`.
-- Experimental branch: `codex/v0-06-retrieval-spike`.
-- Latest product checkpoint: exact-source structured retailer review evidence
-  at `aa9e1463c668c7bb576d758316bea84654329e5c`, followed only by the docs
-  checkpoint containing this ledger update. It belongs in draft PR #10 and
-  awaits independent review. GitHub Quality run `33065000397` passed quality,
-  persistence and browser-smoke on its parent docs head `f3837ec`. Layer 4
-  remains the latest independently accepted checkpoint at
-  `370a4ab6be8a99f25d3fb8b6b848a3fcb0589157`; this Layer 4 checkpoint was
-  independently accepted before the current recursive/evidence work.
+- Active isolated worktree:
+  `/Users/alchemist32/Documents/AI Shopping/ai-shopping-v0-07-evidence`.
+- Active branch: `codex/v0-07-evidence-assessment`, stacked on independently
+  accepted V0-06 `d32fbd7ca46d15dc645dacf20617e9c81ca36ac0`.
+- Latest product implementation checkpoint:
+  `2ae37555efbd580661dfe2e4d0873cf967b37510`. It implements the frozen V0-07
+  evidence/assessment/decision-support slice and awaits a stacked draft PR,
+  exact-head CI and independent review. V0-06 remains draft PR #10 and is not
+  merged.
 - Original V0-05 checkout and draft PR #9 remain separate, unmodified, unmerged,
   and formally unaccepted. Its last instructed checkpoint is `9c33018`; the
   latest Terra release gate completed 14/21 on 24 August 2026. All seven failed
@@ -221,26 +219,29 @@ awaiting independent review.
 ## Current work
 
 V0-06 is accepted at `d32fbd7ca46d15dc645dacf20617e9c81ca36ac0`.
-V0-07 is now isolated on `codex/v0-07-evidence-assessment` in
-`/Users/alchemist32/Documents/AI Shopping/ai-shopping-v0-07-evidence`.
-`docs/plans/v0-07.md` freezes the evidence-source, typed-observation,
-revision-scoped assessment, selective-research, assessment-ordering and saved
-comparison boundary before implementation. V0-05, PR #9 and V0-06 PR #10
-remain unmodified and unmerged.
+V0-07 is implemented at the code/proof checkpoint
+`2ae37555efbd580661dfe2e4d0873cf967b37510` on
+`codex/v0-07-evidence-assessment`. It adds bounded selective research,
+attributable EvidenceSources, typed ProductObservations, revision-scoped
+CriterionAssessments, deterministic assessment ordering, top-option decision
+support and exact saved-listing comparison. Partial research, prompt-injection
+containment, provider/model timeouts, retries, stale authority and one-snapshot
+view loading fail closed. V0-05 PR #9 and V0-06 PR #10 remain unmodified and
+unmerged; no later layer has started.
 
 ## Next validated checkpoints
 
-1. Founder and independent review of the recursive `/live` loop, real mouse
-   evidence, exact saves and rendered desktop/mobile behaviour.
-2. Selective exact-source evidence acquisition for a small promising pool,
-   followed by persisted evidence-backed observations and criterion-level
-   assessment. Search snippets remain merchant assertions and must not become
-   hard-exclusion evidence or objective comfort claims.
-3. Bare reject/undo, kept task-local to the acted-on listing without preference
-   learning.
-4. Shortlist and 2–4 item comparison against the shopper's current criteria.
-5. Responsive visual iteration, unrelated-category founder journeys, resilience,
-   security/privacy review, and founder handoff.
+1. Push the V0-07 docs checkpoint, open a stacked draft PR against
+   `codex/v0-06-retrieval-spike`, obtain exact-head quality/persistence/browser
+   CI, and stop for independent review.
+2. If review finds a material issue, make only a bounded V0-07 correction and
+   rerun the affected plus full gates. Do not weaken unknown/evidence boundaries.
+3. After acceptance only: bare reject/undo, kept task-local to the acted-on
+   listing without preference learning.
+4. Expand source quality or selective page inspection only from measured
+   decision-critical gaps; do not turn V0-07 into a crawler.
+5. Continue unrelated-category founder journeys, resilience, security/privacy,
+   deployment and founder handoff as separately reviewed checkpoints.
 
 ## Credentials and blockers
 
@@ -248,8 +249,9 @@ remain unmodified and unmerged.
   `ai-shopping-serper`. Never print it or write it to the repository. Live
   Serper retrieval has already succeeded.
 - The OpenAI key is stored separately in Keychain service
-  `ai-shopping-openai`. It belongs to the isolated V0-05 release verification
-  and must not be copied into repository files or logs.
+  `ai-shopping-openai`. It is used by the isolated V0-05 release verification
+  and the bounded V0-07 founder proof; it must not be copied into repository
+  files or logs.
 - Local PostgreSQL is running on loopback with guarded base database
   `ai_shopping_test`; test commands pass the URL only to the process. The local
   server is 17.11 while the repository deliberately pins CI to 17.6.
@@ -264,48 +266,47 @@ remain unmodified and unmerged.
 ## Latest verification
 
 - `pnpm check`: formatting, lint, generated route types, strict TypeScript,
-  158/158 deterministic unit/component tests, production build — pass.
-- Full PostgreSQL suite: 90 functional tests pass; the sole failure is the
+  173/173 deterministic unit/component tests, production build — pass.
+- Focused V0-07 PostgreSQL suite: 9/9 pass, including one-snapshot current
+  decision support under a concurrent authoritative revision.
+- Full PostgreSQL suite: 99 functional tests pass; the sole failure is the
   intentional PostgreSQL 17.6 pin against local Homebrew 17.11.
-- `pnpm test:e2e`: 8/8 Chromium tests pass, including `/live` direct + refresh
-  plus save → refine → new SearchRun → refresh and mobile ASK → answer → SEARCH.
-- `pnpm db:generate`: no schema drift after migration 0013.
-- PostgreSQL raw-write regression coverage rejects all eight incomplete or
-  mismatched destination/review provenance tuples while accepting the three
-  valid nullable/verified shapes.
-- Real recursive `/live` proof: one task at revision 6, immutable subject,
-  purpose-labelled three-query current run, 24 exact rows, 18 exact offer
-  groups, 12 direct-conflict rows withheld, two useful visible merchant pages,
-  five exact rating-evidence rows, ASK/answer, exact save, refresh and exact
-  unsave. Visible cards report Anker 4.3/5 from 52,629 Amazon reviews and Trust
-  4.6/5 from 29 Argos reviews without claiming either meets the shopper's
-  qualitative review criterion.
-- Desktop and 390 × 844 rendered inspection: evidence/unknown labels remain
-  readable, direct/source links retain hierarchy and mobile has no horizontal
-  overflow.
+- `pnpm test:e2e`: 8/8 Chromium tests pass, including research → two exact
+  saves → comparison → refinement → revision-specific reassessment → refresh,
+  plus mobile ASK → answer → SEARCH → research.
+- `pnpm db:generate`: no schema drift after migration 0014. A guarded empty
+  database applied all 15 migrations, then was dropped.
+- Real Terra + Serper proof: 2 tasks, 3 SearchRuns, 70 raw listings, 4 bounded
+  research runs, 40/40 successful evidence searches, 165 attributable sources,
+  155 observations, 148 assessments and 20/20 understanding calls. The mouse
+  case produced a direct Argos Trust leader with attributable review/battery
+  support; refinement lowered review strength, added long-workday comfort and
+  correctly kept personal comfort unknown. The chair case placed cleaner
+  candidates before preference conflicts and kept a £338 stretch option visibly
+  conditional. Exact offer duplicates do not repeat in the current shortlist.
+- Six production-rendered desktop/mobile/partial screenshots passed explicit
+  horizontal-overflow checks. The fixture shell, top options, source disclosure,
+  comparison table and partial-research state were inspected visually.
 - Production dependency audit: no known vulnerabilities.
 - `git diff --check` and changed-value secret scan: pass.
-- GitHub Quality run `33071030456` on exact head
-  `962f9405655ed84cde0a39b8ea94e01db374b538`: quality, PostgreSQL 17.6
-  persistence and browser-smoke all pass.
-- Independent Layer-3 read-only review: no material implementation blocker;
-  the unavoidable post-provider/pre-receipt crash ambiguity is documented.
+- Exact-head GitHub quality, PostgreSQL 17.6 persistence and browser-smoke are
+  pending the stacked draft PR and remain required before review handoff.
 
 ## Exact resume instructions
 
 1. Work only in
-   `/Users/alchemist32/Documents/AI Shopping/ai-shopping-v0-06-spike` on
-   `codex/v0-06-retrieval-spike`; confirm the branch and clean tree first.
-2. Read this file and
-   `docs/spikes/v0-06-recursive-founder-evidence.md`; inspect the exact-head PR
-   #10 CI. Do not reopen accepted V0-03/V0-04 or Layer-3 architecture.
+   `/Users/alchemist32/Documents/AI Shopping/ai-shopping-v0-07-evidence` on
+   `codex/v0-07-evidence-assessment`; confirm the branch, exact head and clean
+   tree first.
+2. Read this file, `docs/plans/v0-07.md` and the concise
+   `docs/evals/v0-07-live-founder-proof.md`; inspect the stacked V0-07 draft PR
+   and exact-head CI. Do not reopen accepted V0-03/V0-04/V0-06 architecture.
 3. Preserve the original V0-05 checkout and draft PR #9 exactly; do not merge it
    and do not weaken its Terra gate.
-4. Keep PR #10 draft and unmerged. Do not start reject/undo, full evidence
-   acquisition, comparative judgement, shortlist or comparison while the
-   current structured-review-evidence checkpoint's CI/review is pending.
-5. If review finds a material issue, make only the bounded correction and rerun
-   the affected/full gates.
-6. Do not merge automatically. After acceptance, the next bounded product layer
-   is selective source evidence and persisted candidate observations/criterion
-   assessments for a small pool, with unknowns kept visible.
+4. Keep both the V0-06 and stacked V0-07 PRs draft and unmerged. Do not begin
+   reject/undo, ProductIdentity, crawling, auth, deployment or later work while
+   V0-07 review is pending.
+5. If review finds a material issue, make only the bounded V0-07 correction and
+   rerun the affected plus full gates. Never weaken the evaluator, unknown state,
+   evidence authority or V0-04/V0-05 firewall to obtain a pass.
+6. Do not merge automatically. Stop after exact-head CI for independent review.
