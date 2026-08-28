@@ -306,10 +306,8 @@ later layer has started.
   comparison table and partial-research state were inspected visually.
 - Production dependency audit: no known vulnerabilities.
 - `git diff --check` and changed-value secret scan: pass.
-- The final correction handoff requires a new exact-head GitHub Quality,
-  pinned PostgreSQL 17.6 persistence, and browser-smoke run before review; the
-  prior green run was on the pre-correction head and is not used as final CI
-  evidence.
+- Exact-head GitHub run `33158265669` on `d9328cef1ab906e7fa6b16d3bc0b7a28741f6c9d`
+  passed quality, pinned PostgreSQL 17.6 persistence, and browser-smoke.
 
 ## Exact resume instructions
 
