@@ -15,7 +15,7 @@ and comparison are meaningfully better than beginning with Google.
   accepted V0-06 `d32fbd7ca46d15dc645dacf20617e9c81ca36ac0`.
 - Latest product implementation checkpoint:
   `2ae37555efbd580661dfe2e4d0873cf967b37510`. It implements the frozen V0-07
-  evidence/assessment/decision-support slice and awaits a stacked draft PR,
+  evidence/assessment/decision-support slice in stacked draft PR #11 and awaits
   exact-head CI and independent review. V0-06 remains draft PR #10 and is not
   merged.
 - Original V0-05 checkout and draft PR #9 remain separate, unmodified, unmerged,
@@ -231,9 +231,8 @@ unmerged; no later layer has started.
 
 ## Next validated checkpoints
 
-1. Push the V0-07 docs checkpoint, open a stacked draft PR against
-   `codex/v0-06-retrieval-spike`, obtain exact-head quality/persistence/browser
-   CI, and stop for independent review.
+1. Obtain exact-head quality/persistence/browser CI on stacked draft PR #11 and
+   stop for independent review.
 2. If review finds a material issue, make only a bounded V0-07 correction and
    rerun the affected plus full gates. Do not weaken unknown/evidence boundaries.
 3. After acceptance only: bare reject/undo, kept task-local to the acted-on
@@ -299,7 +298,7 @@ unmerged; no later layer has started.
    `codex/v0-07-evidence-assessment`; confirm the branch, exact head and clean
    tree first.
 2. Read this file, `docs/plans/v0-07.md` and the concise
-   `docs/evals/v0-07-live-founder-proof.md`; inspect the stacked V0-07 draft PR
+   `docs/evals/v0-07-live-founder-proof.md`; inspect stacked V0-07 draft PR #11
    and exact-head CI. Do not reopen accepted V0-03/V0-04/V0-06 architecture.
 3. Preserve the original V0-05 checkout and draft PR #9 exactly; do not merge it
    and do not weaken its Terra gate.
