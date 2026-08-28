@@ -306,8 +306,9 @@ later layer has started.
   comparison table and partial-research state were inspected visually.
 - Production dependency audit: no known vulnerabilities.
 - `git diff --check` and changed-value secret scan: pass.
-- Exact-head GitHub run `33158265669` on `d9328cef1ab906e7fa6b16d3bc0b7a28741f6c9d`
-  passed quality, pinned PostgreSQL 17.6 persistence, and browser-smoke.
+- Exact-head GitHub run `33158396597` on
+  `abf8313ace92be452bd859360cfff2118a81f586` passed quality, pinned
+  PostgreSQL 17.6 persistence, and browser-smoke.
 
 ## Exact resume instructions
 
