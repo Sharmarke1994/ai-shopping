@@ -1,52 +1,52 @@
 # V0-07 live founder proof
 
-Generated: 2026-08-28T08:58:29.354Z
+Generated: 2026-08-28T09:47:04.155Z
 
 This is a sanitized real OpenAI + Serper run against a guarded disposable PostgreSQL database. It is evidence, not a permanent benchmark.
 
 ## ergonomic-mouse
 
 - Clarification turns: 0
-- Retrieval: {"status":"succeeded","queryCount":3,"completedQueryCount":3,"displayedListingCount":10,"directRetailerCount":2}
+- Retrieval: {"status":"succeeded","queryCount":3,"completedQueryCount":3,"displayedListingCount":12,"directRetailerCount":2}
 - Research: ready; 6 candidates assessed
 - Provider/model calls: {"interpretationCalls":2,"actionCalls":2,"shoppingCalls":6,"evidenceSearchCalls":28,"understandingCalls":14}
 
 ### Best-supported options
 
-1. **Trust Bayo II Ergonomic Wireless Mouse** — £25.99; The image supports the requested chunkier, sculpted side-profile form; a specific thumb rest is not clearly visible. Multiple supplied snippets describe the mouse as wireless. Argos reports 4.6/5 from 29 reviews; this is strongly positive, though based on 29 reviews. £25.99 is within the £50 maximum.
-2. **Anker 2.4G Wireless Vertical Ergonomic Optical Mouse** — £17.99; The image shows a tall vertical form with a pronounced sculpted side profile and flared support area rather than a flat, minimal profile. It has a 4.3/5 aggregate rating across 52,631 reviews. £17.99 is within the £50 maximum. The listing describes the mouse as wireless.
-3. **Amazon Ergonomic Wireless Mouse** — £7.90; £7.90 is within the £50 maximum. The image matches the requested non-flat, sculpted profile. Listed as a wireless mouse.
-4. **EU Product Ergonomic Vertical Wireless Mouse 57° – Pink** — £11.97; £11.97 is within the £50 maximum. A separate USB receiver is also visible in the product image. Its pronounced contoured side profile aligns with the preferred form.
-5. **Protoarc Ergonomische Muis** — £12.00; Its pronounced vertical side profile aligns with the requested shaped form. £12 is within the £50 maximum.
+1. **Ergonomic Vertical Mouse Multi-device (2×bt + 2.4ghz) 3 Dpi** — £5.98; £5.98 is within the £50 maximum. These are wireless connection methods. The image shows a non-flat, contoured form with a textured side area.
+2. **Anker 2.4G Wireless Vertical Ergonomic Optical Mouse** — £17.99; This matches the preferred wireless connectivity. The image shows a substantial side contour and thumb-rest-like form. £17.99 is within the £50 maximum.
+3. **INPHIC X9 Pro Ergonomic Wireless Mouse 12800DPI Rechargeable Vertical Mouse | Natural Grip Tri-Mode 2.4G/Type-C Wired/Bluetooth Mouse, 6 Adjustable** — £25.99; This matches the requested chunkier, contoured rather than flat/minimal form. £25.99 is within the £50 maximum. The listing also states 2.4G and Bluetooth wireless modes.
+4. **EU Product Ergonomic Vertical Wireless Mouse 57° – Pink** — £11.97; The image shows a chunkier, contoured vertical form rather than a flat minimal shape. This matches the preferred connectivity type. £11.97 is within the £50 maximum.
+5. **Amazon Ergonomic Vertical Wireless Mouse 6 Buttons Right-Handed for Laptop PC** — £14.40; This matches the preferred connectivity type. The image aligns with a chunkier, non-flat mouse shape; a distinct thumb rest is not clearly visible. £14.40 is within the £50 maximum.
 
 ### Comparison
 
-Trust Bayo II Ergonomic Wireless Mouse currently leads the saved comparison on the deterministic ordering, with its strongest differences shown row by row. The evidence does not establish a decisive winner beyond those differences; review the watchouts and unknown rows before choosing.
+Ergonomic Vertical Mouse Multi-device (2×bt + 2.4ghz) 3 Dpi currently leads the saved comparison on the deterministic ordering, with its strongest differences shown row by row. The evidence does not establish a decisive winner beyond those differences; review the watchouts and unknown rows before choosing.
 
 ### Refinement
 
 Shopper turn: “Reviews matter less now. Comfort for long workdays matters most.”
 
-Current brief: Brand — No Amazon Basics; Review quality — Prefer highly positive customer reviews; Wireless connectivity — Prefer wireless; Battery life — very good battery life; Ergonomic design — Strong preference: comfort for long workdays; Brand reputation — good, reputable brands only; no bad brands; Price — Maximum £50; Mouse shape and profile — Prefer a little chunkier and sculpted, with a noticeable side profile or thumb-rest shape rather than flat and minimal
+Current brief: Ergonomic design — Strong preference: comfort for long workdays; Brand — No Amazon Basics; Mouse shape — Prefer a little chunkier and sculpted, with a noticeable side profile or thumb-rest shape rather than flat and minimal; Battery life — Strong preference: very good battery life; Price — Maximum £50; Brand reputation — good brands only; Review quality — Prefer very good reviews; Connectivity — Prefer wireless
 
-New top options: Trust Bayo II Ergonomic Wireless Mouse (£25.99); Anker 2.4G Wireless Vertical Ergonomic Optical Mouse (£17.99); Zelotes Vertical Wireless Mouse (£18.04); Amazon Ergonomic Wireless Mouse (£7.90); Anker 2.4G Wireless Vertical Ergonomic Optical Mouse (£17.99)
+New top options: Trust Bayo II Ergonomic Wireless Mouse (£25.99); Anker 2.4G Wireless Vertical Ergonomic Optical Mouse (£17.99); Amazon Ergonomic Wireless Mouse (£7.90); Ergonomic Vertical Mouse Multi-device (2×bt + 2.4ghz) 3 Dpi (£5.98); Amazon Ergonomic Vertical Wireless Mouse 6 Buttons Right-Handed for Laptop PC (£14.40)
 
-Comparison: Trust Bayo II Ergonomic Wireless Mouse currently leads the saved comparison on the deterministic ordering, with its strongest differences shown row by row. The evidence does not establish a decisive winner beyond those differences; review the watchouts and unknown rows before choosing.
+Comparison: Ergonomic Vertical Mouse Multi-device (2×bt + 2.4ghz) 3 Dpi currently leads the saved comparison on the deterministic ordering, with its strongest differences shown row by row. The evidence does not establish a decisive winner beyond those differences; review the watchouts and unknown rows before choosing.
 
 Calls: {"interpretationCalls":1,"actionCalls":1,"shoppingCalls":3,"evidenceSearchCalls":16,"understandingCalls":8}
 
 ## office-chair
 
 - Clarification turns: 0
-- Retrieval: {"status":"succeeded","queryCount":3,"completedQueryCount":3,"displayedListingCount":22,"directRetailerCount":3}
+- Retrieval: {"status":"succeeded","queryCount":3,"completedQueryCount":3,"displayedListingCount":20,"directRetailerCount":2}
 - Research: ready; 6 candidates assessed
 - Provider/model calls: {"interpretationCalls":1,"actionCalls":1,"shoppingCalls":3,"evidenceSearchCalls":12,"understandingCalls":6}
 
 ### Best-supported options
 
-1. **SIHOO M57 Ergonomic Mesh Office Chair Lumbar Support 330 lb** — £189.98; The chair is described as breathable high-back mesh. The supplied description states that it has adjustable lumbar support. The image shows a conventional mesh office-chair design without visible gaming-style colour accents or racing-seat contours.
-2. **John Lewis Dorsal Office Chair** — £149.00; It is described as ergonomic and a retailer-page review snippet specifically reports good back support. The pictured chair has a restrained black task-chair design rather than visible gaming-chair cues.
-3. **Hbada E3 Air Ergonomic Office Chair** — £549.00; The retailer-result title explicitly states dynamic lumbar support. Mesh is visibly used on the seat and back areas. The supplied image shows a restrained grey mesh office-chair design rather than gaming-style upholstery or racing-seat styling.
+1. **SIHOO M57 Ergonomic Mesh Office Chair Lumbar Support 330 lb** — £189.98; The listing describes breathable mesh, which matches the preferred mesh upholstery. The image shows a conventional mesh office-chair design and no visible gamer/racing-seat styling.
+2. **FlexiSpot Ergonomic Chair** — £229.99; The visible black mesh office-chair form does not appear gamer-looking.
+3. **SONGMICS Lumbar Support Mesh Chair** — £65.44; The visible white mesh office-chair design appears conventional rather than gamer-styled.
 
 ### Comparison
 
@@ -63,7 +63,7 @@ No refinement was required for this proof.
   "searchRuns": 3,
   "searchQueryCount": 9,
   "rawCandidateListings": 72,
-  "directMerchantDestinations": 8,
+  "directMerchantDestinations": 7,
   "researchRuns": [
     {
       "taskRevision": "2",
@@ -96,20 +96,20 @@ No refinement was required for this proof.
     "failed": 0
   },
   "evidenceSources": {
-    "total": 79,
+    "total": 69,
     "byRole": {
       "independent_review": 2,
       "listing": 18,
-      "other": 30,
+      "other": 21,
       "retailer": 8,
-      "retailer_review_aggregate": 3,
+      "retailer_review_aggregate": 2,
       "visual": 18
     }
   },
-  "observations": 151,
+  "observations": 131,
   "assessments": 148,
-  "unknownAssessmentCount": 82,
-  "observationsReusedAcrossRevisions": 3,
+  "unknownAssessmentCount": 90,
+  "observationsReusedAcrossRevisions": 2,
   "totalCalls": {
     "interpretationCalls": 3,
     "actionCalls": 3,

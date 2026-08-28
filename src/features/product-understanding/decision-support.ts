@@ -62,41 +62,80 @@ function sourcesForAssessment(options: {
   return [...output.values()];
 }
 
-function hardConflict(
+function purchaseExclusion(
   items: readonly BriefItemV1[],
   assessments: readonly CriterionAssessmentV1[],
 ) {
-  const hard = new Set(
-    items
-      .filter(({ strength }) => strength === "hard")
-      .map(({ criterionId }) => criterionId),
-  );
-  return assessments.some(
-    ({ criterionId, status }) =>
-      status === "conflicts" && hard.has(criterionId),
-  );
+  const itemById = new Map(items.map((item) => [item.criterionId, item]));
+  return assessments.some((assessment) => {
+    if (assessment.status !== "conflicts") return false;
+    const item = itemById.get(assessment.criterionId);
+    if (item === undefined) return false;
+    if (item.strength === "hard") return true;
+    if (
+      item.semanticValue.kind === "money" &&
+      item.semanticValue.mode === "ceiling" &&
+      assessment.relation === "above_ceiling"
+    ) {
+      return true;
+    }
+    return (
+      item.semanticValue.kind === "money_stretch" &&
+      assessment.relation === "above_stretch_ceiling"
+    );
+  });
 }
 
 function conciseUnique(values: readonly string[], limit: number) {
   return [...new Set(values)].slice(0, limit);
 }
 
-function exactOfferKey(listing: PersistedCandidateListing) {
-  const exactDestination =
-    listing.merchantDestinationUrl ?? listing.canonicalUrl ?? listing.url;
-  return JSON.stringify([
-    exactDestination,
-    listing.merchant?.trim().toLocaleLowerCase("en-GB") ?? null,
-    listing.price?.amountMinor ?? null,
-    listing.price?.currency ?? null,
-  ]);
+function normalizedOfferPart(value: string | null) {
+  return (value ?? "").trim().replace(/\s+/g, " ").toLocaleLowerCase("en-GB");
 }
 
 function groupExactOffers(candidates: readonly PersistedCandidateListing[]) {
+  const groups = new Map<string, { directDestinations: Set<string> }>();
+  for (const listing of candidates) {
+    const title = normalizedOfferPart(listing.title);
+    const merchant = normalizedOfferPart(listing.merchant);
+    const price = listing.price;
+    if (!title || !merchant || price === null) continue;
+    const identity = JSON.stringify([
+      title,
+      merchant,
+      price.amountMinor,
+      price.currency,
+    ]);
+    const group = groups.get(identity) ?? { directDestinations: new Set() };
+    if (listing.merchantDestinationUrl !== null) {
+      group.directDestinations.add(
+        normalizedOfferPart(listing.merchantDestinationUrl),
+      );
+    }
+    groups.set(identity, group);
+  }
   const seen = new Set<string>();
   return candidates.filter((candidate) => {
-    const key = exactOfferKey(candidate);
-    if (key === null) return true;
+    const price = candidate.price;
+    const title = normalizedOfferPart(candidate.title);
+    const merchant = normalizedOfferPart(candidate.merchant);
+    if (!title || !merchant || price === null) return true;
+    const identity = JSON.stringify([
+      title,
+      merchant,
+      price.amountMinor,
+      price.currency,
+    ]);
+    const group = groups.get(identity);
+    if (group === undefined) return true;
+    const destinationBoundary =
+      group.directDestinations.size > 1
+        ? candidate.merchantDestinationUrl === null
+          ? "indirect"
+          : normalizedOfferPart(candidate.merchantDestinationUrl)
+        : "same-offer";
+    const key = `${identity}|${destinationBoundary}`;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
@@ -227,7 +266,7 @@ export function buildDecisionSupport(options: {
   });
   const viable = groupExactOffers(ordered).filter(
     (listing) =>
-      !hardConflict(
+      !purchaseExclusion(
         options.support.brief.items,
         assessmentsForCandidate(options.support.assessments, listing.id),
       ),

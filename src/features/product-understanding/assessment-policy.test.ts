@@ -314,12 +314,12 @@ describe("criterion assessment guard", () => {
         },
       }),
     ).toMatchObject({
-      status: "meets",
-      relation: "conditional_stretch_supported",
+      status: "uncertain",
+      relation: "inside_conditional_stretch",
     });
   });
 
-  it("accepts conditional stretch only when cited evidence addresses the condition", () => {
+  it("does not treat merely good support as comparative stretch evidence", () => {
     const longSessionEvidence = evidence({
       propertyLabel: "Long-session support",
       claim: "The independent review reports good support over long sessions.",
@@ -351,6 +351,48 @@ describe("criterion assessment guard", () => {
         relation: "condition_supported",
         explanation: "The review directly addresses long-session support.",
         observations: [longSessionEvidence],
+      },
+    });
+    expect(assessment).toMatchObject({
+      status: "uncertain",
+      relation: "inside_conditional_stretch",
+      method: "deterministic",
+    });
+  });
+
+  it("accepts comparative stretch evidence when the source states a comparison", () => {
+    const comparative = evidence({
+      propertyLabel: "Comparative long-session comfort",
+      claim:
+        "The independent review says this chair is better for long sessions than the previous model.",
+      value: {
+        schemaVersion: 1,
+        kind: "text",
+        text: "better for long sessions than the previous model",
+      },
+      role: "independent_review",
+    });
+    const assessment = guardCriterionAssessment({
+      item: item({
+        label: "Budget",
+        strength: "preference",
+        targetSemantics: "stretch",
+        semanticValue: {
+          schemaVersion: 1,
+          kind: "money_stretch",
+          targetMinor: 5_000,
+          stretchCeilingMinor: 7_000,
+          currency: "GBP",
+          condition: "genuinely better for long sessions",
+        },
+      }),
+      listing,
+      observations: [comparative],
+      proposal: {
+        status: "meets",
+        relation: "condition_supported",
+        explanation: "The review gives a direct comparison.",
+        observations: [comparative],
       },
     });
     expect(assessment).toMatchObject({

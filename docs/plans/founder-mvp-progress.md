@@ -14,10 +14,10 @@ and comparison are meaningfully better than beginning with Google.
 - Active branch: `codex/v0-07-evidence-assessment`, stacked on independently
   accepted V0-06 `d32fbd7ca46d15dc645dacf20617e9c81ca36ac0`.
 - Latest product implementation checkpoint:
-  `601bbb7faad17ec9708408528c339ffcbb68339c`, the bounded V0-07 correction
-  pass in stacked draft PR #11. It hardens the evidence/assessment/
-  decision-support slice without changing the accepted V0-03/V0-06 boundaries.
-  Exact-head CI for this SHA is still required before independent review.
+  the bounded V0-07 money/presentation correction pass is being finalized in
+  stacked draft PR #11. It preserves the evidence/assessment decision-support
+  boundaries; the final pushed SHA and exact-head CI must be recorded here
+  before independent review.
   V0-06 remains draft PR #10 and is not merged.
 - Original V0-05 checkout and draft PR #9 remain separate, unmodified, unmerged,
   and formally unaccepted. Its last instructed checkpoint is `9c33018`; the
@@ -224,6 +224,15 @@ awaiting independent review.
   evidence; visual-only or weak evidence cannot hard-exclude, supported
   disagreement is explicit uncertainty, and soft visual mismatch is a
   preference watchout rather than a hidden exclusion.
+- Absolute money ceilings now remove above-ceiling candidates from best-supported
+  purchase options without deleting their persisted research. Target-distance
+  uncertainty and inside-stretch conditional options remain eligible, while
+  comparative stretch requires evidence that actually expresses comparison;
+  “good support” alone is insufficient.
+- Presentation-only grouping now removes exact repeated title/merchant/price
+  offers when direct destinations do not contradict, while keeping distinct
+  verified destinations separate. The fresh mouse proof no longer repeats the
+  Anker offer.
 - Real same-task proof reached revision 6, exercised relaxation, preference
   changes, use-case acquisition, ASK/answer, save, refresh and exact unsave.
 - Durable evidence and responsive screenshots are in
@@ -233,14 +242,14 @@ awaiting independent review.
 ## Current work
 
 V0-06 is accepted at `d32fbd7ca46d15dc645dacf20617e9c81ca36ac0`.
-V0-07 is implemented at `601bbb7faad17ec9708408528c339ffcbb68339c` on
-`codex/v0-07-evidence-assessment` in stacked draft PR #11. The current
-correction pass adds deterministic evidence admission,
-target-distance semantics, and source-aware boolean assessment guards while
-preserving bounded selective research, typed observations, revision-scoped
-assessments, deterministic ordering, top-option support and exact saved-listing
-comparison. V0-05 PR #9 and V0-06 PR #10 remain unmodified and unmerged; no
-later layer has started.
+V0-07 is implemented on `codex/v0-07-evidence-assessment` in stacked draft PR
+#11. The current correction pass adds deterministic evidence admission,
+target-distance and absolute-ceiling semantics, comparative stretch guards,
+source-aware boolean assessment guards, and conservative exact-offer
+presentation grouping while preserving bounded selective research, typed
+observations, revision-scoped assessments, deterministic ordering, top-option
+support and exact saved-listing comparison. V0-05 PR #9 and V0-06 PR #10
+remain unmodified and unmerged; no later layer has started.
 
 ## Next validated checkpoints
 
@@ -278,7 +287,7 @@ later layer has started.
 ## Latest verification
 
 - `pnpm check`: formatting, lint, generated route types, strict TypeScript,
-  182/182 deterministic unit/component tests, production build — pass.
+  185/185 deterministic unit/component tests, production build — pass.
 - Focused V0-07 PostgreSQL suite: 10/10 pass, including the unrelated-organic
   result rejection regression and one-snapshot current decision support under
   a concurrent authoritative revision.
@@ -290,25 +299,23 @@ later layer has started.
 - `pnpm db:generate`: no schema drift after migration 0014. A guarded empty
   database applied all 15 migrations, then was dropped.
 - Real Terra + Serper proof: 2 tasks, 3 SearchRuns, 72 raw listings, 4 bounded
-  research runs, 40/40 successful evidence searches, 79 attributable sources,
-  151 observations, 148 assessments, 82 unknown assessments, 3 observations
-  reused across revisions, and 20/20 understanding calls. The mouse case
-  produced a direct Argos Trust leader with attributable review/battery support;
-  refinement lowered review strength, added long-workday comfort and correctly
-  kept personal comfort unknown. The chair case placed cleaner candidates before
-  preference conflicts and kept an above-target stretch option visibly
-  conditional. The final artifact contains no B&Q phone-case, GXT926, Bayo+, or
-  e-catalog false-positive evidence sources; rejected organic rows remain only
-  in received counts. Exact offer duplicates do not repeat in the current
-  shortlist.
+  research runs, 40/40 successful evidence searches, 69 attributable sources,
+  131 observations, 148 assessments, 90 unknown assessments, 2 observations
+  reused across revisions, and 20/20 understanding calls. The mouse refinement
+  contains no repeated exact Anker presentation offer and keeps battery,
+  reputation and personal comfort unknown where evidence is insufficient. The
+  chair best-supported options contain no product above the £350 stretch
+  ceiling; below-target prices retain signed distance and comparative stretch
+  is not satisfied by “good support over long sessions” alone. No B&Q
+  phone-case, GXT926, Bayo+, or e-catalog false-positive evidence source was
+  persisted; rejected organic rows remain only in received counts.
 - Six production-rendered desktop/mobile/partial screenshots passed explicit
   horizontal-overflow checks. The fixture shell, top options, source disclosure,
   comparison table and partial-research state were inspected visually.
 - Production dependency audit: no known vulnerabilities.
 - `git diff --check` and changed-value secret scan: pass.
-- Exact-head GitHub run `33158396597` on
-  `abf8313ace92be452bd859360cfff2118a81f586` passed quality, pinned
-  PostgreSQL 17.6 persistence, and browser-smoke.
+- The final correction handoff requires a new exact-head GitHub Quality,
+  pinned PostgreSQL 17.6 persistence, and browser-smoke run before review.
 
 ## Exact resume instructions
 

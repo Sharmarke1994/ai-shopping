@@ -139,8 +139,39 @@ function moneyAssessment(options: {
       .filter(
         (term) =>
           term.length >= 4 &&
-          !["genuinely", "better", "because", "only", "with"].includes(term),
+          ![
+            "genuinely",
+            "because",
+            "only",
+            "with",
+            "that",
+            "this",
+            "than",
+          ].includes(term),
       );
+    const comparisonTerms = new Set([
+      "better",
+      "more",
+      "superior",
+      "improved",
+      "improvement",
+      "outperform",
+      "outperforms",
+      "outperformed",
+      "compared",
+      "comparative",
+      "versus",
+      "stronger",
+      "best",
+    ]);
+    const conditionRequiresComparison = conditionTerms.some((term) =>
+      comparisonTerms.has(term),
+    );
+    const nonComparisonConditionTerms = conditionTerms.filter(
+      (term) => !comparisonTerms.has(term),
+    );
+    const comparativeEvidencePattern =
+      /\b(?:better|more|superior|improv(?:ed|ement)?|outperform(?:s|ed)?|compar(?:ed|ative)|versus|vs|stronger)\b/;
     const conditionEvidence =
       options.proposal?.status === "meets"
         ? options.proposal.observations.filter(({ observation, source }) => {
@@ -155,7 +186,15 @@ function moneyAssessment(options: {
             const evidenceText = normalized(
               `${observation.propertyLabel} ${observation.claim}`,
             );
-            return conditionTerms.some((term) => evidenceText.includes(term));
+            if (
+              conditionRequiresComparison &&
+              !comparativeEvidencePattern.test(evidenceText)
+            ) {
+              return false;
+            }
+            return nonComparisonConditionTerms.every((term) =>
+              evidenceText.includes(term),
+            );
           })
         : [];
     if (conditionEvidence.length > 0) {
