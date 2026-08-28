@@ -18,6 +18,10 @@ import {
   type PersistedContextAction,
 } from "@/features/context-acquisition/persistence/context-actions";
 import type { ShoppingSearchProvider } from "@/features/retrieval-spike/contracts";
+import type { EvidenceResearchDependencies } from "@/features/product-understanding/research-orchestrator";
+import { executeOrResumeEvidenceResearch } from "@/features/product-understanding/research-orchestrator";
+import { loadCurrentDecisionSupportInTransaction } from "@/features/product-understanding/persistence";
+import { buildDecisionSupport } from "@/features/product-understanding/decision-support";
 import { loadPersistedSearchRunByTrigger } from "@/features/retrieval-spike/persistence/search-runs";
 import {
   loadShoppingSubjectInTransaction,
@@ -34,7 +38,9 @@ import type {
 } from "@/infrastructure/database/clients";
 import {
   contextActionAnswers,
+  candidateListings,
   founderLiveSessions,
+  savedCandidateListings,
   shoppingTasks,
   taskInputs,
 } from "@/infrastructure/database/schema";
@@ -43,6 +49,7 @@ import {
   liveSessionIdSchema,
   liveShoppingViewSchema,
   refineLiveShoppingRequestSchema,
+  researchLiveShoppingRequestSchema,
   saveLiveListingRequestSchema,
   startLiveShoppingRequestSchema,
   type LiveShoppingView,
@@ -72,6 +79,7 @@ export type LiveShoppingDependencies = Readonly<{
   db: ShoppingDatabase;
   model: ContextAcquisitionModel;
   provider: ShoppingSearchProvider;
+  research?: Omit<EvidenceResearchDependencies, "db">;
 }>;
 
 export class LiveShoppingSessionNotFoundError extends Error {
@@ -648,12 +656,153 @@ export async function resumeLiveShoppingSearch(options: {
   return loadLiveShoppingSession({ db: options.dependencies.db, sessionId });
 }
 
+export async function researchLiveShopping(options: {
+  dependencies: LiveShoppingDependencies;
+  input: unknown;
+}) {
+  const input = researchLiveShoppingRequestSchema.parse(options.input);
+  if (options.dependencies.research === undefined) {
+    throw new LiveShoppingSearchUnavailableError();
+  }
+  const authority = await options.dependencies.db.transaction(async (tx) => {
+    const session = await loadSessionInTransaction({
+      tx,
+      sessionId: input.sessionId,
+    });
+    if (session.currentContextActionId === null) {
+      throw new LiveShoppingSearchUnavailableError();
+    }
+    const action = await loadContextActionByIdInTransaction({
+      tx,
+      taskId: session.taskId,
+      contextActionId: session.currentContextActionId,
+    });
+    if (action?.action !== "search") {
+      throw new LiveShoppingSearchUnavailableError();
+    }
+    const savedRuns = await tx
+      .select({
+        runId: candidateListings.runId,
+        candidateListingId: candidateListings.id,
+      })
+      .from(savedCandidateListings)
+      .innerJoin(
+        candidateListings,
+        and(
+          eq(candidateListings.taskId, savedCandidateListings.taskId),
+          eq(candidateListings.id, savedCandidateListings.candidateListingId),
+        ),
+      )
+      .where(eq(savedCandidateListings.taskId, session.taskId));
+    return {
+      session,
+      action,
+      savedRuns,
+    };
+  });
+  const currentRun = await loadPersistedSearchRunByTrigger({
+    db: options.dependencies.db,
+    taskId: authority.session.taskId,
+    contextActionId: authority.action.id,
+  });
+  if (currentRun === null || currentRun.status === "running") {
+    throw new LiveShoppingSearchUnavailableError();
+  }
+  const researchDependencies = {
+    db: options.dependencies.db,
+    ...options.dependencies.research,
+  };
+  await executeOrResumeEvidenceResearch({
+    dependencies: researchDependencies,
+    taskId: authority.session.taskId,
+    searchRunId: currentRun.portfolio.run.id,
+  });
+  const historicalSaved = new Map<string, string[]>();
+  for (const saved of authority.savedRuns) {
+    if (saved.runId === currentRun.portfolio.run.id) continue;
+    const ids = historicalSaved.get(saved.runId) ?? [];
+    ids.push(saved.candidateListingId);
+    historicalSaved.set(saved.runId, ids);
+  }
+  for (const [searchRunId, savedCandidateListingIds] of historicalSaved) {
+    await executeOrResumeEvidenceResearch({
+      dependencies: researchDependencies,
+      taskId: authority.session.taskId,
+      searchRunId,
+      savedCandidateListingIds,
+    });
+  }
+  return loadLiveShoppingSession({
+    db: options.dependencies.db,
+    sessionId: authority.session.id,
+  });
+}
+
 function briefEmphasis(strength: "hard" | "strong_preference" | "preference") {
   return strength === "hard"
     ? ("must" as const)
     : strength === "strong_preference"
       ? ("strong" as const)
       : ("preference" as const);
+}
+
+function liveListingDto(options: {
+  listing: NonNullable<
+    Awaited<ReturnType<typeof loadPersistedSearchRunByTrigger>>
+  >["listings"][number];
+  brief: ReturnType<typeof projectShoppingBrief>;
+  saved: boolean;
+  foundAcrossQueries?: number;
+}) {
+  const listing = options.listing;
+  const evidence = summarizeListingEvidence({
+    brief: options.brief,
+    listing,
+  });
+  return {
+    candidateListingId: listing.id,
+    displayId: createHash("sha256")
+      .update(listing.id)
+      .digest("hex")
+      .slice(0, 16),
+    title: listing.title,
+    merchant: listing.merchant,
+    priceText:
+      listing.priceText ??
+      (listing.price === null
+        ? null
+        : new Intl.NumberFormat("en-GB", {
+            style: "currency",
+            currency: "GBP",
+          }).format(listing.price.amountMinor / 100)),
+    imageUrl: listing.imageUrl,
+    destinationUrl: listing.merchantDestinationUrl ?? listing.url,
+    destinationLabel:
+      listing.merchantDestinationUrl === null
+        ? "View on Google Shopping"
+        : `View at ${(listing.merchant ?? "retailer").slice(0, 100)}`,
+    sourceUrl:
+      listing.merchantDestinationUrl === null ||
+      listing.merchantDestinationUrl === listing.url
+        ? null
+        : listing.url,
+    sourceLabel:
+      listing.merchantDestinationUrl === null ||
+      listing.merchantDestinationUrl === listing.url
+        ? null
+        : ("View Google Shopping source" as const),
+    deliveryText: listing.deliveryText,
+    availabilityText: listing.availabilityText,
+    foundAcrossQueries: options.foundAcrossQueries ?? 1,
+    evidence: {
+      sourceFacts: evidence.sourceFacts,
+      directlyEvidenced: evidence.directlyEvidenced,
+      contradictions: evidence.contradictions,
+      unverifiedLabels: evidence.unverifiedLabels,
+      additionalUnverifiedCount: evidence.additionalUnverifiedCount,
+    },
+    saved: options.saved,
+  };
 }
 
 export function displayListings(
@@ -733,50 +882,14 @@ export function displayListings(
     );
   return {
     withheldConflictCount: directlyConflicting.length,
-    listings: assessedGroups.map(({ listing, queryIds, evidence }) => ({
-      candidateListingId: listing.id,
-      displayId: createHash("sha256")
-        .update(listing.id)
-        .digest("hex")
-        .slice(0, 16),
-      title: listing.title,
-      merchant: listing.merchant,
-      priceText:
-        listing.priceText ??
-        (listing.price === null
-          ? null
-          : new Intl.NumberFormat("en-GB", {
-              style: "currency",
-              currency: "GBP",
-            }).format(listing.price.amountMinor / 100)),
-      imageUrl: listing.imageUrl,
-      destinationUrl: listing.merchantDestinationUrl ?? listing.url,
-      destinationLabel:
-        listing.merchantDestinationUrl === null
-          ? "View on Google Shopping"
-          : `View at ${(listing.merchant ?? "retailer").slice(0, 100)}`,
-      sourceUrl:
-        listing.merchantDestinationUrl === null ||
-        listing.merchantDestinationUrl === listing.url
-          ? null
-          : listing.url,
-      sourceLabel:
-        listing.merchantDestinationUrl === null ||
-        listing.merchantDestinationUrl === listing.url
-          ? null
-          : ("View Google Shopping source" as const),
-      deliveryText: listing.deliveryText,
-      availabilityText: listing.availabilityText,
-      foundAcrossQueries: queryIds.size,
-      evidence: {
-        sourceFacts: evidence.sourceFacts,
-        directlyEvidenced: evidence.directlyEvidenced,
-        contradictions: evidence.contradictions,
-        unverifiedLabels: evidence.unverifiedLabels,
-        additionalUnverifiedCount: evidence.additionalUnverifiedCount,
-      },
-      saved: options.savedListingIds.has(listing.id),
-    })),
+    listings: assessedGroups.map(({ listing, queryIds }) =>
+      liveListingDto({
+        listing,
+        brief: options.brief,
+        saved: options.savedListingIds.has(listing.id),
+        foundAcrossQueries: queryIds.size,
+      }),
+    ),
   };
 }
 
@@ -825,12 +938,17 @@ export async function loadLiveShoppingSession(options: {
                 .limit(1)
             )[0]?.inputId ?? null)
           : null;
+      const support = await loadCurrentDecisionSupportInTransaction({
+        tx,
+        taskId: session.taskId,
+      });
       return {
         action,
         answeredAskInputId,
         brief: projectShoppingBrief(state),
         session,
         subject,
+        support,
         saved,
       };
     },
@@ -844,6 +962,43 @@ export async function loadLiveShoppingSession(options: {
           contextActionId: snapshot.action.id,
         })
       : null;
+  const savedListingIds = new Set(
+    snapshot.saved.map(({ listing }) => listing.id),
+  );
+  const decision = buildDecisionSupport({
+    support: snapshot.support,
+    savedListingIds,
+  });
+  const decisionSupport = {
+    researchStatus: decision.researchStatus,
+    researchedCandidateCount: decision.researchedCandidateCount,
+    topOptions: decision.topOptions.map((option) => ({
+      listing: liveListingDto({
+        listing: option.listing,
+        brief: snapshot.brief,
+        saved: savedListingIds.has(option.listing.id),
+      }),
+      strongestSupported: option.strongestSupported,
+      whyItFits: option.whyItFits,
+      watchouts: option.watchouts,
+      unknowns: option.unknowns,
+      evidenceSources: option.evidenceSources,
+    })),
+    comparison:
+      decision.comparison === null
+        ? null
+        : {
+            candidates: decision.comparison.candidates.map((listing) =>
+              liveListingDto({
+                listing,
+                brief: snapshot.brief,
+                saved: true,
+              }),
+            ),
+            rows: decision.comparison.rows,
+            judgement: decision.comparison.judgement,
+          },
+  };
   const common = {
     schemaVersion: 1 as const,
     sessionId,
@@ -853,46 +1008,14 @@ export async function loadLiveShoppingSession(options: {
       value: formatBriefItem(item, snapshot.brief.market),
       emphasis: briefEmphasis(item.strength),
     })),
-    savedListings: snapshot.saved.map(({ listing }) => {
-      const direct = listing.merchantDestinationUrl;
-      const evidence = summarizeListingEvidence({
-        brief: snapshot.brief,
+    savedListings: snapshot.saved.map(({ listing }) =>
+      liveListingDto({
         listing,
-      });
-      return {
-        candidateListingId: listing.id,
-        displayId: createHash("sha256")
-          .update(listing.id)
-          .digest("hex")
-          .slice(0, 16),
-        title: listing.title,
-        merchant: listing.merchant,
-        priceText: listing.priceText,
-        imageUrl: listing.imageUrl,
-        destinationUrl: direct ?? listing.url,
-        destinationLabel:
-          direct === null
-            ? "View on Google Shopping"
-            : `View at ${(listing.merchant ?? "retailer").slice(0, 100)}`,
-        sourceUrl:
-          direct === null || direct === listing.url ? null : listing.url,
-        sourceLabel:
-          direct === null || direct === listing.url
-            ? null
-            : ("View Google Shopping source" as const),
-        deliveryText: listing.deliveryText,
-        availabilityText: listing.availabilityText,
-        foundAcrossQueries: 1,
-        evidence: {
-          sourceFacts: evidence.sourceFacts,
-          directlyEvidenced: evidence.directlyEvidenced,
-          contradictions: evidence.contradictions,
-          unverifiedLabels: evidence.unverifiedLabels,
-          additionalUnverifiedCount: evidence.additionalUnverifiedCount,
-        },
+        brief: snapshot.brief,
         saved: true,
-      };
-    }),
+      }),
+    ),
+    decisionSupport,
   };
   if (snapshot.session.pendingTaskInputId !== null) {
     return liveShoppingViewSchema.parse({

@@ -11,6 +11,16 @@ import type {
   InterpretationProviderWireV1,
 } from "@/features/context-acquisition/provider-wire";
 import { createOpenAIContextAcquisitionModel } from "@/features/context-acquisition/openai-adapter";
+import {
+  FakeEvidenceSearchProvider,
+  FakeProductUnderstandingModel,
+} from "@/features/product-understanding/fakes";
+import {
+  createOpenAIProductUnderstandingModel,
+  V0_07_OPENAI_DEFAULT_CONFIG,
+} from "@/features/product-understanding/openai-adapter";
+import { PRODUCT_UNDERSTANDING_PROMPT_VERSION } from "@/features/product-understanding/prompts";
+import { SerperEvidenceSearchAdapter } from "@/features/product-understanding/serper-evidence-adapter";
 import { FakeShoppingProvider } from "@/features/retrieval-spike/fake-shopping-provider";
 import { SerperShoppingAdapter } from "@/features/retrieval-spike/serper-shopping-adapter";
 import {
@@ -228,6 +238,20 @@ export async function createLiveShoppingDependencies(): Promise<LiveShoppingDepe
       db: connection.db,
       model: fixtureModel(),
       provider: new FakeShoppingProvider(),
+      research: {
+        evidenceProvider: new FakeEvidenceSearchProvider({
+          failOnCalls:
+            process.env.LIVE_SHOPPING_TEST_EVIDENCE_FAIL_ON_CALL === "1"
+              ? [1]
+              : [],
+        }),
+        model: new FakeProductUnderstandingModel(),
+        modelIdentity: {
+          provider: "fixture",
+          model: "fixture-product-understanding",
+          promptVersion: PRODUCT_UNDERSTANDING_PROMPT_VERSION,
+        },
+      },
     };
   }
   const [openAIKey, serperKey] = await Promise.all([
@@ -246,5 +270,14 @@ export async function createLiveShoppingDependencies(): Promise<LiveShoppingDepe
       environment: { ...process.env, OPENAI_API_KEY: openAIKey },
     }),
     provider: new SerperShoppingAdapter({ apiKey: serperKey }),
+    research: {
+      evidenceProvider: new SerperEvidenceSearchAdapter({ apiKey: serperKey }),
+      model: createOpenAIProductUnderstandingModel({ apiKey: openAIKey }),
+      modelIdentity: {
+        provider: "openai",
+        model: V0_07_OPENAI_DEFAULT_CONFIG.model,
+        promptVersion: PRODUCT_UNDERSTANDING_PROMPT_VERSION,
+      },
+    },
   };
 }

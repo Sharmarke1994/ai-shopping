@@ -9,6 +9,7 @@ import {
   LiveShoppingSessionNotFoundError,
   loadLiveShoppingSession,
   refineLiveShopping,
+  researchLiveShopping,
   resumeLiveShoppingSearch,
   retryLiveShoppingContext,
   setLiveListingSaved,
@@ -158,6 +159,10 @@ export async function POST(request: Request) {
             sessionId: input.sessionId,
           }),
         );
+      }
+      case "research": {
+        const dependencies = await createLiveShoppingDependencies();
+        return response(await researchLiveShopping({ dependencies, input }));
       }
     }
   } catch (error) {

@@ -5,7 +5,13 @@ export { contextActions, contextQuestionOptions } from "./context-actions";
 export { contextAcquisitionAttempts } from "./context-acquisition-attempts";
 export { criterionSources } from "./criterion-sources";
 export { decisionCriteria } from "./decision-criteria";
+export { criterionAssessmentObservations } from "./criterion-assessment-observations";
+export { criterionAssessments } from "./criterion-assessments";
+export { evidenceAcquisitionAttempts } from "./evidence-acquisition-attempts";
+export { evidenceResearchRuns } from "./evidence-research-runs";
+export { evidenceSources } from "./evidence-sources";
 export { founderLiveSessions } from "./founder-live-sessions";
+export { productObservations } from "./product-observations";
 export {
   searchHypotheses,
   searchHypothesisBasisCriteria,
