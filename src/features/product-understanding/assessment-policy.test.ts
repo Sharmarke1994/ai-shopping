@@ -81,10 +81,11 @@ function evidence(options: {
   value: unknown;
   role?:
     | "listing"
+    | "retailer"
+    | "manufacturer"
     | "visual"
     | "independent_review"
     | "retailer_review_aggregate"
-    | "manufacturer"
     | "other";
 }) {
   const source = evidenceSourceV1Schema.parse({
@@ -228,6 +229,96 @@ describe("criterion assessment guard", () => {
     });
   });
 
+  it("treats money_stretch as a target with explicit distance, not a ceiling", () => {
+    const target = (amountMinor: number) =>
+      guardCriterionAssessment({
+        item: item({
+          label: "Budget",
+          strength: "preference",
+          targetSemantics: "stretch",
+          semanticValue: {
+            schemaVersion: 1,
+            kind: "money_stretch",
+            targetMinor: 25_000,
+            stretchCeilingMinor: 35_000,
+            currency: "GBP",
+            condition: "genuinely better for long sessions",
+          },
+        }),
+        listing: persistedCandidateListingSchema.parse({
+          ...listing,
+          price: { amountMinor, currency: "GBP" },
+          priceText: `£${(amountMinor / 100).toFixed(2)}`,
+        }),
+        observations: [],
+        proposal: null,
+      });
+
+    expect(target(6_500)).toMatchObject({
+      status: "uncertain",
+      relation: "target_distance_minor:-18500",
+    });
+    expect(target(22_000)).toMatchObject({
+      status: "uncertain",
+      relation: "target_distance_minor:-3000",
+    });
+    expect(target(25_000)).toMatchObject({
+      status: "meets",
+      relation: "target_exact",
+    });
+    expect(target(32_000)).toMatchObject({
+      status: "uncertain",
+      relation: "inside_conditional_stretch",
+    });
+    expect(target(36_000)).toMatchObject({
+      status: "conflicts",
+      relation: "above_stretch_ceiling",
+    });
+
+    const condition = evidence({
+      role: "independent_review",
+      propertyLabel: "Long-session support",
+      claim: "The independent review reports good support over long sessions.",
+      value: {
+        schemaVersion: 1,
+        kind: "text",
+        text: "good support over long sessions",
+      },
+    });
+    expect(
+      guardCriterionAssessment({
+        item: item({
+          label: "Budget",
+          strength: "preference",
+          targetSemantics: "stretch",
+          semanticValue: {
+            schemaVersion: 1,
+            kind: "money_stretch",
+            targetMinor: 25_000,
+            stretchCeilingMinor: 35_000,
+            currency: "GBP",
+            condition: "genuinely better for long sessions",
+          },
+        }),
+        listing: persistedCandidateListingSchema.parse({
+          ...listing,
+          price: { amountMinor: 32_000, currency: "GBP" },
+          priceText: "£320",
+        }),
+        observations: [condition],
+        proposal: {
+          status: "meets",
+          relation: "condition_supported",
+          explanation: "The review addresses long-session support.",
+          observations: [condition],
+        },
+      }),
+    ).toMatchObject({
+      status: "meets",
+      relation: "conditional_stretch_supported",
+    });
+  });
+
   it("accepts conditional stretch only when cited evidence addresses the condition", () => {
     const longSessionEvidence = evidence({
       propertyLabel: "Long-session support",
@@ -328,6 +419,146 @@ describe("criterion assessment guard", () => {
     });
     expect(assessment.status).toBe("uncertain");
     expect(assessment.relation).toBe("conflict_not_directly_admissible");
+  });
+
+  it("requires admissible, criterion-specific boolean evidence", () => {
+    const wireless = (options: {
+      value: boolean;
+      role?: "listing" | "manufacturer" | "visual" | "other";
+      propertyLabel?: string;
+    }) =>
+      evidence({
+        role: options.role ?? "listing",
+        propertyLabel: options.propertyLabel ?? "Wireless connectivity",
+        claim: options.value
+          ? "The product is wireless."
+          : "The product is wired only.",
+        value: { schemaVersion: 1, kind: "boolean", value: options.value },
+      });
+    const wirelessItem = () =>
+      item({
+        label: "Wireless connectivity",
+        targetSemantics: "exact",
+        semanticValue: {
+          schemaVersion: 1,
+          kind: "boolean",
+          value: true,
+        },
+      });
+
+    expect(
+      guardCriterionAssessment({
+        item: wirelessItem(),
+        listing,
+        observations: [wireless({ value: false })],
+        proposal: null,
+      }),
+    ).toMatchObject({ status: "conflicts", relation: "direct_contradiction" });
+    expect(
+      guardCriterionAssessment({
+        item: wirelessItem(),
+        listing,
+        observations: [wireless({ value: false, role: "visual" })],
+        proposal: null,
+      }),
+    ).toMatchObject({
+      status: "uncertain",
+      relation: "visual_conflict_not_admissible",
+    });
+    expect(
+      guardCriterionAssessment({
+        item: wirelessItem(),
+        listing,
+        observations: [wireless({ value: false, role: "other" })],
+        proposal: null,
+      }),
+    ).toMatchObject({ status: "uncertain", relation: "weak_boolean_evidence" });
+
+    const positive = wireless({ value: true });
+    expect(
+      guardCriterionAssessment({
+        item: wirelessItem(),
+        listing,
+        observations: [positive],
+        proposal: null,
+      }),
+    ).toMatchObject({ status: "meets", relation: "direct_match" });
+    expect(
+      guardCriterionAssessment({
+        item: wirelessItem(),
+        listing,
+        observations: [
+          positive,
+          wireless({ value: false, role: "manufacturer" }),
+        ],
+        proposal: null,
+      }),
+    ).toMatchObject({
+      status: "uncertain",
+      relation: "conflicting_supported_evidence",
+    });
+    expect(
+      guardCriterionAssessment({
+        item: wirelessItem(),
+        listing,
+        observations: [positive, wireless({ value: true, role: "other" })],
+        proposal: null,
+      }),
+    ).toMatchObject({ status: "meets", relation: "direct_match" });
+
+    const battery = item({
+      label: "Battery life",
+      targetSemantics: "qualitative",
+      semanticValue: {
+        schemaVersion: 1,
+        kind: "boolean",
+        value: true,
+      },
+    });
+    expect(
+      guardCriterionAssessment({
+        item: battery,
+        listing,
+        observations: [positive],
+        proposal: {
+          status: "conflicts",
+          relation: "battery_missing",
+          explanation: "Wireless means it has no battery.",
+          observations: [positive],
+        },
+      }),
+    ).toMatchObject({
+      status: "uncertain",
+      relation: "insufficient_relevant_evidence",
+    });
+  });
+
+  it("keeps soft visual mismatches as watchouts without hard exclusion", () => {
+    const visual = evidence({
+      role: "visual",
+      propertyLabel: "Visible profile",
+      claim: "The image appears flat rather than sculpted.",
+      value: { schemaVersion: 1, kind: "boolean", value: false },
+    });
+    const assessment = guardCriterionAssessment({
+      item: item({
+        label: "Sculpted profile",
+        strength: "preference",
+        targetSemantics: "exact",
+        semanticValue: {
+          schemaVersion: 1,
+          kind: "boolean",
+          value: true,
+        },
+      }),
+      listing,
+      observations: [visual],
+      proposal: null,
+    });
+    expect(assessment).toMatchObject({
+      status: "conflicts",
+      relation: "visual_preference_mismatch",
+    });
   });
 
   it("preserves review rating and volume instead of sorting on stars alone", () => {

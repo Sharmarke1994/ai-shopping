@@ -35,8 +35,10 @@ import {
   recordEvidenceSearchSuccess,
   releaseEvidenceResearchLease,
 } from "../../src/features/product-understanding/persistence";
+import { evidenceSearchResponseSchema } from "../../src/features/product-understanding/evidence-search";
 import { executeOrResumeEvidenceResearch } from "../../src/features/product-understanding/research-orchestrator";
 import { FakeShoppingProvider } from "../../src/features/retrieval-spike/fake-shopping-provider";
+import { loadPersistedSearchRun } from "../../src/features/retrieval-spike/persistence/search-runs";
 import { recordTaskInput } from "../../src/features/shopping-state/persistence/inputs-and-messages";
 import { applyStatePatch } from "../../src/features/shopping-state/persistence/state-transitions";
 import {
@@ -215,6 +217,80 @@ describe("evidence-backed product understanding persistence", () => {
     expect(exactRetry).toEqual(completed);
     expect(evidenceProvider.calls).toHaveLength(searchCallCount);
     expect(model.calls).toHaveLength(modelCallCount);
+  });
+
+  it("does not persist an unrelated organic result as candidate evidence", async () => {
+    const { session, run } = await seedSearch();
+    const prepared = await prepareEvidenceResearch({
+      db: connection.db,
+      taskId: session.taskId,
+      searchRunId: run.id,
+      evidenceProvider: "fixture",
+      modelProvider: "fixture",
+      model: "fixture-product-understanding",
+      promptVersion: "product-understanding-v1",
+    });
+    const attempt = prepared.attempts.find(
+      (entry) => entry.stage === "organic_search",
+    );
+    if (attempt === undefined) throw new Error("Expected organic attempt");
+    const searchRun = await loadPersistedSearchRun({
+      db: connection.db,
+      taskId: session.taskId,
+      runId: run.id,
+    });
+    const listing = searchRun?.listings.find(
+      ({ id }) => id === attempt.candidateListingId,
+    );
+    if (listing === undefined) throw new Error("Expected candidate listing");
+    const leaseToken = await claimEvidenceResearch({
+      db: connection.db,
+      taskId: session.taskId,
+      researchRunId: prepared.run.id,
+    });
+    if (leaseToken === null) throw new Error("Expected evidence lease");
+    await recordEvidenceSearchSuccess({
+      db: connection.db,
+      taskId: session.taskId,
+      researchRunId: prepared.run.id,
+      attemptId: attempt.id,
+      leaseToken,
+      response: evidenceSearchResponseSchema.parse({
+        providerRequestId: "fixture-relevance",
+        receivedResultCount: 2,
+        results: [
+          {
+            providerResultId: "b-and-q-phone-cases",
+            rank: 1,
+            title: "Phone cases | Mobile accessories - B&Q",
+            url: "https://www.diy.com/departments/technology/mobile-accessories/phone-cases/DIY123456.cat",
+            snippet: "Mobile accessories and phone cases",
+            sourceRole: "other",
+          },
+          {
+            providerResultId: "candidate-exact",
+            rank: 2,
+            title: listing.title,
+            url: "https://example.test/exact-candidate-source",
+            snippet: "The supplied result names the candidate product.",
+            sourceRole: "retailer",
+          },
+        ],
+      }),
+      startedAt: new Date("2026-08-28T00:00:00.000Z"),
+      finishedAt: new Date("2026-08-28T00:00:01.000Z"),
+    });
+    const snapshot = await loadEvidenceResearchRun({
+      db: connection.db,
+      taskId: session.taskId,
+      researchRunId: prepared.run.id,
+    });
+    expect(
+      snapshot?.sources.map(({ sourceTitle }) => sourceTitle),
+    ).not.toContain("Phone cases | Mobile accessories - B&Q");
+    expect(snapshot?.sources.map(({ sourceTitle }) => sourceTitle)).toContain(
+      listing.title,
+    );
   });
 
   it("loads current decision support from one repeatable shopping-state snapshot", async () => {

@@ -203,19 +203,8 @@ function buildComparison(options: {
       };
     }),
   }));
-  const [strongest, runnerUp] = candidates;
-  const strongestMeets = assessmentsForCandidate(
-    options.support.assessments,
-    strongest!.id,
-  ).filter(({ status }) => status === "meets").length;
-  const runnerMeets = assessmentsForCandidate(
-    options.support.assessments,
-    runnerUp!.id,
-  ).filter(({ status }) => status === "meets").length;
-  const judgement =
-    strongestMeets > runnerMeets
-      ? `${strongest!.title} is currently the strongest-supported saved option against your current brief. It has evidence-backed support on ${strongestMeets} criteria versus ${runnerMeets} for ${runnerUp!.title}; unresolved rows remain visible rather than being filled in.`
-      : `${strongest!.title} currently leads the saved comparison on the deterministic evidence ordering, but the evidence does not establish a decisive winner. Review the watchouts and unknown rows before choosing.`;
+  const [strongest] = candidates;
+  const judgement = `${strongest!.title} currently leads the saved comparison on the deterministic ordering, with its strongest differences shown row by row. The evidence does not establish a decisive winner beyond those differences; review the watchouts and unknown rows before choosing.`;
   return { candidates, rows, judgement };
 }
 

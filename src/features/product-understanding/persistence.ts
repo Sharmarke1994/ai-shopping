@@ -46,6 +46,7 @@ import {
 import type { ModelCallMetadata } from "./model-port";
 import type { ProductUnderstandingProviderWireV1 } from "./provider-wire";
 import type { EvidenceSearchResponse } from "./evidence-search";
+import { isCandidateEvidenceRelevant } from "./evidence-relevance";
 import {
   guardCriterionAssessment,
   type ObservationWithSource,
@@ -1194,7 +1195,26 @@ export async function recordEvidenceSearchSuccess(options: {
       throw new EvidenceAttemptConflictError(attempt.id);
     }
     if (attempt.status !== "planned") return false;
-    for (const result of options.response.results) {
+    const searchRun = await loadPersistedSearchRunInTransaction({
+      tx,
+      taskId,
+      runId: attempt.candidateRunId,
+    });
+    const listing = searchRun?.listings.find(
+      ({ id }) => id === attempt.candidateListingId,
+    );
+    if (listing === undefined) {
+      throw new EvidenceResearchAuthorityError(
+        "Evidence candidate is unavailable",
+      );
+    }
+    for (const result of options.response.results.filter((candidate) =>
+      isCandidateEvidenceRelevant({
+        candidateTitle: listing.title,
+        merchant: listing.merchant,
+        result: candidate,
+      }),
+    )) {
       await insertSourceIdempotently({
         tx,
         value: {

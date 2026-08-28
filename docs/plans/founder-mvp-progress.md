@@ -14,11 +14,10 @@ and comparison are meaningfully better than beginning with Google.
 - Active branch: `codex/v0-07-evidence-assessment`, stacked on independently
   accepted V0-06 `d32fbd7ca46d15dc645dacf20617e9c81ca36ac0`.
 - Latest product implementation checkpoint:
-  `2ae37555efbd580661dfe2e4d0873cf967b37510`. It implements the frozen V0-07
-  evidence/assessment/decision-support slice in stacked draft PR #11. GitHub
-  run `33131516902` passed quality, pinned PostgreSQL 17.6 persistence and
-  browser-smoke on PR head `fee2ab1657b95537c42203ba06a34d65a6aaf27c`.
-  The final ledger-only handoff head still requires its own exact-head checks.
+  the bounded V0-07 correction pass is being finalized in stacked draft PR
+  #11. It hardens the evidence/assessment/decision-support slice without
+  changing the accepted V0-03/V0-06 boundaries. The final pushed handoff SHA
+  and exact-head CI run must be recorded here before independent review.
   V0-06 remains draft PR #10 and is not merged.
 - Original V0-05 checkout and draft PR #9 remain separate, unmodified, unmerged,
   and formally unaccepted. Its last instructed checkpoint is `9c33018`; the
@@ -212,6 +211,19 @@ awaiting independent review.
 - Additive migration `0013_melodic_roland_deschain.sql` makes the populated
   destination and review branches explicitly require every participating
   nullable field, closing PostgreSQL CHECK-constraint NULL semantics.
+- The correction pass adds a deterministic, server-owned organic-result
+  relevance gate before candidate EvidenceSource insertion. Generic,
+  search/category, comparison, mismatched-model, and ambiguous results remain
+  untrusted and are discarded; the B&Q phone-case regression proves this
+  boundary.
+- `money_stretch` now preserves signed distance from the target: exact target
+  can meet, cheaper is not an automatic target match, above-target options stay
+  conditional within stretch, and above-ceiling options conflict without an
+  invented tolerance.
+- Boolean assessment now admits only criterion-relevant, sufficiently strong
+  evidence; visual-only or weak evidence cannot hard-exclude, supported
+  disagreement is explicit uncertainty, and soft visual mismatch is a
+  preference watchout rather than a hidden exclusion.
 - Real same-task proof reached revision 6, exercised relaxation, preference
   changes, use-case acquisition, ASK/answer, save, refresh and exact unsave.
 - Durable evidence and responsive screenshots are in
@@ -221,19 +233,17 @@ awaiting independent review.
 ## Current work
 
 V0-06 is accepted at `d32fbd7ca46d15dc645dacf20617e9c81ca36ac0`.
-V0-07 is implemented at the code/proof checkpoint
-`2ae37555efbd580661dfe2e4d0873cf967b37510` on
-`codex/v0-07-evidence-assessment`. It adds bounded selective research,
-attributable EvidenceSources, typed ProductObservations, revision-scoped
-CriterionAssessments, deterministic assessment ordering, top-option decision
-support and exact saved-listing comparison. Partial research, prompt-injection
-containment, provider/model timeouts, retries, stale authority and one-snapshot
-view loading fail closed. V0-05 PR #9 and V0-06 PR #10 remain unmodified and
-unmerged; no later layer has started.
+V0-07 is implemented on `codex/v0-07-evidence-assessment` in stacked draft PR
+#11. The current correction pass adds deterministic evidence admission,
+target-distance semantics, and source-aware boolean assessment guards while
+preserving bounded selective research, typed observations, revision-scoped
+assessments, deterministic ordering, top-option support and exact saved-listing
+comparison. V0-05 PR #9 and V0-06 PR #10 remain unmodified and unmerged; no
+later layer has started.
 
 ## Next validated checkpoints
 
-1. Obtain exact-head quality/persistence/browser CI on the final docs-only
+1. Obtain exact-head quality/persistence/browser CI on the final correction
    handoff head of stacked draft PR #11, then stop for independent review.
 2. If review finds a material issue, make only a bounded V0-07 correction and
    rerun the affected plus full gates. Do not weaken unknown/evidence boundaries.
@@ -267,33 +277,38 @@ unmerged; no later layer has started.
 ## Latest verification
 
 - `pnpm check`: formatting, lint, generated route types, strict TypeScript,
-  173/173 deterministic unit/component tests, production build — pass.
-- Focused V0-07 PostgreSQL suite: 9/9 pass, including one-snapshot current
-  decision support under a concurrent authoritative revision.
-- Full PostgreSQL suite: 99 functional tests pass; the sole failure is the
+  182/182 deterministic unit/component tests, production build — pass.
+- Focused V0-07 PostgreSQL suite: 10/10 pass, including the unrelated-organic
+  result rejection regression and one-snapshot current decision support under
+  a concurrent authoritative revision.
+- Full PostgreSQL suite: 100 functional tests pass; the sole failure is the
   intentional PostgreSQL 17.6 pin against local Homebrew 17.11.
 - `pnpm test:e2e`: 8/8 Chromium tests pass, including research → two exact
   saves → comparison → refinement → revision-specific reassessment → refresh,
   plus mobile ASK → answer → SEARCH → research.
 - `pnpm db:generate`: no schema drift after migration 0014. A guarded empty
   database applied all 15 migrations, then was dropped.
-- Real Terra + Serper proof: 2 tasks, 3 SearchRuns, 70 raw listings, 4 bounded
-  research runs, 40/40 successful evidence searches, 165 attributable sources,
-  155 observations, 148 assessments and 20/20 understanding calls. The mouse
-  case produced a direct Argos Trust leader with attributable review/battery
-  support; refinement lowered review strength, added long-workday comfort and
-  correctly kept personal comfort unknown. The chair case placed cleaner
-  candidates before preference conflicts and kept a £338 stretch option visibly
-  conditional. Exact offer duplicates do not repeat in the current shortlist.
+- Real Terra + Serper proof: 2 tasks, 3 SearchRuns, 72 raw listings, 4 bounded
+  research runs, 40/40 successful evidence searches, 79 attributable sources,
+  151 observations, 148 assessments, 82 unknown assessments, 3 observations
+  reused across revisions, and 20/20 understanding calls. The mouse case
+  produced a direct Argos Trust leader with attributable review/battery support;
+  refinement lowered review strength, added long-workday comfort and correctly
+  kept personal comfort unknown. The chair case placed cleaner candidates before
+  preference conflicts and kept an above-target stretch option visibly
+  conditional. The final artifact contains no B&Q phone-case, GXT926, Bayo+, or
+  e-catalog false-positive evidence sources; rejected organic rows remain only
+  in received counts. Exact offer duplicates do not repeat in the current
+  shortlist.
 - Six production-rendered desktop/mobile/partial screenshots passed explicit
   horizontal-overflow checks. The fixture shell, top options, source disclosure,
   comparison table and partial-research state were inspected visually.
 - Production dependency audit: no known vulnerabilities.
 - `git diff --check` and changed-value secret scan: pass.
-- GitHub Quality run `33131516902` on exact PR head
-  `fee2ab1657b95537c42203ba06a34d65a6aaf27c`: quality, pinned PostgreSQL 17.6
-  persistence and browser-smoke all pass. Any later ledger-only handoff head
-  still requires its own exact-head green checks before review.
+- The final correction handoff requires a new exact-head GitHub Quality,
+  pinned PostgreSQL 17.6 persistence, and browser-smoke run before review; the
+  prior green run was on the pre-correction head and is not used as final CI
+  evidence.
 
 ## Exact resume instructions
 
@@ -312,4 +327,5 @@ unmerged; no later layer has started.
 5. If review finds a material issue, make only the bounded V0-07 correction and
    rerun the affected plus full gates. Never weaken the evaluator, unknown state,
    evidence authority or V0-04/V0-05 firewall to obtain a pass.
-6. Do not merge automatically. Stop after exact-head CI for independent review.
+6. Do not merge automatically, start V0-08, or broaden evidence acquisition.
+   Stop after exact-head CI for independent review.

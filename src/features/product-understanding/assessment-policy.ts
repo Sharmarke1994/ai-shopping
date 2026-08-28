@@ -114,11 +114,21 @@ function moneyAssessment(options: {
       observationIds: observed.observationIds,
     };
   }
-  if (observed.amountMinor <= value.targetMinor) {
+  const targetDifference = observed.amountMinor - value.targetMinor;
+  if (targetDifference === 0) {
     return {
       status: "meets",
-      relation: "within_target",
-      explanation: `${formatMoney(observed.amountMinor, observed.currency)} is within the ${formatMoney(value.targetMinor, value.currency)} target.`,
+      relation: "target_exact",
+      explanation: `${formatMoney(observed.amountMinor, observed.currency)} matches the ${formatMoney(value.targetMinor, value.currency)} target.`,
+      method: "deterministic",
+      observationIds: observed.observationIds,
+    };
+  }
+  if (targetDifference < 0) {
+    return {
+      status: "uncertain",
+      relation: `target_distance_minor:${targetDifference}`,
+      explanation: `${formatMoney(observed.amountMinor, observed.currency)} is ${formatMoney(Math.abs(targetDifference), observed.currency)} below the ${formatMoney(value.targetMinor, value.currency)} target; being cheaper is not being treated as an automatic target match.`,
       method: "deterministic",
       observationIds: observed.observationIds,
     };
@@ -137,7 +147,8 @@ function moneyAssessment(options: {
             if (
               observation.support !== "supported" ||
               source.sourceRole === "visual" ||
-              source.sourceRole === "listing"
+              source.sourceRole === "listing" ||
+              source.sourceRole === "other"
             ) {
               return false;
             }
@@ -176,30 +187,108 @@ function moneyAssessment(options: {
   };
 }
 
+function booleanObservationAddressesCriterion(
+  item: BriefItemV1,
+  observation: ProductObservationV1,
+) {
+  if (observation.value.kind !== "boolean") return false;
+  const criterionText = normalized(
+    `${item.conceptLabel} ${item.conceptDefinition}`,
+  );
+  const property = normalized(observation.propertyLabel);
+  if (/battery|runtime|charge life/.test(criterionText)) {
+    return /battery|runtime|charge life/.test(property);
+  }
+  if (
+    /comfort|ergonom|long session|long work|personal fit/.test(criterionText)
+  ) {
+    return /comfort|palm|wrist|support|ergonom|shape|profile/.test(property);
+  }
+  if (/wireless|connect/.test(criterionText)) {
+    return /wireless|wired|connect/.test(property);
+  }
+  const criterionTokens = new Set(
+    criterionText.split(/[^a-z0-9]+/).filter((token) => token.length >= 4),
+  );
+  return [...criterionTokens].some((token) => property.includes(token));
+}
+
 function explicitBooleanAssessment(options: {
   item: BriefItemV1;
   observations: readonly ObservationWithSource[];
 }) {
   if (options.item.semanticValue.kind !== "boolean") return null;
-  const isBattery = conceptMatches(options.item, /battery|runtime|charge life/);
   const isComfort = conceptMatches(
     options.item,
     /comfort|ergonom|long session|long work/,
   );
   const eligible = options.observations.filter(({ observation }) => {
     if (observation.value.kind !== "boolean") return false;
-    const property = normalized(observation.propertyLabel);
-    if (isBattery && !/battery|runtime|charge life/.test(property))
-      return false;
-    if (isComfort && !/comfort|palm|wrist|support/.test(property)) return false;
-    return true;
+    return booleanObservationAddressesCriterion(options.item, observation);
   });
-  const supported = eligible.find(
+  const supported = eligible.filter(
     ({ observation }) => observation.support === "supported",
   );
-  if (supported?.observation.value.kind !== "boolean") return null;
-  const matches =
-    supported.observation.value.value === options.item.semanticValue.value;
+  if (supported.length === 0) return null;
+  const values = new Set(
+    supported.map(({ observation }) =>
+      observation.value.kind === "boolean" ? observation.value.value : null,
+    ),
+  );
+  if (values.size > 1) {
+    return {
+      status: "uncertain" as const,
+      relation: "conflicting_supported_evidence",
+      explanation:
+        "Admissible supplied sources disagree on this boolean; the conflict is left unresolved.",
+      method: "deterministic" as const,
+      observationIds: supported.map(({ observation }) => observation.id),
+    };
+  }
+  const matches = [...values][0] === options.item.semanticValue.value;
+  const hasVisual = supported.some(
+    ({ source, observation }) =>
+      source.sourceRole === "visual" ||
+      source.sourceKind === "listing_image" ||
+      observation.derivation === "model_visual",
+  );
+  const hasWeakSource = supported.some(
+    ({ source }) => source.sourceRole === "other",
+  );
+  const hasStrongNonVisualSource = supported.some(
+    ({ source, observation }) =>
+      source.sourceRole !== "other" &&
+      source.sourceRole !== "visual" &&
+      source.sourceKind !== "listing_image" &&
+      observation.derivation !== "model_visual",
+  );
+  if (
+    hasVisual &&
+    options.item.strength === "hard" &&
+    !hasStrongNonVisualSource
+  ) {
+    return {
+      status: "uncertain" as const,
+      relation: matches
+        ? "visual_support_not_admissible_for_hard_requirement"
+        : "visual_conflict_not_admissible",
+      explanation: matches
+        ? "The image is consistent with this requirement, but visual evidence alone cannot establish a hard hidden specification."
+        : "The image suggests a possible mismatch, but visual evidence alone cannot exclude this candidate.",
+      method: "deterministic" as const,
+      observationIds: supported.map(({ observation }) => observation.id),
+    };
+  }
+  if (hasWeakSource && !hasStrongNonVisualSource) {
+    return {
+      status: "uncertain" as const,
+      relation: "weak_boolean_evidence",
+      explanation:
+        "The supplied source is not specific enough to establish this boolean criterion.",
+      method: "deterministic" as const,
+      observationIds: supported.map(({ observation }) => observation.id),
+    };
+  }
   if (isComfort) {
     return {
       status: "uncertain" as const,
@@ -207,15 +296,23 @@ function explicitBooleanAssessment(options: {
       explanation:
         "The source reports an ergonomic or support feature, but personal comfort over a full workday remains uncertain.",
       method: "deterministic" as const,
-      observationIds: [supported.observation.id],
+      observationIds: supported.map(({ observation }) => observation.id),
     };
   }
   return {
-    status: matches ? ("meets" as const) : ("conflicts" as const),
-    relation: matches ? "direct_match" : "direct_contradiction",
-    explanation: supported.observation.claim,
+    status: matches
+      ? ("meets" as const)
+      : options.item.strength === "hard"
+        ? ("conflicts" as const)
+        : ("conflicts" as const),
+    relation: matches
+      ? "direct_match"
+      : hasVisual
+        ? "visual_preference_mismatch"
+        : "direct_contradiction",
+    explanation: supported[0]!.observation.claim,
     method: "deterministic" as const,
-    observationIds: [supported.observation.id],
+    observationIds: supported.map(({ observation }) => observation.id),
   };
 }
 
@@ -228,6 +325,13 @@ function hasAdmissibleHardConflict(options: {
   return options.proposal.observations.some(({ observation, source }) => {
     if (observation.support !== "supported") return false;
     if (source.sourceRole === "visual") return false;
+    if (source.sourceRole === "other") return false;
+    if (
+      observation.value.kind === "boolean" &&
+      !booleanObservationAddressesCriterion(options.item, observation)
+    ) {
+      return false;
+    }
     return (
       observation.value.kind === "boolean" ||
       observation.value.kind === "money" ||
@@ -243,6 +347,11 @@ function proposalHasRelevantEvidence(options: {
 }) {
   if (options.proposal.status === "uncertain") return true;
   if (options.proposal.observations.length === 0) return false;
+  if (options.item.semanticValue.kind === "boolean") {
+    return options.proposal.observations.some(({ observation }) =>
+      booleanObservationAddressesCriterion(options.item, observation),
+    );
+  }
   const battery = conceptMatches(options.item, /battery|runtime|charge life/);
   const comfort = conceptMatches(
     options.item,
@@ -348,6 +457,7 @@ export function guardCriterionAssessment(options: {
     };
   }
   if (
+    options.item.strength === "hard" &&
     options.proposal.status === "conflicts" &&
     options.proposal.observations.some(
       ({ source }) => source.sourceRole === "visual",
