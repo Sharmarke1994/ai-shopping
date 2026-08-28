@@ -15,9 +15,11 @@ and comparison are meaningfully better than beginning with Google.
   accepted V0-06 `d32fbd7ca46d15dc645dacf20617e9c81ca36ac0`.
 - Latest product implementation checkpoint:
   `2ae37555efbd580661dfe2e4d0873cf967b37510`. It implements the frozen V0-07
-  evidence/assessment/decision-support slice in stacked draft PR #11 and awaits
-  exact-head CI and independent review. V0-06 remains draft PR #10 and is not
-  merged.
+  evidence/assessment/decision-support slice in stacked draft PR #11. GitHub
+  run `33131516902` passed quality, pinned PostgreSQL 17.6 persistence and
+  browser-smoke on PR head `fee2ab1657b95537c42203ba06a34d65a6aaf27c`.
+  The final ledger-only handoff head still requires its own exact-head checks.
+  V0-06 remains draft PR #10 and is not merged.
 - Original V0-05 checkout and draft PR #9 remain separate, unmodified, unmerged,
   and formally unaccepted. Its last instructed checkpoint is `9c33018`; the
   latest Terra release gate completed 14/21 on 24 August 2026. All seven failed
@@ -231,8 +233,8 @@ unmerged; no later layer has started.
 
 ## Next validated checkpoints
 
-1. Obtain exact-head quality/persistence/browser CI on stacked draft PR #11 and
-   stop for independent review.
+1. Obtain exact-head quality/persistence/browser CI on the final docs-only
+   handoff head of stacked draft PR #11, then stop for independent review.
 2. If review finds a material issue, make only a bounded V0-07 correction and
    rerun the affected plus full gates. Do not weaken unknown/evidence boundaries.
 3. After acceptance only: bare reject/undo, kept task-local to the acted-on
@@ -288,8 +290,10 @@ unmerged; no later layer has started.
   comparison table and partial-research state were inspected visually.
 - Production dependency audit: no known vulnerabilities.
 - `git diff --check` and changed-value secret scan: pass.
-- Exact-head GitHub quality, PostgreSQL 17.6 persistence and browser-smoke are
-  pending the stacked draft PR and remain required before review handoff.
+- GitHub Quality run `33131516902` on exact PR head
+  `fee2ab1657b95537c42203ba06a34d65a6aaf27c`: quality, pinned PostgreSQL 17.6
+  persistence and browser-smoke all pass. Any later ledger-only handoff head
+  still requires its own exact-head green checks before review.
 
 ## Exact resume instructions
 
