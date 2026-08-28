@@ -174,12 +174,8 @@
           "tableFrom": "candidate_listings",
           "tableTo": "shopping_tasks",
           "schemaTo": "shopping_private",
-          "columnsFrom": [
-            "task_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["task_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -188,14 +184,8 @@
           "tableFrom": "candidate_listings",
           "tableTo": "search_runs",
           "schemaTo": "shopping_private",
-          "columnsFrom": [
-            "task_id",
-            "run_id"
-          ],
-          "columnsTo": [
-            "task_id",
-            "id"
-          ],
+          "columnsFrom": ["task_id", "run_id"],
+          "columnsTo": ["task_id", "id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -211,13 +201,7 @@
             "provider",
             "surface"
           ],
-          "columnsTo": [
-            "task_id",
-            "run_id",
-            "id",
-            "provider",
-            "surface"
-          ],
+          "columnsTo": ["task_id", "run_id", "id", "provider", "surface"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -232,12 +216,7 @@
             "query_id",
             "query_execution_id"
           ],
-          "columnsTo": [
-            "task_id",
-            "run_id",
-            "query_id",
-            "id"
-          ],
+          "columnsTo": ["task_id", "run_id", "query_id", "id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -247,19 +226,12 @@
         "candidate_listings_task_id_id_unique": {
           "name": "candidate_listings_task_id_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "task_id",
-            "id"
-          ]
+          "columns": ["task_id", "id"]
         },
         "candidate_listings_task_run_id_unique": {
           "name": "candidate_listings_task_run_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "task_id",
-            "run_id",
-            "id"
-          ]
+          "columns": ["task_id", "run_id", "id"]
         }
       },
       "policies": {},
@@ -369,12 +341,8 @@
           "tableFrom": "concept_definitions",
           "tableTo": "shopping_tasks",
           "schemaTo": "shopping_private",
-          "columnsFrom": [
-            "task_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["task_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -384,10 +352,7 @@
         "concept_definitions_task_id_id_unique": {
           "name": "concept_definitions_task_id_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "task_id",
-            "id"
-          ]
+          "columns": ["task_id", "id"]
         }
       },
       "policies": {},
@@ -561,14 +526,8 @@
           "tableFrom": "context_acquisition_attempts",
           "tableTo": "task_inputs",
           "schemaTo": "shopping_private",
-          "columnsFrom": [
-            "task_id",
-            "source_task_input_id"
-          ],
-          "columnsTo": [
-            "task_id",
-            "id"
-          ],
+          "columnsFrom": ["task_id", "source_task_input_id"],
+          "columnsTo": ["task_id", "id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -577,14 +536,8 @@
           "tableFrom": "context_acquisition_attempts",
           "tableTo": "state_change_applications",
           "schemaTo": "shopping_private",
-          "columnsFrom": [
-            "task_id",
-            "state_change_application_id"
-          ],
-          "columnsTo": [
-            "task_id",
-            "id"
-          ],
+          "columnsFrom": ["task_id", "state_change_application_id"],
+          "columnsTo": ["task_id", "id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -593,14 +546,8 @@
           "tableFrom": "context_acquisition_attempts",
           "tableTo": "context_actions",
           "schemaTo": "shopping_private",
-          "columnsFrom": [
-            "task_id",
-            "context_action_id"
-          ],
-          "columnsTo": [
-            "task_id",
-            "id"
-          ],
+          "columnsFrom": ["task_id", "context_action_id"],
+          "columnsTo": ["task_id", "id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -610,11 +557,7 @@
         "context_acquisition_attempts_run_stage_ordinal_unique": {
           "name": "context_acquisition_attempts_run_stage_ordinal_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "orchestration_run_id",
-            "stage",
-            "attempt_ordinal"
-          ]
+          "columns": ["orchestration_run_id", "stage", "attempt_ordinal"]
         }
       },
       "policies": {},
@@ -694,14 +637,8 @@
           "tableFrom": "context_action_answers",
           "tableTo": "context_actions",
           "schemaTo": "shopping_private",
-          "columnsFrom": [
-            "task_id",
-            "context_action_id"
-          ],
-          "columnsTo": [
-            "task_id",
-            "id"
-          ],
+          "columnsFrom": ["task_id", "context_action_id"],
+          "columnsTo": ["task_id", "id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -710,14 +647,8 @@
           "tableFrom": "context_action_answers",
           "tableTo": "task_inputs",
           "schemaTo": "shopping_private",
-          "columnsFrom": [
-            "task_id",
-            "answer_task_input_id"
-          ],
-          "columnsTo": [
-            "task_id",
-            "id"
-          ],
+          "columnsFrom": ["task_id", "answer_task_input_id"],
+          "columnsTo": ["task_id", "id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -727,18 +658,12 @@
         "context_action_answers_task_action_unique": {
           "name": "context_action_answers_task_action_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "task_id",
-            "context_action_id"
-          ]
+          "columns": ["task_id", "context_action_id"]
         },
         "context_action_answers_task_input_unique": {
           "name": "context_action_answers_task_input_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "task_id",
-            "answer_task_input_id"
-          ]
+          "columns": ["task_id", "answer_task_input_id"]
         }
       },
       "policies": {},
@@ -867,12 +792,8 @@
           "tableFrom": "context_actions",
           "tableTo": "shopping_tasks",
           "schemaTo": "shopping_private",
-          "columnsFrom": [
-            "task_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["task_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -881,14 +802,8 @@
           "tableFrom": "context_actions",
           "tableTo": "state_change_applications",
           "schemaTo": "shopping_private",
-          "columnsFrom": [
-            "task_id",
-            "state_change_application_id"
-          ],
-          "columnsTo": [
-            "task_id",
-            "id"
-          ],
+          "columnsFrom": ["task_id", "state_change_application_id"],
+          "columnsTo": ["task_id", "id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -898,18 +813,12 @@
         "context_actions_task_id_id_unique": {
           "name": "context_actions_task_id_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "task_id",
-            "id"
-          ]
+          "columns": ["task_id", "id"]
         },
         "context_actions_task_application_unique": {
           "name": "context_actions_task_application_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "task_id",
-            "state_change_application_id"
-          ]
+          "columns": ["task_id", "state_change_application_id"]
         }
       },
       "policies": {},
@@ -984,14 +893,8 @@
           "tableFrom": "context_question_options",
           "tableTo": "context_actions",
           "schemaTo": "shopping_private",
-          "columnsFrom": [
-            "task_id",
-            "context_action_id"
-          ],
-          "columnsTo": [
-            "task_id",
-            "id"
-          ],
+          "columnsFrom": ["task_id", "context_action_id"],
+          "columnsTo": ["task_id", "id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -1001,19 +904,12 @@
         "context_question_options_task_id_id_unique": {
           "name": "context_question_options_task_id_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "task_id",
-            "id"
-          ]
+          "columns": ["task_id", "id"]
         },
         "context_question_options_action_ordinal_unique": {
           "name": "context_question_options_action_ordinal_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "task_id",
-            "context_action_id",
-            "ordinal"
-          ]
+          "columns": ["task_id", "context_action_id", "ordinal"]
         }
       },
       "policies": {},
@@ -1117,11 +1013,7 @@
       "compositePrimaryKeys": {
         "criterion_assessment_observations_pk": {
           "name": "criterion_assessment_observations_pk",
-          "columns": [
-            "task_id",
-            "assessment_id",
-            "observation_id"
-          ]
+          "columns": ["task_id", "assessment_id", "observation_id"]
         }
       },
       "uniqueConstraints": {},
@@ -1227,12 +1119,8 @@
           "tableFrom": "criterion_assessments",
           "tableTo": "shopping_tasks",
           "schemaTo": "shopping_private",
-          "columnsFrom": [
-            "task_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["task_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -1247,12 +1135,7 @@
             "candidate_run_id",
             "task_revision"
           ],
-          "columnsTo": [
-            "task_id",
-            "id",
-            "search_run_id",
-            "task_revision"
-          ],
+          "columnsTo": ["task_id", "id", "search_run_id", "task_revision"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -1266,11 +1149,7 @@
             "candidate_run_id",
             "candidate_listing_id"
           ],
-          "columnsTo": [
-            "task_id",
-            "run_id",
-            "id"
-          ],
+          "columnsTo": ["task_id", "run_id", "id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -1279,14 +1158,8 @@
           "tableFrom": "criterion_assessments",
           "tableTo": "decision_criteria",
           "schemaTo": "shopping_private",
-          "columnsFrom": [
-            "task_id",
-            "criterion_id"
-          ],
-          "columnsTo": [
-            "task_id",
-            "id"
-          ],
+          "columnsFrom": ["task_id", "criterion_id"],
+          "columnsTo": ["task_id", "id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -1296,10 +1169,7 @@
         "criterion_assessments_task_id_id_unique": {
           "name": "criterion_assessments_task_id_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "task_id",
-            "id"
-          ]
+          "columns": ["task_id", "id"]
         },
         "criterion_assessments_identity_unique": {
           "name": "criterion_assessments_identity_unique",
@@ -1421,12 +1291,8 @@
           "tableFrom": "criterion_sources",
           "tableTo": "shopping_tasks",
           "schemaTo": "shopping_private",
-          "columnsFrom": [
-            "task_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["task_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -1435,14 +1301,8 @@
           "tableFrom": "criterion_sources",
           "tableTo": "decision_criteria",
           "schemaTo": "shopping_private",
-          "columnsFrom": [
-            "task_id",
-            "criterion_id"
-          ],
-          "columnsTo": [
-            "task_id",
-            "id"
-          ],
+          "columnsFrom": ["task_id", "criterion_id"],
+          "columnsTo": ["task_id", "id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -1451,14 +1311,8 @@
           "tableFrom": "criterion_sources",
           "tableTo": "task_inputs",
           "schemaTo": "shopping_private",
-          "columnsFrom": [
-            "task_id",
-            "task_input_id"
-          ],
-          "columnsTo": [
-            "task_id",
-            "id"
-          ],
+          "columnsFrom": ["task_id", "task_input_id"],
+          "columnsTo": ["task_id", "id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -1467,16 +1321,8 @@
           "tableFrom": "criterion_sources",
           "tableTo": "user_messages",
           "schemaTo": "shopping_private",
-          "columnsFrom": [
-            "task_id",
-            "task_input_id",
-            "message_id"
-          ],
-          "columnsTo": [
-            "task_id",
-            "task_input_id",
-            "id"
-          ],
+          "columnsFrom": ["task_id", "task_input_id", "message_id"],
+          "columnsTo": ["task_id", "task_input_id", "id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -1486,19 +1332,12 @@
         "criterion_sources_task_id_id_unique": {
           "name": "criterion_sources_task_id_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "task_id",
-            "id"
-          ]
+          "columns": ["task_id", "id"]
         },
         "criterion_sources_role_input_unique": {
           "name": "criterion_sources_role_input_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "criterion_id",
-            "source_role",
-            "task_input_id"
-          ]
+          "columns": ["criterion_id", "source_role", "task_input_id"]
         }
       },
       "policies": {},
@@ -1652,12 +1491,8 @@
           "tableFrom": "decision_criteria",
           "tableTo": "shopping_tasks",
           "schemaTo": "shopping_private",
-          "columnsFrom": [
-            "task_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["task_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -1666,14 +1501,8 @@
           "tableFrom": "decision_criteria",
           "tableTo": "concept_definitions",
           "schemaTo": "shopping_private",
-          "columnsFrom": [
-            "task_id",
-            "concept_id"
-          ],
-          "columnsTo": [
-            "task_id",
-            "id"
-          ],
+          "columnsFrom": ["task_id", "concept_id"],
+          "columnsTo": ["task_id", "id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -1683,20 +1512,12 @@
         "decision_criteria_task_id_id_unique": {
           "name": "decision_criteria_task_id_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "task_id",
-            "id"
-          ]
+          "columns": ["task_id", "id"]
         },
         "decision_criteria_successor_identity_unique": {
           "name": "decision_criteria_successor_identity_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "task_id",
-            "lineage_id",
-            "concept_id",
-            "id"
-          ]
+          "columns": ["task_id", "lineage_id", "concept_id", "id"]
         }
       },
       "policies": {},
@@ -1880,16 +1701,8 @@
           "tableFrom": "evidence_acquisition_attempts",
           "tableTo": "evidence_research_runs",
           "schemaTo": "shopping_private",
-          "columnsFrom": [
-            "task_id",
-            "research_run_id",
-            "candidate_run_id"
-          ],
-          "columnsTo": [
-            "task_id",
-            "id",
-            "search_run_id"
-          ],
+          "columnsFrom": ["task_id", "research_run_id", "candidate_run_id"],
+          "columnsTo": ["task_id", "id", "search_run_id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -1903,11 +1716,7 @@
             "candidate_run_id",
             "candidate_listing_id"
           ],
-          "columnsTo": [
-            "task_id",
-            "run_id",
-            "id"
-          ],
+          "columnsTo": ["task_id", "run_id", "id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -1917,10 +1726,7 @@
         "evidence_acquisition_attempts_task_id_id_unique": {
           "name": "evidence_acquisition_attempts_task_id_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "task_id",
-            "id"
-          ]
+          "columns": ["task_id", "id"]
         },
         "evidence_acquisition_attempts_candidate_id_unique": {
           "name": "evidence_acquisition_attempts_candidate_id_unique",
@@ -2065,12 +1871,8 @@
           "tableFrom": "evidence_research_runs",
           "tableTo": "shopping_tasks",
           "schemaTo": "shopping_private",
-          "columnsFrom": [
-            "task_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["task_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -2079,14 +1881,8 @@
           "tableFrom": "evidence_research_runs",
           "tableTo": "search_runs",
           "schemaTo": "shopping_private",
-          "columnsFrom": [
-            "task_id",
-            "search_run_id"
-          ],
-          "columnsTo": [
-            "task_id",
-            "id"
-          ],
+          "columnsFrom": ["task_id", "search_run_id"],
+          "columnsTo": ["task_id", "id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -2096,29 +1892,17 @@
         "evidence_research_runs_task_id_id_unique": {
           "name": "evidence_research_runs_task_id_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "task_id",
-            "id"
-          ]
+          "columns": ["task_id", "id"]
         },
         "evidence_research_runs_candidate_scope_unique": {
           "name": "evidence_research_runs_candidate_scope_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "task_id",
-            "id",
-            "search_run_id"
-          ]
+          "columns": ["task_id", "id", "search_run_id"]
         },
         "evidence_research_runs_assessment_scope_unique": {
           "name": "evidence_research_runs_assessment_scope_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "task_id",
-            "id",
-            "search_run_id",
-            "task_revision"
-          ]
+          "columns": ["task_id", "id", "search_run_id", "task_revision"]
         },
         "evidence_research_runs_scope_unique": {
           "name": "evidence_research_runs_scope_unique",
@@ -2270,16 +2054,8 @@
           "tableFrom": "evidence_sources",
           "tableTo": "evidence_research_runs",
           "schemaTo": "shopping_private",
-          "columnsFrom": [
-            "task_id",
-            "research_run_id",
-            "candidate_run_id"
-          ],
-          "columnsTo": [
-            "task_id",
-            "id",
-            "search_run_id"
-          ],
+          "columnsFrom": ["task_id", "research_run_id", "candidate_run_id"],
+          "columnsTo": ["task_id", "id", "search_run_id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -2293,11 +2069,7 @@
             "candidate_run_id",
             "candidate_listing_id"
           ],
-          "columnsTo": [
-            "task_id",
-            "run_id",
-            "id"
-          ],
+          "columnsTo": ["task_id", "run_id", "id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -2329,10 +2101,7 @@
         "evidence_sources_task_id_id_unique": {
           "name": "evidence_sources_task_id_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "task_id",
-            "id"
-          ]
+          "columns": ["task_id", "id"]
         },
         "evidence_sources_candidate_id_unique": {
           "name": "evidence_sources_candidate_id_unique",
@@ -2451,12 +2220,8 @@
           "tableFrom": "founder_live_sessions",
           "tableTo": "shopping_tasks",
           "schemaTo": "shopping_private",
-          "columnsFrom": [
-            "task_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["task_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -2465,14 +2230,8 @@
           "tableFrom": "founder_live_sessions",
           "tableTo": "context_actions",
           "schemaTo": "shopping_private",
-          "columnsFrom": [
-            "task_id",
-            "current_context_action_id"
-          ],
-          "columnsTo": [
-            "task_id",
-            "id"
-          ],
+          "columnsFrom": ["task_id", "current_context_action_id"],
+          "columnsTo": ["task_id", "id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -2481,14 +2240,8 @@
           "tableFrom": "founder_live_sessions",
           "tableTo": "task_inputs",
           "schemaTo": "shopping_private",
-          "columnsFrom": [
-            "task_id",
-            "pending_task_input_id"
-          ],
-          "columnsTo": [
-            "task_id",
-            "id"
-          ],
+          "columnsFrom": ["task_id", "pending_task_input_id"],
+          "columnsTo": ["task_id", "id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -2498,9 +2251,7 @@
         "founder_live_sessions_task_unique": {
           "name": "founder_live_sessions_task_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "task_id"
-          ]
+          "columns": ["task_id"]
         }
       },
       "policies": {},
@@ -2660,14 +2411,8 @@
           "tableFrom": "product_observations",
           "tableTo": "concept_definitions",
           "schemaTo": "shopping_private",
-          "columnsFrom": [
-            "task_id",
-            "concept_id"
-          ],
-          "columnsTo": [
-            "task_id",
-            "id"
-          ],
+          "columnsFrom": ["task_id", "concept_id"],
+          "columnsTo": ["task_id", "id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -2677,10 +2422,7 @@
         "product_observations_task_id_id_unique": {
           "name": "product_observations_task_id_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "task_id",
-            "id"
-          ]
+          "columns": ["task_id", "id"]
         },
         "product_observations_candidate_id_unique": {
           "name": "product_observations_candidate_id_unique",
@@ -2779,14 +2521,8 @@
           "tableFrom": "saved_candidate_listings",
           "tableTo": "candidate_listings",
           "schemaTo": "shopping_private",
-          "columnsFrom": [
-            "task_id",
-            "candidate_listing_id"
-          ],
-          "columnsTo": [
-            "task_id",
-            "id"
-          ],
+          "columnsFrom": ["task_id", "candidate_listing_id"],
+          "columnsTo": ["task_id", "id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -2794,10 +2530,7 @@
       "compositePrimaryKeys": {
         "saved_candidate_listings_pk": {
           "name": "saved_candidate_listings_pk",
-          "columns": [
-            "task_id",
-            "candidate_listing_id"
-          ]
+          "columns": ["task_id", "candidate_listing_id"]
         }
       },
       "uniqueConstraints": {},
@@ -2867,14 +2600,8 @@
           "tableFrom": "search_hypotheses",
           "tableTo": "search_runs",
           "schemaTo": "shopping_private",
-          "columnsFrom": [
-            "task_id",
-            "run_id"
-          ],
-          "columnsTo": [
-            "task_id",
-            "id"
-          ],
+          "columnsFrom": ["task_id", "run_id"],
+          "columnsTo": ["task_id", "id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -2884,28 +2611,17 @@
         "search_hypotheses_task_id_id_unique": {
           "name": "search_hypotheses_task_id_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "task_id",
-            "id"
-          ]
+          "columns": ["task_id", "id"]
         },
         "search_hypotheses_task_run_id_unique": {
           "name": "search_hypotheses_task_run_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "task_id",
-            "run_id",
-            "id"
-          ]
+          "columns": ["task_id", "run_id", "id"]
         },
         "search_hypotheses_run_ordinal_unique": {
           "name": "search_hypotheses_run_ordinal_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "task_id",
-            "run_id",
-            "ordinal"
-          ]
+          "columns": ["task_id", "run_id", "ordinal"]
         }
       },
       "policies": {},
@@ -2967,16 +2683,8 @@
           "tableFrom": "search_hypothesis_basis_criteria",
           "tableTo": "search_hypotheses",
           "schemaTo": "shopping_private",
-          "columnsFrom": [
-            "task_id",
-            "run_id",
-            "hypothesis_id"
-          ],
-          "columnsTo": [
-            "task_id",
-            "run_id",
-            "id"
-          ],
+          "columnsFrom": ["task_id", "run_id", "hypothesis_id"],
+          "columnsTo": ["task_id", "run_id", "id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -2985,14 +2693,8 @@
           "tableFrom": "search_hypothesis_basis_criteria",
           "tableTo": "decision_criteria",
           "schemaTo": "shopping_private",
-          "columnsFrom": [
-            "task_id",
-            "criterion_id"
-          ],
-          "columnsTo": [
-            "task_id",
-            "id"
-          ],
+          "columnsFrom": ["task_id", "criterion_id"],
+          "columnsTo": ["task_id", "id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -3000,24 +2702,14 @@
       "compositePrimaryKeys": {
         "search_hypothesis_basis_criteria_pk": {
           "name": "search_hypothesis_basis_criteria_pk",
-          "columns": [
-            "task_id",
-            "run_id",
-            "hypothesis_id",
-            "criterion_id"
-          ]
+          "columns": ["task_id", "run_id", "hypothesis_id", "criterion_id"]
         }
       },
       "uniqueConstraints": {
         "search_hypothesis_basis_criteria_ordinal_unique": {
           "name": "search_hypothesis_basis_criteria_ordinal_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "task_id",
-            "run_id",
-            "hypothesis_id",
-            "ordinal"
-          ]
+          "columns": ["task_id", "run_id", "hypothesis_id", "ordinal"]
         }
       },
       "policies": {},
@@ -3109,16 +2801,8 @@
           "tableFrom": "search_queries",
           "tableTo": "search_runs",
           "schemaTo": "shopping_private",
-          "columnsFrom": [
-            "task_id",
-            "run_id",
-            "provider"
-          ],
-          "columnsTo": [
-            "task_id",
-            "id",
-            "provider"
-          ],
+          "columnsFrom": ["task_id", "run_id", "provider"],
+          "columnsTo": ["task_id", "id", "provider"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -3127,16 +2811,8 @@
           "tableFrom": "search_queries",
           "tableTo": "search_hypotheses",
           "schemaTo": "shopping_private",
-          "columnsFrom": [
-            "task_id",
-            "run_id",
-            "hypothesis_id"
-          ],
-          "columnsTo": [
-            "task_id",
-            "run_id",
-            "id"
-          ],
+          "columnsFrom": ["task_id", "run_id", "hypothesis_id"],
+          "columnsTo": ["task_id", "run_id", "id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -3146,48 +2822,27 @@
         "search_queries_task_id_id_unique": {
           "name": "search_queries_task_id_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "task_id",
-            "id"
-          ]
+          "columns": ["task_id", "id"]
         },
         "search_queries_task_run_id_unique": {
           "name": "search_queries_task_run_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "task_id",
-            "run_id",
-            "id"
-          ]
+          "columns": ["task_id", "run_id", "id"]
         },
         "search_queries_exact_provider_surface_unique": {
           "name": "search_queries_exact_provider_surface_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "task_id",
-            "run_id",
-            "id",
-            "provider",
-            "surface"
-          ]
+          "columns": ["task_id", "run_id", "id", "provider", "surface"]
         },
         "search_queries_run_ordinal_unique": {
           "name": "search_queries_run_ordinal_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "task_id",
-            "run_id",
-            "ordinal"
-          ]
+          "columns": ["task_id", "run_id", "ordinal"]
         },
         "search_queries_hypothesis_unique": {
           "name": "search_queries_hypothesis_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "task_id",
-            "run_id",
-            "hypothesis_id"
-          ]
+          "columns": ["task_id", "run_id", "hypothesis_id"]
         }
       },
       "policies": {},
@@ -3305,14 +2960,8 @@
           "tableFrom": "search_query_executions",
           "tableTo": "search_runs",
           "schemaTo": "shopping_private",
-          "columnsFrom": [
-            "task_id",
-            "run_id"
-          ],
-          "columnsTo": [
-            "task_id",
-            "id"
-          ],
+          "columnsFrom": ["task_id", "run_id"],
+          "columnsTo": ["task_id", "id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -3321,16 +2970,8 @@
           "tableFrom": "search_query_executions",
           "tableTo": "search_queries",
           "schemaTo": "shopping_private",
-          "columnsFrom": [
-            "task_id",
-            "run_id",
-            "query_id"
-          ],
-          "columnsTo": [
-            "task_id",
-            "run_id",
-            "id"
-          ],
+          "columnsFrom": ["task_id", "run_id", "query_id"],
+          "columnsTo": ["task_id", "run_id", "id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -3340,29 +2981,17 @@
         "search_query_executions_task_id_id_unique": {
           "name": "search_query_executions_task_id_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "task_id",
-            "id"
-          ]
+          "columns": ["task_id", "id"]
         },
         "search_query_executions_query_unique": {
           "name": "search_query_executions_query_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "task_id",
-            "run_id",
-            "query_id"
-          ]
+          "columns": ["task_id", "run_id", "query_id"]
         },
         "search_query_executions_exact_query_id_unique": {
           "name": "search_query_executions_exact_query_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "task_id",
-            "run_id",
-            "query_id",
-            "id"
-          ]
+          "columns": ["task_id", "run_id", "query_id", "id"]
         }
       },
       "policies": {},
@@ -3494,12 +3123,8 @@
           "tableFrom": "search_runs",
           "tableTo": "shopping_tasks",
           "schemaTo": "shopping_private",
-          "columnsFrom": [
-            "task_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["task_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -3508,14 +3133,8 @@
           "tableFrom": "search_runs",
           "tableTo": "context_actions",
           "schemaTo": "shopping_private",
-          "columnsFrom": [
-            "task_id",
-            "context_action_id"
-          ],
-          "columnsTo": [
-            "task_id",
-            "id"
-          ],
+          "columnsFrom": ["task_id", "context_action_id"],
+          "columnsTo": ["task_id", "id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -3525,27 +3144,17 @@
         "search_runs_task_id_id_unique": {
           "name": "search_runs_task_id_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "task_id",
-            "id"
-          ]
+          "columns": ["task_id", "id"]
         },
         "search_runs_task_id_id_provider_unique": {
           "name": "search_runs_task_id_id_provider_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "task_id",
-            "id",
-            "provider"
-          ]
+          "columns": ["task_id", "id", "provider"]
         },
         "search_runs_task_context_action_unique": {
           "name": "search_runs_task_context_action_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "task_id",
-            "context_action_id"
-          ]
+          "columns": ["task_id", "context_action_id"]
         }
       },
       "policies": {},
@@ -3626,16 +3235,8 @@
           "tableFrom": "shopping_task_subjects",
           "tableTo": "user_messages",
           "schemaTo": "shopping_private",
-          "columnsFrom": [
-            "task_id",
-            "task_input_id",
-            "user_message_id"
-          ],
-          "columnsTo": [
-            "task_id",
-            "task_input_id",
-            "id"
-          ],
+          "columnsFrom": ["task_id", "task_input_id", "user_message_id"],
+          "columnsTo": ["task_id", "task_input_id", "id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -3847,12 +3448,8 @@
           "tableFrom": "state_change_applications",
           "tableTo": "shopping_tasks",
           "schemaTo": "shopping_private",
-          "columnsFrom": [
-            "task_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["task_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -3861,14 +3458,8 @@
           "tableFrom": "state_change_applications",
           "tableTo": "task_inputs",
           "schemaTo": "shopping_private",
-          "columnsFrom": [
-            "task_id",
-            "source_task_input_id"
-          ],
-          "columnsTo": [
-            "task_id",
-            "id"
-          ],
+          "columnsFrom": ["task_id", "source_task_input_id"],
+          "columnsTo": ["task_id", "id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -3878,18 +3469,12 @@
         "state_change_applications_task_id_id_unique": {
           "name": "state_change_applications_task_id_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "task_id",
-            "id"
-          ]
+          "columns": ["task_id", "id"]
         },
         "state_change_applications_task_source_unique": {
           "name": "state_change_applications_task_source_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "task_id",
-            "source_task_input_id"
-          ]
+          "columns": ["task_id", "source_task_input_id"]
         }
       },
       "policies": {},
@@ -4007,12 +3592,8 @@
           "tableFrom": "task_inputs",
           "tableTo": "shopping_tasks",
           "schemaTo": "shopping_private",
-          "columnsFrom": [
-            "task_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["task_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -4022,18 +3603,12 @@
         "task_inputs_task_id_id_unique": {
           "name": "task_inputs_task_id_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "task_id",
-            "id"
-          ]
+          "columns": ["task_id", "id"]
         },
         "task_inputs_task_client_action_unique": {
           "name": "task_inputs_task_client_action_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "task_id",
-            "client_action_id"
-          ]
+          "columns": ["task_id", "client_action_id"]
         }
       },
       "policies": {},
@@ -4123,12 +3698,8 @@
           "tableFrom": "user_messages",
           "tableTo": "shopping_tasks",
           "schemaTo": "shopping_private",
-          "columnsFrom": [
-            "task_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["task_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -4137,14 +3708,8 @@
           "tableFrom": "user_messages",
           "tableTo": "task_inputs",
           "schemaTo": "shopping_private",
-          "columnsFrom": [
-            "task_id",
-            "task_input_id"
-          ],
-          "columnsTo": [
-            "task_id",
-            "id"
-          ],
+          "columnsFrom": ["task_id", "task_input_id"],
+          "columnsTo": ["task_id", "id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -4154,27 +3719,17 @@
         "user_messages_task_id_id_unique": {
           "name": "user_messages_task_id_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "task_id",
-            "id"
-          ]
+          "columns": ["task_id", "id"]
         },
         "user_messages_task_input_unique": {
           "name": "user_messages_task_input_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "task_id",
-            "task_input_id"
-          ]
+          "columns": ["task_id", "task_input_id"]
         },
         "user_messages_exact_source_unique": {
           "name": "user_messages_exact_source_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "task_id",
-            "task_input_id",
-            "id"
-          ]
+          "columns": ["task_id", "task_input_id", "id"]
         }
       },
       "policies": {},

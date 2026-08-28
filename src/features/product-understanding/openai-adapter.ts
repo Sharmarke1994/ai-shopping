@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+import OpenAI, { APIConnectionTimeoutError, APIUserAbortError } from "openai";
 import { zodTextFormat } from "openai/helpers/zod";
 import type { Response } from "openai/resources/responses/responses";
 import { parseOpenAIResponse } from "@/features/context-acquisition/openai-adapter";
@@ -16,12 +16,19 @@ import {
   productUnderstandingProviderWireV1Schema,
 } from "./provider-wire";
 
+export type OpenAIProductUnderstandingConfig = Readonly<{
+  model: string;
+  reasoningEffort: "none" | "minimal" | "low" | "medium" | "high";
+  timeoutMs: number;
+  maxOutputTokens: number;
+}>;
+
 export const V0_07_OPENAI_DEFAULT_CONFIG = {
   model: "gpt-5.6-terra",
   reasoningEffort: "low",
   timeoutMs: 45_000,
   maxOutputTokens: 6_000,
-} as const;
+} as const satisfies OpenAIProductUnderstandingConfig;
 
 type ResponseLike = Pick<
   Response,
@@ -31,7 +38,7 @@ type ResponseLike = Pick<
 export function createOpenAIProductUnderstandingModel(options: {
   apiKey: string;
   client?: OpenAI;
-  config?: Partial<typeof V0_07_OPENAI_DEFAULT_CONFIG>;
+  config?: Partial<OpenAIProductUnderstandingConfig>;
 }): ProductUnderstandingModel {
   const client =
     options.client ?? new OpenAI({ apiKey: options.apiKey, maxRetries: 0 });
@@ -103,8 +110,10 @@ export function createOpenAIProductUnderstandingModel(options: {
         });
       } catch (error) {
         const timedOut =
-          error instanceof Error &&
-          ["AbortError", "TimeoutError"].includes(error.name);
+          error instanceof APIUserAbortError ||
+          error instanceof APIConnectionTimeoutError ||
+          (error instanceof Error &&
+            ["AbortError", "TimeoutError"].includes(error.name));
         return {
           status: timedOut
             ? ("timed_out" as const)

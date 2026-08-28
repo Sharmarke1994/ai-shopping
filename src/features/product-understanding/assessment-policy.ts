@@ -75,6 +75,7 @@ function moneyAssessment(options: {
   item: BriefItemV1;
   listing: PersistedCandidateListing;
   observations: readonly ObservationWithSource[];
+  proposal: ProposedCriterionAssessment | null;
 }): GuardedAssessment | null {
   const observed = observedMoney(options.listing, options.observations);
   const value = options.item.semanticValue;
@@ -123,16 +124,51 @@ function moneyAssessment(options: {
     };
   }
   if (observed.amountMinor <= value.stretchCeilingMinor) {
+    const conditionTerms = normalized(value.condition)
+      .split(/[^a-z0-9]+/)
+      .filter(
+        (term) =>
+          term.length >= 4 &&
+          !["genuinely", "better", "because", "only", "with"].includes(term),
+      );
+    const conditionEvidence =
+      options.proposal?.status === "meets"
+        ? options.proposal.observations.filter(({ observation, source }) => {
+            if (
+              observation.support !== "supported" ||
+              source.sourceRole === "visual" ||
+              source.sourceRole === "listing"
+            ) {
+              return false;
+            }
+            const evidenceText = normalized(
+              `${observation.propertyLabel} ${observation.claim}`,
+            );
+            return conditionTerms.some((term) => evidenceText.includes(term));
+          })
+        : [];
+    if (conditionEvidence.length > 0) {
+      return {
+        status: "meets",
+        relation: "conditional_stretch_supported",
+        explanation: `${formatMoney(observed.amountMinor, observed.currency)} is inside the stretch ceiling, and the cited evidence directly addresses the condition: ${value.condition}.`,
+        method: "guarded_model",
+        observationIds: [
+          ...observed.observationIds,
+          ...conditionEvidence.map(({ observation }) => observation.id),
+        ],
+      };
+    }
     return {
       status: "uncertain",
       relation: "inside_conditional_stretch",
-      explanation: `${formatMoney(observed.amountMinor, observed.currency)} is inside the conditional stretch range, but still needs evidence that it is ${value.condition}.`,
+      explanation: `${formatMoney(observed.amountMinor, observed.currency)} is inside the conditional stretch range, but still needs evidence for the stated condition: “${value.condition}”.`,
       method: "deterministic",
       observationIds: observed.observationIds,
     };
   }
   return {
-    status: options.item.strength === "hard" ? "conflicts" : "uncertain",
+    status: "conflicts",
     relation: "above_stretch_ceiling",
     explanation: `${formatMoney(observed.amountMinor, observed.currency)} is above the ${formatMoney(value.stretchCeilingMinor, value.currency)} stretch ceiling.`,
     method: "deterministic",
@@ -216,6 +252,10 @@ function proposalHasRelevantEvidence(options: {
     options.item,
     /brand|reputation|established/,
   );
+  const reviews = conceptMatches(
+    options.item,
+    /review|customer evidence|customer sentiment/,
+  );
   return options.proposal.observations.some(({ observation, source }) => {
     const property = normalized(observation.propertyLabel);
     if (battery) return /battery|runtime|charge life/.test(property);
@@ -234,6 +274,16 @@ function proposalHasRelevantEvidence(options: {
         "independent_review",
         "retailer_review_aggregate",
       ].includes(source.sourceRole);
+    }
+    if (reviews) {
+      return (
+        observation.value.kind === "rating_aggregate" &&
+        [
+          "retailer",
+          "retailer_review_aggregate",
+          "independent_review",
+        ].includes(source.sourceRole)
+      );
     }
     return true;
   });
@@ -267,6 +317,20 @@ export function guardCriterionAssessment(options: {
         "The available evidence does not directly establish this criterion.",
       method: "guarded_model",
       observationIds: options.proposal.observations.map(
+        ({ observation }) => observation.id,
+      ),
+    };
+  }
+  if (
+    conceptMatches(options.item, /comfort|long session|long workday/) &&
+    proposal.status === "meets"
+  ) {
+    return {
+      status: "uncertain",
+      relation: "personal_fit_unresolved",
+      explanation: `${proposal.explanation} Personal comfort over a full workday remains uncertain.`,
+      method: "guarded_model",
+      observationIds: proposal.observations.map(
         ({ observation }) => observation.id,
       ),
     };
@@ -338,7 +402,9 @@ export function orderCandidatesByAssessments(options: {
     const counts = {
       hardConflicts: 0,
       hardMeets: 0,
+      strongConflicts: 0,
       strongMeets: 0,
+      preferenceConflicts: 0,
       preferenceMeets: 0,
       unknowns: 0,
       targetDistance: 0,
@@ -354,6 +420,13 @@ export function orderCandidatesByAssessments(options: {
         else if (item.strength === "strong_preference") counts.strongMeets += 1;
         else counts.preferenceMeets += 1;
       }
+      if (assessment.status === "conflicts") {
+        if (item.strength === "strong_preference") {
+          counts.strongConflicts += 1;
+        } else if (item.strength === "preference") {
+          counts.preferenceConflicts += 1;
+        }
+      }
       if (assessment.status === "uncertain") counts.unknowns += 1;
       counts.targetDistance += targetDistance(assessment);
     }
@@ -365,7 +438,9 @@ export function orderCandidatesByAssessments(options: {
     return (
       l.hardConflicts - r.hardConflicts ||
       r.hardMeets - l.hardMeets ||
+      l.strongConflicts - r.strongConflicts ||
       r.strongMeets - l.strongMeets ||
+      l.preferenceConflicts - r.preferenceConflicts ||
       r.preferenceMeets - l.preferenceMeets ||
       l.unknowns - r.unknowns ||
       l.targetDistance - r.targetDistance ||

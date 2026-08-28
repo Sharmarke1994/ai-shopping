@@ -5,7 +5,7 @@ import {
   type TestDatabaseConnection,
 } from "./helpers";
 
-describe("shopping-state and context-acquisition migration shape", () => {
+describe("shopping architecture migration shape", () => {
   let connection: TestDatabaseConnection;
 
   beforeAll(() => {
@@ -35,9 +35,15 @@ describe("shopping-state and context-acquisition migration shape", () => {
       "context_action_answers",
       "context_actions",
       "context_question_options",
+      "criterion_assessment_observations",
+      "criterion_assessments",
       "criterion_sources",
       "decision_criteria",
+      "evidence_acquisition_attempts",
+      "evidence_research_runs",
+      "evidence_sources",
       "founder_live_sessions",
+      "product_observations",
       "saved_candidate_listings",
       "search_hypotheses",
       "search_hypothesis_basis_criteria",
@@ -65,7 +71,7 @@ describe("shopping-state and context-acquisition migration shape", () => {
       'select count(*)::integer as count from "drizzle"."migrations"',
     );
     const after = afterRows[0]?.count;
-    expect(before).toBe(14);
+    expect(before).toBe(15);
     expect(after).toBe(before);
   });
 
@@ -266,12 +272,12 @@ describe("shopping-state and context-acquisition migration shape", () => {
     expect(definitions).toContain("status = 'completed'::text");
   });
 
-  it("contains no premature product-identity, evidence, judgement, or reaction persistence", async () => {
+  it("contains no premature product identity, comparative judgement, or reaction persistence", async () => {
     const rows = await connection.client.unsafe<{ table_name: string }[]>(`
       select table_name
       from information_schema.tables
       where table_schema = 'shopping_private'
-        and table_name ~ '(product_identity|observation|evidence|assessment|judgement|reaction)'
+        and table_name ~ '(product_identity|judgement|reaction)'
     `);
     expect(rows).toEqual([]);
   });

@@ -53,6 +53,11 @@ export const resumeLiveSearchRequestSchema = z.strictObject({
   sessionId: liveSessionIdSchema,
 });
 
+export const researchLiveShoppingRequestSchema = z.strictObject({
+  operation: z.literal("research"),
+  sessionId: liveSessionIdSchema,
+});
+
 export const liveShoppingMutationSchema = z.discriminatedUnion("operation", [
   startLiveShoppingRequestSchema,
   answerLiveShoppingRequestSchema,
@@ -60,6 +65,7 @@ export const liveShoppingMutationSchema = z.discriminatedUnion("operation", [
   saveLiveListingRequestSchema,
   retryLiveContextRequestSchema,
   resumeLiveSearchRequestSchema,
+  researchLiveShoppingRequestSchema,
 ]);
 
 const liveBriefItemSchema = z.strictObject({
@@ -100,6 +106,66 @@ const liveSearchSchema = z.strictObject({
   listings: z.array(liveListingSchema),
 });
 
+const evidenceSourceLinkSchema = z.strictObject({
+  title: z.string().min(1).max(500),
+  url: z.url(),
+  role: z.enum([
+    "listing",
+    "retailer",
+    "manufacturer",
+    "independent_review",
+    "retailer_review_aggregate",
+    "visual",
+    "other",
+  ]),
+});
+
+const decisionSupportCandidateSchema = z.strictObject({
+  listing: liveListingSchema,
+  strongestSupported: z.boolean(),
+  whyItFits: z.array(z.string().min(1).max(500)).max(4),
+  watchouts: z.array(z.string().min(1).max(500)).max(3),
+  unknowns: z.array(z.string().min(1).max(500)).max(3),
+  evidenceSources: z.array(evidenceSourceLinkSchema).max(5),
+});
+
+const savedComparisonSchema = z.strictObject({
+  candidates: z.array(liveListingSchema).min(2).max(4),
+  rows: z.array(
+    z.strictObject({
+      criterionId: z.uuid(),
+      label: z.string().min(1).max(200),
+      cells: z.array(
+        z.strictObject({
+          candidateListingId: candidateListingIdSchema,
+          status: z.enum(["meets", "conflicts", "uncertain", "not_applicable"]),
+          explanation: z.string().min(1).max(500),
+          sources: z.array(
+            z.strictObject({
+              title: z.string().min(1).max(500),
+              url: z.url(),
+            }),
+          ),
+        }),
+      ),
+    }),
+  ),
+  judgement: z.string().min(1).max(1_500),
+});
+
+const liveDecisionSupportSchema = z.strictObject({
+  researchStatus: z.enum([
+    "not_started",
+    "researching",
+    "partial",
+    "failed",
+    "ready",
+  ]),
+  researchedCandidateCount: z.number().int().nonnegative(),
+  topOptions: z.array(decisionSupportCandidateSchema).max(5),
+  comparison: savedComparisonSchema.nullable(),
+});
+
 const actionBase = {
   notice: z.string().nullable(),
 };
@@ -110,6 +176,7 @@ export const liveShoppingViewSchema = z.strictObject({
   subject: z.string(),
   brief: z.array(liveBriefItemSchema),
   savedListings: z.array(liveListingSchema),
+  decisionSupport: liveDecisionSupportSchema.nullable(),
   action: z.discriminatedUnion("kind", [
     z.strictObject({
       ...actionBase,

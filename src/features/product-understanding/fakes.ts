@@ -9,6 +9,11 @@ import type { ProductUnderstandingInputV1 } from "./provider-wire";
 export class FakeEvidenceSearchProvider implements EvidenceSearchProvider {
   readonly provider = "fixture" as const;
   readonly calls: string[] = [];
+  readonly #failOnCalls: ReadonlySet<number>;
+
+  constructor(options?: { failOnCalls?: readonly number[] }) {
+    this.#failOnCalls = new Set(options?.failOnCalls ?? []);
+  }
 
   async search(input: {
     query: string;
@@ -16,6 +21,9 @@ export class FakeEvidenceSearchProvider implements EvidenceSearchProvider {
     merchant: string | null;
   }) {
     this.calls.push(input.query);
+    if (this.#failOnCalls.has(this.calls.length)) {
+      throw new Error("Fixture evidence-source failure");
+    }
     const experience = /review|comfort|ergonom|shape|profile/i.test(
       input.query,
     );

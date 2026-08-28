@@ -1,7 +1,10 @@
 import { projectShoppingBrief } from "@/domain/shopping-state/brief";
 import { loadCurrentShoppingState } from "@/features/shopping-state/persistence/state-loaders";
 import type { ShoppingDatabase } from "@/infrastructure/database/clients";
-import type { EvidenceSearchProvider } from "./evidence-search";
+import type {
+  EvidenceSearchProvider,
+  EvidenceSearchResponse,
+} from "./evidence-search";
 import type { ProductUnderstandingModel } from "./model-port";
 import { PRODUCT_UNDERSTANDING_PROMPT_VERSION } from "./prompts";
 import {
@@ -119,6 +122,7 @@ export async function executeOrResumeEvidenceResearch(options: {
   dependencies: EvidenceResearchDependencies;
   taskId: unknown;
   searchRunId: unknown;
+  savedCandidateListingIds?: readonly unknown[];
 }): Promise<EvidenceResearchSnapshot> {
   const prepared = await prepareEvidenceResearch({
     db: options.dependencies.db,
@@ -130,6 +134,9 @@ export async function executeOrResumeEvidenceResearch(options: {
     promptVersion:
       options.dependencies.modelIdentity.promptVersion ||
       PRODUCT_UNDERSTANDING_PROMPT_VERSION,
+    ...(options.savedCandidateListingIds === undefined
+      ? {}
+      : { savedCandidateListingIds: options.savedCandidateListingIds }),
   });
   if (prepared.run.status !== "running") return prepared;
   const leaseToken = await claimEvidenceResearch({
@@ -161,6 +168,7 @@ export async function executeOrResumeEvidenceResearch(options: {
       });
       const startedAt = new Date();
       unsafeToRelease = true;
+      let response: EvidenceSearchResponse;
       try {
         const candidateRun =
           await import("@/features/retrieval-spike/persistence/search-runs").then(
@@ -177,20 +185,10 @@ export async function executeOrResumeEvidenceResearch(options: {
         if (listing === undefined || attempt.query === null) {
           throw new Error("Planned evidence candidate is unavailable");
         }
-        const response = await options.dependencies.evidenceProvider.search({
+        response = await options.dependencies.evidenceProvider.search({
           query: attempt.query,
           candidateTitle: listing.title,
           merchant: listing.merchant,
-        });
-        await recordEvidenceSearchSuccess({
-          db: options.dependencies.db,
-          taskId: snapshot.run.taskId,
-          researchRunId: snapshot.run.id,
-          attemptId: attempt.id,
-          leaseToken,
-          response,
-          startedAt,
-          finishedAt: new Date(),
         });
       } catch {
         await recordEvidenceAttemptFailure({
@@ -203,7 +201,25 @@ export async function executeOrResumeEvidenceResearch(options: {
           startedAt,
           finishedAt: new Date(),
         });
+        unsafeToRelease = false;
+        snapshot =
+          (await loadEvidenceResearchRun({
+            db: options.dependencies.db,
+            taskId: snapshot.run.taskId,
+            researchRunId: snapshot.run.id,
+          })) ?? snapshot;
+        continue;
       }
+      await recordEvidenceSearchSuccess({
+        db: options.dependencies.db,
+        taskId: snapshot.run.taskId,
+        researchRunId: snapshot.run.id,
+        attemptId: attempt.id,
+        leaseToken,
+        response,
+        startedAt,
+        finishedAt: new Date(),
+      });
       unsafeToRelease = false;
       snapshot =
         (await loadEvidenceResearchRun({

@@ -164,15 +164,19 @@ function Brief({ view }: { view: LiveShoppingView }) {
 }
 
 type LiveListing = LiveShoppingView["savedListings"][number];
+type DecisionSupport = NonNullable<LiveShoppingView["decisionSupport"]>;
+type DecisionOption = DecisionSupport["topOptions"][number];
 
 function ProductCard({
   listing,
   busy,
   onToggleSaved,
+  decision,
 }: {
   listing: LiveListing;
   busy: boolean;
   onToggleSaved: (listing: LiveListing) => void;
+  decision?: DecisionOption;
 }) {
   const [imageFailed, setImageFailed] = useState(false);
   return (
@@ -200,6 +204,11 @@ function ProductCard({
           ) : null}
         </div>
         <h3>{listing.title}</h3>
+        {decision?.strongestSupported ? (
+          <div className={styles.strongestBadge}>
+            Strongest-supported so far
+          </div>
+        ) : null}
         <div className={styles.productFacts}>
           <strong>{listing.priceText ?? "Price not supplied"}</strong>
           {listing.deliveryText ? <span>{listing.deliveryText}</span> : null}
@@ -208,6 +217,60 @@ function ProductCard({
           ) : null}
         </div>
         <div className={styles.evidenceSummary}>
+          {decision !== undefined ? (
+            <div className={styles.decisionSummary}>
+              {decision.whyItFits.length > 0 ? (
+                <div>
+                  <strong>Why it fits</strong>
+                  <ul>
+                    {decision.whyItFits.map((entry) => (
+                      <li key={entry}>{entry}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+              {decision.watchouts.length > 0 ? (
+                <div className={styles.decisionWatchout}>
+                  <strong>Watchouts</strong>
+                  <ul>
+                    {decision.watchouts.map((entry) => (
+                      <li key={entry}>{entry}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+              {decision.unknowns.length > 0 ? (
+                <div className={styles.decisionUnknown}>
+                  <strong>Still unknown</strong>
+                  <ul>
+                    {decision.unknowns.map((entry) => (
+                      <li key={entry}>{entry}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+              {decision.evidenceSources.length > 0 ? (
+                <details className={styles.evidenceSources}>
+                  <summary>
+                    {decision.evidenceSources.length} attributable{" "}
+                    {decision.evidenceSources.length === 1
+                      ? "source"
+                      : "sources"}
+                  </summary>
+                  <ul>
+                    {decision.evidenceSources.map((source) => (
+                      <li key={source.url}>
+                        <a href={source.url} target="_blank" rel="noreferrer">
+                          {source.title}
+                        </a>
+                        <span>{source.role.replaceAll("_", " ")}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              ) : null}
+            </div>
+          ) : null}
           {listing.evidence.sourceFacts.length > 0 ? (
             <p>
               <strong>Retailer evidence</strong>
@@ -319,7 +382,7 @@ function SearchResults({
   const visibleListings = showAll
     ? search.listings
     : search.listings.slice(0, 12);
-  return (
+  const results = (
     <section className={styles.results}>
       <div className={styles.resultsIntro}>
         <div>
@@ -376,6 +439,197 @@ function SearchResults({
       ) : null}
     </section>
   );
+  const researched =
+    view.decisionSupport !== null &&
+    ["ready", "partial"].includes(view.decisionSupport.researchStatus) &&
+    view.decisionSupport.topOptions.length > 0;
+  if (!researched) return results;
+  return (
+    <details className={styles.rawResultsDisclosure}>
+      <summary>
+        <span>Browse all factual listings</span>
+        <small>
+          {search.listings.length} unranked product rows ·{" "}
+          {search.completedQueryCount} of {search.queryCount} searches complete
+        </small>
+      </summary>
+      {results}
+    </details>
+  );
+}
+
+function EvidenceDecisionSupport({
+  view,
+  busy,
+  onResearch,
+  onToggleSaved,
+}: {
+  view: LiveShoppingView;
+  busy: boolean;
+  onResearch: () => void;
+  onToggleSaved: (listing: LiveListing) => void;
+}) {
+  if (view.action.kind !== "search" || view.decisionSupport === null)
+    return null;
+  const support = view.decisionSupport;
+  if (support.researchStatus === "not_started") {
+    return (
+      <section className={styles.researchInvitation} aria-busy={busy}>
+        <div>
+          <p className={styles.eyebrow}>Go beyond the listing</p>
+          <h2>Check the strongest options against your brief</h2>
+          <p>
+            Consider will investigate a small promising set, preserve exact
+            sources, and leave anything unsupported as unknown.
+          </p>
+        </div>
+        {busy ? (
+          <div className={styles.researchProgress}>
+            <LoadingStory searchExpected />
+            <p>
+              Checking focused specifications, independent evidence and useful
+              product images. This may take a moment.
+            </p>
+          </div>
+        ) : (
+          <button className={styles.researchButton} onClick={onResearch}>
+            Investigate strongest options
+            <span aria-hidden="true">→</span>
+          </button>
+        )}
+      </section>
+    );
+  }
+  if (support.researchStatus === "researching") {
+    return (
+      <section className={styles.researchInvitation} aria-busy="true">
+        <p className={styles.eyebrow}>Research is safely resumable</p>
+        <h2>Checking the strongest options against your brief…</h2>
+        <LoadingStory searchExpected />
+      </section>
+    );
+  }
+  if (support.topOptions.length === 0) {
+    return (
+      <section className={styles.researchInvitation}>
+        <p className={styles.eyebrow}>Evidence check complete</p>
+        <h2>No option has enough current support to recommend yet</h2>
+        <p>
+          We kept partial sources and unknowns, but did not manufacture a winner
+          from weak evidence.
+        </p>
+      </section>
+    );
+  }
+  return (
+    <section
+      className={styles.decisionSection}
+      aria-labelledby="decision-support-heading"
+    >
+      <div className={styles.decisionIntro}>
+        <div>
+          <p className={styles.eyebrow}>
+            {support.researchStatus === "partial"
+              ? "Best-supported from partial research"
+              : "Best-supported options"}
+          </p>
+          <h2 id="decision-support-heading">
+            Which products are actually supported?
+          </h2>
+          <p>
+            {support.researchedCandidateCount} promising{" "}
+            {support.researchedCandidateCount === 1
+              ? "product was"
+              : "products were"}{" "}
+            checked criterion by criterion. These are ordered from current
+            assessments—not a hidden match score.
+          </p>
+        </div>
+      </div>
+      <div className={styles.topOptionGrid}>
+        {support.topOptions.map((option) => (
+          <ProductCard
+            key={"decision:" + option.listing.candidateListingId}
+            listing={option.listing}
+            decision={option}
+            busy={busy}
+            onToggleSaved={onToggleSaved}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function SavedComparison({ view }: { view: LiveShoppingView }) {
+  const comparison = view.decisionSupport?.comparison;
+  if (comparison === null || comparison === undefined) return null;
+  return (
+    <section
+      className={styles.comparisonSection}
+      aria-labelledby="saved-comparison-heading"
+    >
+      <div className={styles.comparisonIntro}>
+        <p className={styles.eyebrow}>Your saved comparison</p>
+        <h2 id="saved-comparison-heading">Trade-offs against today’s brief</h2>
+        <p>{comparison.judgement}</p>
+      </div>
+      <div className={styles.comparisonScroller}>
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">What matters</th>
+              {comparison.candidates.map((candidate) => (
+                <th scope="col" key={candidate.candidateListingId}>
+                  <span>{candidate.title}</span>
+                  <strong>{candidate.priceText ?? "Price unknown"}</strong>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {comparison.rows.map((row) => (
+              <tr key={row.criterionId}>
+                <th scope="row">{row.label}</th>
+                {row.cells.map((cell) => (
+                  <td key={cell.candidateListingId}>
+                    <span className={styles[cell.status]}>
+                      {cell.status === "meets"
+                        ? "Supported"
+                        : cell.status === "conflicts"
+                          ? "Conflict"
+                          : cell.status === "not_applicable"
+                            ? "Not applicable"
+                            : "Unknown"}
+                    </span>
+                    <p>{cell.explanation}</p>
+                    {cell.sources.length > 0 ? (
+                      <details>
+                        <summary>
+                          {cell.sources.length}{" "}
+                          {cell.sources.length === 1 ? "source" : "sources"}
+                        </summary>
+                        {cell.sources.map((source) => (
+                          <a
+                            key={source.url}
+                            href={source.url}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            {source.title}
+                          </a>
+                        ))}
+                      </details>
+                    ) : null}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
 }
 
 function SavedProducts({
@@ -387,7 +641,11 @@ function SavedProducts({
   busy: boolean;
   onToggleSaved: (listing: LiveListing) => void;
 }) {
-  if (view.savedListings.length === 0) return null;
+  if (
+    view.savedListings.length === 0 ||
+    view.decisionSupport?.comparison !== null
+  )
+    return null;
   return (
     <section className={styles.savedSection}>
       <div>
@@ -768,6 +1026,17 @@ export function LiveShopping() {
               </section>
             ) : null}
 
+            <EvidenceDecisionSupport
+              view={view}
+              busy={busy}
+              onResearch={() =>
+                void runMutation({
+                  operation: "research",
+                  sessionId: view.sessionId,
+                })
+              }
+              onToggleSaved={toggleSaved}
+            />
             <SearchResults
               view={view}
               busy={busy}
@@ -797,7 +1066,7 @@ export function LiveShopping() {
                     disabled={busy}
                   />
                   <button className={styles.primaryButton} disabled={busy}>
-                    Update and search again
+                    Update my priorities
                   </button>
                 </div>
                 <p>
@@ -811,6 +1080,7 @@ export function LiveShopping() {
               busy={busy}
               onToggleSaved={toggleSaved}
             />
+            <SavedComparison view={view} />
           </div>
           <Brief view={view} />
         </div>

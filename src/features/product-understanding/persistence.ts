@@ -27,6 +27,7 @@ import {
   evidenceResearchRuns,
   evidenceSources,
   productObservations,
+  savedCandidateListings,
   shoppingTasks,
 } from "@/infrastructure/database/schema";
 import {
@@ -653,10 +654,30 @@ export async function prepareEvidenceResearch(options: {
   modelProvider: "openai" | "fixture";
   model: string;
   promptVersion: string;
+  savedCandidateListingIds?: readonly unknown[];
   now?: Date;
 }): Promise<EvidenceResearchSnapshot> {
   const taskId = shoppingTaskIdSchema.parse(options.taskId);
   const searchRunId = searchRunIdSchema.parse(options.searchRunId);
+  const savedCandidateListingIds = [
+    ...new Set(
+      (options.savedCandidateListingIds ?? []).map((id) =>
+        candidateListingIdSchema.parse(id),
+      ),
+    ),
+  ].sort();
+  if (savedCandidateListingIds.length > 8) {
+    throw new EvidenceResearchAuthorityError(
+      "At most eight saved exact listings may be reassessed",
+    );
+  }
+  const policyVersion =
+    savedCandidateListingIds.length === 0
+      ? EVIDENCE_POLICY_VERSION
+      : `${EVIDENCE_POLICY_VERSION}:saved:${createHash("sha256")
+          .update(JSON.stringify(savedCandidateListingIds))
+          .digest("hex")
+          .slice(0, 16)}`;
   const now = z.date().parse(options.now ?? new Date());
   return options.db.transaction(async (tx) => {
     const [lockedTask] = await tx
@@ -687,7 +708,7 @@ export async function prepareEvidenceResearch(options: {
           eq(evidenceResearchRuns.taskId, taskId),
           eq(evidenceResearchRuns.searchRunId, searchRunId),
           eq(evidenceResearchRuns.taskRevision, brief.revision),
-          eq(evidenceResearchRuns.policyVersion, EVIDENCE_POLICY_VERSION),
+          eq(evidenceResearchRuns.policyVersion, policyVersion),
         ),
       )
       .limit(1);
@@ -700,7 +721,47 @@ export async function prepareEvidenceResearch(options: {
       if (snapshot === null) throw new Error("Existing research disappeared");
       return snapshot;
     }
-    const selected = selectResearchCandidates({ brief, run });
+    const savedRows = await tx
+      .select({ candidateListingId: savedCandidateListings.candidateListingId })
+      .from(savedCandidateListings)
+      .where(eq(savedCandidateListings.taskId, taskId));
+    const savedIds = new Set(
+      savedRows.map(({ candidateListingId }) => candidateListingId),
+    );
+    let selected;
+    if (savedCandidateListingIds.length > 0) {
+      selected = savedCandidateListingIds.map((candidateListingId) => {
+        if (!savedIds.has(candidateListingId)) {
+          throw new EvidenceResearchAuthorityError(
+            "Historical reassessment may include only saved exact listings",
+          );
+        }
+        const listing = run.listings.find(
+          ({ id }) => id === candidateListingId,
+        );
+        if (listing === undefined) {
+          throw new EvidenceResearchAuthorityError(
+            "Saved exact listing does not belong to this search run",
+          );
+        }
+        return { listing, foundAcrossQueryCount: 1 };
+      });
+    } else {
+      const selectedBase = selectResearchCandidates({ brief, run });
+      selected = [...selectedBase];
+      for (const listing of run.listings) {
+        if (
+          selected.length >= 8 ||
+          !savedIds.has(listing.id) ||
+          selected.some(
+            ({ listing: selectedListing }) => selectedListing.id === listing.id,
+          )
+        ) {
+          continue;
+        }
+        selected.push({ listing, foundAcrossQueryCount: 1 });
+      }
+    }
     if (selected.length === 0) {
       throw new EvidenceResearchAuthorityError(
         "No candidate survived direct hard-constraint triage",
@@ -718,7 +779,7 @@ export async function prepareEvidenceResearch(options: {
       taskId,
       searchRunId,
       taskRevision: brief.revision,
-      policyVersion: EVIDENCE_POLICY_VERSION,
+      policyVersion,
       status: "running",
       selectedCandidateCount: selected.length,
       plannedSearchCount: searches.length,
@@ -785,6 +846,115 @@ export async function prepareEvidenceResearch(options: {
     if (snapshot === null) throw new Error("Created research was not visible");
     return snapshot;
   });
+}
+
+export type CurrentDecisionSupport = Readonly<{
+  brief: ReturnType<typeof projectShoppingBrief>;
+  researchRuns: readonly EvidenceResearchSnapshot["run"][];
+  candidates: readonly PersistedCandidateListing[];
+  sources: readonly EvidenceSourceV1[];
+  observations: readonly ProductObservationV1[];
+  assessments: readonly CriterionAssessmentV1[];
+}>;
+
+export async function loadCurrentDecisionSupportInTransaction(options: {
+  tx: ShoppingTransaction;
+  taskId: unknown;
+}): Promise<CurrentDecisionSupport> {
+  const taskId = shoppingTaskIdSchema.parse(options.taskId);
+  const tx = options.tx;
+  const state = await loadCurrentShoppingState(tx, taskId);
+  const brief = projectShoppingBrief(state);
+  const rows = await tx
+    .select({
+      id: evidenceResearchRuns.id,
+      searchRunId: evidenceResearchRuns.searchRunId,
+    })
+    .from(evidenceResearchRuns)
+    .where(
+      and(
+        eq(evidenceResearchRuns.taskId, taskId),
+        eq(evidenceResearchRuns.taskRevision, brief.revision),
+      ),
+    )
+    .orderBy(asc(evidenceResearchRuns.createdAt));
+  const snapshots: EvidenceResearchSnapshot[] = [];
+  for (const row of rows) {
+    const snapshot = await loadResearchSnapshotInTransaction({
+      tx,
+      taskId,
+      researchRunId: evidenceResearchRunIdSchema.parse(row.id),
+    });
+    if (snapshot === null) {
+      failPersisted(
+        "EvidenceResearchRun",
+        row.id,
+        new Error("Current research run disappeared"),
+      );
+    }
+    snapshots.push(snapshot);
+  }
+  const candidateMap = new Map<string, PersistedCandidateListing>();
+  for (const row of rows) {
+    const searchRun = await loadPersistedSearchRunInTransaction({
+      tx,
+      taskId,
+      runId: row.searchRunId,
+    });
+    if (searchRun === null) {
+      failPersisted(
+        "SearchRun",
+        row.searchRunId,
+        new Error("Evidence research search run is missing"),
+      );
+    }
+    const selected = new Set(
+      snapshots
+        .filter(({ run }) => run.searchRunId === row.searchRunId)
+        .flatMap(({ attempts }) =>
+          attempts.map(({ candidateListingId }) => candidateListingId),
+        ),
+    );
+    for (const listing of searchRun.listings) {
+      if (selected.has(listing.id)) candidateMap.set(listing.id, listing);
+    }
+  }
+  const sourceMap = new Map<string, EvidenceSourceV1>();
+  const observationMap = new Map<string, ProductObservationV1>();
+  const assessmentMap = new Map<string, CriterionAssessmentV1>();
+  for (const snapshot of snapshots) {
+    for (const source of snapshot.sources) sourceMap.set(source.id, source);
+    for (const observation of snapshot.observations) {
+      observationMap.set(observation.id, observation);
+    }
+    for (const assessment of snapshot.assessments) {
+      if (assessment.taskRevision === brief.revision) {
+        assessmentMap.set(assessment.id, assessment);
+      }
+    }
+  }
+  return {
+    brief,
+    researchRuns: snapshots.map(({ run }) => run),
+    candidates: [...candidateMap.values()],
+    sources: [...sourceMap.values()],
+    observations: [...observationMap.values()],
+    assessments: [...assessmentMap.values()],
+  };
+}
+
+export async function loadCurrentDecisionSupport(options: {
+  db: ShoppingDatabase;
+  taskId: unknown;
+}): Promise<CurrentDecisionSupport> {
+  return options.db.transaction(
+    (tx) =>
+      loadCurrentDecisionSupportInTransaction({
+        tx,
+        taskId: options.taskId,
+      }),
+    { isolationLevel: "repeatable read", accessMode: "read only" },
+  );
 }
 
 const LEASE_DURATION_SECONDS = 90;
