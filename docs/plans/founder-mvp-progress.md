@@ -456,6 +456,10 @@ branch recorded above. The durable execution contract is
   with zero cleanup errors and no V0-09 disposable database remains. This is
   diagnostic evidence, not release acceptance; `releaseAccepted` is false and
   no second run is permitted without independent review and new authorization.
+- Exact diagnostic head `4be44ded367efec6a650e29a7b9649f8520c57a1`
+  passed GitHub quality, pinned PostgreSQL persistence and browser-smoke in run
+  `33257880181`. Draft stacked PR #13 remains mergeable and unmerged. The
+  following delivery commit changes only this durable CI/progress ledger.
 
 ## Exact resume instructions
 
