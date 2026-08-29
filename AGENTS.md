@@ -22,8 +22,10 @@ unmerged in draft stacked PR #12. Independently reviewed pre-correction head
 `c28c891885462eb2990f0b098f3817e744afdec0` is green; the final bounded
 correction is implemented, but its single fresh release proof completed mouse,
 failed closed during chair product-understanding output and did not reach
-vacuum. V0-08 is not release-accepted. Do not rerun the proof, merge or start
-V0-09 before independent review of the exact correction/failure checkpoint.
+vacuum. Exact correction/evidence commit
+`76549c7abcefb81429d5ddda7c8f0069c2be78ce` is not release-accepted. Do not
+rerun the proof, merge or start V0-09 before independent review of that exact
+correction/failure checkpoint.
 ProductIdentity, fuzzy deduplication, broad crawling, rejection learning, auth,
 deployment and V0-09 have not started. Do not broaden a task because later work
 is documented.

@@ -17,10 +17,11 @@ and comparison are meaningfully better than beginning with Google.
 - Independently reviewed V0-08 pre-correction head:
   `c28c891885462eb2990f0b098f3817e744afdec0` in draft stacked PR #12.
 - The final bounded six-issue correction and hardened one-shot proof harness are
-  implemented locally. Their single fresh release attempt completed mouse,
-  failed closed during chair product-understanding output and did not reach
-  vacuum. Release acceptance is therefore still open; the honest failure
-  artifact replaces the stale success artifact.
+  committed with the honest failure evidence at
+  `76549c7abcefb81429d5ddda7c8f0069c2be78ce`. Their single fresh release
+  attempt completed mouse, failed closed during chair product-understanding
+  output and did not reach vacuum. Release acceptance is therefore still open;
+  the honest failure artifact replaces the stale success artifact.
 - V0-07 remains draft stacked PR #11 and is not merged. PR #12 remains draft,
   stacked and unmerged. Do not rerun the live proof, merge, or begin V0-09
   without independent review of the failure checkpoint.
@@ -261,8 +262,9 @@ V0-08 is implemented in the active isolated branch. The original bounded review
 and the final six-issue code correction review are complete. Draft stacked PR
 #12 is open, mergeable and intentionally unmerged. The independently reviewed
 pre-correction head is `c28c891885462eb2990f0b098f3817e744afdec0`;
-the correction/evidence delivery head and its exact CI are pending this bounded
-checkpoint commit.
+the correction/evidence checkpoint is
+`76549c7abcefb81429d5ddda7c8f0069c2be78ce`. Exact PR delivery-head CI is
+pending the ledger-only follow-up commit.
 
 - Decision readiness is derived, qualitative and score-free: qualified, needs
   verification, trade-off or ineligible.
