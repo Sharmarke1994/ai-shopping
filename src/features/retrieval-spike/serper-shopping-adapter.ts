@@ -229,6 +229,7 @@ export type SerperShoppingAdapterOptions = Readonly<{
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
   now?: () => Date;
+  onRequest?: (surface: "shopping" | "merchant_resolution") => void;
 }>;
 
 export class SerperShoppingAdapter implements ShoppingSearchProvider {
@@ -239,6 +240,7 @@ export class SerperShoppingAdapter implements ShoppingSearchProvider {
   readonly #fetch: typeof fetch;
   readonly #timeoutMs: number;
   readonly #now: () => Date;
+  readonly #onRequest: NonNullable<SerperShoppingAdapterOptions["onRequest"]>;
   readonly #destinationCache = new Map<
     string,
     Promise<{
@@ -261,6 +263,7 @@ export class SerperShoppingAdapter implements ShoppingSearchProvider {
       .parse(options.timeoutMs ?? 12_000);
     this.maxRequestDurationMs = this.#timeoutMs;
     this.#now = options.now ?? (() => new Date());
+    this.#onRequest = options.onRequest ?? (() => undefined);
   }
 
   async search(queryInput: SearchQuery): Promise<ProviderSearchResult> {
@@ -276,6 +279,7 @@ export class SerperShoppingAdapter implements ShoppingSearchProvider {
     const deadline = Date.now() + this.#timeoutMs;
     let response: Response;
     try {
+      this.#onRequest("shopping");
       response = await this.#fetch(SERPER_SHOPPING_ENDPOINT, {
         method: "POST",
         headers: {
@@ -364,7 +368,12 @@ export class SerperShoppingAdapter implements ShoppingSearchProvider {
         seenMerchants.add(merchant);
         return true;
       })
-      .slice(0, 3);
+      // The V0-08 founder proof found that resolving three merchants per
+      // retrieval query spent 25 additional requests for 1/11 direct top-card
+      // destinations. Keep one conservative leading lookup here; Google
+      // Shopping remains the honest fallback until destination enrichment has
+      // its own post-shortlist persistence boundary.
+      .slice(0, 1);
     for (const candidateForDestination of destinationCandidates) {
       const cacheKey = `${candidateForDestination.title}\n${candidateForDestination.merchant}`;
       let resolution = this.#destinationCache.get(cacheKey);
@@ -403,6 +412,7 @@ export class SerperShoppingAdapter implements ShoppingSearchProvider {
     const remainingMs = deadline - Date.now();
     if (remainingMs < 100 || listing.merchant === null) return null;
     try {
+      this.#onRequest("merchant_resolution");
       const response = await this.#fetch(SERPER_SEARCH_ENDPOINT, {
         method: "POST",
         headers: {

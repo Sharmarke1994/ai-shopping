@@ -21,7 +21,7 @@ describe("live shopping browser contract", () => {
     });
   });
 
-  it("accepts bounded same-task refinement and task-scoped save operations", () => {
+  it("accepts bounded same-task refinement and task-scoped listing operations", () => {
     expect(
       liveShoppingMutationSchema.parse({
         operation: "refine",
@@ -37,6 +37,63 @@ describe("live shopping browser contract", () => {
         candidateListingId: "8a0e451f-0471-4693-81d2-761c19a6ea7d",
       }),
     ).toMatchObject({ operation: "save_listing" });
+    expect(
+      liveShoppingMutationSchema.parse({
+        operation: "reject_listing",
+        sessionId: "4318c9d8-2460-4cc2-9861-91dcf681a23e",
+        candidateListingId: "8a0e451f-0471-4693-81d2-761c19a6ea7d",
+      }),
+    ).toMatchObject({ operation: "reject_listing" });
+    expect(
+      liveShoppingMutationSchema.parse({
+        operation: "research_candidate",
+        sessionId: "4318c9d8-2460-4cc2-9861-91dcf681a23e",
+        candidateListingId: "8a0e451f-0471-4693-81d2-761c19a6ea7d",
+      }),
+    ).toMatchObject({ operation: "research_candidate" });
+  });
+
+  it("accepts one exact optional criterion target for candidate research", () => {
+    expect(
+      liveShoppingMutationSchema.parse({
+        operation: "research_candidate",
+        sessionId: "4318c9d8-2460-4cc2-9861-91dcf681a23e",
+        candidateListingId: "8a0e451f-0471-4693-81d2-761c19a6ea7d",
+        criterionId: "70b74650-a485-4aeb-a507-0ca9b448f64f",
+      }),
+    ).toEqual({
+      operation: "research_candidate",
+      sessionId: "4318c9d8-2460-4cc2-9861-91dcf681a23e",
+      candidateListingId: "8a0e451f-0471-4693-81d2-761c19a6ea7d",
+      criterionId: "70b74650-a485-4aeb-a507-0ca9b448f64f",
+    });
+
+    expect(() =>
+      liveShoppingMutationSchema.parse({
+        operation: "research_candidate",
+        sessionId: "4318c9d8-2460-4cc2-9861-91dcf681a23e",
+        candidateListingId: "8a0e451f-0471-4693-81d2-761c19a6ea7d",
+        criterionId: "not-a-criterion-id",
+      }),
+    ).toThrow();
+  });
+
+  it.each([
+    "revision",
+    "researchRunId",
+    "policyGeneration",
+    "sourceUrl",
+    "targetCriterionId",
+  ])("rejects client-selected research authority field %s", (field) => {
+    expect(() =>
+      liveShoppingMutationSchema.parse({
+        operation: "research_candidate",
+        sessionId: "4318c9d8-2460-4cc2-9861-91dcf681a23e",
+        candidateListingId: "8a0e451f-0471-4693-81d2-761c19a6ea7d",
+        criterionId: "70b74650-a485-4aeb-a507-0ca9b448f64f",
+        [field]: "client-chosen",
+      }),
+    ).toThrow();
   });
 
   it.each([
@@ -69,18 +126,26 @@ describe("live shopping browser contract", () => {
   });
 
   it("does not expose the authoritative state revision in the browser view", () => {
+    const valid = {
+      schemaVersion: 1 as const,
+      sessionId: "4318c9d8-2460-4cc2-9861-91dcf681a23e",
+      viewEpoch: "a".repeat(24),
+      subject: "A breathable running cap",
+      brief: [],
+      savedListings: [],
+      rejectedListings: [],
+      decisionSupport: null,
+      action: {
+        kind: "understanding_failed" as const,
+        notice: "Safe to retry",
+        retryable: true as const,
+      },
+    };
+    expect(liveShoppingViewSchema.parse(valid).viewEpoch).toHaveLength(24);
     expect(() =>
       liveShoppingViewSchema.parse({
-        schemaVersion: 1,
-        sessionId: "4318c9d8-2460-4cc2-9861-91dcf681a23e",
-        subject: "A breathable running cap",
+        ...valid,
         revision: "1",
-        brief: [],
-        action: {
-          kind: "understanding_failed",
-          notice: "Safe to retry",
-          retryable: true,
-        },
       }),
     ).toThrow();
   });

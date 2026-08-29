@@ -2,10 +2,13 @@ import { createHash } from "node:crypto";
 import type { ShoppingBriefV1 } from "@/domain/shopping-state/brief";
 import type { PersistedSearchRun } from "@/features/retrieval-spike/persistence/contracts";
 import { triageListingAgainstHardCriteria } from "@/features/live-shopping/hard-constraint-triage";
+import type { CriterionAssessmentV1 } from "./contracts";
 
-export const EVIDENCE_POLICY_VERSION = "evidence-selective-v1";
-export const MAX_RESEARCH_CANDIDATES = 6;
-export const MAX_SEARCHES_PER_CANDIDATE = 2;
+export const EVIDENCE_POLICY_VERSION = "evidence-progressive-v2";
+export const MAX_RESEARCH_CANDIDATES = 4;
+export const MAX_FIRST_PASS_SEARCHES_PER_CANDIDATE = 1;
+export const MAX_DEEP_RESEARCH_CANDIDATES = 3;
+export const MAX_DEEP_CRITERIA_PER_CANDIDATE = 2;
 
 export type SelectedResearchCandidate = Readonly<{
   listing: PersistedSearchRun["listings"][number];
@@ -14,8 +17,15 @@ export type SelectedResearchCandidate = Readonly<{
 
 export type PlannedEvidenceSearch = Readonly<{
   planKey: string;
-  purpose: "specifications" | "experience";
+  purpose: "first_pass" | "decision_gap";
   query: string;
+  criterionIds: readonly string[];
+}>;
+
+export type SelectedDeepResearchCandidate = Readonly<{
+  listing: PersistedSearchRun["listings"][number];
+  criterionIds: readonly string[];
+  criterionLabels: readonly string[];
 }>;
 
 function normalized(value: string | null) {
@@ -103,24 +113,18 @@ export function selectResearchCandidates(options: {
     }));
 }
 
-function criterionVocabulary(brief: ShoppingBriefV1) {
-  const labels = brief.items
-    .map((item) => item.conceptLabel.trim())
-    .filter(Boolean);
-  const specifications = labels.filter((label) =>
-    /battery|wireless|connect|dimension|width|depth|height|material|mesh|fabric|weight|size|lumbar/i.test(
-      label,
-    ),
+function criterionPriority(
+  strength: ShoppingBriefV1["items"][number]["strength"],
+) {
+  return strength === "hard" ? 0 : strength === "strong_preference" ? 1 : 2;
+}
+
+function prioritizedCriteria(brief: ShoppingBriefV1) {
+  return [...brief.items].sort(
+    (left, right) =>
+      criterionPriority(left.strength) - criterionPriority(right.strength) ||
+      left.conceptLabel.localeCompare(right.conceptLabel),
   );
-  const experience = labels.filter((label) =>
-    /review|comfort|ergonom|shape|profile|reputation|quality|support|long session|long work/i.test(
-      label,
-    ),
-  );
-  return {
-    specifications: specifications.slice(0, 4),
-    experience: experience.slice(0, 4),
-  };
 }
 
 function boundedQuery(value: string) {
@@ -138,27 +142,112 @@ export function planEvidenceSearches(options: {
   const title = options.candidate.listing.title
     .replaceAll('"', "")
     .slice(0, 260);
-  const vocabulary = criterionVocabulary(options.brief);
-  const specificationTerms =
-    vocabulary.specifications.length === 0
-      ? "official specifications"
-      : vocabulary.specifications.join(" ");
-  const experienceTerms =
-    vocabulary.experience.length === 0
-      ? "independent review"
-      : vocabulary.experience.join(" ");
-  const specificationQuery = boundedQuery(`"${title}" ${specificationTerms}`);
-  const experienceQuery = boundedQuery(`"${title}" ${experienceTerms} review`);
+  const criteria = prioritizedCriteria(options.brief).slice(0, 5);
+  const criterionTerms = criteria
+    .map(({ conceptLabel }) => conceptLabel)
+    .join(" ");
+  const query = boundedQuery(
+    `"${title}" ${criterionTerms || "official specifications"} review`,
+  );
   return [
     {
-      planKey: planKey("specifications", specificationQuery),
-      purpose: "specifications" as const,
-      query: specificationQuery,
+      planKey: planKey("first-pass", query),
+      purpose: "first_pass" as const,
+      query,
+      criterionIds: criteria.map(({ criterionId }) => criterionId),
     },
-    {
-      planKey: planKey("experience", experienceQuery),
-      purpose: "experience" as const,
-      query: experienceQuery,
-    },
-  ].slice(0, MAX_SEARCHES_PER_CANDIDATE);
+  ].slice(0, MAX_FIRST_PASS_SEARCHES_PER_CANDIDATE);
+}
+
+export function selectDeepResearchCandidates(options: {
+  brief: ShoppingBriefV1;
+  run: PersistedSearchRun;
+  orderedCandidateIds: readonly string[];
+  assessments: readonly CriterionAssessmentV1[];
+  savedCandidateListingIds: ReadonlySet<string>;
+  rejectedCandidateListingIds?: ReadonlySet<string>;
+  completedCriterionIdsByCandidate?: ReadonlyMap<string, ReadonlySet<string>>;
+  targetCandidateListingId?: string;
+  targetCriterionId?: string;
+  limit?: number;
+}): readonly SelectedDeepResearchCandidate[] {
+  const byId = new Map<string, PersistedSearchRun["listings"][number]>(
+    options.run.listings.map((listing) => [listing.id, listing]),
+  );
+  const rejected = options.rejectedCandidateListingIds ?? new Set<string>();
+  const candidateIds =
+    options.targetCandidateListingId === undefined
+      ? [
+          ...options.run.listings
+            .filter(({ id }) => options.savedCandidateListingIds.has(id))
+            .map(({ id }) => id),
+          ...options.orderedCandidateIds,
+        ]
+      : [options.targetCandidateListingId];
+  const uniqueIds = [...new Set(candidateIds)];
+  const assessmentByIdentity = new Map(
+    options.assessments.map((assessment) => [
+      `${assessment.candidateListingId}:${assessment.criterionId}`,
+      assessment,
+    ]),
+  );
+  const selected: SelectedDeepResearchCandidate[] = [];
+  const limit = Math.min(
+    MAX_DEEP_RESEARCH_CANDIDATES,
+    Math.max(1, options.limit ?? 2),
+  );
+  for (const candidateId of uniqueIds) {
+    if (selected.length >= limit || rejected.has(candidateId)) continue;
+    const listing = byId.get(candidateId);
+    if (listing === undefined) continue;
+    const completedCriteria =
+      options.completedCriterionIdsByCandidate?.get(candidateId) ??
+      new Set<string>();
+    const unresolved = prioritizedCriteria(options.brief)
+      .filter((item) => {
+        if (
+          options.targetCriterionId !== undefined &&
+          item.criterionId !== options.targetCriterionId
+        ) {
+          return false;
+        }
+        if (completedCriteria.has(item.criterionId)) return false;
+        const assessment = assessmentByIdentity.get(
+          `${candidateId}:${item.criterionId}`,
+        );
+        if (assessment?.relation.startsWith("target_distance_minor:")) {
+          return false;
+        }
+        return (
+          assessment === undefined ||
+          assessment.status === "uncertain" ||
+          assessment.status === "not_applicable"
+        );
+      })
+      .slice(0, MAX_DEEP_CRITERIA_PER_CANDIDATE);
+    if (unresolved.length === 0) continue;
+    selected.push({
+      listing,
+      criterionIds: unresolved.map(({ criterionId }) => criterionId),
+      criterionLabels: unresolved.map(({ conceptLabel }) => conceptLabel),
+    });
+  }
+  return selected;
+}
+
+export function planDecisionGapSearch(options: {
+  candidate: SelectedDeepResearchCandidate;
+}): PlannedEvidenceSearch {
+  const title = options.candidate.listing.title
+    .replaceAll('"', "")
+    .slice(0, 260);
+  const query = boundedQuery(
+    `"${title}" ${options.candidate.criterionLabels.join(" ")} official independent review`,
+  );
+  return {
+    planKey: planKey("decision-gap", query),
+    purpose: "decision_gap",
+    query,
+    criterionIds: options.candidate.criterionIds,
+  };
 }

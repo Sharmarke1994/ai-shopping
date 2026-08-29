@@ -3,9 +3,11 @@ import {
   bigint,
   check,
   foreignKey,
+  integer,
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 import { candidateListings } from "./candidate-listings";
@@ -24,6 +26,12 @@ export const criterionAssessments = shoppingPrivate.table(
     candidateRunId: uuid("candidate_run_id").notNull(),
     candidateListingId: uuid("candidate_listing_id").notNull(),
     criterionId: uuid("criterion_id").notNull(),
+    generation: integer("generation").notNull().default(1),
+    supersedesAssessmentId: uuid("supersedes_assessment_id"),
+    supersededAt: timestamp("superseded_at", {
+      mode: "date",
+      withTimezone: true,
+    }),
     status: text("status").notNull(),
     relation: text("relation").notNull(),
     explanation: text("explanation").notNull(),
@@ -39,13 +47,31 @@ export const criterionAssessments = shoppingPrivate.table(
       table.taskId,
       table.id,
     ),
-    unique("criterion_assessments_identity_unique").on(
+    unique("criterion_assessments_generation_unique").on(
       table.taskId,
       table.taskRevision,
       table.candidateRunId,
       table.candidateListingId,
       table.criterionId,
+      table.generation,
     ),
+    unique("criterion_assessments_lineage_id_unique").on(
+      table.taskId,
+      table.taskRevision,
+      table.candidateRunId,
+      table.candidateListingId,
+      table.criterionId,
+      table.id,
+    ),
+    uniqueIndex("criterion_assessments_current_unique")
+      .on(
+        table.taskId,
+        table.taskRevision,
+        table.candidateRunId,
+        table.candidateListingId,
+        table.criterionId,
+      )
+      .where(sql`${table.supersededAt} is null`),
     unique("criterion_assessments_candidate_id_unique").on(
       table.taskId,
       table.researchRunId,
@@ -63,6 +89,25 @@ export const criterionAssessments = shoppingPrivate.table(
       name: "criterion_assessments_task_fk",
       columns: [table.taskId],
       foreignColumns: [shoppingTasks.id],
+    }).onDelete("restrict"),
+    foreignKey({
+      name: "criterion_assessments_supersedes_fk",
+      columns: [
+        table.taskId,
+        table.taskRevision,
+        table.candidateRunId,
+        table.candidateListingId,
+        table.criterionId,
+        table.supersedesAssessmentId,
+      ],
+      foreignColumns: [
+        table.taskId,
+        table.taskRevision,
+        table.candidateRunId,
+        table.candidateListingId,
+        table.criterionId,
+        table.id,
+      ],
     }).onDelete("restrict"),
     foreignKey({
       name: "criterion_assessments_research_run_fk",
@@ -96,6 +141,14 @@ export const criterionAssessments = shoppingPrivate.table(
     check(
       "criterion_assessments_revision_nonnegative",
       sql`${table.taskRevision} >= 0`,
+    ),
+    check(
+      "criterion_assessments_generation_shape",
+      sql`(${table.generation} = 1 and ${table.supersedesAssessmentId} is null) or (${table.generation} > 1 and ${table.supersedesAssessmentId} is not null)`,
+    ),
+    check(
+      "criterion_assessments_superseded_time_shape",
+      sql`${table.supersededAt} is null or ${table.supersededAt} >= ${table.createdAt}`,
     ),
     check(
       "criterion_assessments_status_allowed",

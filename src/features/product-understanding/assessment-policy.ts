@@ -33,9 +33,197 @@ function normalized(value: string) {
   return value.trim().replace(/\s+/g, " ").toLocaleLowerCase("en-GB");
 }
 
+export const DIRECT_TITLE_DESCRIPTOR_PROPERTY = "Listing title descriptor";
+
+const appearanceMarkers = new Set(["looking", "style", "styled"]);
+const titleNegationMarkers = new Set(["anti", "no", "non", "not", "without"]);
+const auditedAppearanceDescriptorEquivalents = new Map<
+  string,
+  ReadonlySet<string>
+>([
+  ["gamer", new Set(["gaming"])],
+  ["gaming", new Set(["gamer"])],
+]);
+const leadingTargetFillers = new Set([
+  "a",
+  "an",
+  "anything",
+  "something",
+  "the",
+]);
+
+function lexicalTokens(value: string) {
+  return normalized(value).match(/[a-z0-9]+/g) ?? [];
+}
+
+type NegativeTitleTarget = Readonly<{
+  phrase: string;
+  tokens: readonly string[];
+  permitsAppearanceAlternation: boolean;
+}>;
+
+function explicitNegativeTitleTargets(item: BriefItemV1) {
+  if (
+    item.semanticValue.kind === "categorical" &&
+    item.semanticValue.operator === "exclude"
+  ) {
+    return item.semanticValue.values.flatMap((value) => {
+      const tokens = lexicalTokens(value);
+      return tokens.length === 0
+        ? []
+        : [
+            {
+              phrase: tokens.join(" "),
+              tokens,
+              permitsAppearanceAlternation: false,
+            } satisfies NegativeTitleTarget,
+          ];
+    });
+  }
+  if (
+    item.semanticValue.kind !== "qualitative" ||
+    item.semanticValue.mode !== "text"
+  ) {
+    return [];
+  }
+  const normalizedText = normalized(item.semanticValue.text ?? "")
+    .replaceAll("don’t", "do not")
+    .replaceAll("don't", "do not")
+    .replaceAll("doesn’t", "does not")
+    .replaceAll("doesn't", "does not");
+  return normalizedText.split(/[,.;]|\bbut\b|\bwhile\b/).flatMap((clause) => {
+    const trimmed = clause.trim();
+    if (/^(?:not\s+only|without\s+sacrificing)\b/.test(trimmed)) return [];
+    const match =
+      /^(?:(?:i\s+)?(?:do|does)\s+not\s+want(?:\s+(?:a|an|anything|something|the))?|(?:i\s+)?prefer\s+not\s+to\s+(?:have|be|look)|(?:i\s+)?prefer\s+not(?:\s+to)?|not|no|avoid|without)\s+(.+)$/.exec(
+        trimmed,
+      );
+    if (match?.[1] === undefined) return [];
+    if (/\s+and\s+/.test(match[1])) return [];
+    return match[1].split(/\s+or\s+/).flatMap((rawTarget) => {
+      const tokens = lexicalTokens(rawTarget);
+      while (tokens[0] !== undefined && leadingTargetFillers.has(tokens[0])) {
+        tokens.shift();
+      }
+      const permitsAppearanceAlternation = appearanceMarkers.has(
+        tokens.at(-1) ?? "",
+      );
+      if (permitsAppearanceAlternation) tokens.pop();
+      return tokens.length === 0
+        ? []
+        : [
+            {
+              phrase: tokens.join(" "),
+              tokens,
+              permitsAppearanceAlternation,
+            } satisfies NegativeTitleTarget,
+          ];
+    });
+  });
+}
+
+function listingTitleTokens(listingTitle: string) {
+  return [...listingTitle.matchAll(/[a-z0-9]+/gi)].map((match) => ({
+    normalized: normalized(match[0]),
+    surface: match[0],
+  }));
+}
+
+function titleMatchIsNegated(
+  titleTokens: readonly Readonly<{ normalized: string; surface: string }>[],
+  start: number,
+  length: number,
+) {
+  const previous = titleTokens[start - 1]?.normalized;
+  if (previous !== undefined && titleNegationMarkers.has(previous)) return true;
+  if (previous === "for") return true;
+  if (
+    previous === "with" &&
+    titleTokens[start - 2]?.normalized === "compatible"
+  ) {
+    return true;
+  }
+  if (titleTokens[start + length]?.normalized === "free") return true;
+  return (
+    previous !== undefined &&
+    leadingTargetFillers.has(previous) &&
+    (titleNegationMarkers.has(titleTokens[start - 2]?.normalized ?? "") ||
+      titleTokens[start - 2]?.normalized === "for")
+  );
+}
+
+function findTitleTargetMatch(
+  target: NegativeTitleTarget,
+  titleTokens: readonly Readonly<{ normalized: string; surface: string }>[],
+) {
+  for (
+    let start = 0;
+    start <= titleTokens.length - target.tokens.length;
+    start += 1
+  ) {
+    const exact = target.tokens.every(
+      (token, offset) => titleTokens[start + offset]?.normalized === token,
+    );
+    const appearanceAlternative =
+      target.permitsAppearanceAlternation &&
+      target.tokens.length === 1 &&
+      (auditedAppearanceDescriptorEquivalents
+        .get(target.tokens[0]!)
+        ?.has(titleTokens[start]?.normalized ?? "") ??
+        false);
+    if (
+      (!exact && !appearanceAlternative) ||
+      titleMatchIsNegated(titleTokens, start, target.tokens.length)
+    ) {
+      continue;
+    }
+    return titleTokens
+      .slice(start, start + target.tokens.length)
+      .map(({ surface }) => surface)
+      .join(" ");
+  }
+  return null;
+}
+
+export function directTitleSoftContradiction(
+  item: BriefItemV1,
+  listingTitle: string,
+): { targetTerm: string; titleTerm: string } | null {
+  if (item.strength === "hard") return null;
+  const targets = explicitNegativeTitleTargets(item);
+  const titleTokens = listingTitleTokens(listingTitle);
+  for (const target of targets) {
+    const titleTerm = findTitleTargetMatch(target, titleTokens);
+    if (titleTerm !== null) {
+      return { targetTerm: target.phrase, titleTerm };
+    }
+  }
+  return null;
+}
+
 function conceptMatches(item: BriefItemV1, pattern: RegExp) {
   return pattern.test(
     normalized(`${item.conceptLabel} ${item.conceptDefinition}`),
+  );
+}
+
+export function isPurchasePriceCriterion(item: BriefItemV1) {
+  if (
+    item.semanticValue.kind !== "money" &&
+    item.semanticValue.kind !== "money_stretch"
+  ) {
+    return false;
+  }
+  const text = normalized(`${item.conceptLabel} ${item.conceptDefinition}`);
+  if (
+    /\b(?:delivery|shipping|installation|subscription|running|operating|maintenance|accessory|warranty|energy)\b/.test(
+      text,
+    )
+  ) {
+    return false;
+  }
+  return /\b(?:price|budget|purchase cost|cost to buy|spend|afford)\b/.test(
+    text,
   );
 }
 
@@ -49,6 +237,7 @@ function formatMoney(amountMinor: number, currency: string) {
 }
 
 function observedMoney(
+  item: BriefItemV1,
   listing: PersistedCandidateListing,
   observations: readonly ObservationWithSource[],
 ): {
@@ -56,8 +245,30 @@ function observedMoney(
   currency: string;
   observationIds: ProductObservationV1["id"][];
 } | null {
+  if (isPurchasePriceCriterion(item) && listing.price !== null) {
+    const directListingObservation = observations.find(
+      ({ observation, source }) =>
+        observation.conceptId === item.conceptId &&
+        observation.support === "supported" &&
+        observation.observationKind === "structured_field" &&
+        observation.value.kind === "money" &&
+        source.sourceRole === "listing",
+    );
+    return {
+      ...listing.price,
+      observationIds:
+        directListingObservation === undefined
+          ? []
+          : [directListingObservation.observation.id],
+    };
+  }
   const direct = observations.find(
-    ({ observation }) => observation.value.kind === "money",
+    ({ observation, source }) =>
+      observation.conceptId === item.conceptId &&
+      observation.support === "supported" &&
+      observation.value.kind === "money" &&
+      source.sourceRole !== "visual" &&
+      source.sourceKind !== "listing_image",
   );
   if (direct?.observation.value.kind === "money") {
     return {
@@ -66,9 +277,7 @@ function observedMoney(
       observationIds: [direct.observation.id],
     };
   }
-  return listing.price === null
-    ? null
-    : { ...listing.price, observationIds: [] };
+  return null;
 }
 
 function moneyAssessment(options: {
@@ -77,7 +286,11 @@ function moneyAssessment(options: {
   observations: readonly ObservationWithSource[];
   proposal: ProposedCriterionAssessment | null;
 }): GuardedAssessment | null {
-  const observed = observedMoney(options.listing, options.observations);
+  const observed = observedMoney(
+    options.item,
+    options.listing,
+    options.observations,
+  );
   const value = options.item.semanticValue;
   if (value.kind !== "money" && value.kind !== "money_stretch") return null;
   if (observed === null || observed.currency !== value.currency) {
@@ -176,6 +389,7 @@ function moneyAssessment(options: {
       options.proposal?.status === "meets"
         ? options.proposal.observations.filter(({ observation, source }) => {
             if (
+              observation.conceptId !== options.item.conceptId ||
               observation.support !== "supported" ||
               source.sourceRole === "visual" ||
               source.sourceRole === "listing" ||
@@ -355,6 +569,39 @@ function explicitBooleanAssessment(options: {
   };
 }
 
+function explicitTitleSoftAssessment(options: {
+  item: BriefItemV1;
+  listing: PersistedCandidateListing;
+  observations: readonly ObservationWithSource[];
+}) {
+  const contradiction = directTitleSoftContradiction(
+    options.item,
+    options.listing.title,
+  );
+  if (contradiction === null) return null;
+  const directObservation = options.observations.find(
+    ({ observation, source }) =>
+      observation.conceptId === options.item.conceptId &&
+      observation.support === "supported" &&
+      observation.observationKind === "structured_field" &&
+      observation.derivation === "deterministic" &&
+      observation.propertyLabel === DIRECT_TITLE_DESCRIPTOR_PROPERTY &&
+      observation.value.kind === "text" &&
+      normalized(observation.value.text) ===
+        normalized(contradiction.titleTerm) &&
+      source.sourceRole === "listing" &&
+      source.sourceKind === "listing_field",
+  );
+  if (directObservation === undefined) return null;
+  return {
+    status: "conflicts" as const,
+    relation: "direct_title_preference_mismatch",
+    explanation: `${directObservation.observation.claim} This directly conflicts with the stated preference to avoid “${contradiction.targetTerm}”.`,
+    method: "deterministic" as const,
+    observationIds: [directObservation.observation.id],
+  };
+}
+
 function hasAdmissibleHardConflict(options: {
   item: BriefItemV1;
   proposal: ProposedCriterionAssessment;
@@ -443,11 +690,27 @@ export function guardCriterionAssessment(options: {
   observations: readonly ObservationWithSource[];
   proposal: ProposedCriterionAssessment | null;
 }): GuardedAssessment {
-  const money = moneyAssessment(options);
+  const observations = options.observations.filter(
+    ({ observation }) => observation.conceptId === options.item.conceptId,
+  );
+  const proposal =
+    options.proposal === null
+      ? null
+      : {
+          ...options.proposal,
+          observations: options.proposal.observations.filter(
+            ({ observation }) =>
+              observation.conceptId === options.item.conceptId,
+          ),
+        };
+  const guardedOptions = { ...options, observations, proposal };
+  const money = moneyAssessment(guardedOptions);
   if (money !== null) return money;
-  const directBoolean = explicitBooleanAssessment(options);
+  const directBoolean = explicitBooleanAssessment(guardedOptions);
   if (directBoolean !== null) return directBoolean;
-  if (options.proposal === null) {
+  const directTitle = explicitTitleSoftAssessment(guardedOptions);
+  if (directTitle !== null) return directTitle;
+  if (proposal === null) {
     return {
       status: "uncertain",
       relation: "insufficient_evidence",
@@ -456,7 +719,6 @@ export function guardCriterionAssessment(options: {
       observationIds: [],
     };
   }
-  const proposal = options.proposal;
   if (!proposalHasRelevantEvidence({ item: options.item, proposal })) {
     return {
       status: "uncertain",
@@ -464,7 +726,7 @@ export function guardCriterionAssessment(options: {
       explanation:
         "The available evidence does not directly establish this criterion.",
       method: "guarded_model",
-      observationIds: options.proposal.observations.map(
+      observationIds: proposal.observations.map(
         ({ observation }) => observation.id,
       ),
     };
@@ -490,17 +752,15 @@ export function guardCriterionAssessment(options: {
       explanation:
         "The evidence is not a direct enough contradiction to exclude this product.",
       method: "guarded_model",
-      observationIds: options.proposal.observations.map(
+      observationIds: proposal.observations.map(
         ({ observation }) => observation.id,
       ),
     };
   }
   if (
     options.item.strength === "hard" &&
-    options.proposal.status === "conflicts" &&
-    options.proposal.observations.some(
-      ({ source }) => source.sourceRole === "visual",
-    )
+    proposal.status === "conflicts" &&
+    proposal.observations.some(({ source }) => source.sourceRole === "visual")
   ) {
     return {
       status: "uncertain",
@@ -508,17 +768,17 @@ export function guardCriterionAssessment(options: {
       explanation:
         "The image suggests a possible mismatch, but visual evidence alone cannot exclude it.",
       method: "guarded_model",
-      observationIds: options.proposal.observations.map(
+      observationIds: proposal.observations.map(
         ({ observation }) => observation.id,
       ),
     };
   }
   return {
-    status: options.proposal.status,
-    relation: options.proposal.relation,
-    explanation: options.proposal.explanation,
+    status: proposal.status,
+    relation: proposal.relation,
+    explanation: proposal.explanation,
     method: "guarded_model",
-    observationIds: options.proposal.observations.map(
+    observationIds: proposal.observations.map(
       ({ observation }) => observation.id,
     ),
   };
@@ -536,9 +796,6 @@ export function orderCandidatesByAssessments(options: {
   candidates: readonly PersistedCandidateListing[];
   assessments: readonly CriterionAssessmentV1[];
 }) {
-  const itemById = new Map(
-    options.brief.items.map((item) => [item.criterionId, item]),
-  );
   const assessmentsByCandidate = new Map<string, CriterionAssessmentV1[]>();
   for (const assessment of options.assessments) {
     const list =
@@ -548,19 +805,27 @@ export function orderCandidatesByAssessments(options: {
   }
   const dimensions = (candidateId: string) => {
     const assessments = assessmentsByCandidate.get(candidateId) ?? [];
+    const assessmentByCriterion = new Map(
+      assessments.map((assessment) => [assessment.criterionId, assessment]),
+    );
     const counts = {
       hardConflicts: 0,
+      hardUnknowns: 0,
       hardMeets: 0,
       strongConflicts: 0,
       strongMeets: 0,
       preferenceConflicts: 0,
       preferenceMeets: 0,
-      unknowns: 0,
+      nonHardUnknowns: 0,
       targetDistance: 0,
     };
-    for (const assessment of assessments) {
-      const item = itemById.get(assessment.criterionId);
-      if (item === undefined) continue;
+    for (const item of options.brief.items) {
+      const assessment = assessmentByCriterion.get(item.criterionId);
+      if (assessment === undefined) {
+        if (item.strength === "hard") counts.hardUnknowns += 1;
+        else counts.nonHardUnknowns += 1;
+        continue;
+      }
       if (assessment.status === "conflicts" && item.strength === "hard") {
         counts.hardConflicts += 1;
       }
@@ -576,7 +841,13 @@ export function orderCandidatesByAssessments(options: {
           counts.preferenceConflicts += 1;
         }
       }
-      if (assessment.status === "uncertain") counts.unknowns += 1;
+      if (
+        assessment.status === "uncertain" ||
+        assessment.status === "not_applicable"
+      ) {
+        if (item.strength === "hard") counts.hardUnknowns += 1;
+        else counts.nonHardUnknowns += 1;
+      }
       counts.targetDistance += targetDistance(assessment);
     }
     return counts;
@@ -586,12 +857,13 @@ export function orderCandidatesByAssessments(options: {
     const r = dimensions(right.id);
     return (
       l.hardConflicts - r.hardConflicts ||
+      l.hardUnknowns - r.hardUnknowns ||
       r.hardMeets - l.hardMeets ||
       l.strongConflicts - r.strongConflicts ||
       r.strongMeets - l.strongMeets ||
       l.preferenceConflicts - r.preferenceConflicts ||
       r.preferenceMeets - l.preferenceMeets ||
-      l.unknowns - r.unknowns ||
+      l.nonHardUnknowns - r.nonHardUnknowns ||
       l.targetDistance - r.targetDistance ||
       left.id.localeCompare(right.id)
     );

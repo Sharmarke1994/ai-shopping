@@ -4,6 +4,7 @@ import {
   type EvidenceSearchProvider,
 } from "./evidence-search";
 import type { ProductUnderstandingModel } from "./model-port";
+import { PRODUCT_UNDERSTANDING_PROMPT_VERSION } from "./prompts";
 import type { ProductUnderstandingInputV1 } from "./provider-wire";
 
 export class FakeEvidenceSearchProvider implements EvidenceSearchProvider {
@@ -53,7 +54,7 @@ export class FakeEvidenceSearchProvider implements EvidenceSearchProvider {
 const metadata: ModelCallMetadata = {
   provider: "fixture",
   model: "fixture-product-understanding",
-  promptVersion: "product-understanding-v1",
+  promptVersion: PRODUCT_UNDERSTANDING_PROMPT_VERSION,
   providerSchemaVersion: 1,
   providerRequestId: "fixture-understanding",
   durationMs: 0,

@@ -726,6 +726,42 @@
   text-transform: uppercase;
 }
 
+.readinessBadge {
+  width: fit-content;
+  margin-top: 12px;
+  padding: 6px 9px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.qualified {
+  border-color: rgb(40 85 60 / 20%);
+  color: #28553c;
+  background: #dfeadf;
+}
+
+.needs_verification {
+  border-color: rgb(121 96 40 / 19%);
+  color: #68511e;
+  background: #f2e9cf;
+}
+
+.trade_off {
+  border-color: rgb(122 69 45 / 18%);
+  color: #74452f;
+  background: #f3e3d8;
+}
+
+.ineligible {
+  border-color: rgb(123 52 44 / 18%);
+  color: #7b342c;
+  background: #f0ddd7;
+}
+
 .decisionSummary {
   display: grid;
   color: var(--ink);
@@ -745,6 +781,24 @@
 
 .decisionSummary > .decisionUnknown {
   background: #efede6;
+}
+
+.decisionSummary > .mustHaveUnknowns {
+  border: 1px solid rgb(121 96 40 / 13%);
+  background: #f5ecd4;
+}
+
+.mustHaveProgress {
+  padding: 0 2px;
+  color: var(--muted);
+}
+
+.mustHaveProgress strong {
+  display: inline;
+  color: var(--ink);
+  font-size: 15px;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .decisionSummary ul {
@@ -804,6 +858,14 @@
   justify-content: space-between;
 }
 
+.purchaseRow {
+  margin-top: auto;
+}
+
+.purchaseRow .productLink {
+  margin-top: 0;
+}
+
 .sourceLink {
   margin-top: 7px;
   color: var(--muted);
@@ -825,6 +887,53 @@
   font-size: 12px;
   font-weight: 750;
   cursor: pointer;
+}
+
+.cardActions {
+  display: flex;
+  margin-top: 13px;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cardActions .saveButton,
+.cardActions .savedButton {
+  margin-top: 0;
+}
+
+.rejectButton,
+.researchMoreButton {
+  padding: 7px 10px;
+  border: 0;
+  color: var(--muted);
+  background: transparent;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.rejectButton:hover:not(:disabled) {
+  color: #7b342c;
+}
+
+.researchMoreButton {
+  color: var(--forest);
+}
+
+.researchCompletion {
+  max-width: 230px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.rejectButton:disabled,
+.researchMoreButton:disabled {
+  cursor: default;
+  opacity: 0.48;
 }
 
 .savedButton {
@@ -928,6 +1037,33 @@
   margin-bottom: 24px;
 }
 
+.excludedNote {
+  font-size: 12px;
+}
+
+.progressiveResearch {
+  display: flex;
+  margin: -6px 0 22px;
+  padding: 14px 16px;
+  border: 1px solid rgb(31 74 53 / 11%);
+  border-radius: 14px;
+  background: #edf2e9;
+  align-items: center;
+  gap: 12px;
+}
+
+.progressiveResearch strong,
+.progressiveResearch p {
+  display: block;
+  margin: 0;
+}
+
+.progressiveResearch p {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .topOptionGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -941,6 +1077,63 @@
 
 .topOptionGrid .productBody {
   min-height: 390px;
+}
+
+.decisionGaps {
+  display: grid;
+  margin-top: 22px;
+  padding: 22px;
+  border: 1px solid rgb(23 26 23 / 10%);
+  border-radius: 18px;
+  background: #f5f2e8;
+  grid-template-columns: minmax(180px, 0.7fr) minmax(280px, 1.4fr);
+  gap: 20px 28px;
+}
+
+.decisionGaps h3 {
+  margin: 3px 0 0;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 26px;
+  font-weight: 520;
+}
+
+.decisionGaps > ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.decisionGaps > ul > li {
+  display: flex;
+  padding: 10px 0;
+  border-bottom: 1px solid rgb(23 26 23 / 8%);
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.decisionGaps > ul > li:first-child {
+  padding-top: 0;
+}
+
+.decisionGaps > ul > li:last-child {
+  border-bottom: 0;
+}
+
+.decisionGaps li div {
+  display: grid;
+  gap: 3px;
+}
+
+.decisionGaps li span,
+.researchFailure {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.decisionGaps > .researchButton,
+.decisionGaps > .researchFailure {
+  grid-column: 2;
 }
 
 .comparisonSection {
@@ -958,6 +1151,106 @@
   border-left: 3px solid var(--forest);
   background: #e9efe5;
   color: var(--ink);
+}
+
+.comparisonOverview {
+  display: grid;
+  margin-bottom: 18px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.comparisonOverview > section {
+  min-height: 170px;
+  padding: 18px;
+  border: 1px solid rgb(23 26 23 / 10%);
+  border-radius: 15px;
+  background: #f7f5ed;
+}
+
+.comparisonOverview section > span {
+  color: var(--forest);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.comparisonOverview section > strong {
+  display: block;
+  margin-top: 8px;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 20px;
+  font-weight: 520;
+  line-height: 1.15;
+}
+
+.comparisonOverview ul {
+  margin: 13px 0 0;
+  padding: 0;
+  color: var(--muted);
+  font-size: 12px;
+  list-style: none;
+}
+
+.comparisonOverview li + li {
+  margin-top: 7px;
+}
+
+.comparisonOverview li > strong,
+.comparisonOverview li > span,
+.comparisonOverview li > small {
+  display: block;
+}
+
+.comparisonOverview li > strong {
+  color: var(--ink);
+  font-size: 12px;
+}
+
+.comparisonOverview li > span,
+.comparisonOverview li > small {
+  margin-top: 3px;
+  line-height: 1.35;
+}
+
+.comparisonOverview li > a {
+  display: flex;
+  color: var(--forest);
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  text-decoration: none;
+}
+
+.comparisonOverview li > a span {
+  font-size: 10px;
+  text-align: right;
+}
+
+.comparisonOverview li button {
+  margin-left: 6px;
+  border: 0;
+  color: var(--forest);
+  background: transparent;
+  font: inherit;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.comparisonDetails > summary {
+  padding: 14px 16px;
+  border: 1px solid rgb(23 26 23 / 10%);
+  border-radius: 13px;
+  color: var(--forest);
+  background: #efede5;
+  font-size: 13px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.comparisonDetails[open] > summary {
+  margin-bottom: 10px;
 }
 
 .comparisonScroller {
@@ -1002,6 +1295,13 @@
 .comparisonScroller thead span,
 .comparisonScroller thead strong {
   display: block;
+}
+
+.comparisonScroller thead a {
+  display: inline-block;
+  margin-top: 8px;
+  color: var(--forest);
+  font-size: 11px;
 }
 
 .comparisonScroller thead span {
@@ -1062,6 +1362,60 @@
   white-space: nowrap;
 }
 
+.rejectedDisclosure {
+  margin-top: 32px;
+  border-top: 1px solid rgb(23 26 23 / 10%);
+}
+
+.rejectedDisclosure > summary {
+  display: flex;
+  padding: 18px 2px;
+  color: var(--muted);
+  font-weight: 750;
+  cursor: pointer;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.rejectedDisclosure > summary small {
+  font-weight: 500;
+}
+
+.rejectedList {
+  display: grid;
+  gap: 8px;
+}
+
+.rejectedList article {
+  display: flex;
+  padding: 13px 15px;
+  border-radius: 12px;
+  background: #efede6;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.rejectedList article div {
+  display: grid;
+  gap: 3px;
+}
+
+.rejectedList article span,
+.rejectedDisclosure > p {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.rejectedList button {
+  border: 0;
+  color: var(--forest);
+  background: transparent;
+  font: inherit;
+  font-weight: 750;
+  cursor: pointer;
+}
+
 .refineComposer {
   margin-top: 30px;
   padding: 24px;
@@ -1116,6 +1470,10 @@
 
 @media (max-width: 1100px) {
   .productGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .comparisonOverview {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -1256,6 +1614,16 @@
     grid-template-columns: 1fr;
   }
 
+  .decisionGaps,
+  .comparisonOverview {
+    grid-template-columns: 1fr;
+  }
+
+  .decisionGaps > .researchButton,
+  .decisionGaps > .researchFailure {
+    grid-column: 1;
+  }
+
   .rawResultsDisclosure > summary {
     align-items: flex-start;
     flex-wrap: wrap;
@@ -1296,6 +1664,11 @@
 
   .productBody h3 {
     font-size: 18px;
+  }
+
+  .cardActions {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .merchantLine {

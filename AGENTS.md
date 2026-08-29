@@ -13,14 +13,23 @@ closed. The independently reviewed V0-05 AI interpretation/context-acquisition
 plan is merged. Its bounded implementation remains a formal draft-PR release
 checkpoint and must not be merged without acceptance. V0-06 is independently
 accepted at `d32fbd7ca46d15dc645dacf20617e9c81ca36ac0` and remains a draft,
-unmerged PR. The isolated V0-07 branch now implements its bounded evidence and
-decision-support checkpoint: selective source acquisition, attributable typed
-product observations, revision-scoped criterion assessments, assessment-driven
-top options, and exact saved-listing comparison. It is awaiting exact-head CI
-and independent review and remains cheap to rebase until V0-05 is accepted.
+unmerged PR. V0-07 is independently accepted at
+`149f93cd43092996e20621e8976003b341a82c6a` in draft stacked PR #11. The
+isolated V0-08 branch is the current checkpoint: deterministic decision
+readiness, hard-unknown-aware ordering, progressive evidence research, exact
+listing reject/undo, and decision-oriented saved comparison. It remains
+unmerged in draft stacked PR #12. Independently reviewed pre-correction head
+`c28c891885462eb2990f0b098f3817e744afdec0` is green; the final bounded
+correction and focused product-understanding contract alignment are
+implemented. Exactly one newly authorized fresh release proof completed the
+ergonomic-mouse, office-chair and cordless-vacuum journeys successfully with
+real Terra + Serper calls and a disposable PostgreSQL database. The sanitized
+success artifact replaces the prior fail-closed diagnostic artifact. V0-08 is
+still pending independent release review: do not rerun the proof, merge or
+start V0-09 before that review accepts the exact pushed checkpoint.
 ProductIdentity, fuzzy deduplication, broad crawling, rejection learning, auth,
-deployment and later layers have not started. Do not broaden a task because
-later work is documented.
+deployment and V0-09 have not started. Do not broaden a task because later work
+is documented.
 
 ## Hard invariants
 

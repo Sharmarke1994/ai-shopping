@@ -8,10 +8,12 @@ export { decisionCriteria } from "./decision-criteria";
 export { criterionAssessmentObservations } from "./criterion-assessment-observations";
 export { criterionAssessments } from "./criterion-assessments";
 export { evidenceAcquisitionAttempts } from "./evidence-acquisition-attempts";
+export { evidenceAttemptTargetCriteria } from "./evidence-attempt-target-criteria";
 export { evidenceResearchRuns } from "./evidence-research-runs";
 export { evidenceSources } from "./evidence-sources";
 export { founderLiveSessions } from "./founder-live-sessions";
 export { productObservations } from "./product-observations";
+export { rejectedCandidateListings } from "./rejected-candidate-listings";
 export {
   searchHypotheses,
   searchHypothesisBasisCriteria,

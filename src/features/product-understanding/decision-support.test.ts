@@ -11,6 +11,238 @@ import {
 import { buildDecisionSupport } from "./decision-support";
 
 describe("assessment-driven decision support", () => {
+  it("keeps hard unknowns distinct from conflicts and ahead of soft wins", () => {
+    const taskId = randomUUID();
+    const runId = randomUUID();
+    const hardCriterionId = randomUUID();
+    const preferenceCriterionId = randomUUID();
+    const brief = shoppingBriefV1Schema.parse({
+      schemaVersion: 1,
+      taskId,
+      revision: 3n,
+      market: { country: "GB", language: "en-GB", currency: "GBP" },
+      items: [
+        {
+          criterionId: hardCriterionId,
+          lineageId: randomUUID(),
+          conceptId: randomUUID(),
+          conceptLabel: "Battery life",
+          conceptDefinition: "Battery life must be verified",
+          strength: "hard",
+          targetSemantics: "qualitative",
+          semanticValue: {
+            schemaVersion: 1,
+            kind: "qualitative",
+            mode: "text",
+            text: "very good battery life",
+          },
+        },
+        {
+          criterionId: preferenceCriterionId,
+          lineageId: randomUUID(),
+          conceptId: randomUUID(),
+          conceptLabel: "Colour",
+          conceptDefinition: "A preferred colour",
+          strength: "preference",
+          targetSemantics: "qualitative",
+          semanticValue: {
+            schemaVersion: 1,
+            kind: "qualitative",
+            mode: "text",
+            text: "dark grey",
+          },
+        },
+      ],
+    });
+    const candidate = (title: string) =>
+      persistedCandidateListingSchema.parse({
+        id: randomUUID(),
+        taskId,
+        runId,
+        queryId: randomUUID(),
+        queryExecutionId: randomUUID(),
+        provider: "fixture",
+        providerResultId: randomUUID(),
+        sourceRank: 1,
+        surface: "shopping",
+        title,
+        url: `https://example.test/${encodeURIComponent(title)}`,
+        canonicalUrl: `https://example.test/${encodeURIComponent(title)}`,
+        merchantDestinationUrl: null,
+        merchantDestinationSource: null,
+        merchant: "Example",
+        price: { amountMinor: 4_000, currency: "GBP" },
+        priceText: "£40",
+        imageUrl: null,
+        deliveryText: null,
+        availabilityText: null,
+        reviewEvidence: null,
+        retrievedAt: new Date("2026-01-01T00:00:00Z"),
+      });
+    const verified = candidate("Verified mouse");
+    const generic = candidate("Generic mouse");
+    const assessment = (options: {
+      listingId: string;
+      criterionId: string;
+      status: "meets" | "conflicts" | "uncertain";
+      explanation: string;
+    }) =>
+      criterionAssessmentV1Schema.parse({
+        schemaVersion: 1,
+        id: randomUUID(),
+        researchRunId: randomUUID(),
+        taskId,
+        taskRevision: 3n,
+        candidateRunId: runId,
+        candidateListingId: options.listingId,
+        criterionId: options.criterionId,
+        status: options.status,
+        relation:
+          options.status === "meets"
+            ? "source_support"
+            : options.status === "conflicts"
+              ? "source_conflict"
+              : "insufficient_evidence",
+        explanation: options.explanation,
+        method: "deterministic",
+        model: null,
+        promptVersion: null,
+        observationIds: [],
+        createdAt: new Date("2026-01-01T00:00:01Z"),
+      });
+    const verifiedAssessments = [
+      assessment({
+        listingId: verified.id,
+        criterionId: hardCriterionId,
+        status: "meets",
+        explanation: "Battery life is supported by current evidence.",
+      }),
+      assessment({
+        listingId: verified.id,
+        criterionId: preferenceCriterionId,
+        status: "uncertain",
+        explanation: "Colour has not been verified.",
+      }),
+    ];
+    const genericAssessments = [
+      assessment({
+        listingId: generic.id,
+        criterionId: hardCriterionId,
+        status: "uncertain",
+        explanation: "Battery life remains unknown.",
+      }),
+      assessment({
+        listingId: generic.id,
+        criterionId: preferenceCriterionId,
+        status: "meets",
+        explanation: "The preferred colour is supported.",
+      }),
+    ];
+    const support = {
+      brief,
+      researchRuns: [],
+      deepResearchCoverage: [],
+      candidates: [generic, verified],
+      sources: [],
+      observations: [],
+      assessments: [...genericAssessments, ...verifiedAssessments],
+    };
+    const result = buildDecisionSupport({
+      support,
+      savedListingIds: new Set(),
+    });
+    expect(result.topOptions.map(({ listing }) => listing.id)).toEqual([
+      verified.id,
+      generic.id,
+    ]);
+    expect(result.topOptions[0]).toMatchObject({
+      readiness: "qualified",
+      strongestSupported: true,
+      supportedMustHaveCount: 1,
+      mustHaveCount: 1,
+    });
+    expect(result.topOptions[1]).toMatchObject({
+      readiness: "needs_verification",
+      strongestSupported: false,
+      unresolvedMustHaves: [expect.objectContaining({ label: "Battery life" })],
+    });
+    expect(genericAssessments[0]!.status).toBe("uncertain");
+
+    const compared = buildDecisionSupport({
+      support,
+      savedListingIds: new Set([verified.id, generic.id]),
+    });
+    expect(compared.comparison?.purchaseSummaries).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ candidateListingId: verified.id }),
+        expect.objectContaining({ candidateListingId: generic.id }),
+      ]),
+    );
+    expect(compared.comparison?.researchStates).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          candidateListingId: verified.id,
+          state: "available",
+        }),
+        expect.objectContaining({
+          candidateListingId: generic.id,
+          state: "available",
+        }),
+      ]),
+    );
+    expect(compared.comparison?.decisionGaps).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: "Battery life", strength: "hard" }),
+      ]),
+    );
+    expect(compared.comparison?.judgement).toContain(
+      "Verified mouse has stronger support on Battery life",
+    );
+    expect(compared.comparison?.judgement).toContain(
+      "Generic mouse has stronger support on Colour",
+    );
+
+    const allUnknown = buildDecisionSupport({
+      support: {
+        ...support,
+        candidates: [generic],
+        assessments: genericAssessments,
+      },
+      savedListingIds: new Set(),
+    });
+    expect(allUnknown.sectionMode).toBe("verification_needed");
+    expect(allUnknown.topOptions[0]).toMatchObject({
+      readiness: "needs_verification",
+      strongestSupported: false,
+    });
+    expect(allUnknown.decisionGaps[0]).toMatchObject({
+      label: "Battery life",
+      strength: "hard",
+    });
+    expect(JSON.stringify(allUnknown)).not.toMatch(/\d+(?:\.\d+)?%|\/10/);
+
+    const checkedButStillUnknown = buildDecisionSupport({
+      support: {
+        ...support,
+        candidates: [generic],
+        assessments: genericAssessments,
+        deepResearchCoverage: [
+          {
+            researchRunId: evidenceResearchRunIdSchema.parse(randomUUID()),
+            candidateListingId: generic.id,
+            runStatus: "succeeded",
+            status: "succeeded",
+            criterionIds: [brief.items[0]!.criterionId],
+          },
+        ],
+      },
+      savedListingIds: new Set(),
+    });
+    expect(checkedButStillUnknown.topOptions[0]?.researchState).toBe(
+      "complete",
+    );
+  });
+
   it("surfaces assessment content without manufacturing percentages", () => {
     const candidate = persistedCandidateListingSchema.parse({
       id: "11111111-1111-4111-8111-111111111111",
@@ -89,6 +321,7 @@ describe("assessment-driven decision support", () => {
             searchRunId: searchRunIdSchema.parse(candidate.runId),
             taskRevision: 1n,
             policyVersion: "evidence-selective-v1",
+            phase: "first_pass",
             status: "succeeded",
             selectedCandidateCount: 1,
             plannedSearchCount: 2,
@@ -96,6 +329,7 @@ describe("assessment-driven decision support", () => {
             finishedAt: new Date("2026-01-01T00:00:01Z"),
           },
         ],
+        deepResearchCoverage: [],
         candidates: [candidate],
         sources: [],
         observations: [],
@@ -125,6 +359,7 @@ describe("assessment-driven decision support", () => {
       support: {
         brief,
         researchRuns: [],
+        deepResearchCoverage: [],
         candidates: [candidate, duplicate],
         sources: [],
         observations: [],
@@ -166,6 +401,7 @@ describe("assessment-driven decision support", () => {
         support: {
           brief,
           researchRuns: [],
+          deepResearchCoverage: [],
           candidates: [indirectCandidate, indirectDuplicate],
           sources: [],
           observations: [],
@@ -203,6 +439,7 @@ describe("assessment-driven decision support", () => {
       support: {
         brief: preferenceBrief,
         researchRuns: [],
+        deepResearchCoverage: [],
         candidates: [candidate, cleanRunner, conflictingOption],
         sources: [],
         observations: [],
@@ -346,6 +583,7 @@ describe("assessment-driven decision support", () => {
       support: {
         brief,
         researchRuns: [],
+        deepResearchCoverage: [],
         candidates: [
           aboveCeiling,
           aboveStretch,
@@ -419,6 +657,7 @@ describe("assessment-driven decision support", () => {
       support: {
         brief: ordinaryBrief,
         researchRuns: [],
+        deepResearchCoverage: [],
         candidates: [exactTarget, ordinaryConflict],
         sources: [],
         observations: [],
@@ -543,6 +782,7 @@ describe("assessment-driven decision support", () => {
       support: {
         brief,
         researchRuns: [],
+        deepResearchCoverage: [],
         candidates: [candidate, duplicate, distinctDirect, otherDirect],
         sources: [],
         observations: [],
@@ -557,5 +797,382 @@ describe("assessment-driven decision support", () => {
       distinctDirect.id,
       otherDirect.id,
     ]);
+  });
+
+  it("uses only the purchase-price criterion in saved purchase summaries", () => {
+    const taskId = shoppingTaskIdSchema.parse(randomUUID());
+    const runId = searchRunIdSchema.parse(randomUUID());
+    const deliveryCriterionId = randomUUID();
+    const runningCostCriterionId = randomUUID();
+    const budgetCriterionId = randomUUID();
+    const candidates = ["Chair one", "Chair two"].map((title, index) =>
+      persistedCandidateListingSchema.parse({
+        id: randomUUID(),
+        taskId,
+        runId,
+        queryId: randomUUID(),
+        queryExecutionId: randomUUID(),
+        provider: "fixture",
+        providerResultId: `chair-${index}`,
+        sourceRank: index + 1,
+        surface: "shopping",
+        title,
+        url: `https://example.test/chair-${index}`,
+        canonicalUrl: `https://example.test/chair-${index}`,
+        merchantDestinationUrl: null,
+        merchantDestinationSource: null,
+        merchant: "Example",
+        price: { amountMinor: 24_000 + index * 1_000, currency: "GBP" },
+        priceText: `£${240 + index * 10}`,
+        imageUrl: null,
+        deliveryText: "£5 delivery",
+        availabilityText: null,
+        reviewEvidence: null,
+        retrievedAt: new Date("2026-01-01T00:00:00Z"),
+      }),
+    );
+    const moneyItem = (
+      criterionId: string,
+      label: string,
+      amountMinor: number,
+    ) => ({
+      criterionId,
+      lineageId: randomUUID(),
+      conceptId: randomUUID(),
+      conceptLabel: label,
+      conceptDefinition: label,
+      strength: "preference" as const,
+      targetSemantics: "exact" as const,
+      semanticValue: {
+        schemaVersion: 1 as const,
+        kind: "money" as const,
+        mode: "ceiling" as const,
+        amountMinor,
+        currency: "GBP" as const,
+      },
+    });
+    const deliveryItem = moneyItem(deliveryCriterionId, "Delivery cost", 2_000);
+    const runningCostItem = moneyItem(
+      runningCostCriterionId,
+      "Annual running cost",
+      5_000,
+    );
+    const budgetItem = moneyItem(budgetCriterionId, "Purchase budget", 25_000);
+    const brief = shoppingBriefV1Schema.parse({
+      schemaVersion: 1,
+      taskId,
+      revision: 1n,
+      market: { country: "GB", language: "en-GB", currency: "GBP" },
+      items: [deliveryItem, budgetItem],
+    });
+    const assessment = (
+      candidateListingId: string,
+      criterionId: string,
+      explanation: string,
+    ) =>
+      criterionAssessmentV1Schema.parse({
+        schemaVersion: 1,
+        id: randomUUID(),
+        researchRunId: randomUUID(),
+        taskId,
+        taskRevision: 1n,
+        candidateRunId: runId,
+        candidateListingId,
+        criterionId,
+        status: "meets",
+        relation: "within_ceiling",
+        explanation,
+        method: "deterministic",
+        model: null,
+        promptVersion: null,
+        observationIds: [],
+        createdAt: new Date("2026-01-01T00:00:01Z"),
+      });
+    const assessments = candidates.flatMap((candidate, index) => [
+      assessment(candidate.id, deliveryCriterionId, "Delivery costs £5."),
+      assessment(
+        candidate.id,
+        budgetCriterionId,
+        `£${240 + index * 10} is within the £250 purchase budget.`,
+      ),
+    ]);
+    const support = {
+      brief,
+      researchRuns: [],
+      deepResearchCoverage: [],
+      candidates,
+      sources: [],
+      observations: [],
+      assessments,
+    };
+    const compared = buildDecisionSupport({
+      support,
+      savedListingIds: new Set(candidates.map(({ id }) => id)),
+    });
+    expect(
+      compared.comparison?.purchaseSummaries.map(
+        ({ priceRelationship }) => priceRelationship,
+      ),
+    ).toEqual(
+      expect.arrayContaining([
+        "£240 is within the £250 purchase budget.",
+        "£250 is within the £250 purchase budget.",
+      ]),
+    );
+
+    const deliveryOnly = buildDecisionSupport({
+      support: {
+        ...support,
+        brief: shoppingBriefV1Schema.parse({
+          ...brief,
+          items: [deliveryItem, runningCostItem],
+        }),
+        assessments: assessments.filter(
+          ({ criterionId }) => criterionId === deliveryCriterionId,
+        ),
+      },
+      savedListingIds: new Set(candidates.map(({ id }) => id)),
+    });
+    expect(
+      deliveryOnly.comparison?.purchaseSummaries.map(
+        ({ priceRelationship }) => priceRelationship,
+      ),
+    ).toEqual([
+      "No purchase-price target is stated in the current brief.",
+      "No purchase-price target is stated in the current brief.",
+    ]);
+
+    const purchaseTargetWithoutAssessment = buildDecisionSupport({
+      support: {
+        ...support,
+        assessments: assessments.filter(
+          ({ criterionId }) => criterionId === deliveryCriterionId,
+        ),
+      },
+      savedListingIds: new Set(candidates.map(({ id }) => id)),
+    });
+    expect(
+      purchaseTargetWithoutAssessment.comparison?.purchaseSummaries.map(
+        ({ priceRelationship }) => priceRelationship,
+      ),
+    ).toEqual([
+      "Its observed purchase price has not been related to the stated purchase-price target.",
+      "Its observed purchase price has not been related to the stated purchase-price target.",
+    ]);
+
+    const ambiguousPurchaseTargets = buildDecisionSupport({
+      support: {
+        ...support,
+        brief: shoppingBriefV1Schema.parse({
+          ...brief,
+          items: [
+            budgetItem,
+            moneyItem(randomUUID(), "Maximum purchase price", 30_000),
+          ],
+        }),
+      },
+      savedListingIds: new Set(candidates.map(({ id }) => id)),
+    });
+    expect(
+      ambiguousPurchaseTargets.comparison?.purchaseSummaries.map(
+        ({ priceRelationship }) => priceRelationship,
+      ),
+    ).toEqual([
+      "Multiple purchase-price targets are stated, so no single purchase summary is assumed.",
+      "Multiple purchase-price targets are stated, so no single purchase summary is assumed.",
+    ]);
+  });
+
+  it("projects running, partial and failed research without discarding useful work", () => {
+    const taskId = shoppingTaskIdSchema.parse(randomUUID());
+    const runId = searchRunIdSchema.parse(randomUUID());
+    const criterionId = randomUUID();
+    const candidate = persistedCandidateListingSchema.parse({
+      id: randomUUID(),
+      taskId,
+      runId,
+      queryId: randomUUID(),
+      queryExecutionId: randomUUID(),
+      provider: "fixture",
+      providerResultId: "candidate",
+      sourceRank: 1,
+      surface: "shopping",
+      title: "Candidate",
+      url: "https://example.test/candidate",
+      canonicalUrl: "https://example.test/candidate",
+      merchantDestinationUrl: null,
+      merchantDestinationSource: null,
+      merchant: "Example",
+      price: null,
+      priceText: null,
+      imageUrl: null,
+      deliveryText: null,
+      availabilityText: null,
+      reviewEvidence: null,
+      retrievedAt: new Date("2026-01-01T00:00:00Z"),
+    });
+    const brief = shoppingBriefV1Schema.parse({
+      schemaVersion: 1,
+      taskId,
+      revision: 1n,
+      market: { country: "GB", language: "en-GB", currency: "GBP" },
+      items: [
+        {
+          criterionId,
+          lineageId: randomUUID(),
+          conceptId: randomUUID(),
+          conceptLabel: "Battery life",
+          conceptDefinition: "Battery life",
+          strength: "hard",
+          targetSemantics: "qualitative",
+          semanticValue: {
+            schemaVersion: 1,
+            kind: "qualitative",
+            mode: "text",
+            text: "long battery life",
+          },
+        },
+      ],
+    });
+    const currentAssessment = criterionAssessmentV1Schema.parse({
+      schemaVersion: 1,
+      id: randomUUID(),
+      researchRunId: randomUUID(),
+      taskId,
+      taskRevision: 1n,
+      candidateRunId: runId,
+      candidateListingId: candidate.id,
+      criterionId,
+      status: "uncertain",
+      relation: "insufficient_evidence",
+      explanation: "Battery life remains unknown.",
+      method: "deterministic",
+      model: null,
+      promptVersion: null,
+      observationIds: [],
+      createdAt: new Date("2026-01-01T00:00:01Z"),
+    });
+    const run = (
+      phase: "first_pass" | "deepening",
+      status: "running" | "succeeded" | "partial" | "failed",
+    ) => ({
+      id: evidenceResearchRunIdSchema.parse(randomUUID()),
+      taskId,
+      searchRunId: runId,
+      taskRevision: 1n,
+      policyVersion: `evidence-${phase}-${randomUUID()}`,
+      phase,
+      status,
+      selectedCandidateCount: 1,
+      plannedSearchCount: 1,
+      startedAt: new Date("2026-01-01T00:00:00Z"),
+      finishedAt:
+        status === "running" ? null : new Date("2026-01-01T00:00:02Z"),
+    });
+    const decide = (
+      researchRuns: ReturnType<typeof run>[],
+      assessments = [currentAssessment],
+    ) =>
+      buildDecisionSupport({
+        support: {
+          brief,
+          researchRuns,
+          deepResearchCoverage: [],
+          candidates: [candidate],
+          sources: [],
+          observations: [],
+          assessments,
+        },
+        savedListingIds: new Set(),
+      });
+
+    expect(decide([run("first_pass", "running")]).researchStatus).toBe(
+      "researching",
+    );
+    expect(decide([run("first_pass", "running")], []).researchStatus).toBe(
+      "researching",
+    );
+    expect(decide([run("first_pass", "partial")]).researchStatus).toBe(
+      "partial",
+    );
+    expect(
+      decide([run("first_pass", "succeeded"), run("first_pass", "failed")], [])
+        .researchStatus,
+    ).toBe("partial");
+    expect(decide([run("first_pass", "failed")], []).researchStatus).toBe(
+      "failed",
+    );
+    const failedFirstPassWithDirectEvidence = run("first_pass", "failed");
+    expect(
+      decide(
+        [failedFirstPassWithDirectEvidence],
+        [
+          criterionAssessmentV1Schema.parse({
+            ...currentAssessment,
+            id: randomUUID(),
+            researchRunId: failedFirstPassWithDirectEvidence.id,
+          }),
+        ],
+      ).researchStatus,
+    ).toBe("failed");
+    expect(
+      decide(
+        [failedFirstPassWithDirectEvidence],
+        [
+          criterionAssessmentV1Schema.parse({
+            ...currentAssessment,
+            id: randomUUID(),
+            researchRunId: failedFirstPassWithDirectEvidence.id,
+            observationIds: [randomUUID()],
+          }),
+        ],
+      ).researchStatus,
+    ).toBe("partial");
+    expect(
+      decide([run("first_pass", "succeeded"), run("deepening", "partial")])
+        .deepResearchStatus,
+    ).toBe("partial");
+    expect(
+      decide([
+        run("first_pass", "succeeded"),
+        run("deepening", "succeeded"),
+        run("deepening", "partial"),
+      ]).deepResearchStatus,
+    ).toBe("partial");
+    expect(
+      decide([run("first_pass", "succeeded"), run("deepening", "failed")])
+        .deepResearchStatus,
+    ).toBe("failed");
+    const failedDeepWithDirectEvidence = run("deepening", "failed");
+    expect(
+      decide(
+        [run("first_pass", "succeeded"), failedDeepWithDirectEvidence],
+        [
+          criterionAssessmentV1Schema.parse({
+            ...currentAssessment,
+            id: randomUUID(),
+            researchRunId: failedDeepWithDirectEvidence.id,
+            observationIds: [randomUUID()],
+          }),
+        ],
+      ).deepResearchStatus,
+    ).toBe("partial");
+    expect(
+      decide([run("first_pass", "succeeded"), run("deepening", "running")])
+        .deepResearchStatus,
+    ).toBe("researching");
+    const resolvedAssessment = criterionAssessmentV1Schema.parse({
+      ...currentAssessment,
+      id: randomUUID(),
+      status: "meets",
+      relation: "direct_match",
+      explanation: "Battery life is supported.",
+    });
+    expect(
+      decide(
+        [run("first_pass", "succeeded"), run("deepening", "running")],
+        [resolvedAssessment],
+      ).deepResearchStatus,
+    ).toBe("researching");
   });
 });

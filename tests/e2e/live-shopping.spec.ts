@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("researches strongest options, compares saves, refines, and restores the task", async ({
+test("automatically investigates, supports exact rejection, comparison, refinement and refresh", async ({
   page,
 }) => {
   await page.goto("/live");
@@ -10,47 +10,65 @@ test("researches strongest options, compares saves, refines, and restores the ta
   await page.getByRole("button", { name: "Start looking" }).click();
 
   await expect(
-    page.getByRole("heading", { name: "Products found for your brief" }),
+    page.getByRole("heading", {
+      name: "The options with the strongest current evidence",
+    }),
   ).toBeVisible();
-  await expect(page.getByText("Breathability", { exact: true })).toBeVisible();
+  await expect(
+    page
+      .getByRole("complementary", { name: "What matters for this search" })
+      .getByText("Breathability", { exact: true }),
+  ).toBeVisible();
   await expect(
     page.getByRole("link", { name: "View at Fixture Outfitters" }).first(),
   ).toHaveAttribute("href", /^https:\/\/example\.test\/products\//);
 
-  await page
-    .getByRole("button", { name: "Investigate strongest options" })
-    .click();
-  await expect(
-    page.getByRole("heading", {
-      name: "Which products are actually supported?",
-    }),
-  ).toBeVisible();
-  await expect(page.getByText("Strongest-supported so far")).toBeVisible();
-  await expect(page.getByText("Why it fits").first()).toBeVisible();
-
-  const researchedOptions = page.getByRole("region", {
-    name: "Which products are actually supported?",
+  const decisionRegion = page.getByRole("region", {
+    name: "The options with the strongest current evidence",
   });
-  await researchedOptions
+  await decisionRegion
     .getByRole("button", { name: "Save", exact: true })
     .first()
     .click();
   await expect(
-    researchedOptions.getByRole("button", { name: "Saved ✓" }),
+    decisionRegion.getByRole("button", { name: "Saved ✓" }),
   ).toHaveCount(1);
-  await researchedOptions
+  await decisionRegion
     .getByRole("button", { name: "Save", exact: true })
     .first()
     .click();
   await expect(
-    researchedOptions.getByRole("button", { name: "Saved ✓" }),
-  ).toHaveCount(2);
-  await expect(
-    page.getByRole("heading", {
-      name: "Trade-offs against today’s brief",
-    }),
+    page.getByRole("heading", { name: "What separates your saved options" }),
   ).toBeVisible();
-  await expect(page.getByRole("table")).toContainText("Breathability");
+  await expect(
+    page.getByRole("button", { name: "Remove from saved" }),
+  ).toHaveCount(2);
+  await expect(page.getByText("Important unknowns")).toBeVisible();
+  await expect(page.getByText("Price / purchase")).toBeVisible();
+
+  await decisionRegion
+    .getByRole("button", { name: "Not for me" })
+    .first()
+    .click();
+  const rejected = page.locator("details").filter({ hasText: /^Rejected/ });
+  await expect(rejected).toBeVisible();
+  await rejected.locator("summary").click();
+  await expect(
+    rejected.getByText(/does not teach Consider a new preference/i),
+  ).toBeVisible();
+  await rejected.getByRole("button", { name: "Undo" }).click();
+  await expect(rejected).toHaveCount(0);
+  await expect(
+    decisionRegion.getByRole("button", { name: "Saved ✓" }),
+  ).toHaveCount(1);
+
+  await decisionRegion
+    .getByRole("button", { name: "Save", exact: true })
+    .first()
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "What separates your saved options" }),
+  ).toBeVisible();
 
   await page
     .getByLabel("Refine what you’re looking for")
@@ -64,30 +82,30 @@ test("researches strongest options, compares saves, refines, and restores the ta
   await expect(
     page.getByText("Strong preference: Water resistance: yes", { exact: true }),
   ).toBeVisible();
-  await page
-    .getByRole("button", { name: "Investigate strongest options" })
+  const comparison = page.getByRole("region", {
+    name: "What separates your saved options",
+  });
+  await comparison
+    .getByText("See the full criterion-by-criterion evidence")
     .click();
-  await expect(page.getByRole("table")).toContainText("Water resistance");
+  await expect(comparison.getByRole("table")).toContainText("Water resistance");
 
   const restoredUrl = page.url();
   expect(restoredUrl).toContain("session=");
   await page.reload();
-  await expect(
-    page.getByRole("heading", {
-      name: "Which products are actually supported?",
-    }),
-  ).toBeVisible();
   await expect(
     page
       .getByRole("complementary", { name: "What matters for this search" })
       .getByText("Water resistance", { exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Trade-offs against today’s brief" }),
+    page.getByRole("heading", { name: "What separates your saved options" }),
   ).toBeVisible();
+  await expect(page.locator("body")).not.toContainText(/\d+% match|\d+\/10/i);
+  await expect(page.locator("main").getByRole("alert")).toHaveCount(0);
 });
 
-test("runs a deterministic ASK to answer to SEARCH on mobile", async ({
+test("keeps unresolved must-haves honest and reject/undo usable on mobile", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
@@ -105,22 +123,33 @@ test("runs a deterministic ASK to answer to SEARCH on mobile", async ({
   await page.getByRole("button", { name: "Up to 60 cm" }).click();
 
   await expect(
-    page.getByRole("heading", { name: "Products found for your brief" }),
-  ).toBeVisible();
-  await expect(page.getByText("Maximum width", { exact: true })).toBeVisible();
-  await expect(page.getByText("maximum 60 cm")).toBeVisible();
-  await page
-    .getByRole("button", { name: "Investigate strongest options" })
-    .click();
-  await expect(
     page.getByRole("heading", {
-      name: "Which products are actually supported?",
+      name: "No product has cleared every must-have yet",
     }),
   ).toBeVisible();
-  await expect(page.getByText(/attributable source/).first()).toBeVisible();
+  await expect(page.getByText("Needs verification").first()).toBeVisible();
+  await expect(page.getByText("Must-haves to verify").first()).toBeVisible();
+  await expect(
+    page.getByText("Maximum width", { exact: true }).first(),
+  ).toBeVisible();
+
+  const decisionRegion = page.getByRole("region", {
+    name: "No product has cleared every must-have yet",
+  });
+  await decisionRegion
+    .getByRole("button", { name: "Not for me" })
+    .first()
+    .click();
+  const rejected = page.locator("details").filter({ hasText: /^Rejected/ });
+  await rejected.locator("summary").click();
+  await rejected.getByRole("button", { name: "Undo" }).click();
+  await expect(
+    decisionRegion.getByText("Needs verification").first(),
+  ).toBeVisible();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,
     ),
   ).toBe(true);
+  await expect(page.locator("main").getByRole("alert")).toHaveCount(0);
 });

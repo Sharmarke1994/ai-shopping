@@ -5,10 +5,14 @@ import type {
   EvidenceSearchProvider,
   EvidenceSearchResponse,
 } from "./evidence-search";
-import type { ProductUnderstandingModel } from "./model-port";
+import type {
+  ProductUnderstandingCallPolicy,
+  ProductUnderstandingModel,
+} from "./model-port";
 import { PRODUCT_UNDERSTANDING_PROMPT_VERSION } from "./prompts";
 import {
   productUnderstandingInputV1Schema,
+  productUnderstandingProviderWireV1SchemaForInput,
   type ProductUnderstandingInputV1,
 } from "./provider-wire";
 import {
@@ -34,8 +38,10 @@ export type EvidenceResearchDependencies = Readonly<{
   }>;
 }>;
 
-function hasVisualCriterion(brief: ReturnType<typeof projectShoppingBrief>) {
-  return brief.items.some(({ conceptLabel, conceptDefinition }) =>
+function hasVisualCriterion(
+  criteria: ReturnType<typeof projectShoppingBrief>["items"],
+) {
+  return criteria.some(({ conceptLabel, conceptDefinition }) =>
     /shape|profile|thumb|visual|style|gamer|bulky|mesh|fabric|leather|material|sculpt/i.test(
       `${conceptLabel} ${conceptDefinition}`,
     ),
@@ -76,7 +82,39 @@ async function buildUnderstandingInput(options: {
     ({ id }) => id === options.candidateListingId,
   );
   if (listing === undefined) throw new Error("Research listing is unavailable");
-  const includeVisual = hasVisualCriterion(brief);
+  const candidateModelAttempts = options.snapshot.attempts.filter(
+    (attempt) =>
+      attempt.candidateListingId === options.candidateListingId &&
+      (attempt.stage === "observation_extraction" ||
+        attempt.stage === "criterion_assessment"),
+  );
+  const extractionTargets = candidateModelAttempts.find(
+    ({ stage }) => stage === "observation_extraction",
+  )?.targetCriterionIds;
+  const assessmentTargets = candidateModelAttempts.find(
+    ({ stage }) => stage === "criterion_assessment",
+  )?.targetCriterionIds;
+  if (extractionTargets === undefined || assessmentTargets === undefined) {
+    throw new Error("Research model target bindings are unavailable");
+  }
+  const extractionTargetSet = new Set(extractionTargets);
+  const assessmentTargetSet = new Set(assessmentTargets);
+  if (
+    extractionTargetSet.size === 0 ||
+    extractionTargetSet.size !== assessmentTargetSet.size ||
+    [...extractionTargetSet].some(
+      (criterionId) => !assessmentTargetSet.has(criterionId),
+    )
+  ) {
+    throw new Error("Research model target bindings disagree");
+  }
+  const targetCriteria = brief.items.filter(({ criterionId }) =>
+    extractionTargetSet.has(criterionId),
+  );
+  if (targetCriteria.length !== extractionTargetSet.size) {
+    throw new Error("Research model target is not current");
+  }
+  const includeVisual = hasVisualCriterion(targetCriteria);
   const sources = options.snapshot.sources
     .filter(
       (source) =>
@@ -85,8 +123,10 @@ async function buildUnderstandingInput(options: {
     )
     .sort(
       (left, right) =>
+        Number(right.researchRunId === options.snapshot.run.id) -
+          Number(left.researchRunId === options.snapshot.run.id) ||
         sourcePriority(left) - sourcePriority(right) ||
-        left.observedAt.getTime() - right.observedAt.getTime() ||
+        right.observedAt.getTime() - left.observedAt.getTime() ||
         left.id.localeCompare(right.id),
     )
     .slice(0, 20);
@@ -98,7 +138,7 @@ async function buildUnderstandingInput(options: {
       merchant: listing.merchant,
       observedPriceText: listing.priceText,
     },
-    criteria: brief.items.map((item, ordinal) => ({
+    criteria: targetCriteria.map((item, ordinal) => ({
       ordinal,
       label: item.conceptLabel,
       definition: item.conceptDefinition,
@@ -122,6 +162,9 @@ export async function executeOrResumeEvidenceResearch(options: {
   dependencies: EvidenceResearchDependencies;
   taskId: unknown;
   searchRunId: unknown;
+  mode?: "first_pass" | "deepening" | "targeted" | "reassessment";
+  targetCandidateListingId?: unknown;
+  targetCriterionId?: unknown;
   savedCandidateListingIds?: readonly unknown[];
 }): Promise<EvidenceResearchSnapshot> {
   const prepared = await prepareEvidenceResearch({
@@ -134,6 +177,13 @@ export async function executeOrResumeEvidenceResearch(options: {
     promptVersion:
       options.dependencies.modelIdentity.promptVersion ||
       PRODUCT_UNDERSTANDING_PROMPT_VERSION,
+    ...(options.mode === undefined ? {} : { mode: options.mode }),
+    ...(options.targetCandidateListingId === undefined
+      ? {}
+      : { targetCandidateListingId: options.targetCandidateListingId }),
+    ...(options.targetCriterionId === undefined
+      ? {}
+      : { targetCriterionId: options.targetCriterionId }),
     ...(options.savedCandidateListingIds === undefined
       ? {}
       : { savedCandidateListingIds: options.savedCandidateListingIds }),
@@ -262,9 +312,22 @@ export async function executeOrResumeEvidenceResearch(options: {
         snapshot,
         candidateListingId,
       });
+      const callPolicy: ProductUnderstandingCallPolicy = {
+        requireCriterionBinding: snapshot.run.phase === "deepening",
+      };
       const startedAt = new Date();
       unsafeToRelease = true;
-      const result = await options.dependencies.model.understand(input);
+      const result = await options.dependencies.model.understand(
+        input,
+        callPolicy,
+      );
+      const scopedResult =
+        result.status === "completed"
+          ? productUnderstandingProviderWireV1SchemaForInput({
+              input,
+              requireCriterionBinding: callPolicy.requireCriterionBinding,
+            }).safeParse(result.value)
+          : null;
       await recordCandidateUnderstanding({
         db: options.dependencies.db,
         taskId: snapshot.run.taskId,
@@ -274,13 +337,18 @@ export async function executeOrResumeEvidenceResearch(options: {
         assessmentAttemptId: assessment.id,
         leaseToken,
         sourceIdsInOrder,
-        result: result.status === "completed" ? result.value : null,
+        result:
+          result.status === "completed" && scopedResult?.success === true
+            ? scopedResult.data
+            : null,
         metadata: result.metadata,
-        ...(result.status === "completed"
+        ...(result.status === "completed" && scopedResult?.success === true
           ? {}
           : {
               failureCode:
-                result.status === "malformed"
+                result.status === "malformed" ||
+                (result.status === "completed" &&
+                  scopedResult?.success === false)
                   ? ("invalid_model_output" as const)
                   : ("model_failed" as const),
             }),

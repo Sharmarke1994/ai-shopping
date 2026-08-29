@@ -126,9 +126,9 @@ function countingDependencies(options: {
     apiKey: options.openAIKey,
   });
   const understanding: ProductUnderstandingModel = {
-    understand: (input) => {
+    understand: (input, policy) => {
       counts.understandingCalls += 1;
-      return understandingBase.understand(input);
+      return understandingBase.understand(input, policy);
     },
   };
   return {

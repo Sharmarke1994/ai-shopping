@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { candidateListingIdSchema } from "@/domain/shopping-state/ids";
+import {
+  candidateListingIdSchema,
+  criterionIdSchema,
+} from "@/domain/shopping-state/ids";
 
 export const liveSessionIdSchema = z.uuid().brand<"LiveSessionId">();
 export const liveTurnIdSchema = z.uuid().brand<"LiveTurnId">();
@@ -58,6 +61,24 @@ export const researchLiveShoppingRequestSchema = z.strictObject({
   sessionId: liveSessionIdSchema,
 });
 
+export const deepenLiveShoppingRequestSchema = z.strictObject({
+  operation: z.literal("deepen_research"),
+  sessionId: liveSessionIdSchema,
+});
+
+export const researchLiveCandidateRequestSchema = z.strictObject({
+  operation: z.literal("research_candidate"),
+  sessionId: liveSessionIdSchema,
+  candidateListingId: candidateListingIdSchema,
+  criterionId: criterionIdSchema.optional(),
+});
+
+export const rejectLiveListingRequestSchema = z.strictObject({
+  operation: z.enum(["reject_listing", "undo_reject_listing"]),
+  sessionId: liveSessionIdSchema,
+  candidateListingId: candidateListingIdSchema,
+});
+
 export const liveShoppingMutationSchema = z.discriminatedUnion("operation", [
   startLiveShoppingRequestSchema,
   answerLiveShoppingRequestSchema,
@@ -66,6 +87,9 @@ export const liveShoppingMutationSchema = z.discriminatedUnion("operation", [
   retryLiveContextRequestSchema,
   resumeLiveSearchRequestSchema,
   researchLiveShoppingRequestSchema,
+  deepenLiveShoppingRequestSchema,
+  researchLiveCandidateRequestSchema,
+  rejectLiveListingRequestSchema,
 ]);
 
 const liveBriefItemSchema = z.strictObject({
@@ -96,6 +120,7 @@ const liveListingSchema = z.strictObject({
     additionalUnverifiedCount: z.number().int().nonnegative(),
   }),
   saved: z.boolean(),
+  rejected: z.boolean(),
 });
 
 const liveSearchSchema = z.strictObject({
@@ -122,7 +147,23 @@ const evidenceSourceLinkSchema = z.strictObject({
 
 const decisionSupportCandidateSchema = z.strictObject({
   listing: liveListingSchema,
+  readiness: z.enum([
+    "qualified",
+    "needs_verification",
+    "trade_off",
+    "ineligible",
+  ]),
+  researchState: z.enum(["available", "researching", "complete", "failed"]),
   strongestSupported: z.boolean(),
+  supportedMustHaveCount: z.number().int().nonnegative(),
+  mustHaveCount: z.number().int().nonnegative(),
+  unresolvedMustHaves: z.array(
+    z.strictObject({
+      criterionId: z.uuid(),
+      label: z.string().min(1).max(200),
+      explanation: z.string().min(1).max(500),
+    }),
+  ),
   whyItFits: z.array(z.string().min(1).max(500)).max(4),
   watchouts: z.array(z.string().min(1).max(500)).max(3),
   unknowns: z.array(z.string().min(1).max(500)).max(3),
@@ -131,10 +172,23 @@ const decisionSupportCandidateSchema = z.strictObject({
 
 const savedComparisonSchema = z.strictObject({
   candidates: z.array(liveListingSchema).min(2).max(4),
+  researchStates: z.array(
+    z.strictObject({
+      candidateListingId: candidateListingIdSchema,
+      state: z.enum(["available", "researching", "complete", "failed"]),
+    }),
+  ),
+  purchaseSummaries: z.array(
+    z.strictObject({
+      candidateListingId: candidateListingIdSchema,
+      priceRelationship: z.string().min(1).max(500),
+    }),
+  ),
   rows: z.array(
     z.strictObject({
       criterionId: z.uuid(),
       label: z.string().min(1).max(200),
+      strength: z.enum(["hard", "strong_preference", "preference"]),
       cells: z.array(
         z.strictObject({
           candidateListingId: candidateListingIdSchema,
@@ -151,6 +205,25 @@ const savedComparisonSchema = z.strictObject({
     }),
   ),
   judgement: z.string().min(1).max(1_500),
+  decisionGaps: z.array(
+    z.strictObject({
+      criterionId: z.uuid(),
+      label: z.string().min(1).max(200),
+      strength: z.enum(["hard", "strong_preference", "preference"]),
+      candidateListingIds: z.array(candidateListingIdSchema).min(1).max(4),
+      candidateTitles: z.array(z.string().min(1).max(500)).min(1).max(4),
+      explanation: z.string().min(1).max(500),
+    }),
+  ),
+});
+
+const decisionGapSchema = z.strictObject({
+  criterionId: z.uuid(),
+  label: z.string().min(1).max(200),
+  strength: z.enum(["hard", "strong_preference", "preference"]),
+  candidateListingIds: z.array(candidateListingIdSchema).min(1).max(5),
+  candidateTitles: z.array(z.string().min(1).max(500)).min(1).max(5),
+  explanation: z.string().min(1).max(500),
 });
 
 const liveDecisionSupportSchema = z.strictObject({
@@ -161,7 +234,23 @@ const liveDecisionSupportSchema = z.strictObject({
     "failed",
     "ready",
   ]),
+  deepResearchStatus: z.enum([
+    "available",
+    "researching",
+    "complete",
+    "partial",
+    "failed",
+    "not_needed",
+  ]),
+  researchActivity: z.strictObject({
+    firstPassEvidenceCalls: z.number().int().nonnegative(),
+    deepeningEvidenceCalls: z.number().int().nonnegative(),
+    productUnderstandingCalls: z.number().int().nonnegative(),
+  }),
   researchedCandidateCount: z.number().int().nonnegative(),
+  sectionMode: z.enum(["qualified_options", "verification_needed"]),
+  excludedCandidateCount: z.number().int().nonnegative(),
+  decisionGaps: z.array(decisionGapSchema).max(3),
   topOptions: z.array(decisionSupportCandidateSchema).max(5),
   comparison: savedComparisonSchema.nullable(),
 });
@@ -173,9 +262,11 @@ const actionBase = {
 export const liveShoppingViewSchema = z.strictObject({
   schemaVersion: z.literal(1),
   sessionId: liveSessionIdSchema,
+  viewEpoch: z.string().regex(/^[a-f0-9]{24}$/),
   subject: z.string(),
   brief: z.array(liveBriefItemSchema),
   savedListings: z.array(liveListingSchema),
+  rejectedListings: z.array(liveListingSchema),
   decisionSupport: liveDecisionSupportSchema.nullable(),
   action: z.discriminatedUnion("kind", [
     z.strictObject({

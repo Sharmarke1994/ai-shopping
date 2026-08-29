@@ -85,7 +85,7 @@ export const evidenceAcquisitionAttempts = shoppingPrivate.table(
     ),
     check(
       "evidence_acquisition_attempts_purpose_allowed",
-      sql`${table.purpose} in ('specifications', 'experience', 'combined', 'current_brief')`,
+      sql`${table.purpose} in ('specifications', 'experience', 'first_pass', 'decision_gap', 'combined', 'current_brief')`,
     ),
     check(
       "evidence_acquisition_attempts_text_bounds",

@@ -7,13 +7,13 @@ import type {
   ProductUnderstandingModel,
 } from "./model-port";
 import {
-  PRODUCT_UNDERSTANDING_INSTRUCTIONS,
   PRODUCT_UNDERSTANDING_PROMPT_VERSION,
+  productUnderstandingInstructionsForCall,
 } from "./prompts";
 import {
   PRODUCT_UNDERSTANDING_PROVIDER_SCHEMA_VERSION,
   productUnderstandingInputV1Schema,
-  productUnderstandingProviderWireV1Schema,
+  productUnderstandingProviderStructuredOutputSchema,
 } from "./provider-wire";
 
 export type OpenAIProductUnderstandingConfig = Readonly<{
@@ -44,8 +44,14 @@ export function createOpenAIProductUnderstandingModel(options: {
     options.client ?? new OpenAI({ apiKey: options.apiKey, maxRetries: 0 });
   const config = { ...V0_07_OPENAI_DEFAULT_CONFIG, ...options.config };
   return {
-    understand: async (rawInput) => {
+    understand: async (rawInput, policy) => {
       const input = productUnderstandingInputV1Schema.parse(rawInput);
+      const providerSchema = productUnderstandingProviderStructuredOutputSchema(
+        {
+          input,
+          requireCriterionBinding: policy.requireCriterionBinding,
+        },
+      );
       const startedAt = performance.now();
       const metadata = (): ModelCallMetadata => ({
         provider: "openai",
@@ -84,7 +90,7 @@ export function createOpenAIProductUnderstandingModel(options: {
         const response: ResponseLike = await client.responses.create(
           {
             model: config.model,
-            instructions: PRODUCT_UNDERSTANDING_INSTRUCTIONS,
+            instructions: productUnderstandingInstructionsForCall(policy),
             input: [{ role: "user", content }],
             max_output_tokens: config.maxOutputTokens,
             reasoning: { effort: config.reasoningEffort },
@@ -93,8 +99,10 @@ export function createOpenAIProductUnderstandingModel(options: {
             tools: [],
             text: {
               format: zodTextFormat(
-                productUnderstandingProviderWireV1Schema,
-                "product_understanding_v1",
+                providerSchema,
+                policy.requireCriterionBinding
+                  ? "product_understanding_focused_v1"
+                  : "product_understanding_v1",
               ),
             },
           },
@@ -105,7 +113,7 @@ export function createOpenAIProductUnderstandingModel(options: {
         );
         return parseOpenAIResponse({
           response,
-          schema: productUnderstandingProviderWireV1Schema,
+          schema: providerSchema,
           fallbackMetadata: metadata(),
         });
       } catch (error) {

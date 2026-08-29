@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import {
   afterAll,
   beforeAll,
@@ -15,18 +15,25 @@ import type {
   InterpretationProviderWireV1,
 } from "../../src/features/context-acquisition/provider-wire";
 import {
+  deepenLiveShoppingResearch,
+  loadLiveShoppingSession,
+  researchLiveCandidate,
   researchLiveShopping,
   setLiveListingSaved,
   startLiveShopping,
   type LiveShoppingDependencies,
 } from "../../src/features/live-shopping/application";
 import { saveCandidateListing } from "../../src/features/live-shopping/saved-listings";
+import { rejectCandidateListing } from "../../src/features/live-shopping/rejected-listings";
 import {
   FakeEvidenceSearchProvider,
   FakeProductUnderstandingModel,
 } from "../../src/features/product-understanding/fakes";
+import type { ProductUnderstandingCallPolicy } from "../../src/features/product-understanding/model-port";
 import {
   claimEvidenceResearch,
+  EvidenceResearchAuthorityError,
+  EvidenceResearchNotNeededError,
   loadCurrentDecisionSupport,
   loadCurrentDecisionSupportInTransaction,
   loadEvidenceResearchRun,
@@ -36,6 +43,7 @@ import {
   releaseEvidenceResearchLease,
 } from "../../src/features/product-understanding/persistence";
 import { evidenceSearchResponseSchema } from "../../src/features/product-understanding/evidence-search";
+import { buildDecisionSupport } from "../../src/features/product-understanding/decision-support";
 import { executeOrResumeEvidenceResearch } from "../../src/features/product-understanding/research-orchestrator";
 import { FakeShoppingProvider } from "../../src/features/retrieval-spike/fake-shopping-provider";
 import { loadPersistedSearchRun } from "../../src/features/retrieval-spike/persistence/search-runs";
@@ -44,7 +52,11 @@ import { applyStatePatch } from "../../src/features/shopping-state/persistence/s
 import {
   criterionAssessmentObservations,
   criterionAssessments,
+  candidateListings,
+  evidenceAcquisitionAttempts,
+  evidenceAttemptTargetCriteria,
   evidenceResearchRuns,
+  evidenceSources,
   founderLiveSessions,
   productObservations,
   searchRuns,
@@ -121,6 +133,177 @@ function contextModel(): ContextAcquisitionModel {
   };
 }
 
+function fourCriteriaContextModel(): ContextAcquisitionModel {
+  const definitions = [
+    ["criterion_a", "Criterion A", "First researchable fact"],
+    ["battery_life", "Battery life", "Battery endurance"],
+    ["criterion_c", "Criterion C", "Third researchable fact"],
+    ["criterion_d", "Criterion D", "Fourth researchable fact"],
+  ] as const;
+  return {
+    interpret: vi.fn(() =>
+      Promise.resolve({
+        status: "completed" as const,
+        value: {
+          providerSchemaVersion: 1 as const,
+          outcome: "change" as const,
+          operations: definitions.flatMap(([localRef, label, definition]) => [
+            {
+              op: "create_concept" as const,
+              localRef,
+              label,
+              definition,
+              valueFamily: "qualitative" as const,
+              canonicalUnit: null,
+            },
+            {
+              op: "add_criterion" as const,
+              concept: { kind: "created" as const, localRef },
+              target: {
+                strength: "strong_preference" as const,
+                targetSemantics: "qualitative" as const,
+                semanticValue: {
+                  schemaVersion: 1 as const,
+                  kind: "qualitative_text" as const,
+                  text: `Evidence for ${label}`,
+                },
+              },
+            },
+          ]),
+          ambiguities: [],
+        },
+        metadata: acquisitionMetadata,
+      }),
+    ),
+    selectAction: vi.fn(() =>
+      Promise.resolve({
+        status: "completed" as const,
+        value: search,
+        metadata: acquisitionMetadata,
+      }),
+    ),
+  };
+}
+
+function appearanceContextModel(): ContextAcquisitionModel {
+  return {
+    interpret: vi.fn(() =>
+      Promise.resolve({
+        status: "completed" as const,
+        value: {
+          providerSchemaVersion: 1 as const,
+          outcome: "change" as const,
+          operations: [
+            {
+              op: "create_concept" as const,
+              localRef: "appearance",
+              label: "Chair appearance",
+              definition: "Avoid an overt gaming-chair appearance",
+              valueFamily: "qualitative" as const,
+              canonicalUnit: null,
+            },
+            {
+              op: "add_criterion" as const,
+              concept: { kind: "created" as const, localRef: "appearance" },
+              target: {
+                strength: "preference" as const,
+                targetSemantics: "qualitative" as const,
+                semanticValue: {
+                  schemaVersion: 1 as const,
+                  kind: "qualitative_text" as const,
+                  text: "not huge or gamer-looking",
+                },
+              },
+            },
+          ],
+          ambiguities: [],
+        },
+        metadata: acquisitionMetadata,
+      }),
+    ),
+    selectAction: vi.fn(() =>
+      Promise.resolve({
+        status: "completed" as const,
+        value: search,
+        metadata: acquisitionMetadata,
+      }),
+    ),
+  };
+}
+
+const understandingMetadata = {
+  provider: "fixture" as const,
+  model: "fixture-product-understanding",
+  promptVersion: "product-understanding-v1",
+  providerSchemaVersion: 1,
+  providerRequestId: "fixture-assessment-only",
+  durationMs: 0,
+  inputTokens: null,
+  outputTokens: null,
+};
+
+function assessmentOnlyModel(status: "meets" | "uncertain" = "uncertain") {
+  const calls: Parameters<FakeProductUnderstandingModel["understand"]>[0][] =
+    [];
+  const policies: ProductUnderstandingCallPolicy[] = [];
+  return {
+    calls,
+    policies,
+    understand: vi.fn(
+      (
+        input: Parameters<FakeProductUnderstandingModel["understand"]>[0],
+        policy: ProductUnderstandingCallPolicy,
+      ) => {
+        calls.push(input);
+        policies.push(policy);
+        const source = input.sources.find(
+          ({ kind }) => kind !== "listing_image",
+        );
+        const observations =
+          status === "meets" && source !== undefined
+            ? input.criteria.map((criterion) => ({
+                localRef: `criterion_${criterion.ordinal}`,
+                sourceOrdinal: source.ordinal,
+                criterionOrdinal: criterion.ordinal,
+                support: "supported" as const,
+                observationKind: "source_assertion" as const,
+                propertyLabel: criterion.label,
+                claim: `The supplied source directly addresses ${criterion.label}.`,
+                value: {
+                  schemaVersion: 1 as const,
+                  kind: "text" as const,
+                  text: `Supported ${criterion.label}`,
+                },
+                derivation: "model_text" as const,
+              }))
+            : [];
+        return Promise.resolve({
+          status: "completed" as const,
+          value: {
+            providerSchemaVersion: 1 as const,
+            observations,
+            assessments: input.criteria.map(({ ordinal }) => ({
+              criterionOrdinal: ordinal,
+              status,
+              relation:
+                status === "meets"
+                  ? "fixture_supported"
+                  : "insufficient_evidence",
+              explanation:
+                status === "meets"
+                  ? "The fixture marks this criterion supported."
+                  : "The fixture leaves this criterion unresolved.",
+              observationRefs:
+                status === "meets" ? [`criterion_${ordinal}`] : [],
+            })),
+          },
+          metadata: understandingMetadata,
+        });
+      },
+    ),
+  };
+}
+
 describe("evidence-backed product understanding persistence", () => {
   let connection: TestDatabaseConnection;
 
@@ -134,10 +317,10 @@ describe("evidence-backed product understanding persistence", () => {
     await connection.close();
   });
 
-  async function seedSearch() {
+  async function seedSearch(acquisitionModel = contextModel()) {
     const dependencies = {
       db: connection.db,
-      model: contextModel(),
+      model: acquisitionModel,
       provider: new FakeShoppingProvider(
         () => new Date("2026-08-28T00:00:00.000Z"),
       ),
@@ -217,6 +400,908 @@ describe("evidence-backed product understanding persistence", () => {
     expect(exactRetry).toEqual(completed);
     expect(evidenceProvider.calls).toHaveLength(searchCallCount);
     expect(model.calls).toHaveLength(modelCallCount);
+  });
+
+  it("keeps first-pass and reassessment model calls broad while preserving a title trade-off", async () => {
+    const { session, run } = await seedSearch(appearanceContextModel());
+    await connection.db
+      .update(candidateListings)
+      .set({ title: "Mesh Gaming Chair with Footrest" })
+      .where(eq(candidateListings.taskId, session.taskId));
+    const firstPassModel = assessmentOnlyModel("uncertain");
+    const dependencies = {
+      db: connection.db,
+      evidenceProvider: new FakeEvidenceSearchProvider(),
+      model: firstPassModel,
+      modelIdentity: {
+        provider: "fixture" as const,
+        model: "fixture-product-understanding",
+        promptVersion: "product-understanding-v1",
+      },
+    };
+    const completed = await executeOrResumeEvidenceResearch({
+      dependencies,
+      taskId: session.taskId,
+      searchRunId: run.id,
+    });
+    expect(firstPassModel.policies.length).toBeGreaterThan(0);
+    expect(
+      firstPassModel.policies.every(
+        ({ requireCriterionBinding }) => !requireCriterionBinding,
+      ),
+    ).toBe(true);
+    const titleAssessment = completed.assessments.find(
+      ({ relation }) => relation === "direct_title_preference_mismatch",
+    );
+    if (titleAssessment === undefined) {
+      throw new Error("Expected an evidence-backed title assessment");
+    }
+    const descriptor = completed.observations.find(({ id }) =>
+      titleAssessment.observationIds.includes(id),
+    );
+    const support = await loadCurrentDecisionSupport({
+      db: connection.db,
+      taskId: session.taskId,
+    });
+    const appearanceItem = support.brief.items.find(
+      ({ criterionId }) => criterionId === titleAssessment.criterionId,
+    );
+    if (appearanceItem === undefined) {
+      throw new Error("Expected the authoritative appearance criterion");
+    }
+    expect(descriptor).toMatchObject({
+      researchRunId: completed.run.id,
+      conceptId: appearanceItem.conceptId,
+      propertyLabel: "Listing title descriptor",
+      claim: "The exact listing title uses “Gaming”.",
+      value: { schemaVersion: 1, kind: "text", text: "Gaming" },
+      derivation: "deterministic",
+    });
+    const decision = buildDecisionSupport({
+      support,
+      savedListingIds: new Set(),
+    });
+    expect(
+      decision.topOptions.find(
+        ({ listing }) => listing.id === titleAssessment.candidateListingId,
+      ),
+    ).toMatchObject({
+      readiness: "trade_off",
+      watchouts: [expect.stringContaining("stated preference")],
+    });
+
+    await saveCandidateListing({
+      db: connection.db,
+      taskId: session.taskId,
+      candidateListingId: titleAssessment.candidateListingId,
+    });
+    const reassessmentModel = assessmentOnlyModel("uncertain");
+    const reassessed = await executeOrResumeEvidenceResearch({
+      dependencies: {
+        ...dependencies,
+        model: reassessmentModel,
+      },
+      taskId: session.taskId,
+      searchRunId: run.id,
+      mode: "reassessment",
+      savedCandidateListingIds: [titleAssessment.candidateListingId],
+    });
+    expect(reassessed.run.id).not.toBe(completed.run.id);
+    expect(reassessmentModel.policies).toEqual([
+      { requireCriterionBinding: false },
+    ]);
+    const [storedDescriptor] = await connection.db
+      .select({
+        observationRunId: productObservations.researchRunId,
+        sourceRunId: evidenceSources.researchRunId,
+      })
+      .from(productObservations)
+      .innerJoin(
+        evidenceSources,
+        and(
+          eq(evidenceSources.taskId, productObservations.taskId),
+          eq(evidenceSources.id, productObservations.evidenceSourceId),
+        ),
+      )
+      .where(
+        and(
+          eq(productObservations.taskId, session.taskId),
+          eq(productObservations.id, descriptor!.id),
+        ),
+      );
+    expect(storedDescriptor).toEqual({
+      observationRunId: completed.run.id,
+      sourceRunId: completed.run.id,
+    });
+  });
+
+  it("prepares research for an authoritative brief with thirteen criteria", async () => {
+    const operations = Array.from({ length: 13 }, (_, index) => {
+      const localRef = `criterion_${index + 1}`;
+      return [
+        {
+          op: "create_concept" as const,
+          localRef,
+          label: `Criterion ${index + 1}`,
+          definition: `Explicit shopping criterion ${index + 1}`,
+          valueFamily: "qualitative" as const,
+          canonicalUnit: null,
+        },
+        {
+          op: "add_criterion" as const,
+          concept: { kind: "created" as const, localRef },
+          target: {
+            strength: "preference" as const,
+            targetSemantics: "qualitative" as const,
+            semanticValue: {
+              schemaVersion: 1 as const,
+              kind: "qualitative_text" as const,
+              text: `Preference ${index + 1}`,
+            },
+          },
+        },
+      ];
+    }).flat();
+    const acquisitionModel: ContextAcquisitionModel = {
+      interpret: vi.fn(() =>
+        Promise.resolve({
+          status: "completed" as const,
+          value: {
+            providerSchemaVersion: 1 as const,
+            outcome: "change" as const,
+            operations,
+            ambiguities: [],
+          },
+          metadata: acquisitionMetadata,
+        }),
+      ),
+      selectAction: vi.fn(() =>
+        Promise.resolve({
+          status: "completed" as const,
+          value: search,
+          metadata: acquisitionMetadata,
+        }),
+      ),
+    };
+    const { session, run } = await seedSearch(acquisitionModel);
+    const prepared = await prepareEvidenceResearch({
+      db: connection.db,
+      taskId: session.taskId,
+      searchRunId: run.id,
+      evidenceProvider: "fixture",
+      modelProvider: "fixture",
+      model: "fixture-product-understanding",
+      promptVersion: "product-understanding-v1",
+    });
+    const modelAttempts = prepared.attempts.filter(
+      ({ stage }) =>
+        stage === "observation_extraction" || stage === "criterion_assessment",
+    );
+    expect(modelAttempts.length).toBeGreaterThan(0);
+    expect(
+      modelAttempts.every(
+        ({ targetCriterionIds }) => targetCriterionIds.length === 13,
+      ),
+    ).toBe(true);
+  });
+
+  it("requires criterion binding while scoping targeted supersession to one exact criterion", async () => {
+    const { session, run } = await seedSearch(fourCriteriaContextModel());
+    const initialModel = assessmentOnlyModel();
+    const baseDependencies = {
+      db: connection.db,
+      evidenceProvider: new FakeEvidenceSearchProvider(),
+      model: initialModel,
+      modelIdentity: {
+        provider: "fixture" as const,
+        model: "fixture-product-understanding",
+        promptVersion: "product-understanding-v1",
+      },
+    };
+    const first = await executeOrResumeEvidenceResearch({
+      dependencies: baseDependencies,
+      taskId: session.taskId,
+      searchRunId: run.id,
+      mode: "first_pass",
+    });
+    expect(initialModel.policies.length).toBeGreaterThan(0);
+    expect(
+      initialModel.policies.every(
+        ({ requireCriterionBinding }) => !requireCriterionBinding,
+      ),
+    ).toBe(true);
+    const candidateListingId = first.assessments[0]?.candidateListingId;
+    if (candidateListingId === undefined) {
+      throw new Error("Expected a first-pass candidate");
+    }
+    const beforeSupport = await loadCurrentDecisionSupport({
+      db: connection.db,
+      taskId: session.taskId,
+    });
+    const target = beforeSupport.brief.items.find(
+      ({ conceptLabel }) => conceptLabel === "Battery life",
+    );
+    if (target === undefined) throw new Error("Expected Battery life");
+    const before = await connection.db
+      .select()
+      .from(criterionAssessments)
+      .where(
+        and(
+          eq(criterionAssessments.taskId, session.taskId),
+          eq(criterionAssessments.candidateListingId, candidateListingId),
+          isNull(criterionAssessments.supersededAt),
+        ),
+      );
+    expect(before).toHaveLength(4);
+
+    const targetedModel = assessmentOnlyModel("meets");
+    const targeted = await executeOrResumeEvidenceResearch({
+      dependencies: {
+        ...baseDependencies,
+        evidenceProvider: new FakeEvidenceSearchProvider(),
+        model: targetedModel,
+      },
+      taskId: session.taskId,
+      searchRunId: run.id,
+      mode: "targeted",
+      targetCandidateListingId: candidateListingId,
+      targetCriterionId: target.criterionId,
+    });
+
+    expect(targetedModel.calls).toHaveLength(1);
+    expect(targetedModel.policies).toEqual([{ requireCriterionBinding: true }]);
+    expect(targetedModel.calls[0]?.criteria).toEqual([
+      expect.objectContaining({ ordinal: 0, label: "Battery life" }),
+    ]);
+    expect(
+      targeted.attempts.every(
+        ({ targetCriterionIds }) =>
+          targetCriterionIds.length === 1 &&
+          targetCriterionIds[0] === target.criterionId,
+      ),
+    ).toBe(true);
+    expect(targeted.assessments).toEqual([
+      expect.objectContaining({
+        criterionId: target.criterionId,
+        generation: 2,
+      }),
+    ]);
+
+    const allAfter = await connection.db
+      .select()
+      .from(criterionAssessments)
+      .where(
+        and(
+          eq(criterionAssessments.taskId, session.taskId),
+          eq(criterionAssessments.candidateListingId, candidateListingId),
+        ),
+      );
+    const beforeByCriterion = new Map(
+      before.map((assessment) => [assessment.criterionId, assessment]),
+    );
+    for (const item of beforeSupport.brief.items) {
+      const previous = beforeByCriterion.get(item.criterionId);
+      if (previous === undefined) throw new Error("Expected prior assessment");
+      const lineage = allAfter
+        .filter(({ criterionId }) => criterionId === item.criterionId)
+        .sort((left, right) => left.generation - right.generation);
+      if (item.criterionId === target.criterionId) {
+        expect(lineage).toHaveLength(2);
+        expect(lineage[0]).toMatchObject({
+          id: previous.id,
+          generation: 1,
+          supersededAt: expect.any(Date),
+        });
+        expect(lineage[1]).toMatchObject({
+          generation: 2,
+          supersedesAssessmentId: previous.id,
+          supersededAt: null,
+        });
+      } else {
+        expect(lineage).toEqual([previous]);
+      }
+    }
+  });
+
+  it("requires criterion binding for every automatic deepening model call", async () => {
+    const { session, run } = await seedSearch(fourCriteriaContextModel());
+    const firstPassModel = assessmentOnlyModel();
+    const baseDependencies = {
+      db: connection.db,
+      evidenceProvider: new FakeEvidenceSearchProvider(),
+      model: firstPassModel,
+      modelIdentity: {
+        provider: "fixture" as const,
+        model: "fixture-product-understanding",
+        promptVersion: "product-understanding-v1",
+      },
+    };
+    await executeOrResumeEvidenceResearch({
+      dependencies: baseDependencies,
+      taskId: session.taskId,
+      searchRunId: run.id,
+      mode: "first_pass",
+    });
+
+    const deepeningModel = assessmentOnlyModel("meets");
+    const deepening = await executeOrResumeEvidenceResearch({
+      dependencies: {
+        ...baseDependencies,
+        evidenceProvider: new FakeEvidenceSearchProvider(),
+        model: deepeningModel,
+      },
+      taskId: session.taskId,
+      searchRunId: run.id,
+      mode: "deepening",
+    });
+
+    expect(deepening.run.phase).toBe("deepening");
+    expect(deepeningModel.calls.length).toBeGreaterThan(0);
+    expect(deepeningModel.policies).toHaveLength(deepeningModel.calls.length);
+    expect(
+      deepeningModel.policies.every(
+        ({ requireCriterionBinding }) => requireCriterionBinding,
+      ),
+    ).toBe(true);
+  });
+
+  it("fails malformed non-target model output closed without changing any current assessment", async () => {
+    const { session, run } = await seedSearch(fourCriteriaContextModel());
+    const baseDependencies = {
+      db: connection.db,
+      evidenceProvider: new FakeEvidenceSearchProvider(),
+      model: assessmentOnlyModel(),
+      modelIdentity: {
+        provider: "fixture" as const,
+        model: "fixture-product-understanding",
+        promptVersion: "product-understanding-v1",
+      },
+    };
+    const first = await executeOrResumeEvidenceResearch({
+      dependencies: baseDependencies,
+      taskId: session.taskId,
+      searchRunId: run.id,
+      mode: "first_pass",
+    });
+    const candidateListingId = first.assessments[0]?.candidateListingId;
+    if (candidateListingId === undefined) {
+      throw new Error("Expected a first-pass candidate");
+    }
+    const support = await loadCurrentDecisionSupport({
+      db: connection.db,
+      taskId: session.taskId,
+    });
+    const target = support.brief.items.find(
+      ({ conceptLabel }) => conceptLabel === "Battery life",
+    );
+    const nonTargetOrdinal = support.brief.items.findIndex(
+      ({ criterionId }, ordinal) =>
+        criterionId !== target?.criterionId && ordinal > 0,
+    );
+    if (target === undefined || nonTargetOrdinal < 0) {
+      throw new Error("Expected target and non-target criteria");
+    }
+    const before = support.assessments
+      .filter(
+        (assessment) => assessment.candidateListingId === candidateListingId,
+      )
+      .map(({ id, criterionId, generation }) => ({
+        id,
+        criterionId,
+        generation,
+      }))
+      .sort((left, right) => left.criterionId.localeCompare(right.criterionId));
+    const calls: unknown[] = [];
+    const malformedModel = {
+      understand: vi.fn(
+        (input: Parameters<FakeProductUnderstandingModel["understand"]>[0]) => {
+          calls.push(input);
+          return Promise.resolve({
+            status: "completed" as const,
+            value: {
+              providerSchemaVersion: 1 as const,
+              observations: [],
+              assessments: [
+                {
+                  criterionOrdinal: nonTargetOrdinal,
+                  status: "uncertain" as const,
+                  relation: "attempted_non_target",
+                  explanation:
+                    "This global ordinal is outside the one-item target subset.",
+                  observationRefs: [],
+                },
+              ],
+            },
+            metadata: understandingMetadata,
+          });
+        },
+      ),
+    };
+    const deep = await executeOrResumeEvidenceResearch({
+      dependencies: {
+        ...baseDependencies,
+        evidenceProvider: new FakeEvidenceSearchProvider(),
+        model: malformedModel,
+      },
+      taskId: session.taskId,
+      searchRunId: run.id,
+      mode: "targeted",
+      targetCandidateListingId: candidateListingId,
+      targetCriterionId: target.criterionId,
+    });
+    expect(calls).toEqual([
+      expect.objectContaining({
+        criteria: [
+          expect.objectContaining({ ordinal: 0, label: "Battery life" }),
+        ],
+      }),
+    ]);
+    expect(deep.run.status).toBe("partial");
+    const modelAttempts = await connection.db
+      .select()
+      .from(evidenceAcquisitionAttempts)
+      .where(
+        and(
+          eq(evidenceAcquisitionAttempts.taskId, session.taskId),
+          eq(evidenceAcquisitionAttempts.researchRunId, deep.run.id),
+        ),
+      );
+    expect(
+      modelAttempts
+        .filter(({ stage }) => stage !== "organic_search")
+        .map(({ status, failureCode }) => ({ status, failureCode })),
+    ).toEqual([
+      { status: "failed", failureCode: "invalid_model_output" },
+      { status: "failed", failureCode: "invalid_model_output" },
+    ]);
+    const after = (
+      await loadCurrentDecisionSupport({
+        db: connection.db,
+        taskId: session.taskId,
+      })
+    ).assessments
+      .filter(
+        (assessment) => assessment.candidateListingId === candidateListingId,
+      )
+      .map(({ id, criterionId, generation }) => ({
+        id,
+        criterionId,
+        generation,
+      }))
+      .sort((left, right) => left.criterionId.localeCompare(right.criterionId));
+    expect(after).toEqual(before);
+  });
+
+  it("fails a raw deep run whose search and model target scopes diverge before paid work", async () => {
+    const { session, run } = await seedSearch(fourCriteriaContextModel());
+    const first = await executeOrResumeEvidenceResearch({
+      dependencies: {
+        db: connection.db,
+        evidenceProvider: new FakeEvidenceSearchProvider(),
+        model: assessmentOnlyModel(),
+        modelIdentity: {
+          provider: "fixture",
+          model: "fixture-product-understanding",
+          promptVersion: "product-understanding-v1",
+        },
+      },
+      taskId: session.taskId,
+      searchRunId: run.id,
+      mode: "first_pass",
+    });
+    const candidateListingId = first.assessments[0]?.candidateListingId;
+    if (candidateListingId === undefined) {
+      throw new Error("Expected a first-pass candidate");
+    }
+    const support = await loadCurrentDecisionSupport({
+      db: connection.db,
+      taskId: session.taskId,
+    });
+    const target = support.brief.items.find(
+      ({ conceptLabel }) => conceptLabel === "Battery life",
+    );
+    const nonTarget = support.brief.items.find(
+      ({ criterionId }) => criterionId !== target?.criterionId,
+    );
+    if (target === undefined || nonTarget === undefined) {
+      throw new Error("Expected distinct target and non-target criteria");
+    }
+    const prepared = await prepareEvidenceResearch({
+      db: connection.db,
+      taskId: session.taskId,
+      searchRunId: run.id,
+      evidenceProvider: "fixture",
+      modelProvider: "fixture",
+      model: "fixture-product-understanding",
+      promptVersion: "product-understanding-v1",
+      mode: "targeted",
+      targetCandidateListingId: candidateListingId,
+      targetCriterionId: target.criterionId,
+    });
+    const modelAttempts = prepared.attempts.filter(
+      ({ stage }) =>
+        stage === "observation_extraction" || stage === "criterion_assessment",
+    );
+    expect(modelAttempts).toHaveLength(2);
+    for (const attempt of modelAttempts) {
+      await connection.db
+        .update(evidenceAttemptTargetCriteria)
+        .set({ criterionId: nonTarget.criterionId })
+        .where(
+          and(
+            eq(evidenceAttemptTargetCriteria.taskId, session.taskId),
+            eq(evidenceAttemptTargetCriteria.attemptId, attempt.id),
+          ),
+        );
+    }
+
+    await expect(
+      loadEvidenceResearchRun({
+        db: connection.db,
+        taskId: session.taskId,
+        researchRunId: prepared.run.id,
+      }),
+    ).rejects.toMatchObject({ name: "PersistedDataCorruptionError" });
+
+    const evidenceProvider = new FakeEvidenceSearchProvider();
+    const model = assessmentOnlyModel("meets");
+    await expect(
+      executeOrResumeEvidenceResearch({
+        dependencies: {
+          db: connection.db,
+          evidenceProvider,
+          model,
+          modelIdentity: {
+            provider: "fixture",
+            model: "fixture-product-understanding",
+            promptVersion: "product-understanding-v1",
+          },
+        },
+        taskId: session.taskId,
+        searchRunId: run.id,
+        mode: "targeted",
+        targetCandidateListingId: candidateListingId,
+        targetCriterionId: target.criterionId,
+      }),
+    ).rejects.toMatchObject({ name: "PersistedDataCorruptionError" });
+    expect(evidenceProvider.calls).toHaveLength(0);
+    expect(model.calls).toHaveLength(0);
+  });
+
+  it("validates exact targeted candidate and criterion authority before paid work", async () => {
+    const { session, run } = await seedSearch(fourCriteriaContextModel());
+    const evidenceProvider = new FakeEvidenceSearchProvider();
+    const model = assessmentOnlyModel("meets");
+    const dependencies = {
+      db: connection.db,
+      evidenceProvider,
+      model,
+      modelIdentity: {
+        provider: "fixture" as const,
+        model: "fixture-product-understanding",
+        promptVersion: "product-understanding-v1",
+      },
+    };
+    const first = await executeOrResumeEvidenceResearch({
+      dependencies,
+      taskId: session.taskId,
+      searchRunId: run.id,
+      mode: "first_pass",
+    });
+    const candidateListingId = first.assessments[0]?.candidateListingId;
+    if (candidateListingId === undefined) {
+      throw new Error("Expected a first-pass candidate");
+    }
+    const support = await loadCurrentDecisionSupport({
+      db: connection.db,
+      taskId: session.taskId,
+    });
+    const battery = support.brief.items.find(
+      ({ conceptLabel }) => conceptLabel === "Battery life",
+    );
+    if (battery === undefined) throw new Error("Expected Battery life");
+    const evidenceCalls = evidenceProvider.calls.length;
+    const modelCalls = model.calls.length;
+
+    await expect(
+      prepareEvidenceResearch({
+        db: connection.db,
+        taskId: session.taskId,
+        searchRunId: run.id,
+        evidenceProvider: "fixture",
+        modelProvider: "fixture",
+        model: "fixture-product-understanding",
+        promptVersion: "product-understanding-v1",
+        mode: "targeted",
+        targetCandidateListingId: candidateListingId,
+        targetCriterionId: battery.criterionId,
+      }),
+    ).rejects.toBeInstanceOf(EvidenceResearchNotNeededError);
+    await expect(
+      prepareEvidenceResearch({
+        db: connection.db,
+        taskId: session.taskId,
+        searchRunId: run.id,
+        evidenceProvider: "fixture",
+        modelProvider: "fixture",
+        model: "fixture-product-understanding",
+        promptVersion: "product-understanding-v1",
+        mode: "targeted",
+        targetCandidateListingId: candidateListingId,
+        targetCriterionId: randomUUID(),
+      }),
+    ).rejects.toBeInstanceOf(EvidenceResearchAuthorityError);
+    await expect(
+      prepareEvidenceResearch({
+        db: connection.db,
+        taskId: session.taskId,
+        searchRunId: run.id,
+        evidenceProvider: "fixture",
+        modelProvider: "fixture",
+        model: "fixture-product-understanding",
+        promptVersion: "product-understanding-v1",
+        mode: "targeted",
+        targetCandidateListingId: randomUUID(),
+        targetCriterionId: battery.criterionId,
+      }),
+    ).rejects.toBeInstanceOf(EvidenceResearchAuthorityError);
+
+    const revisionInput = await recordTaskInput({
+      db: connection.db,
+      taskId: session.taskId,
+      clientActionId: `remove-target:${randomUUID()}`,
+      request: {
+        inputSchemaVersion: 1,
+        expectedRevision: 1n,
+        kind: "message",
+        body: "Battery life no longer matters",
+      },
+    });
+    await applyStatePatch(connection.db, {
+      applicationSchemaVersion: 1,
+      applicationKind: "patch",
+      taskId: session.taskId,
+      expectedRevision: 1n,
+      source: { kind: "user_explicit", inputId: revisionInput.input.id },
+      patch: {
+        schemaVersion: 1,
+        outcome: "change",
+        operations: [{ op: "remove", targetCriterionId: battery.criterionId }],
+      },
+    });
+    await expect(
+      prepareEvidenceResearch({
+        db: connection.db,
+        taskId: session.taskId,
+        searchRunId: run.id,
+        evidenceProvider: "fixture",
+        modelProvider: "fixture",
+        model: "fixture-product-understanding",
+        promptVersion: "product-understanding-v1",
+        mode: "targeted",
+        targetCandidateListingId: candidateListingId,
+        targetCriterionId: battery.criterionId,
+      }),
+    ).rejects.toBeInstanceOf(EvidenceResearchAuthorityError);
+
+    const current = await loadCurrentDecisionSupport({
+      db: connection.db,
+      taskId: session.taskId,
+    });
+    const currentCriterion = current.brief.items[0];
+    if (currentCriterion === undefined) {
+      throw new Error("Expected a remaining current criterion");
+    }
+    await rejectCandidateListing({
+      db: connection.db,
+      taskId: session.taskId,
+      candidateListingId,
+    });
+    await expect(
+      prepareEvidenceResearch({
+        db: connection.db,
+        taskId: session.taskId,
+        searchRunId: run.id,
+        evidenceProvider: "fixture",
+        modelProvider: "fixture",
+        model: "fixture-product-understanding",
+        promptVersion: "product-understanding-v1",
+        mode: "targeted",
+        targetCandidateListingId: candidateListingId,
+        targetCriterionId: currentCriterion.criterionId,
+      }),
+    ).rejects.toBeInstanceOf(EvidenceResearchAuthorityError);
+    expect(evidenceProvider.calls).toHaveLength(evidenceCalls);
+    expect(model.calls).toHaveLength(modelCalls);
+  });
+
+  it("reserves active candidate-criterion coverage across concurrent subset policies while leaving distinct criteria available", async () => {
+    const { session, run } = await seedSearch(fourCriteriaContextModel());
+    const dependencies = {
+      db: connection.db,
+      evidenceProvider: new FakeEvidenceSearchProvider(),
+      model: assessmentOnlyModel(),
+      modelIdentity: {
+        provider: "fixture" as const,
+        model: "fixture-product-understanding",
+        promptVersion: "product-understanding-v1",
+      },
+    };
+    const first = await executeOrResumeEvidenceResearch({
+      dependencies,
+      taskId: session.taskId,
+      searchRunId: run.id,
+      mode: "first_pass",
+    });
+    const candidateListingId = first.assessments[0]?.candidateListingId;
+    if (candidateListingId === undefined) {
+      throw new Error("Expected a first-pass candidate");
+    }
+    const support = await loadCurrentDecisionSupport({
+      db: connection.db,
+      taskId: session.taskId,
+    });
+    const requestedCriterion = support.brief.items[0];
+    if (requestedCriterion === undefined) {
+      throw new Error("Expected an unresolved criterion");
+    }
+    const contender = createTestDatabaseConnection("target-reservation-racer");
+    const prepare = (db: typeof connection.db) => ({
+      db,
+      taskId: session.taskId,
+      searchRunId: run.id,
+      evidenceProvider: "fixture" as const,
+      modelProvider: "fixture" as const,
+      model: "fixture-product-understanding",
+      promptVersion: "product-understanding-v1",
+    });
+    try {
+      const [automatic, exact] = await Promise.allSettled([
+        prepareEvidenceResearch({
+          ...prepare(connection.db),
+          mode: "deepening",
+        }),
+        prepareEvidenceResearch({
+          ...prepare(contender.db),
+          mode: "targeted",
+          targetCandidateListingId: candidateListingId,
+          targetCriterionId: requestedCriterion.criterionId,
+        }),
+      ]);
+      expect(automatic.status).toBe("fulfilled");
+      if (automatic.status !== "fulfilled") throw automatic.reason;
+      expect(automatic.value.run.selectedCandidateCount).toBeGreaterThan(1);
+      if (exact.status === "rejected") {
+        expect(exact.reason).toBeInstanceOf(EvidenceResearchNotNeededError);
+      }
+
+      const active = await loadCurrentDecisionSupport({
+        db: connection.db,
+        taskId: session.taskId,
+      });
+      const occurrenceCount = new Map<string, number>();
+      for (const coverage of active.deepResearchCoverage) {
+        expect(coverage.runStatus).toBe("running");
+        for (const criterionId of coverage.criterionIds) {
+          const identity = `${coverage.candidateListingId}:${criterionId}`;
+          occurrenceCount.set(
+            identity,
+            (occurrenceCount.get(identity) ?? 0) + 1,
+          );
+        }
+      }
+      expect([...occurrenceCount.values()].every((count) => count === 1)).toBe(
+        true,
+      );
+
+      const reservedForCandidate = new Set(
+        active.deepResearchCoverage
+          .filter(
+            ({ candidateListingId: coveredCandidateId }) =>
+              coveredCandidateId === candidateListingId,
+          )
+          .flatMap(({ criterionIds }) => criterionIds),
+      );
+      const distinctCriterion = active.brief.items.find(
+        ({ criterionId }) => !reservedForCandidate.has(criterionId),
+      );
+      if (distinctCriterion === undefined) {
+        throw new Error("Expected a distinct unreserved criterion");
+      }
+      const distinct = await prepareEvidenceResearch({
+        ...prepare(connection.db),
+        mode: "targeted",
+        targetCandidateListingId: candidateListingId,
+        targetCriterionId: distinctCriterion.criterionId,
+      });
+      expect(
+        distinct.attempts
+          .filter(({ stage }) => stage === "organic_search")
+          .map(({ targetCriterionIds }) => targetCriterionIds),
+      ).toEqual([[distinctCriterion.criterionId]]);
+      const alreadyReserved = active.brief.items.find(({ criterionId }) =>
+        reservedForCandidate.has(criterionId),
+      );
+      if (alreadyReserved === undefined) {
+        throw new Error("Expected an active reserved criterion");
+      }
+      const owner = active.deepResearchCoverage.find(
+        ({ candidateListingId: coveredCandidateId, criterionIds }) =>
+          coveredCandidateId === candidateListingId &&
+          criterionIds.includes(alreadyReserved.criterionId),
+      );
+      if (owner === undefined) throw new Error("Expected reservation owner");
+      const runCountBeforeOverlap = (
+        await connection.db
+          .select({ id: evidenceResearchRuns.id })
+          .from(evidenceResearchRuns)
+          .where(eq(evidenceResearchRuns.taskId, session.taskId))
+      ).length;
+      try {
+        const reused = await prepareEvidenceResearch({
+          ...prepare(connection.db),
+          mode: "targeted",
+          targetCandidateListingId: candidateListingId,
+          targetCriterionId: alreadyReserved.criterionId,
+        });
+        expect(reused.run.id).toBe(owner.researchRunId);
+      } catch (error) {
+        expect(error).toBeInstanceOf(EvidenceResearchNotNeededError);
+      }
+      expect(
+        (
+          await connection.db
+            .select({ id: evidenceResearchRuns.id })
+            .from(evidenceResearchRuns)
+            .where(eq(evidenceResearchRuns.taskId, session.taskId))
+        ).length,
+      ).toBe(runCountBeforeOverlap);
+    } finally {
+      await contender.close();
+    }
+  });
+
+  it("keeps unassessed saved listings visible and compareable as unknown", async () => {
+    const { session, run } = await seedSearch();
+    const searchRun = await loadPersistedSearchRun({
+      db: connection.db,
+      taskId: session.taskId,
+      runId: run.id,
+    });
+    const candidates = searchRun?.listings.slice(0, 2) ?? [];
+    if (candidates.length !== 2) {
+      throw new Error("Expected two factual listings before research");
+    }
+    for (const candidate of candidates) {
+      await saveCandidateListing({
+        db: connection.db,
+        taskId: session.taskId,
+        candidateListingId: candidate.id,
+      });
+    }
+
+    const view = await loadLiveShoppingSession({
+      db: connection.db,
+      sessionId: session.id,
+    });
+    expect(view.savedListings).toHaveLength(2);
+    expect(view.decisionSupport?.comparison?.candidates).toHaveLength(2);
+    expect(view.decisionSupport?.comparison?.researchStates).toEqual(
+      expect.arrayContaining(
+        candidates.map((candidate) => ({
+          candidateListingId: candidate.id,
+          state: "available",
+        })),
+      ),
+    );
+    expect(
+      view.decisionSupport?.comparison?.rows.every(({ cells }) =>
+        cells.every(({ status }) => status === "uncertain"),
+      ),
+    ).toBe(true);
+    expect(view.decisionSupport?.comparison?.judgement).toContain(
+      "does not meaningfully separate",
+    );
   });
 
   it("does not persist an unrelated organic result as candidate evidence", async () => {
@@ -490,6 +1575,105 @@ describe("evidence-backed product understanding persistence", () => {
     expect(completed.assessments.length).toBeGreaterThan(0);
   });
 
+  it("resumes targeted deepening without repeating its completed evidence search", async () => {
+    const { session, run } = await seedSearch();
+    const firstDependencies = {
+      db: connection.db,
+      evidenceProvider: new FakeEvidenceSearchProvider(),
+      model: new FakeProductUnderstandingModel(),
+      modelIdentity: {
+        provider: "fixture" as const,
+        model: "fixture-product-understanding",
+        promptVersion: "product-understanding-v1",
+      },
+    };
+    const first = await executeOrResumeEvidenceResearch({
+      dependencies: firstDependencies,
+      taskId: session.taskId,
+      searchRunId: run.id,
+      mode: "first_pass",
+    });
+    const candidateListingId = first.assessments[0]?.candidateListingId;
+    if (candidateListingId === undefined) {
+      throw new Error("Expected a first-pass candidate");
+    }
+    const prepared = await prepareEvidenceResearch({
+      db: connection.db,
+      taskId: session.taskId,
+      searchRunId: run.id,
+      evidenceProvider: "fixture",
+      modelProvider: "fixture",
+      model: "fixture-product-understanding",
+      promptVersion: "product-understanding-v1",
+      mode: "targeted",
+      targetCandidateListingId: candidateListingId,
+    });
+    const searchAttempt = prepared.attempts.find(
+      ({ stage }) => stage === "organic_search",
+    );
+    const candidate = (
+      await loadPersistedSearchRun({
+        db: connection.db,
+        taskId: session.taskId,
+        runId: run.id,
+      })
+    )?.listings.find(({ id }) => id === candidateListingId);
+    if (searchAttempt === undefined || candidate === undefined) {
+      throw new Error("Expected a targeted evidence attempt");
+    }
+    const leaseToken = await claimEvidenceResearch({
+      db: connection.db,
+      taskId: session.taskId,
+      researchRunId: prepared.run.id,
+    });
+    if (leaseToken === null) throw new Error("Expected a research lease");
+    await recordEvidenceSearchSuccess({
+      db: connection.db,
+      taskId: session.taskId,
+      researchRunId: prepared.run.id,
+      attemptId: searchAttempt.id,
+      leaseToken,
+      response: evidenceSearchResponseSchema.parse({
+        providerRequestId: "completed-before-resume",
+        receivedResultCount: 1,
+        results: [
+          {
+            providerResultId: "deep-source",
+            rank: 1,
+            title: `${candidate.title} independent review`,
+            url: "https://trustedreviews.com/deep-source",
+            snippet: "An exact-product review with bounded evidence.",
+            sourceRole: "independent_review",
+          },
+        ],
+      }),
+      startedAt: new Date("2026-08-28T00:00:00.000Z"),
+      finishedAt: new Date("2026-08-28T00:00:01.000Z"),
+    });
+    await releaseEvidenceResearchLease({
+      db: connection.db,
+      taskId: session.taskId,
+      researchRunId: prepared.run.id,
+      leaseToken,
+    });
+    const resumedEvidence = new FakeEvidenceSearchProvider();
+    const resumedModel = new FakeProductUnderstandingModel();
+    const resumed = await executeOrResumeEvidenceResearch({
+      dependencies: {
+        ...firstDependencies,
+        evidenceProvider: resumedEvidence,
+        model: resumedModel,
+      },
+      taskId: session.taskId,
+      searchRunId: run.id,
+      mode: "targeted",
+      targetCandidateListingId: candidateListingId,
+    });
+    expect(resumed.run.status).toBe("succeeded");
+    expect(resumedEvidence.calls).toHaveLength(0);
+    expect(resumedModel.calls).toHaveLength(1);
+  });
+
   it("drives the founder research, strongest-options and saved-comparison flow", async () => {
     const evidenceProvider = new FakeEvidenceSearchProvider();
     const understanding = new FakeProductUnderstandingModel();
@@ -528,10 +1712,11 @@ describe("evidence-backed product understanding persistence", () => {
     expect(researched.decisionSupport).toMatchObject({
       researchStatus: "ready",
       researchedCandidateCount: 2,
+      sectionMode: "qualified_options",
     });
     expect(researched.decisionSupport?.topOptions).toHaveLength(2);
     expect(researched.decisionSupport?.topOptions[0]?.strongestSupported).toBe(
-      true,
+      false,
     );
     expect(JSON.stringify(researched)).not.toContain(
       "IGNORE PREVIOUS INSTRUCTIONS",
@@ -573,6 +1758,71 @@ describe("evidence-backed product understanding persistence", () => {
     });
     expect(evidenceProvider.calls).toHaveLength(evidenceCalls);
     expect(understanding.calls).toHaveLength(modelCalls);
+
+    const [deepened] = await Promise.all([
+      deepenLiveShoppingResearch({
+        dependencies,
+        input: { operation: "deepen_research", sessionId },
+      }),
+      researchLiveCandidate({
+        dependencies,
+        input: {
+          operation: "research_candidate",
+          sessionId,
+          candidateListingId: first.listing.candidateListingId,
+        },
+      }),
+    ]);
+    expect(deepened.decisionSupport?.researchActivity).toMatchObject({
+      firstPassEvidenceCalls: 2,
+      deepeningEvidenceCalls: 2,
+    });
+    expect(evidenceProvider.calls.length).toBeLessThanOrEqual(
+      evidenceCalls + 2,
+    );
+    expect(new Set(evidenceProvider.calls).size).toBe(
+      evidenceProvider.calls.length,
+    );
+    const deepEvidenceCalls = evidenceProvider.calls.length;
+    const deepModelCalls = understanding.calls.length;
+    await researchLiveCandidate({
+      dependencies,
+      input: {
+        operation: "research_candidate",
+        sessionId,
+        candidateListingId: first.listing.candidateListingId,
+      },
+    });
+    expect(evidenceProvider.calls).toHaveLength(deepEvidenceCalls);
+    expect(understanding.calls).toHaveLength(deepModelCalls);
+    const [persistedSession] = await connection.db
+      .select({ taskId: founderLiveSessions.taskId })
+      .from(founderLiveSessions)
+      .where(eq(founderLiveSessions.id, sessionId));
+    if (persistedSession === undefined) {
+      throw new Error("Expected founder session");
+    }
+    const targetRows = await connection.db
+      .select()
+      .from(evidenceAttemptTargetCriteria)
+      .where(eq(evidenceAttemptTargetCriteria.taskId, persistedSession.taskId));
+    expect(targetRows.length).toBeGreaterThan(0);
+    const assessmentRows = await connection.db
+      .select()
+      .from(criterionAssessments)
+      .where(eq(criterionAssessments.taskId, persistedSession.taskId));
+    const firstLineage = assessmentRows
+      .filter(
+        ({ candidateListingId }) =>
+          candidateListingId === first.listing.candidateListingId,
+      )
+      .sort((left, right) => left.generation - right.generation);
+    expect(firstLineage.map(({ generation }) => generation)).toEqual([1, 2]);
+    expect(firstLineage[0]).toMatchObject({ supersededAt: expect.any(Date) });
+    expect(firstLineage[1]).toMatchObject({
+      supersedesAssessmentId: firstLineage[0]?.id,
+      supersededAt: null,
+    });
   });
 
   it("preserves observations while a later authoritative revision gets new assessments", async () => {
@@ -675,6 +1925,94 @@ describe("evidence-backed product understanding persistence", () => {
     expect(
       new Set(persistedAssessments.map(({ taskRevision }) => taskRevision)),
     ).toEqual(new Set([1n, 2n]));
+  });
+
+  it("keeps the prior current assessment when targeted deep understanding fails", async () => {
+    const { session, run } = await seedSearch();
+    const initialModel = new FakeProductUnderstandingModel();
+    const baseDependencies = {
+      db: connection.db,
+      evidenceProvider: new FakeEvidenceSearchProvider(),
+      model: initialModel,
+      modelIdentity: {
+        provider: "fixture" as const,
+        model: "fixture-product-understanding",
+        promptVersion: "product-understanding-v1",
+      },
+    };
+    const first = await executeOrResumeEvidenceResearch({
+      dependencies: baseDependencies,
+      taskId: session.taskId,
+      searchRunId: run.id,
+      mode: "first_pass",
+    });
+    const candidateListingId = first.assessments[0]?.candidateListingId;
+    if (candidateListingId === undefined) {
+      throw new Error("Expected a first-pass assessment");
+    }
+    const before = await loadCurrentDecisionSupport({
+      db: connection.db,
+      taskId: session.taskId,
+    });
+    const beforeIds = before.assessments
+      .filter(
+        (assessment) => assessment.candidateListingId === candidateListingId,
+      )
+      .map(({ id }) => id)
+      .sort();
+    const failingModel = {
+      understand: vi.fn(() =>
+        Promise.resolve({
+          status: "provider_failed" as const,
+          errorCode: "fixture_deep_failure",
+          metadata: {
+            provider: "fixture",
+            model: "fixture-product-understanding",
+            promptVersion: "product-understanding-v1",
+            providerSchemaVersion: 1,
+            providerRequestId: "fixture-deep-failure",
+            durationMs: 0,
+            inputTokens: null,
+            outputTokens: null,
+          },
+        }),
+      ),
+    };
+    const deep = await executeOrResumeEvidenceResearch({
+      dependencies: {
+        ...baseDependencies,
+        evidenceProvider: new FakeEvidenceSearchProvider(),
+        model: failingModel,
+      },
+      taskId: session.taskId,
+      searchRunId: run.id,
+      mode: "targeted",
+      targetCandidateListingId: candidateListingId,
+    });
+    expect(deep.run.phase).toBe("deepening");
+    expect(deep.run.status).toBe("partial");
+    expect(failingModel.understand).toHaveBeenCalledTimes(1);
+    const after = await loadCurrentDecisionSupport({
+      db: connection.db,
+      taskId: session.taskId,
+    });
+    expect(
+      after.assessments
+        .filter(
+          (assessment) => assessment.candidateListingId === candidateListingId,
+        )
+        .map(({ id }) => id)
+        .sort(),
+    ).toEqual(beforeIds);
+    expect(after.deepResearchCoverage).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          candidateListingId,
+          runStatus: "partial",
+          status: "failed",
+        }),
+      ]),
+    );
   });
 
   it("rejects assessment publication after authoritative truth advances", async () => {
