@@ -25,6 +25,9 @@ and comparison are meaningfully better than beginning with Google.
   for independent review of the exact delivered checkpoint.
 - Focused contract-alignment and successful release-evidence commit:
   `f35f2fe718704726fe3f26a131f3fb696cf06c45`.
+- Release checkpoint ledger head
+  `5874ed96c071e73679b374293bddfcaf6623cbbe` passed exact-head quality,
+  pinned PostgreSQL persistence and browser-smoke in GitHub run `33248668320`.
 - Correction/evidence plus ledger delivery head
   `4e891f81f581d8c2614bbdf76bf5ae1073399c43` passed exact-head quality,
   PostgreSQL persistence and browser-smoke in GitHub run `33228469926`.
@@ -414,10 +417,11 @@ V0-09 has not started.
   private local paths and strip known third-party tracking parameters.
 - Historical delivery head `4e891f81f581d8c2614bbdf76bf5ae1073399c43`
   passed GitHub quality, PostgreSQL persistence and browser-smoke in run
-  `33228469926`. The successful release-evidence commit
-  `f35f2fe718704726fe3f26a131f3fb696cf06c45` has passed all documented local
-  gates and still requires pushed-head CI before independent review. PR #12
-  remains draft and unmerged.
+  `33228469926`. The successful release checkpoint
+  `5874ed96c071e73679b374293bddfcaf6623cbbe` passed exact-head quality, pinned
+  PostgreSQL persistence and browser-smoke in run `33248668320`. PR #12 remains
+  draft and unmerged; the following CI-record commit changes only this durable
+  progress documentation.
 
 ## Exact resume instructions
 
