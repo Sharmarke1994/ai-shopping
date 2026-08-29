@@ -41,9 +41,12 @@ describe("shopping architecture migration shape", () => {
       "decision_criteria",
       "evidence_acquisition_attempts",
       "evidence_attempt_target_criteria",
+      "evidence_page_fetch_targets",
       "evidence_research_runs",
       "evidence_sources",
+      "fetched_evidence_documents",
       "founder_live_sessions",
+      "merchant_destination_resolutions",
       "product_observations",
       "rejected_candidate_listings",
       "saved_candidate_listings",
@@ -73,7 +76,7 @@ describe("shopping architecture migration shape", () => {
       'select count(*)::integer as count from "drizzle"."migrations"',
     );
     const after = afterRows[0]?.count;
-    expect(before).toBe(16);
+    expect(before).toBe(17);
     expect(after).toBe(before);
   });
 
@@ -196,11 +199,15 @@ describe("shopping architecture migration shape", () => {
         anon_subject_table: boolean;
         anon_live_session_table: boolean;
         anon_saved_table: boolean;
+        anon_fetched_page_table: boolean;
+        anon_destination_table: boolean;
         authenticated_schema: boolean;
         authenticated_table: boolean;
         authenticated_subject_table: boolean;
         authenticated_live_session_table: boolean;
         authenticated_saved_table: boolean;
+        authenticated_fetched_page_table: boolean;
+        authenticated_destination_table: boolean;
       }[]
     >(`
       select
@@ -209,11 +216,15 @@ describe("shopping architecture migration shape", () => {
         has_table_privilege('anon', 'shopping_private.shopping_task_subjects', 'SELECT') as anon_subject_table,
         has_table_privilege('anon', 'shopping_private.founder_live_sessions', 'SELECT') as anon_live_session_table,
         has_table_privilege('anon', 'shopping_private.saved_candidate_listings', 'SELECT') as anon_saved_table,
+        has_table_privilege('anon', 'shopping_private.fetched_evidence_documents', 'SELECT') as anon_fetched_page_table,
+        has_table_privilege('anon', 'shopping_private.merchant_destination_resolutions', 'SELECT') as anon_destination_table,
         has_schema_privilege('authenticated', 'shopping_private', 'USAGE') as authenticated_schema,
         has_table_privilege('authenticated', 'shopping_private.search_runs', 'SELECT') as authenticated_table,
         has_table_privilege('authenticated', 'shopping_private.shopping_task_subjects', 'SELECT') as authenticated_subject_table,
         has_table_privilege('authenticated', 'shopping_private.founder_live_sessions', 'SELECT') as authenticated_live_session_table,
-        has_table_privilege('authenticated', 'shopping_private.saved_candidate_listings', 'SELECT') as authenticated_saved_table
+        has_table_privilege('authenticated', 'shopping_private.saved_candidate_listings', 'SELECT') as authenticated_saved_table,
+        has_table_privilege('authenticated', 'shopping_private.fetched_evidence_documents', 'SELECT') as authenticated_fetched_page_table,
+        has_table_privilege('authenticated', 'shopping_private.merchant_destination_resolutions', 'SELECT') as authenticated_destination_table
     `);
     expect(privileges).toEqual({
       anon_schema: false,
@@ -221,11 +232,15 @@ describe("shopping architecture migration shape", () => {
       anon_subject_table: false,
       anon_live_session_table: false,
       anon_saved_table: false,
+      anon_fetched_page_table: false,
+      anon_destination_table: false,
       authenticated_schema: false,
       authenticated_table: false,
       authenticated_subject_table: false,
       authenticated_live_session_table: false,
       authenticated_saved_table: false,
+      authenticated_fetched_page_table: false,
+      authenticated_destination_table: false,
     });
   });
 

@@ -66,6 +66,11 @@ export const deepenLiveShoppingRequestSchema = z.strictObject({
   sessionId: liveSessionIdSchema,
 });
 
+export const resolveLiveDestinationsRequestSchema = z.strictObject({
+  operation: z.literal("resolve_destinations"),
+  sessionId: liveSessionIdSchema,
+});
+
 export const researchLiveCandidateRequestSchema = z.strictObject({
   operation: z.literal("research_candidate"),
   sessionId: liveSessionIdSchema,
@@ -88,6 +93,7 @@ export const liveShoppingMutationSchema = z.discriminatedUnion("operation", [
   resumeLiveSearchRequestSchema,
   researchLiveShoppingRequestSchema,
   deepenLiveShoppingRequestSchema,
+  resolveLiveDestinationsRequestSchema,
   researchLiveCandidateRequestSchema,
   rejectLiveListingRequestSchema,
 ]);
@@ -107,6 +113,7 @@ const liveListingSchema = z.strictObject({
   imageUrl: z.url().nullable(),
   destinationUrl: z.url(),
   destinationLabel: z.string().min(1).max(120),
+  purchaseState: z.enum(["direct", "checking", "fallback"]),
   sourceUrl: z.url().nullable(),
   sourceLabel: z.literal("View Google Shopping source").nullable(),
   deliveryText: z.string().nullable(),
@@ -143,6 +150,12 @@ const evidenceSourceLinkSchema = z.strictObject({
     "visual",
     "other",
   ]),
+  depth: z.enum([
+    "listing_field",
+    "organic_result",
+    "fetched_page",
+    "listing_image",
+  ]),
 });
 
 const decisionSupportCandidateSchema = z.strictObject({
@@ -166,7 +179,22 @@ const decisionSupportCandidateSchema = z.strictObject({
   ),
   whyItFits: z.array(z.string().min(1).max(500)).max(4),
   watchouts: z.array(z.string().min(1).max(500)).max(3),
-  unknowns: z.array(z.string().min(1).max(500)).max(3),
+  unknowns: z
+    .array(
+      z.strictObject({
+        criterionId: z.uuid(),
+        label: z.string().min(1).max(200),
+        reason: z.enum([
+          "not_checked",
+          "checked_no_answer",
+          "source_disagreement",
+          "check_failed",
+          "personal_fit",
+        ]),
+        explanation: z.string().min(1).max(500),
+      }),
+    )
+    .max(3),
   evidenceSources: z.array(evidenceSourceLinkSchema).max(5),
 });
 
@@ -198,6 +226,8 @@ const savedComparisonSchema = z.strictObject({
             z.strictObject({
               title: z.string().min(1).max(500),
               url: z.url(),
+              role: evidenceSourceLinkSchema.shape.role,
+              depth: evidenceSourceLinkSchema.shape.depth,
             }),
           ),
         }),

@@ -567,6 +567,9 @@ async function loadSearchRunInTransaction(
         return corrupt(runId, "A failed or pending query has candidates");
       }
     }
+    const listingsInPortfolioOrder = portfolio.queries.flatMap((query) =>
+      listings.filter((listing) => listing.queryId === query.id),
+    );
 
     const derivedStatus =
       executions.length < portfolio.queries.length
@@ -610,7 +613,7 @@ async function loadSearchRunInTransaction(
             const execution = executionByQuery.get(query.id);
             return execution === undefined ? [] : [execution];
           }),
-          listings,
+          listings: listingsInPortfolioOrder,
         }),
     });
   })();

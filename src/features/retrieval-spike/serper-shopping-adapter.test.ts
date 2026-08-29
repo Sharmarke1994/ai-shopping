@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
+import { verifyOrganicMerchantDestination } from "@/features/purchase-destinations/exact-offer-policy";
 import { buildSearchQueryPortfolio } from "./query-strategy";
 import {
   parseObservedGbpPrice,
   SerperShoppingAdapter,
   SerperShoppingError,
-  verifyOrganicMerchantDestination,
 } from "./serper-shopping-adapter";
 
 function query() {
@@ -167,45 +167,25 @@ describe("Serper shopping adapter", () => {
     }
   });
 
-  it("adds a verified exact-title merchant page for the leading Google listing", async () => {
-    const fetchSpy = vi.fn(
-      async (input: string | URL | Request, init?: RequestInit) => {
-        void init;
-        if (String(input).endsWith("/shopping")) {
-          return new Response(
-            JSON.stringify({
-              shopping: [
-                {
-                  position: 1,
-                  title: "Trust Bayo II Ergonomic Wireless Mouse",
-                  link: "https://www.google.co.uk/search?ibp=oshop&q=trust+bayo",
-                  source: "Argos",
-                  price: "£25.99",
-                  productId: "trust-bayo-ii",
-                },
-              ],
-            }),
-            { status: 200 },
-          );
-        }
-        return new Response(
-          JSON.stringify({
-            organic: [
-              {
-                position: 1,
-                title:
-                  "Buy Trust Bayo II Ergonomic Wireless Mouse - Black - Argos",
-                link: "https://www.argos.co.uk/product/6827043?srsltid=tracking",
-                rating: 4.6,
-                ratingCount: 29,
-              },
-            ],
-          }),
-          { status: 200 },
-        );
-      },
-    );
-    const fetchImpl = fetchSpy as unknown as typeof fetch;
+  it("does not resolve a Google intermediary during initial retrieval", async () => {
+    const fetchImpl = vi.fn(async (input) => {
+      expect(String(input)).toBe("https://google.serper.dev/shopping");
+      return new Response(
+        JSON.stringify({
+          shopping: [
+            {
+              position: 1,
+              title: "Trust Bayo II Ergonomic Wireless Mouse",
+              link: "https://www.google.co.uk/search?ibp=oshop&q=trust+bayo",
+              source: "Argos",
+              price: "£25.99",
+              productId: "trust-bayo-ii",
+            },
+          ],
+        }),
+        { status: 200 },
+      );
+    }) as unknown as typeof fetch;
     const provider = new SerperShoppingAdapter({
       apiKey: "test-key",
       fetchImpl,
@@ -213,24 +193,12 @@ describe("Serper shopping adapter", () => {
 
     const result = await provider.search(query());
 
-    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
     expect(result.listings[0]).toMatchObject({
-      merchantDestinationUrl: "https://www.argos.co.uk/product/6827043",
-      merchantDestinationSource: "verified_organic",
-      reviewEvidence: {
-        kind: "provider_structured_rating",
-        ratingHundredths: 460,
-        scaleHundredths: 500,
-        reviewCount: 29,
-        sourceUrl: "https://www.argos.co.uk/product/6827043",
-      },
+      merchantDestinationUrl: null,
+      merchantDestinationSource: null,
+      reviewEvidence: null,
     });
-
-    const repeated = await provider.search(query());
-    expect(repeated.listings[0]?.merchantDestinationUrl).toBe(
-      "https://www.argos.co.uk/product/6827043",
-    );
-    expect(fetchImpl).toHaveBeenCalledTimes(3);
   });
 
   it("rejects comparison, search and merchant-mismatched destinations", () => {
@@ -268,91 +236,33 @@ describe("Serper shopping adapter", () => {
     ).toBeNull();
   });
 
-  it("keeps a verified destination when optional review fields are malformed", async () => {
-    const provider = new SerperShoppingAdapter({
-      apiKey: "test-key",
-      fetchImpl: vi.fn(async (input) =>
-        Promise.resolve(
-          new Response(
-            JSON.stringify(
-              String(input).endsWith("/shopping")
-                ? {
-                    shopping: [
-                      {
-                        title: "Trust Bayo II Ergonomic Wireless Mouse",
-                        link: "https://www.google.co.uk/search?ibp=oshop&q=trust+bayo",
-                        source: "Argos",
-                      },
-                    ],
-                  }
-                : {
-                    organic: [
-                      {
-                        title: "Trust Bayo II Ergonomic Wireless Mouse - Argos",
-                        link: "https://www.argos.co.uk/product/6827043",
-                        rating: "excellent",
-                        ratingCount: -1,
-                      },
-                    ],
-                  },
-            ),
-            { status: 200 },
-          ),
+  it("makes one Shopping request even when every returned merchant needs a destination", async () => {
+    const fetchImpl = vi.fn(async () =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            shopping: [
+              {
+                title: "A one",
+                link: "https://google.com/a",
+                source: "A Shop",
+              },
+              {
+                title: "B one",
+                link: "https://google.com/b",
+                source: "B Shop",
+              },
+              {
+                title: "C one",
+                link: "https://google.com/c",
+                source: "C Shop",
+              },
+            ],
+          }),
+          { status: 200 },
         ),
-      ) as unknown as typeof fetch,
-    });
-
-    const result = await provider.search(query());
-
-    expect(result.listings[0]).toMatchObject({
-      merchantDestinationUrl: "https://www.argos.co.uk/product/6827043",
-      merchantDestinationSource: "verified_organic",
-      reviewEvidence: null,
-    });
-  });
-
-  it("bounds destination enrichment to the leading distinct merchant", async () => {
-    const fetchSpy = vi.fn(
-      async (input: string | URL | Request, init?: RequestInit) => {
-        void init;
-        if (String(input).endsWith("/shopping")) {
-          return new Response(
-            JSON.stringify({
-              shopping: [
-                {
-                  title: "A one",
-                  link: "https://google.com/a",
-                  source: "A Shop",
-                },
-                {
-                  title: "A two",
-                  link: "https://google.com/b",
-                  source: "A Shop",
-                },
-                {
-                  title: "B one",
-                  link: "https://google.com/c",
-                  source: "B Shop",
-                },
-                {
-                  title: "C one",
-                  link: "https://google.com/d",
-                  source: "C Shop",
-                },
-                {
-                  title: "D one",
-                  link: "https://google.com/e",
-                  source: "D Shop",
-                },
-              ],
-            }),
-            { status: 200 },
-          );
-        }
-        return new Response(JSON.stringify({ organic: [] }), { status: 200 });
-      },
-    );
-    const fetchImpl = fetchSpy as unknown as typeof fetch;
+      ),
+    ) as unknown as typeof fetch;
     const surfaces: string[] = [];
     const provider = new SerperShoppingAdapter({
       apiKey: "test-key",
@@ -362,12 +272,8 @@ describe("Serper shopping adapter", () => {
 
     await provider.search(query());
 
-    expect(fetchImpl).toHaveBeenCalledTimes(2);
-    const organicBodies = fetchSpy.mock.calls
-      .slice(1)
-      .map(([, init]) => JSON.parse(String(init?.body)).q);
-    expect(organicBodies).toEqual(['"A one" A Shop']);
-    expect(surfaces).toEqual(["shopping", "merchant_resolution"]);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(surfaces).toEqual(["shopping"]);
   });
 
   it("keeps ambiguous/non-GBP price text but does not manufacture money", () => {

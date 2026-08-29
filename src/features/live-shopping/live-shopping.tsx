@@ -167,6 +167,48 @@ type LiveListing = LiveShoppingView["savedListings"][number];
 type DecisionSupport = NonNullable<LiveShoppingView["decisionSupport"]>;
 type DecisionOption = DecisionSupport["topOptions"][number];
 
+function unknownReasonLabel(
+  reason: DecisionOption["unknowns"][number]["reason"],
+) {
+  return reason === "not_checked"
+    ? "Not checked yet"
+    : reason === "checked_no_answer"
+      ? "Checked · source did not answer"
+      : reason === "source_disagreement"
+        ? "Checked · sources disagree"
+        : reason === "check_failed"
+          ? "Check could not complete"
+          : "Personal fit remains yours to judge";
+}
+
+function evidenceSourceLabel(
+  source: DecisionOption["evidenceSources"][number],
+) {
+  const role =
+    source.role === "manufacturer"
+      ? "Manufacturer"
+      : source.role === "independent_review"
+        ? "Independent review"
+        : source.role === "retailer_review_aggregate"
+          ? "Retailer reviews"
+          : source.role === "retailer"
+            ? "Retailer"
+            : source.role === "listing"
+              ? "Shopping listing"
+              : source.role === "visual"
+                ? "Listing image"
+                : "Other source";
+  const depth =
+    source.depth === "fetched_page"
+      ? "checked product page"
+      : source.depth === "organic_result"
+        ? "search snippet"
+        : source.depth === "listing_field"
+          ? "listing fact"
+          : "image";
+  return `${role} · ${depth}`;
+}
+
 function ProductCard({
   listing,
   busy,
@@ -279,7 +321,12 @@ function ProductCard({
                   <strong>Still unknown</strong>
                   <ul>
                     {decision.unknowns.map((entry) => (
-                      <li key={entry}>{entry}</li>
+                      <li key={entry.criterionId}>
+                        <span>
+                          {entry.label} · {unknownReasonLabel(entry.reason)}
+                        </span>
+                        <small>{entry.explanation}</small>
+                      </li>
                     ))}
                   </ul>
                 </div>
@@ -298,7 +345,7 @@ function ProductCard({
                         <a href={source.url} target="_blank" rel="noreferrer">
                           {source.title}
                         </a>
-                        <span>{source.role.replaceAll("_", " ")}</span>
+                        <span>{evidenceSourceLabel(source)}</span>
                       </li>
                     ))}
                   </ul>
@@ -306,25 +353,28 @@ function ProductCard({
               ) : null}
             </div>
           ) : null}
-          {listing.evidence.sourceFacts.length > 0 ? (
+          {decision === undefined && listing.evidence.sourceFacts.length > 0 ? (
             <p>
               <strong>Retailer evidence</strong>
               {listing.evidence.sourceFacts.join(" · ")}
             </p>
           ) : null}
-          {listing.evidence.contradictions.length > 0 ? (
+          {decision === undefined &&
+          listing.evidence.contradictions.length > 0 ? (
             <p className={styles.evidenceConflict}>
               <strong>Conflicts with current brief</strong>
               {listing.evidence.contradictions.join(" · ")}
             </p>
           ) : null}
-          {listing.evidence.directlyEvidenced.length > 0 ? (
+          {decision === undefined &&
+          listing.evidence.directlyEvidenced.length > 0 ? (
             <p>
               <strong>Listing evidence</strong>
               {listing.evidence.directlyEvidenced.join(" · ")}
             </p>
           ) : null}
-          {listing.evidence.unverifiedLabels.length > 0 ? (
+          {decision === undefined &&
+          listing.evidence.unverifiedLabels.length > 0 ? (
             <p>
               <strong>Still unverified</strong>
               {listing.evidence.unverifiedLabels.join(", ")}
@@ -345,6 +395,12 @@ function ProductCard({
             <span aria-hidden="true">↗</span>
           </a>
         </div>
+        {listing.purchaseState === "checking" ? (
+          <p className={styles.purchaseStatus}>
+            Checking for the exact retailer page. Google Shopping remains
+            available.
+          </p>
+        ) : null}
         {listing.sourceUrl !== null ? (
           <a
             href={listing.sourceUrl}
@@ -1000,14 +1056,19 @@ function SavedComparison({
                             {cell.sources.length === 1 ? "source" : "sources"}
                           </summary>
                           {cell.sources.map((source) => (
-                            <a
+                            <span
+                              className={styles.comparisonSource}
                               key={source.url}
-                              href={source.url}
-                              target="_blank"
-                              rel="noreferrer"
                             >
-                              {source.title}
-                            </a>
+                              <a
+                                href={source.url}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                {source.title}
+                              </a>
+                              <small>{evidenceSourceLabel(source)}</small>
+                            </span>
                           ))}
                         </details>
                       ) : null}
@@ -1111,13 +1172,24 @@ export function LiveShopping() {
   const [refinement, setRefinement] = useState("");
   const [restoring, setRestoring] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [backgroundBusy, setBackgroundBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pendingOperation, setPendingOperation] = useState<unknown>(null);
   const autoResumeKey = useRef<string | null>(null);
   const autoResearchKey = useRef<string | null>(null);
+  const autoDestinationKey = useRef<string | null>(null);
+  const autoDestinationRetryAt = useRef(0);
   const autoDeepenKey = useRef<string | null>(null);
+  const backgroundBusyRef = useRef(false);
+  const foregroundMutationVersionRef = useRef(0);
+  const currentViewRef = useRef<LiveShoppingView | null>(null);
+
+  useEffect(() => {
+    currentViewRef.current = view;
+  }, [view]);
 
   const acceptView = useCallback((next: LiveShoppingView) => {
+    currentViewRef.current = next;
     setView(next);
     setError(null);
     setPendingOperation(null);
@@ -1126,6 +1198,7 @@ export function LiveShopping() {
 
   const runMutation = useCallback(
     async (operation: unknown) => {
+      foregroundMutationVersionRef.current += 1;
       setBusy(true);
       setError(null);
       setPendingOperation(operation);
@@ -1158,6 +1231,109 @@ export function LiveShopping() {
     },
     [acceptView],
   );
+
+  const runBackgroundMutation = useCallback(async (operation: unknown) => {
+    if (backgroundBusyRef.current) return;
+    const startingForegroundVersion = foregroundMutationVersionRef.current;
+    const startingView = currentViewRef.current;
+    backgroundBusyRef.current = true;
+    setBackgroundBusy(true);
+    setError(null);
+    try {
+      const next = await mutate(operation);
+      const current = currentViewRef.current;
+      if (
+        foregroundMutationVersionRef.current === startingForegroundVersion &&
+        (startingView === null ||
+          (current?.sessionId === startingView.sessionId &&
+            next.sessionId === startingView.sessionId))
+      ) {
+        currentViewRef.current = next;
+        setView(next);
+      } else if (current !== null) {
+        const refreshed = await loadSession(current.sessionId);
+        if (
+          foregroundMutationVersionRef.current === startingForegroundVersion
+        ) {
+          currentViewRef.current = refreshed;
+          setView(refreshed);
+        }
+      }
+    } catch (cause) {
+      if (foregroundMutationVersionRef.current !== startingForegroundVersion) {
+        return;
+      }
+      // A shopper refinement may intentionally stale background work. Reload
+      // the current task instead of surfacing that expected race as data loss.
+      if (
+        cause instanceof ShoppingApiError &&
+        cause.code === "stale_authority" &&
+        currentViewRef.current !== null
+      ) {
+        try {
+          const next = await loadSession(currentViewRef.current.sessionId);
+          currentViewRef.current = next;
+          setView(next);
+        } catch {
+          // The normal retry notice below remains the truthful fallback.
+          setError(cause.message);
+        }
+      } else {
+        setError(
+          cause instanceof Error
+            ? cause.message
+            : "Background shopping research is temporarily unavailable.",
+        );
+      }
+    } finally {
+      backgroundBusyRef.current = false;
+      setBackgroundBusy(false);
+    }
+  }, []);
+
+  const visibleSessionId = view?.sessionId ?? null;
+  const hasCheckingPurchase =
+    view?.decisionSupport !== null && view?.decisionSupport !== undefined
+      ? [
+          ...view.decisionSupport.topOptions.map(({ listing }) => listing),
+          ...(view.decisionSupport.comparison?.candidates ?? []),
+          ...view.savedListings,
+        ].some(({ purchaseState }) => purchaseState === "checking")
+      : (view?.savedListings.some(
+          ({ purchaseState }) => purchaseState === "checking",
+        ) ?? false);
+  useEffect(() => {
+    if (
+      (!backgroundBusy && !hasCheckingPurchase) ||
+      visibleSessionId === null
+    ) {
+      return;
+    }
+    let cancelled = false;
+    const poll = async () => {
+      if (busy || cancelled) return;
+      const startingForegroundVersion = foregroundMutationVersionRef.current;
+      try {
+        const next = await loadSession(visibleSessionId);
+        if (
+          cancelled ||
+          foregroundMutationVersionRef.current !== startingForegroundVersion
+        ) {
+          return;
+        }
+        currentViewRef.current = next;
+        setView(next);
+      } catch {
+        // The owning mutation reports terminal errors. A transient projection
+        // poll must not replace that result or manufacture a failure state.
+      }
+    };
+    const interval = window.setInterval(() => void poll(), 1_200);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [backgroundBusy, busy, hasCheckingPurchase, visibleSessionId]);
 
   useEffect(() => {
     void Promise.resolve().then(async () => {
@@ -1219,15 +1395,19 @@ export function LiveShopping() {
       view?.action.kind !== "search" ||
       (view.action.search !== null &&
         view.action.search.status !== "running") ||
-      busy
+      busy ||
+      backgroundBusy
     ) {
       return;
     }
     const key = `${view.sessionId}:${view.action.search?.completedQueryCount ?? 0}`;
     if (autoResumeKey.current === key) return;
     autoResumeKey.current = key;
-    void runMutation({ operation: "resume_search", sessionId: view.sessionId });
-  }, [busy, runMutation, view]);
+    void runBackgroundMutation({
+      operation: "resume_search",
+      sessionId: view.sessionId,
+    });
+  }, [backgroundBusy, busy, runBackgroundMutation, view]);
 
   useEffect(() => {
     if (
@@ -1237,15 +1417,67 @@ export function LiveShopping() {
       !["not_started", "researching"].includes(
         view.decisionSupport?.researchStatus ?? "ready",
       ) ||
-      busy
+      busy ||
+      backgroundBusy
     ) {
       return;
     }
     const key = `${view.sessionId}:${view.viewEpoch}:first-pass`;
     if (autoResearchKey.current === key) return;
     autoResearchKey.current = key;
-    void runMutation({ operation: "research", sessionId: view.sessionId });
-  }, [busy, runMutation, view]);
+    void runBackgroundMutation({
+      operation: "research",
+      sessionId: view.sessionId,
+    });
+  }, [backgroundBusy, busy, runBackgroundMutation, view]);
+
+  useEffect(() => {
+    if (
+      view?.action.kind !== "search" ||
+      !["ready", "partial"].includes(
+        view.decisionSupport?.researchStatus ?? "not_started",
+      ) ||
+      ["available", "researching"].includes(
+        view.decisionSupport?.deepResearchStatus ?? "not_needed",
+      ) ||
+      busy ||
+      backgroundBusy
+    ) {
+      return;
+    }
+    const candidates = [
+      ...(view.decisionSupport?.topOptions.map(({ listing }) => listing) ?? []),
+      ...(view.decisionSupport?.comparison?.candidates ?? []),
+    ];
+    const unresolved = [
+      ...new Map(
+        candidates
+          .filter(({ purchaseState }) => purchaseState !== "direct")
+          .map((listing) => [listing.candidateListingId, listing]),
+      ).values(),
+    ];
+    if (unresolved.length === 0) return;
+    const key = `${view.sessionId}:${unresolved
+      .map(
+        ({ candidateListingId, purchaseState }) =>
+          `${candidateListingId}:${purchaseState}`,
+      )
+      .sort()
+      .join("|")}`;
+    const now = Date.now();
+    if (
+      autoDestinationKey.current === key &&
+      now < autoDestinationRetryAt.current
+    ) {
+      return;
+    }
+    autoDestinationKey.current = key;
+    autoDestinationRetryAt.current = now + 15_000;
+    void runBackgroundMutation({
+      operation: "resolve_destinations",
+      sessionId: view.sessionId,
+    });
+  }, [backgroundBusy, busy, runBackgroundMutation, view]);
 
   useEffect(() => {
     if (
@@ -1256,18 +1488,19 @@ export function LiveShopping() {
       !["available", "researching"].includes(
         view.decisionSupport?.deepResearchStatus ?? "not_needed",
       ) ||
-      busy
+      busy ||
+      backgroundBusy
     ) {
       return;
     }
     const key = `${view.sessionId}:${view.viewEpoch}:deepening`;
     if (autoDeepenKey.current === key) return;
     autoDeepenKey.current = key;
-    void runMutation({
+    void runBackgroundMutation({
       operation: "deepen_research",
       sessionId: view.sessionId,
     });
-  }, [busy, runMutation, view]);
+  }, [backgroundBusy, busy, runBackgroundMutation, view]);
 
   const start = (event: FormEvent) => {
     event.preventDefault();
@@ -1306,6 +1539,8 @@ export function LiveShopping() {
 
   const newSearch = () => {
     forgetSession();
+    foregroundMutationVersionRef.current += 1;
+    currentViewRef.current = null;
     autoResumeKey.current = null;
     autoResearchKey.current = null;
     autoDeepenKey.current = null;

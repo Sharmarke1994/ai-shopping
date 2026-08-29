@@ -12,7 +12,12 @@ const localRefSchema = z.string().regex(/^[a-z][a-z0-9_]{0,63}$/);
 export const evidenceSourceInputSchema = z.strictObject({
   ordinal: z.number().int().min(0).max(19),
   role: evidenceSourceRoleSchema,
-  kind: z.enum(["listing_field", "organic_result", "listing_image"]),
+  kind: z.enum([
+    "listing_field",
+    "organic_result",
+    "fetched_page",
+    "listing_image",
+  ]),
   title: z.string().min(1).max(500),
   url: z.url().max(4_000),
   excerpt: z.string().min(1).max(1_000).nullable(),

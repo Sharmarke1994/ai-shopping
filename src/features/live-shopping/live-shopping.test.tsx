@@ -36,6 +36,7 @@ const listing: LiveShoppingView["savedListings"][number] = {
   imageUrl: null,
   destinationUrl: "https://example.test/product",
   destinationLabel: "View at Example Retailer",
+  purchaseState: "direct" as const,
   sourceUrl: null,
   sourceLabel: null,
   deliveryText: "Delivery available",
@@ -113,8 +114,22 @@ function view(options?: {
                 unknowns:
                   options?.deepResearchStatus === "not_needed"
                     ? []
-                    : ["Battery life remains unknown."],
-                evidenceSources: [],
+                    : [
+                        {
+                          criterionId,
+                          label: "Battery life",
+                          reason: "checked_no_answer",
+                          explanation: "Battery life remains unknown.",
+                        },
+                      ],
+                evidenceSources: [
+                  {
+                    title: "Exact manufacturer product page",
+                    url: "https://example.test/exact-product",
+                    role: "manufacturer",
+                    depth: "fetched_page",
+                  },
+                ],
               },
             ]
           : [],
@@ -148,6 +163,74 @@ describe("founder live shopping decision loop", () => {
     window.history.replaceState({}, "", "/live");
   });
 
+  it("keeps Google Shopping usable while an exact retailer page is checking", async () => {
+    localStorage.setItem("consider-live-session-v1", sessionId);
+    const base = view({ includeDecision: true });
+    if (
+      base.action.kind !== "search" ||
+      base.action.search === null ||
+      base.decisionSupport === null ||
+      base.decisionSupport.topOptions[0] === undefined
+    ) {
+      throw new Error("Expected a decision-support fixture");
+    }
+    const checkingListing = {
+      ...listing,
+      destinationUrl: "https://google.example/shopping/product",
+      destinationLabel: "View on Google Shopping",
+      purchaseState: "checking" as const,
+    };
+    const checking = liveShoppingViewSchema.parse({
+      ...base,
+      decisionSupport: {
+        ...base.decisionSupport,
+        topOptions: [
+          {
+            ...base.decisionSupport.topOptions[0],
+            listing: checkingListing,
+          },
+        ],
+      },
+      action: {
+        ...base.action,
+        search: {
+          ...base.action.search,
+          listings: [checkingListing],
+        },
+      },
+    });
+    const fetchMock = vi.fn(
+      (input: RequestInfo | URL, request?: RequestInit) => {
+        void input;
+        void request;
+        return Promise.resolve(jsonResponse(checking));
+      },
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<LiveShopping />);
+
+    expect(
+      (
+        await screen.findAllByRole("link", {
+          name: /View on Google Shopping/i,
+        })
+      )[0],
+    ).toHaveAttribute("href", checkingListing.destinationUrl);
+    expect(
+      screen.getAllByText(/Checking for the exact retailer page/i)[0],
+    ).toBeVisible();
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.some(([, request]) =>
+          String((request as RequestInit | undefined)?.body).includes(
+            '"operation":"resolve_destinations"',
+          ),
+        ),
+      ).toBe(true),
+    );
+  });
+
   it("keeps progressive decision cards visible while first-pass research is still running", async () => {
     localStorage.setItem("consider-live-session-v1", sessionId);
     const progressive = view({
@@ -173,6 +256,14 @@ describe("founder live shopping decision loop", () => {
     expect(
       screen.queryByText("Supported from partial research"),
     ).not.toBeInTheDocument();
+    expect(
+      screen.getByText("Battery life · Checked · source did not answer"),
+    ).toBeVisible();
+    expect(screen.queryByText("Still unverified")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText("1 attributable source"));
+    expect(
+      screen.getByText("Manufacturer · checked product page"),
+    ).toBeVisible();
   });
 
   it("shows listings immediately and starts each progressive research phase once", async () => {
@@ -238,6 +329,109 @@ describe("founder live shopping decision loop", () => {
       screen.queryByRole("button", { name: "Investigate" }),
     ).not.toBeInTheDocument();
     expect(screen.getByText("Checked · still unknown")).toBeVisible();
+  });
+
+  it("does not let an older background result overwrite a shopper refinement", async () => {
+    localStorage.setItem("consider-live-session-v1", sessionId);
+    const initial = view({
+      researchStatus: "ready",
+      deepResearchStatus: "available",
+      includeDecision: true,
+    });
+    const oldBackground = view({
+      researchStatus: "ready",
+      deepResearchStatus: "complete",
+      includeDecision: true,
+    });
+    const refined = liveShoppingViewSchema.parse({
+      ...oldBackground,
+      viewEpoch: "b".repeat(24),
+      brief: [
+        ...oldBackground.brief,
+        {
+          label: "Water resistance",
+          value: "Strong preference: yes",
+          emphasis: "strong",
+        },
+      ],
+    });
+    let resolveBackground!: (response: Response) => void;
+    const delayedBackground = new Promise<Response>((resolve) => {
+      resolveBackground = resolve;
+    });
+    const operations: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_request: RequestInfo | URL, init?: RequestInit) => {
+        if (init?.method !== "POST") return jsonResponse(initial);
+        const body = JSON.parse(String(init.body)) as { operation: string };
+        operations.push(body.operation);
+        return body.operation === "deepen_research"
+          ? delayedBackground
+          : jsonResponse(refined);
+      }),
+    );
+
+    render(<LiveShopping />);
+    await waitFor(() => expect(operations).toEqual(["deepen_research"]));
+    fireEvent.change(screen.getByLabelText("Refine what you’re looking for"), {
+      target: { value: "Make water resistance important too" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Update my priorities" }),
+    );
+    await waitFor(() => expect(operations).toContain("refine"));
+    expect(
+      await screen.findByText("Water resistance", { exact: true }),
+    ).toBeVisible();
+
+    await act(async () => {
+      resolveBackground(jsonResponse(oldBackground));
+    });
+    expect(screen.getByText("Water resistance", { exact: true })).toBeVisible();
+  });
+
+  it("does not let an older background result resurrect an abandoned purchase", async () => {
+    localStorage.setItem("consider-live-session-v1", sessionId);
+    const initial = view({
+      researchStatus: "ready",
+      deepResearchStatus: "available",
+      includeDecision: true,
+    });
+    const completed = view({
+      researchStatus: "ready",
+      deepResearchStatus: "complete",
+      includeDecision: true,
+    });
+    let resolveBackground!: (response: Response) => void;
+    const delayedBackground = new Promise<Response>((resolve) => {
+      resolveBackground = resolve;
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_request: RequestInfo | URL, init?: RequestInit) => {
+        if (init?.method !== "POST") return jsonResponse(initial);
+        return delayedBackground;
+      }),
+    );
+
+    render(<LiveShopping />);
+    await screen.findByRole("button", { name: "Start a different purchase" });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Start a different purchase" }),
+    );
+    expect(screen.getByLabelText("What are you looking for?")).toBeVisible();
+    expect(
+      screen.queryByRole("article", { name: listing.title }),
+    ).not.toBeInTheDocument();
+
+    await act(async () => {
+      resolveBackground(jsonResponse(completed));
+    });
+    expect(screen.getByLabelText("What are you looking for?")).toBeVisible();
+    expect(
+      screen.queryByRole("article", { name: listing.title }),
+    ).not.toBeInTheDocument();
   });
 
   it("hides one exact rejected listing and makes undo explicit without learning", async () => {

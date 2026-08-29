@@ -11,7 +11,6 @@ import {
 import { z } from "zod";
 
 const SERPER_SHOPPING_ENDPOINT = "https://google.serper.dev/shopping";
-const SERPER_SEARCH_ENDPOINT = "https://google.serper.dev/search";
 
 const serperShoppingItemSchema = z.looseObject({
   position: z.number().int().positive().optional(),
@@ -26,23 +25,6 @@ const serperShoppingItemSchema = z.looseObject({
 
 const serperEnvelopeSchema = z.looseObject({
   shopping: z.array(z.unknown()).optional().default([]),
-});
-
-const serperOrganicItemSchema = z.looseObject({
-  position: z.number().int().positive().optional(),
-  title: z.string().min(1),
-  link: httpUrlSchema,
-  rating: z.unknown().optional(),
-  ratingCount: z.unknown().optional(),
-});
-
-const serperStructuredReviewSchema = z.strictObject({
-  rating: z.number().finite().min(0).max(5),
-  ratingCount: z.number().int().positive(),
-});
-
-const serperOrganicEnvelopeSchema = z.looseObject({
-  organic: z.array(z.unknown()).optional().default([]),
 });
 
 export class SerperShoppingError extends Error {
@@ -85,125 +67,6 @@ function merchantDestinationUrl(rawUrl: string) {
   return googleOwnedHost ? null : url.toString();
 }
 
-const merchantNoise = new Set([
-  "amazon",
-  "seller",
-  "shop",
-  "shopping",
-  "store",
-  "official",
-  "limited",
-  "ltd",
-]);
-
-const titleNoise = new Set([
-  "and",
-  "for",
-  "from",
-  "the",
-  "with",
-  "black",
-  "white",
-  "new",
-]);
-
-const genericProductTokens = new Set([
-  "2",
-  "4g",
-  "2ghz",
-  "4ghz",
-  "bluetooth",
-  "ergonomic",
-  "gaming",
-  "mouse",
-  "optical",
-  "rechargeable",
-  "usb",
-  "vertical",
-  "wired",
-  "wireless",
-]);
-
-function tokens(value: string, noise: ReadonlySet<string>) {
-  return value
-    .toLocaleLowerCase("en-GB")
-    .split(/[^a-z0-9]+/)
-    .filter((token) => token.length >= 2 && !noise.has(token));
-}
-
-function merchantMatchesHostname(merchant: string, hostname: string) {
-  const compactHostname = hostname
-    .toLocaleLowerCase("en-GB")
-    .replace(/^www\./, "")
-    .replace(/[^a-z0-9]/g, "");
-  const merchantTokens = tokens(merchant, merchantNoise).filter(
-    (token) => token.length >= 4,
-  );
-  if (merchantTokens.length === 0) {
-    const amazonMerchant = /(^|[^a-z0-9])amazon([^a-z0-9]|$)/i.test(merchant);
-    return amazonMerchant && compactHostname.startsWith("amazon");
-  }
-  return merchantTokens.some((token) => compactHostname.includes(token));
-}
-
-function titleCoverage(candidateTitle: string, resultTitle: string) {
-  const candidateTokens = [...new Set(tokens(candidateTitle, titleNoise))];
-  if (candidateTokens.length < 3) return 0;
-  const resultTokens = new Set(tokens(resultTitle, titleNoise));
-  return (
-    candidateTokens.filter((token) => resultTokens.has(token)).length /
-    candidateTokens.length
-  );
-}
-
-function hasDiscriminativeTitleIdentity(
-  candidateTitle: string,
-  resultTitle: string,
-) {
-  const candidateIdentity = tokens(candidateTitle, titleNoise).filter(
-    (token) => !genericProductTokens.has(token),
-  );
-  if (candidateIdentity.length === 0) return false;
-  const resultTokens = new Set(tokens(resultTitle, titleNoise));
-  return candidateIdentity.every((token) => resultTokens.has(token));
-}
-
-const comparisonHosts = [
-  "idealo.co.uk",
-  "pinterest.com",
-  "pricerunner.com",
-  "pricespy.co.uk",
-  "testmarket.io",
-];
-
-export function verifyOrganicMerchantDestination(options: {
-  candidateTitle: string;
-  merchant: string;
-  resultTitle: string;
-  resultUrl: string;
-}) {
-  const url = new URL(options.resultUrl);
-  const hostname = url.hostname.toLocaleLowerCase("en-GB");
-  if (
-    url.protocol !== "https:" ||
-    merchantDestinationUrl(url.toString()) === null ||
-    comparisonHosts.some(
-      (blocked) => hostname === blocked || hostname.endsWith(`.${blocked}`),
-    ) ||
-    !merchantMatchesHostname(options.merchant, hostname) ||
-    !hasDiscriminativeTitleIdentity(
-      options.candidateTitle,
-      options.resultTitle,
-    ) ||
-    titleCoverage(options.candidateTitle, options.resultTitle) < 0.7 ||
-    url.pathname === "/" ||
-    /^\/(?:s|search|browse|category|categories)(?:\/|$)/i.test(url.pathname)
-  ) {
-    return null;
-  }
-  return canonicaliseListingUrl(url.toString());
-}
-
 export function parseObservedGbpPrice(
   rawPrice: string | number | undefined,
 ): CandidateListing["price"] {
@@ -229,7 +92,7 @@ export type SerperShoppingAdapterOptions = Readonly<{
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
   now?: () => Date;
-  onRequest?: (surface: "shopping" | "merchant_resolution") => void;
+  onRequest?: (surface: "shopping") => void;
 }>;
 
 export class SerperShoppingAdapter implements ShoppingSearchProvider {
@@ -241,14 +104,6 @@ export class SerperShoppingAdapter implements ShoppingSearchProvider {
   readonly #timeoutMs: number;
   readonly #now: () => Date;
   readonly #onRequest: NonNullable<SerperShoppingAdapterOptions["onRequest"]>;
-  readonly #destinationCache = new Map<
-    string,
-    Promise<{
-      destinationUrl: string;
-      reviewEvidence: CandidateListing["reviewEvidence"];
-    } | null>
-  >();
-
   constructor(options: SerperShoppingAdapterOptions) {
     if (options.apiKey.trim().length === 0) {
       throw new Error("SERPER_API_KEY must not be empty");
@@ -276,7 +131,6 @@ export class SerperShoppingAdapter implements ShoppingSearchProvider {
       throw new Error("The retrieval spike supports only GB / GBP / en-GB");
     }
 
-    const deadline = Date.now() + this.#timeoutMs;
     let response: Response;
     try {
       this.#onRequest("shopping");
@@ -352,116 +206,12 @@ export class SerperShoppingAdapter implements ShoppingSearchProvider {
       );
     }
 
-    const acceptedListings = listings.slice(0, query.limit);
-    const seenMerchants = new Set<string>();
-    const destinationCandidates = [...acceptedListings]
-      .sort((left, right) => left.sourceRank - right.sourceRank)
-      .filter((listing) => {
-        if (
-          listing.merchantDestinationUrl !== null ||
-          listing.merchant === null
-        ) {
-          return false;
-        }
-        const merchant = listing.merchant.toLocaleLowerCase("en-GB");
-        if (seenMerchants.has(merchant)) return false;
-        seenMerchants.add(merchant);
-        return true;
-      })
-      // The V0-08 founder proof found that resolving three merchants per
-      // retrieval query spent 25 additional requests for 1/11 direct top-card
-      // destinations. Keep one conservative leading lookup here; Google
-      // Shopping remains the honest fallback until destination enrichment has
-      // its own post-shortlist persistence boundary.
-      .slice(0, 1);
-    for (const candidateForDestination of destinationCandidates) {
-      const cacheKey = `${candidateForDestination.title}\n${candidateForDestination.merchant}`;
-      let resolution = this.#destinationCache.get(cacheKey);
-      if (resolution === undefined) {
-        resolution = this.#resolveMerchantDestination(
-          candidateForDestination,
-          deadline,
-        );
-        this.#destinationCache.set(cacheKey, resolution);
-      }
-      const resolved = await resolution;
-      if (resolved !== null) {
-        const listingIndex = acceptedListings.indexOf(candidateForDestination);
-        acceptedListings[listingIndex] = candidateListingSchema.parse({
-          ...candidateForDestination,
-          merchantDestinationUrl: resolved.destinationUrl,
-          merchantDestinationSource: "verified_organic",
-          reviewEvidence: resolved.reviewEvidence,
-        });
-      }
-    }
-
     return providerSearchResultSchema.parse({
-      listings: acceptedListings,
+      listings: listings.slice(0, query.limit),
       diagnostics: {
         receivedResultCount: envelope.data.shopping.length,
         rejectedResultCount,
       },
     });
-  }
-
-  async #resolveMerchantDestination(
-    listing: CandidateListing,
-    deadline: number,
-  ) {
-    const remainingMs = deadline - Date.now();
-    if (remainingMs < 100 || listing.merchant === null) return null;
-    try {
-      this.#onRequest("merchant_resolution");
-      const response = await this.#fetch(SERPER_SEARCH_ENDPOINT, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-API-KEY": this.#apiKey,
-        },
-        body: JSON.stringify({
-          q: `"${listing.title.replaceAll('"', "").slice(0, 240)}" ${listing.merchant.slice(0, 120)}`,
-          gl: "gb",
-          hl: "en",
-          location: "United Kingdom",
-          num: 5,
-        }),
-        signal: AbortSignal.timeout(remainingMs),
-      });
-      if (!response.ok) return null;
-      const envelope = serperOrganicEnvelopeSchema.safeParse(
-        await response.json(),
-      );
-      if (!envelope.success) return null;
-      for (const rawItem of envelope.data.organic.slice(0, 5)) {
-        const parsed = serperOrganicItemSchema.safeParse(rawItem);
-        if (!parsed.success) continue;
-        const destination = verifyOrganicMerchantDestination({
-          candidateTitle: listing.title,
-          merchant: listing.merchant,
-          resultTitle: parsed.data.title,
-          resultUrl: parsed.data.link,
-        });
-        if (destination !== null) {
-          const review = serperStructuredReviewSchema.safeParse({
-            rating: parsed.data.rating,
-            ratingCount: parsed.data.ratingCount,
-          });
-          const reviewEvidence = review.success
-            ? {
-                kind: "provider_structured_rating" as const,
-                ratingHundredths: Math.round(review.data.rating * 100),
-                scaleHundredths: 500 as const,
-                reviewCount: review.data.ratingCount,
-                sourceUrl: destination,
-              }
-            : null;
-          return { destinationUrl: destination, reviewEvidence };
-        }
-      }
-      return null;
-    } catch {
-      return null;
-    }
   }
 }

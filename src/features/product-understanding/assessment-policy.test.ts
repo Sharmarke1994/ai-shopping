@@ -93,10 +93,14 @@ function evidence(options: {
     | "other";
   observationKind?: "structured_field" | "source_assertion";
   derivation?: "deterministic" | "model_text";
+  sourceKind?:
+    "listing_field" | "organic_result" | "fetched_page" | "listing_image";
+  sourceId?: string;
+  observationId?: string;
 }) {
   const source = evidenceSourceV1Schema.parse({
     schemaVersion: 1,
-    id: ids.source,
+    id: options.sourceId ?? ids.source,
     researchRunId: ids.research,
     taskId: ids.task,
     candidateRunId: ids.run,
@@ -104,13 +108,14 @@ function evidence(options: {
     acquisitionAttemptId: ids.attempt,
     sourceRole: options.role ?? "listing",
     sourceKind:
-      options.role === "visual"
+      options.sourceKind ??
+      (options.role === "visual"
         ? "listing_image"
         : options.role === "independent_review" ||
             options.role === "manufacturer" ||
             options.role === "other"
           ? "organic_result"
-          : "listing_field",
+          : "listing_field"),
     sourceUrl: "https://example.test/evidence",
     sourceTitle: "Evidence",
     excerpt: options.claim,
@@ -121,12 +126,12 @@ function evidence(options: {
   });
   const observation = productObservationV1Schema.parse({
     schemaVersion: 1,
-    id: ids.observation,
+    id: options.observationId ?? ids.observation,
     researchRunId: ids.research,
     taskId: ids.task,
     candidateRunId: ids.run,
     candidateListingId: ids.listing,
-    evidenceSourceId: ids.source,
+    evidenceSourceId: options.sourceId ?? ids.source,
     conceptId: options.conceptId ?? null,
     support: "supported",
     observationKind:
@@ -386,6 +391,7 @@ describe("criterion assessment guard", () => {
         text: "good support over long sessions",
       },
       role: "independent_review",
+      sourceKind: "fetched_page",
     });
     const assessment = guardCriterionAssessment({
       item: item({
@@ -570,6 +576,254 @@ describe("criterion assessment guard", () => {
     expect(assessment.status).toBe("uncertain");
   });
 
+  it("requires exact fetched-page depth for battery, noise, and durability claims", () => {
+    const batteryCriterion = item({
+      label: "Real-world battery life",
+      strength: "strong_preference",
+      targetSemantics: "qualitative",
+      semanticValue: {
+        schemaVersion: 1,
+        kind: "qualitative",
+        mode: "text",
+        text: "long real-world battery life",
+      },
+    });
+    const snippet = evidence({
+      conceptId: batteryCriterion.conceptId,
+      role: "independent_review",
+      sourceKind: "organic_result",
+      propertyLabel: "Battery life",
+      claim: "A search snippet says battery life is long.",
+      value: { schemaVersion: 1, kind: "text", text: "long" },
+    });
+    const page = evidence({
+      conceptId: batteryCriterion.conceptId,
+      role: "independent_review",
+      sourceKind: "fetched_page",
+      sourceId: randomUUID(),
+      observationId: randomUUID(),
+      propertyLabel: "Measured battery life",
+      claim: "The exact review page reports 72 hours in its test.",
+      value: {
+        schemaVersion: 1,
+        kind: "quantity",
+        amount: "72",
+        unit: "hours",
+        qualifier: "exact",
+      },
+    });
+    expect(
+      guardCriterionAssessment({
+        item: batteryCriterion,
+        listing,
+        observations: [snippet],
+        proposal: {
+          status: "meets",
+          relation: "long_battery",
+          explanation: snippet.observation.claim,
+          observations: [snippet],
+        },
+      }),
+    ).toMatchObject({
+      status: "uncertain",
+      relation: "insufficient_relevant_evidence",
+    });
+    expect(
+      guardCriterionAssessment({
+        item: batteryCriterion,
+        listing,
+        observations: [page],
+        proposal: {
+          status: "meets",
+          relation: "tested_runtime",
+          explanation: page.observation.claim,
+          observations: [page],
+        },
+      }),
+    ).toMatchObject({ status: "meets", relation: "tested_runtime" });
+
+    for (const label of ["Quiet operation", "Long-term durability"]) {
+      const criterion = item({
+        label,
+        strength: "strong_preference",
+        targetSemantics: "qualitative",
+        semanticValue: {
+          schemaVersion: 1,
+          kind: "qualitative",
+          mode: "text",
+          text: label,
+        },
+      });
+      const organic = evidence({
+        conceptId: criterion.conceptId,
+        role: "independent_review",
+        propertyLabel: label,
+        claim: `A snippet calls it ${label.toLowerCase()}.`,
+        value: {
+          schemaVersion: 1,
+          kind: "text",
+          text: label.toLowerCase(),
+        },
+      });
+      expect(
+        guardCriterionAssessment({
+          item: criterion,
+          listing,
+          observations: [organic],
+          proposal: {
+            status: "meets",
+            relation: "snippet_claim",
+            explanation: organic.observation.claim,
+            observations: [organic],
+          },
+        }),
+      ).toMatchObject({
+        status: "uncertain",
+        relation: "insufficient_relevant_evidence",
+      });
+    }
+  });
+
+  it("does not let a manufacturer's own page establish brand reputation", () => {
+    const reputation = item({
+      label: "Established brand reputation",
+      strength: "preference",
+      targetSemantics: "qualitative",
+      semanticValue: {
+        schemaVersion: 1,
+        kind: "qualitative",
+        mode: "text",
+        text: "an established reputable brand",
+      },
+    });
+    const manufacturer = evidence({
+      conceptId: reputation.conceptId,
+      role: "manufacturer",
+      sourceKind: "fetched_page",
+      propertyLabel: "Brand reputation",
+      claim: "The manufacturer describes itself as trusted.",
+      value: { schemaVersion: 1, kind: "text", text: "trusted" },
+    });
+    expect(
+      guardCriterionAssessment({
+        item: reputation,
+        listing,
+        observations: [manufacturer],
+        proposal: {
+          status: "meets",
+          relation: "self_described_reputation",
+          explanation: manufacturer.observation.claim,
+          observations: [manufacturer],
+        },
+      }),
+    ).toMatchObject({
+      status: "uncertain",
+      relation: "insufficient_relevant_evidence",
+    });
+  });
+
+  it("keeps incompatible exact-page claims as source disagreement", () => {
+    const noise = item({
+      label: "Quiet operation",
+      strength: "strong_preference",
+      targetSemantics: "qualitative",
+      semanticValue: {
+        schemaVersion: 1,
+        kind: "qualitative",
+        mode: "text",
+        text: "quiet",
+      },
+    });
+    const quiet = evidence({
+      conceptId: noise.conceptId,
+      role: "independent_review",
+      sourceKind: "fetched_page",
+      sourceId: randomUUID(),
+      observationId: randomUUID(),
+      propertyLabel: "Measured noise",
+      claim: "Review A reports 60 dB.",
+      value: { schemaVersion: 1, kind: "text", text: "60 dB" },
+    });
+    const loud = evidence({
+      conceptId: noise.conceptId,
+      role: "independent_review",
+      sourceKind: "fetched_page",
+      sourceId: randomUUID(),
+      observationId: randomUUID(),
+      propertyLabel: "Measured noise",
+      claim: "Review B reports 74 dB.",
+      value: { schemaVersion: 1, kind: "text", text: "74 dB" },
+    });
+    expect(
+      guardCriterionAssessment({
+        item: noise,
+        listing,
+        observations: [quiet, loud],
+        proposal: {
+          status: "meets",
+          relation: "quiet_test",
+          explanation: quiet.observation.claim,
+          observations: [quiet],
+        },
+      }),
+    ).toMatchObject({
+      status: "uncertain",
+      relation: "source_disagreement",
+    });
+  });
+
+  it("compares exact-page quantities canonically before declaring disagreement", () => {
+    const width = item({
+      label: "Maximum width",
+      targetSemantics: "range",
+      semanticValue: {
+        schemaVersion: 1,
+        kind: "measurement_range",
+        upper: { amount: "30", inclusive: true },
+        unit: "cm",
+      },
+    });
+    const measured = (amount: string, unit: "mm" | "cm") =>
+      evidence({
+        conceptId: width.conceptId,
+        role: "manufacturer",
+        sourceKind: "fetched_page",
+        sourceId: randomUUID(),
+        observationId: randomUUID(),
+        propertyLabel: "Overall width",
+        claim: `The exact page reports ${amount} ${unit}.`,
+        value: {
+          schemaVersion: 1,
+          kind: "quantity",
+          amount,
+          unit,
+          qualifier: "exact",
+        },
+      });
+    const centimetres = measured("25", "cm");
+    const equivalentMillimetres = measured("250", "mm");
+    expect(
+      guardCriterionAssessment({
+        item: width,
+        listing,
+        observations: [centimetres, equivalentMillimetres],
+        proposal: null,
+      }),
+    ).not.toMatchObject({ relation: "source_disagreement" });
+
+    expect(
+      guardCriterionAssessment({
+        item: width,
+        listing,
+        observations: [centimetres, measured("300", "mm")],
+        proposal: null,
+      }),
+    ).toMatchObject({
+      status: "uncertain",
+      relation: "source_disagreement",
+    });
+  });
+
   it("does not let visual evidence hard-exclude a candidate", () => {
     const sculptedProfile = item({
       label: "Sculpted profile",
@@ -712,6 +966,48 @@ describe("criterion assessment guard", () => {
       status: "uncertain",
       relation: "insufficient_relevant_evidence",
     });
+
+    const organicBattery = evidence({
+      conceptId: battery.conceptId,
+      role: "manufacturer",
+      sourceKind: "organic_result",
+      propertyLabel: "Battery life",
+      claim: "A search snippet says a battery is included.",
+      value: { schemaVersion: 1, kind: "boolean", value: true },
+    });
+    expect(
+      guardCriterionAssessment({
+        item: battery,
+        listing,
+        observations: [organicBattery],
+        proposal: {
+          status: "meets",
+          relation: "snippet_battery_claim",
+          explanation: organicBattery.observation.claim,
+          observations: [organicBattery],
+        },
+      }),
+    ).toMatchObject({
+      status: "uncertain",
+      relation: "insufficient_relevant_evidence",
+    });
+
+    const fetchedBattery = evidence({
+      conceptId: battery.conceptId,
+      role: "manufacturer",
+      sourceKind: "fetched_page",
+      propertyLabel: "Battery life",
+      claim: "The exact product page says a battery is included.",
+      value: { schemaVersion: 1, kind: "boolean", value: true },
+    });
+    expect(
+      guardCriterionAssessment({
+        item: battery,
+        listing,
+        observations: [fetchedBattery],
+        proposal: null,
+      }),
+    ).toMatchObject({ status: "meets", relation: "direct_match" });
   });
 
   it.each([
@@ -1231,6 +1527,7 @@ describe("criterion assessment guard", () => {
         text: "strong palm support",
       },
       role: "independent_review",
+      sourceKind: "fetched_page",
     });
     const assessment = guardCriterionAssessment({
       item: longWorkdayComfort,

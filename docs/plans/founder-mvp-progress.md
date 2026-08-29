@@ -357,40 +357,38 @@ V0-09 is active from the exact accepted V0-08 head in the isolated worktree and
 branch recorded above. The durable execution contract is
 `docs/plans/v0-09.md`.
 
-- Add no-crawler, server-owned fetching of at most two already-discovered exact
-  source pages for one candidate/focused generation, behind a DNS-pinned SSRF,
-  redirect, deadline, byte, encoding and content-type boundary.
-- Extend the existing evidence attempt/source architecture with replayable
-  bounded extracted-page provenance. Raw HTML is never persisted or sent to
-  the model; page text is hostile input and the focused Structured Output
-  contract remains authoritative.
-- Select source roles according to the unresolved criterion, recheck exact
-  candidate identity after fetch and leave unsupported facts unknown.
-- Remove merchant resolution from initial retrieval, run independent shopping
-  and candidate work under explicit small concurrency caps, persist every
-  terminal unit independently and report honest comparable latency.
-- Resolve exact same-merchant destinations only for current top/saved offers in
-  an immutable idempotent post-shortlist layer; Google Shopping remains the
-  honest fallback.
-- Project source depth, useful reasons for unknown and progressive purchase
-  state into the calm consumer UI without exposing implementation internals.
-- Run deterministic, PostgreSQL, browser, security, drift and production gates
-  before exactly one guarded four-category Terra + Serper proof. Stop for
-  independent review after exact-head CI; do not merge or start V0-10.
+- Implemented a no-crawler, server-owned fetch boundary for at most two
+  already-discovered exact product pages. DNS pinning, redirect revalidation,
+  deadlines, byte/encoding/content-type bounds and HTML extraction keep raw
+  pages out of persistence and model input.
+- Added replayable page-attempt, exact-target, admitted-source and typed
+  extracted-document provenance. Read and write paths fail closed on orphaned,
+  mutated, cross-scope or variant-conflicting evidence; unsupported product
+  facts remain unknown.
+- Added candidate-local organic -> page -> model pipelines with explicit
+  concurrency caps 3/2/2. Terminal units persist as they finish and useful
+  candidate decisions can project while slower candidates continue.
+- Removed merchant resolution from initial Shopping retrieval. A separate
+  task/run/candidate/policy-bound receipt now resolves only exact same-merchant
+  destinations for current top or saved offers; accepted result title and URL
+  are independently replayed, while Google Shopping remains the fallback.
+- Projected fetched source depth, attributable checked-no-answer states,
+  progressive research, page failures and direct/fallback purchase paths into
+  the existing calm responsive decision UI.
+- Added a guarded four-category Terra + Serper proof harness and eight-state
+  production-server visual workflow. The one authorized live proof has not yet
+  been consumed; independent static proof review is the final precondition.
 
 ## Next validated checkpoints
 
-1. Implement the V0-09 security/extraction boundary and page-evidence
-   persistence with focused deterministic and PostgreSQL proof.
-2. Implement post-shortlist exact-offer destinations and bounded retrieval /
-   evidence concurrency with deferred-provider proof and measured timings.
-3. Complete consumer projection and browser visual QA, then run all repository,
-   migration, security and production gates.
-4. Only when those gates and independent static review are green, run exactly
-   one fresh guarded Terra + Serper proof across mouse, chair, vacuum and the
-   exact compact-coffee-machine prompt. Preserve an honest diagnostic on
-   failure; on success update evidence/ledger/PR, obtain exact-head CI and stop
-   for independent review. Do not merge or begin V0-10.
+1. Receive explicit GO from the final production and proof-harness read-only
+   audits, then commit and push the deterministic V0-09 checkpoint.
+2. Run exactly one fresh guarded Terra + Serper proof across mouse, chair,
+   vacuum and the exact compact-coffee-machine prompt. Preserve an honest
+   diagnostic on failure and make no speculative retry.
+3. On success only, commit the sanitized JSON/Markdown evidence, update this
+   ledger and the draft stacked PR, obtain exact-head quality/persistence/
+   browser-smoke, and stop for independent review. Do not merge or begin V0-10.
 
 ## Credentials and blockers
 
@@ -407,51 +405,34 @@ branch recorded above. The durable execution contract is
 - The full local database suite therefore reports one expected version-pin
   assertion failure. Do not weaken the pin to make the local result green.
 - Public deployment/auth and any second paid provider remain unresolved
-  product/security decisions. The current bounded Serper policy performs at
-  most one merchant-resolution attempt per shopping query and still leaves most
-  top/saved products on an honest Google Shopping fallback. Moving resolution
-  post-shortlist requires an immutable enrichment boundary and remains a
-  measured product gap, not permission for scraping or a second paid vendor.
+  product/security decisions. The bounded post-shortlist Serper destination
+  layer is category-independent and exact-offer-only; unverifiable offers stay
+  on an honest Google Shopping fallback. It is not permission for scraping or
+  a second paid vendor.
 
 ## Latest verification
 
 - `pnpm check`: formatting, lint, generated route types, strict TypeScript,
-  225/225 deterministic unit/component tests and the production build pass on
-  the model-contract-aligned tree.
-- Focused V0-08 PostgreSQL suite: 21/21 passes, including explicit broad versus
-  focused model-call policy, exact gap targeting, A/B/C/D generation identity,
-  malformed non-target output, active reservation, cross-stage target
-  corruption, title evidence and failed-deep preservation.
-- Full PostgreSQL suite: 114 functional tests pass. The sole local failure is
+  337/337 deterministic unit/component tests and the production build pass on
+  the settled V0-09 tree.
+- Full PostgreSQL suite: 139/139 functional tests pass. The sole local failure is
   the intentional PostgreSQL 17.6 version assertion against Homebrew 17.11; the
   repository pin remains unchanged.
 - `pnpm test:e2e`: 8/8 Chromium tests pass, including automatic first/deep
   research, progressive cards, two saves, comparison, exact rejection/undo,
   refinement, refresh, mobile hard-unknown presentation and no overflow.
-- `pnpm db:generate` reports 28 tables and no schema drift; V0-08 adds no
-  migration. Production audit reports no known vulnerabilities.
-- Eight production-server desktop/mobile/partial screenshots were regenerated,
-  passed explicit horizontal-overflow checks and were inspected without Next
-  development chrome.
-- Exactly one newly authorized fresh live attempt generated at
-  `2026-08-29T10:39:53.483Z` completed mouse, chair and vacuum. Each exact named
-  target used a focused one-criterion provider contract, advanced exactly one
-  current generation and wrote one in-scope assessment with no out-of-scope
-  assessment writes. Mouse also proved one prevented duplicate call; vacuum
-  proved an honest controlled partial run after a real provider response.
-- Logical port counts were interpretation 4, action 4, shopping 12, merchant
-  resolution 7, evidence search 27 and product understanding 29. These are
-  logical application/port invocations, not transport-retry counts.
-- The prior failure JSON/Markdown were removed before success evidence was
-  written. The success JSON and Markdown contain no repository credentials or
-  private local paths and strip known third-party tracking parameters.
-- Historical delivery head `4e891f81f581d8c2614bbdf76bf5ae1073399c43`
-  passed GitHub quality, PostgreSQL persistence and browser-smoke in run
-  `33228469926`. The successful release checkpoint
-  `5874ed96c071e73679b374293bddfcaf6623cbbe` passed exact-head quality, pinned
-  PostgreSQL persistence and browser-smoke in run `33248668320`. PR #12 remains
-  draft and unmerged; the following CI-record commit changes only this durable
-  progress documentation.
+- `pnpm db:generate` reports 31 tables and no schema drift. The final additive
+  `0016_lame_wolfpack.sql` migration runs from empty, revokes PUBLIC/anon/
+  authenticated access to all new private tables, and preserves the accepted
+  PostgreSQL 17.6 pin. Production dependency audit reports no vulnerabilities.
+- Eight production `next start` desktop/mobile screenshots passed explicit
+  horizontal-overflow assertions and were visually inspected without framework
+  development chrome. They cover fast listings, progressive evidence, fetched
+  source depth, an attributed page failure, exact direct/fallback purchase,
+  comparison, targeted research and reject/undo.
+- Credential-shape scanning found no OpenAI/Serper/Bearer key values in the
+  worktree. The guarded four-category live proof remains unrun at this
+  checkpoint; no V0-09 success artifact or claim exists yet.
 
 ## Exact resume instructions
 

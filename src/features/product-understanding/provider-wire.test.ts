@@ -33,7 +33,7 @@ function focusedInput(criterionCount = 1) {
       {
         ordinal: 0,
         role: "manufacturer",
-        kind: "organic_result",
+        kind: "fetched_page",
         title: "Exact candidate specifications",
         url: "https://example.test/specifications",
         excerpt: "The manufacturer states a battery specification.",

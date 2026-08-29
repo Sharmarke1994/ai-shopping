@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { projectShoppingBrief } from "@/domain/shopping-state/brief";
 import {
@@ -26,8 +26,10 @@ import {
   criterionAssessments,
   evidenceAcquisitionAttempts,
   evidenceAttemptTargetCriteria,
+  evidencePageFetchTargets,
   evidenceResearchRuns,
   evidenceSources,
+  fetchedEvidenceDocuments,
   productObservations,
   rejectedCandidateListings,
   savedCandidateListings,
@@ -54,6 +56,28 @@ import {
 import type { EvidenceSearchResponse } from "./evidence-search";
 import { isCandidateEvidenceRelevant } from "./evidence-relevance";
 import {
+  admitFetchedPageEvidence,
+  pageEvidenceAdmissionV1Schema,
+  type PageEvidenceAdmissionV1,
+} from "./page-evidence-admission";
+import { projectFetchedPageModelExcerpt } from "./page-evidence-projection";
+import {
+  computeExtractedPageDocumentHash,
+  extractedProductPageDocumentV1Schema,
+  PAGE_EXTRACTION_VERSION,
+  type ExtractedProductPageDocumentV1,
+} from "./page-extraction";
+import {
+  PAGE_FETCH_POLICY_VERSION,
+  type BoundedPageFetch,
+  type PageFetchFailureCode,
+} from "./page-fetch";
+import {
+  MAX_PAGE_SOURCES_PER_CANDIDATE,
+  selectPageSources,
+  type PageSourcePurpose,
+} from "./page-source-strategy";
+import {
   DIRECT_TITLE_DESCRIPTOR_PROPERTY,
   directTitleSoftContradiction,
   guardCriterionAssessment,
@@ -71,12 +95,14 @@ import {
 
 const attemptStageSchema = z.enum([
   "organic_search",
+  "page_fetch",
   "observation_extraction",
   "criterion_assessment",
 ]);
 const attemptPurposeSchema = z.enum([
   "specifications",
   "experience",
+  "source_depth",
   "first_pass",
   "decision_gap",
   "combined",
@@ -90,36 +116,174 @@ const researchStatusSchema = z.enum([
   "failed",
 ]);
 
-const persistedAttemptSchema = z.strictObject({
-  id: evidenceAcquisitionAttemptIdSchema,
+const persistedAttemptSchema = z
+  .strictObject({
+    id: evidenceAcquisitionAttemptIdSchema,
+    taskId: shoppingTaskIdSchema,
+    researchRunId: evidenceResearchRunIdSchema,
+    candidateRunId: searchRunIdSchema,
+    candidateListingId: candidateListingIdSchema,
+    stage: attemptStageSchema,
+    purpose: attemptPurposeSchema,
+    planKey: z.string().min(1).max(180),
+    query: z.string().min(1).max(500).nullable(),
+    status: attemptStatusSchema,
+    provider: z.enum(["serper", "server_http", "openai", "fixture"]),
+    model: z.string().min(1).max(160).nullable(),
+    promptVersion: z.string().min(1).max(120).nullable(),
+    providerRequestId: z.string().min(1).max(240).nullable(),
+    receivedResultCount: z.number().int().nonnegative().nullable(),
+    failureCode: z
+      .enum([
+        "provider_failed",
+        "invalid_provider_result",
+        "unsafe_url",
+        "dns_failed",
+        "network_failed",
+        "timeout",
+        "redirect_invalid",
+        "redirect_limit",
+        "http_status",
+        "unsupported_content_type",
+        "unsupported_content_encoding",
+        "response_too_large",
+        "invalid_text",
+        "invalid_extraction",
+        "identity_mismatch",
+        "model_failed",
+        "invalid_model_output",
+      ])
+      .nullable(),
+    startedAt: z.date().nullable(),
+    finishedAt: z.date().nullable(),
+    targetCriterionIds: z.array(criterionIdSchema).max(50),
+  })
+  .superRefine((attempt, context) => {
+    if (attempt.status !== "failed") return;
+    const allowed =
+      attempt.stage === "organic_search"
+        ? new Set(["provider_failed", "invalid_provider_result"])
+        : attempt.stage === "page_fetch"
+          ? new Set([
+              "unsafe_url",
+              "dns_failed",
+              "network_failed",
+              "timeout",
+              "redirect_invalid",
+              "redirect_limit",
+              "http_status",
+              "unsupported_content_type",
+              "unsupported_content_encoding",
+              "response_too_large",
+              "invalid_text",
+              "invalid_extraction",
+              "identity_mismatch",
+            ])
+          : new Set(["model_failed", "invalid_model_output"]);
+    if (attempt.failureCode === null || !allowed.has(attempt.failureCode)) {
+      context.addIssue({
+        code: "custom",
+        path: ["failureCode"],
+        message: "Failure code does not belong to the acquisition stage",
+      });
+    }
+  });
+
+export type PersistedEvidenceAttempt = z.infer<typeof persistedAttemptSchema>;
+
+const fetchedPageMetadataSchema = z.strictObject({
+  requestedUrl: z.url().max(4_000),
+  finalUrl: z.url().max(4_000),
+  contentType: z.enum(["text/html", "application/xhtml+xml", "text/plain"]),
+  encodedBytes: z.number().int().min(1).max(1_500_000),
+  decodedBytes: z.number().int().min(1).max(1_500_000),
+  fetchedAt: z.date(),
+  responseHash: z.string().regex(/^[a-f0-9]{64}$/),
+});
+
+export type FetchedPageMetadata = Readonly<
+  Omit<BoundedPageFetch, "text" | "redirectCount">
+>;
+
+const admittedPageEvidenceSchema = pageEvidenceAdmissionV1Schema.refine(
+  (value): value is Extract<PageEvidenceAdmissionV1, { decision: "admit" }> =>
+    value.decision === "admit",
+  "Only admitted exact-product pages can be persisted",
+);
+
+const persistedFetchedEvidenceDocumentSchema = z.strictObject({
+  id: z.uuid(),
   taskId: shoppingTaskIdSchema,
   researchRunId: evidenceResearchRunIdSchema,
   candidateRunId: searchRunIdSchema,
   candidateListingId: candidateListingIdSchema,
-  stage: attemptStageSchema,
-  purpose: attemptPurposeSchema,
-  planKey: z.string().min(1).max(180),
-  query: z.string().min(1).max(500).nullable(),
-  status: attemptStatusSchema,
-  provider: z.enum(["serper", "openai", "fixture"]),
-  model: z.string().min(1).max(160).nullable(),
-  promptVersion: z.string().min(1).max(120).nullable(),
-  providerRequestId: z.string().min(1).max(240).nullable(),
-  receivedResultCount: z.number().int().nonnegative().nullable(),
-  failureCode: z
-    .enum([
-      "provider_failed",
-      "invalid_provider_result",
-      "model_failed",
-      "invalid_model_output",
-    ])
-    .nullable(),
-  startedAt: z.date().nullable(),
-  finishedAt: z.date().nullable(),
-  targetCriterionIds: z.array(criterionIdSchema).max(50),
+  attemptId: evidenceAcquisitionAttemptIdSchema,
+  attemptStage: z.literal("page_fetch"),
+  discoveredSourceId: evidenceSourceIdSchema,
+  evidenceSourceId: evidenceSourceIdSchema,
+  evidenceSourceKind: z.literal("fetched_page"),
+  requestedUrl: z.url().max(4_000),
+  finalUrl: z.url().max(4_000),
+  canonicalUrl: z.url().max(4_000).nullable(),
+  contentType: fetchedPageMetadataSchema.shape.contentType,
+  encodedBytes: fetchedPageMetadataSchema.shape.encodedBytes,
+  decodedBytes: fetchedPageMetadataSchema.shape.decodedBytes,
+  responseHash: fetchedPageMetadataSchema.shape.responseHash,
+  documentHash: z.string().regex(/^[a-f0-9]{64}$/),
+  extractionVersion: z.literal(PAGE_EXTRACTION_VERSION),
+  document: extractedProductPageDocumentV1Schema,
+  admission: admittedPageEvidenceSchema,
+  fetchedAt: z.date(),
 });
 
-export type PersistedEvidenceAttempt = z.infer<typeof persistedAttemptSchema>;
+export type PersistedFetchedEvidenceDocument = Readonly<
+  z.infer<typeof persistedFetchedEvidenceDocumentSchema>
+>;
+
+export type PlannedOrganicEvidenceSource = Readonly<
+  Omit<
+    EvidenceSourceV1,
+    "sourceKind" | "sourceRole" | "acquisitionAttemptId" | "providerResultId"
+  > & {
+    sourceKind: "organic_result";
+    sourceRole:
+      | "retailer"
+      | "manufacturer"
+      | "independent_review"
+      | "retailer_review_aggregate"
+      | "other";
+    acquisitionAttemptId: z.infer<typeof evidenceAcquisitionAttemptIdSchema>;
+    providerResultId: string;
+  }
+>;
+
+export type PlannedEvidencePageFetch = Readonly<{
+  attempt: PersistedEvidenceAttempt;
+  discoveredSource: PlannedOrganicEvidenceSource;
+  requestedUrl: string;
+  policyVersion: string;
+  purpose: PageSourcePurpose;
+}>;
+
+export type PageEvidenceFailureCode =
+  PageFetchFailureCode | "invalid_extraction" | "identity_mismatch";
+
+const pageAttemptProviderSchema = z.enum(["server_http", "fixture"]);
+const pageEvidenceFailureCodeSchema = z.enum([
+  "unsafe_url",
+  "dns_failed",
+  "network_failed",
+  "timeout",
+  "redirect_invalid",
+  "redirect_limit",
+  "http_status",
+  "unsupported_content_type",
+  "unsupported_content_encoding",
+  "response_too_large",
+  "invalid_text",
+  "invalid_extraction",
+  "identity_mismatch",
+]);
 
 export type EvidenceResearchSnapshot = Readonly<{
   run: Readonly<{
@@ -291,6 +455,63 @@ function mapEvidenceSourceRow(
   return evidenceSourceV1Schema.parse({ schemaVersion: 1, ...value });
 }
 
+function mapFetchedEvidenceDocumentRow(
+  row: typeof fetchedEvidenceDocuments.$inferSelect,
+): PersistedFetchedEvidenceDocument {
+  const { createdAt, ...value } = row;
+  void createdAt;
+  const parsed = persistedFetchedEvidenceDocumentSchema.parse(value);
+  if (
+    parsed.documentHash !== computeExtractedPageDocumentHash(parsed.document) ||
+    parsed.extractionVersion !== parsed.document.extractionVersion ||
+    parsed.finalUrl !== parsed.document.sourceUrl ||
+    parsed.canonicalUrl !== parsed.document.canonicalUrlCandidate
+  ) {
+    throw new Error("Fetched page document metadata is incoherent");
+  }
+  return parsed;
+}
+
+function fetchedPageFingerprint(options: {
+  attemptId: string;
+  discoveredSourceId: string;
+  requestedUrl: string;
+  finalUrl: string;
+  canonicalUrl: string | null;
+  responseHash: string;
+  documentHash: string;
+  admission: Extract<PageEvidenceAdmissionV1, { decision: "admit" }>;
+}) {
+  return fingerprint({ kind: "fetched_page", ...options });
+}
+
+function pageIdentityFromDocument(options: {
+  fetch: FetchedPageMetadata;
+  document: ExtractedProductPageDocumentV1;
+}) {
+  return {
+    finalUrl: options.fetch.finalUrl,
+    canonicalUrl: options.document.canonicalUrlCandidate,
+    title: options.document.title,
+    openGraphTitle: options.document.metadata.openGraphTitle,
+    products: options.document.jsonLdProducts.map((product) => ({
+      productName: product.name,
+      brand: product.brand,
+      model: product.model,
+      sku: product.sku,
+      mpn: product.mpn,
+    })),
+  } as const;
+}
+
+function exactJson(left: unknown, right: unknown) {
+  return fingerprint(left) === fingerprint(right);
+}
+
+function exactDate(left: Date | null, right: Date) {
+  return left !== null && left.getTime() === right.getTime();
+}
+
 function mapObservationRow(
   row: typeof productObservations.$inferSelect,
 ): ProductObservationV1 {
@@ -320,6 +541,7 @@ async function loadResearchSnapshotInTransaction(options: {
     attemptRows,
     targetRows,
     sourceRows,
+    fetchedDocumentRows,
     observationRows,
     assessmentRows,
     linkRows,
@@ -344,6 +566,10 @@ async function loadResearchSnapshotInTransaction(options: {
       .where(eq(evidenceSources.taskId, options.taskId)),
     options.tx
       .select()
+      .from(fetchedEvidenceDocuments)
+      .where(eq(fetchedEvidenceDocuments.taskId, options.taskId)),
+    options.tx
+      .select()
       .from(productObservations)
       .where(eq(productObservations.taskId, options.taskId)),
     options.tx
@@ -365,8 +591,11 @@ async function loadResearchSnapshotInTransaction(options: {
   const candidateIds = new Set(
     attemptRows.map(({ candidateListingId }) => candidateListingId),
   );
-  const relevantSources = sourceRows.filter((row) =>
-    candidateIds.has(row.candidateListingId),
+  const relevantSources = sourceRows.filter(
+    (row) =>
+      candidateIds.has(row.candidateListingId) &&
+      (row.sourceKind !== "fetched_page" ||
+        row.researchRunId === options.researchRunId),
   );
   const relevantSourceIds = new Set(relevantSources.map(({ id }) => id));
   const relevantObservations = observationRows.filter(
@@ -430,6 +659,15 @@ async function loadResearchSnapshotInTransaction(options: {
     );
   }
   validateDeepAttemptTargetCoherence({ run, attempts });
+  await validateSnapshotFetchedPageChildren({
+    tx: options.tx,
+    taskId: options.taskId,
+    researchRunId: options.researchRunId,
+    runRow,
+    attempts,
+    sourceRows,
+    documentRows: fetchedDocumentRows,
+  });
   const sources = relevantSources.map((row) =>
     parsePersisted({
       recordType: "EvidenceSource",
@@ -511,6 +749,20 @@ async function insertSourceIdempotently(options: {
   tx: ShoppingTransaction;
   value: Omit<EvidenceSourceV1, "schemaVersion">;
 }) {
+  const [inserted] = await options.tx
+    .insert(evidenceSources)
+    .values(options.value)
+    .onConflictDoNothing()
+    .returning({
+      id: evidenceSources.id,
+      researchRunId: evidenceSources.researchRunId,
+    });
+  if (inserted !== undefined) {
+    return {
+      id: evidenceSourceIdSchema.parse(inserted.id),
+      researchRunId: evidenceResearchRunIdSchema.parse(inserted.researchRunId),
+    };
+  }
   const [existing] = await options.tx
     .select({
       id: evidenceSources.id,
@@ -529,16 +781,14 @@ async function insertSourceIdempotently(options: {
       ),
     )
     .limit(1);
-  if (existing !== undefined) {
-    return {
-      id: evidenceSourceIdSchema.parse(existing.id),
-      researchRunId: evidenceResearchRunIdSchema.parse(existing.researchRunId),
-    };
+  if (existing === undefined) {
+    throw new EvidenceAttemptConflictError(
+      options.value.acquisitionAttemptId ?? options.value.id,
+    );
   }
-  await options.tx.insert(evidenceSources).values(options.value);
   return {
-    id: options.value.id,
-    researchRunId: options.value.researchRunId,
+    id: evidenceSourceIdSchema.parse(existing.id),
+    researchRunId: evidenceResearchRunIdSchema.parse(existing.researchRunId),
   };
 }
 
@@ -912,6 +1162,16 @@ export async function prepareEvidenceResearch(options: {
     const rejectedIds = new Set(
       rejectedRows.map(({ candidateListingId }) => candidateListingId),
     );
+    const searchRunIsCurrent =
+      run.portfolio.run.taskRevision === brief.revision;
+    if (
+      (mode === "first_pass" || mode === "deepening") &&
+      !searchRunIsCurrent
+    ) {
+      throw new EvidenceResearchAuthorityError(
+        "Current-run research requires a search run from the current shopping revision",
+      );
+    }
     if (targetCandidateListingId !== undefined) {
       if (!run.listings.some(({ id }) => id === targetCandidateListingId)) {
         throw new EvidenceResearchAuthorityError(
@@ -921,6 +1181,11 @@ export async function prepareEvidenceResearch(options: {
       if (rejectedIds.has(targetCandidateListingId)) {
         throw new EvidenceResearchAuthorityError(
           "A rejected candidate cannot be researched",
+        );
+      }
+      if (!searchRunIsCurrent && !savedIds.has(targetCandidateListingId)) {
+        throw new EvidenceResearchAuthorityError(
+          "A historical candidate must still be saved before targeted research",
         );
       }
     }
@@ -1244,6 +1509,10 @@ export type CurrentDecisionSupport = Readonly<{
     runStatus: z.infer<typeof researchStatusSchema>;
     status: "planned" | "succeeded" | "failed";
     criterionIds: readonly z.infer<typeof criterionIdSchema>[];
+    checkedSourcesByCriterion: readonly Readonly<{
+      criterionId: z.infer<typeof criterionIdSchema>;
+      sourceIds: readonly z.infer<typeof evidenceSourceIdSchema>[];
+    }>[];
   }>[];
   candidates: readonly PersistedCandidateListing[];
   sources: readonly EvidenceSourceV1[];
@@ -1376,31 +1645,69 @@ export async function loadCurrentDecisionSupportInTransaction(options: {
   return {
     brief,
     researchRuns: snapshots.map(({ run }) => run),
-    deepResearchCoverage: snapshots.flatMap((snapshot) =>
-      snapshot.run.phase === "deepening"
-        ? snapshot.attempts
-            .filter(({ stage }) => stage === "organic_search")
-            .map((attempt) => {
-              const candidateAttempts = snapshot.attempts.filter(
-                ({ candidateListingId }) =>
-                  candidateListingId === attempt.candidateListingId,
-              );
-              return {
-                researchRunId: snapshot.run.id,
-                candidateListingId: attempt.candidateListingId,
-                runStatus: snapshot.run.status,
-                status: candidateAttempts.some(
-                  ({ status }) => status === "failed",
-                )
-                  ? ("failed" as const)
-                  : candidateAttempts.some(({ status }) => status === "planned")
-                    ? ("planned" as const)
-                    : ("succeeded" as const),
-                criterionIds: attempt.targetCriterionIds,
-              };
-            })
-        : [],
-    ),
+    deepResearchCoverage: snapshots.flatMap((snapshot) => {
+      if (snapshot.run.phase !== "deepening") return [];
+      const fetchedSourceByAttemptId = new Map(
+        snapshot.sources.flatMap((source) =>
+          source.sourceKind === "fetched_page" &&
+          source.researchRunId === snapshot.run.id &&
+          source.acquisitionAttemptId !== null
+            ? [[source.acquisitionAttemptId, source.id] as const]
+            : [],
+        ),
+      );
+      return snapshot.attempts
+        .filter(({ stage }) => stage === "organic_search")
+        .map((attempt) => {
+          const candidateAttempts = snapshot.attempts.filter(
+            ({ candidateListingId }) =>
+              candidateListingId === attempt.candidateListingId,
+          );
+          const checkedSourcesByCriterion = attempt.targetCriterionIds.map(
+            (criterionId) => {
+              const sourceIds = [
+                ...new Set(
+                  candidateAttempts.flatMap((candidateAttempt) => {
+                    if (
+                      candidateAttempt.stage !== "page_fetch" ||
+                      candidateAttempt.status !== "succeeded" ||
+                      !candidateAttempt.targetCriterionIds.includes(criterionId)
+                    ) {
+                      return [];
+                    }
+                    const sourceId = fetchedSourceByAttemptId.get(
+                      candidateAttempt.id,
+                    );
+                    return sourceId === undefined ? [] : [sourceId];
+                  }),
+                ),
+              ];
+              if (sourceIds.length > MAX_PAGE_SOURCES_PER_CANDIDATE) {
+                failPersisted(
+                  "EvidenceResearchRun",
+                  snapshot.run.id,
+                  new Error(
+                    "Checked-page provenance exceeds its candidate bound",
+                  ),
+                );
+              }
+              return { criterionId, sourceIds };
+            },
+          );
+          return {
+            researchRunId: snapshot.run.id,
+            candidateListingId: attempt.candidateListingId,
+            runStatus: snapshot.run.status,
+            status: candidateAttempts.some(({ status }) => status === "failed")
+              ? ("failed" as const)
+              : candidateAttempts.some(({ status }) => status === "planned")
+                ? ("planned" as const)
+                : ("succeeded" as const),
+            criterionIds: attempt.targetCriterionIds,
+            checkedSourcesByCriterion,
+          };
+        });
+    }),
     candidates: [...candidateMap.values()],
     sources: [...sourceMap.values()],
     observations: [...observationMap.values()],
@@ -1451,6 +1758,34 @@ function assertLease(
   token: string,
 ) {
   if (row.leaseToken !== token) throw new EvidenceResearchLeaseError(row.id);
+}
+
+async function assertCurrentResearchAuthority(options: {
+  tx: ShoppingTransaction;
+  taskId: z.infer<typeof shoppingTaskIdSchema>;
+  run: typeof evidenceResearchRuns.$inferSelect;
+}) {
+  const [task] = await options.tx
+    .select({ currentRevision: shoppingTasks.currentRevision })
+    .from(shoppingTasks)
+    .where(eq(shoppingTasks.id, options.taskId))
+    .for("share")
+    .limit(1);
+  if (task === undefined) {
+    throw new EvidenceResearchAuthorityError("Shopping task was not found");
+  }
+  if (task.currentRevision !== options.run.taskRevision) {
+    throw new StaleTaskRevisionError(
+      options.taskId,
+      options.run.taskRevision,
+      task.currentRevision,
+    );
+  }
+  if (options.run.status !== "running") {
+    throw new EvidenceResearchAuthorityError(
+      "Evidence research is no longer current work",
+    );
+  }
 }
 
 export async function claimEvidenceResearch(options: {
@@ -1593,6 +1928,886 @@ async function loadLockedAttempt(options: {
   );
 }
 
+function normalizedPagePlanUrl(raw: string) {
+  const url = new URL(raw);
+  url.hash = "";
+  url.hostname = url.hostname.toLocaleLowerCase("en-GB");
+  if (url.pathname !== "/") url.pathname = url.pathname.replace(/\/+$/, "");
+  return url.toString();
+}
+
+function pageFetchPlanKey(options: {
+  discoveredSourceId: string;
+  purpose: PageSourcePurpose;
+  targetCriterionIds: readonly string[];
+}) {
+  return `page-fetch:${fingerprint({
+    policyVersion: PAGE_FETCH_POLICY_VERSION,
+    discoveredSourceId: options.discoveredSourceId,
+    purpose: options.purpose,
+    targetCriterionIds: [...options.targetCriterionIds].sort(),
+  }).slice(0, 32)}`;
+}
+
+/**
+ * Plans only URLs that already exist as exact, admitted organic evidence for
+ * this candidate generation. The caller cannot supply a URL or criterion.
+ */
+export async function planEvidencePageFetches(options: {
+  db: ShoppingDatabase;
+  taskId: unknown;
+  researchRunId: unknown;
+  candidateListingId: unknown;
+  leaseToken: unknown;
+  provider: "server_http" | "fixture";
+}): Promise<readonly PlannedEvidencePageFetch[]> {
+  const taskId = shoppingTaskIdSchema.parse(options.taskId);
+  const researchRunId = evidenceResearchRunIdSchema.parse(
+    options.researchRunId,
+  );
+  const candidateListingId = candidateListingIdSchema.parse(
+    options.candidateListingId,
+  );
+  const leaseToken = z.uuid().parse(options.leaseToken);
+  const provider = pageAttemptProviderSchema.parse(options.provider);
+
+  return options.db.transaction(async (tx) => {
+    const run = await loadLockedResearchRow({ tx, taskId, researchRunId });
+    assertLease(run, leaseToken);
+    await assertCurrentResearchAuthority({ tx, taskId, run });
+
+    const [rejected] = await tx
+      .select({
+        candidateListingId: rejectedCandidateListings.candidateListingId,
+      })
+      .from(rejectedCandidateListings)
+      .where(
+        and(
+          eq(rejectedCandidateListings.taskId, taskId),
+          eq(rejectedCandidateListings.candidateListingId, candidateListingId),
+        ),
+      )
+      .limit(1);
+    if (rejected !== undefined) {
+      throw new EvidenceResearchAuthorityError(
+        "A rejected candidate cannot receive fetched-page work",
+      );
+    }
+
+    const searchRun = await loadPersistedSearchRunInTransaction({
+      tx,
+      taskId,
+      runId: run.searchRunId,
+    });
+    const listing = searchRun?.listings.find(
+      ({ id }) => id === candidateListingId,
+    );
+    if (listing === undefined) {
+      throw new EvidenceResearchAuthorityError(
+        "Page candidate is not in the research search run",
+      );
+    }
+
+    const [attemptRows, targetCriterionRows, pageTargetRows] =
+      await Promise.all([
+        tx
+          .select()
+          .from(evidenceAcquisitionAttempts)
+          .where(
+            and(
+              eq(evidenceAcquisitionAttempts.taskId, taskId),
+              eq(evidenceAcquisitionAttempts.researchRunId, researchRunId),
+              eq(evidenceAcquisitionAttempts.candidateRunId, run.searchRunId),
+              eq(
+                evidenceAcquisitionAttempts.candidateListingId,
+                candidateListingId,
+              ),
+            ),
+          )
+          .orderBy(asc(evidenceAcquisitionAttempts.createdAt)),
+        tx
+          .select()
+          .from(evidenceAttemptTargetCriteria)
+          .where(
+            and(
+              eq(evidenceAttemptTargetCriteria.taskId, taskId),
+              eq(evidenceAttemptTargetCriteria.researchRunId, researchRunId),
+              eq(evidenceAttemptTargetCriteria.candidateRunId, run.searchRunId),
+              eq(
+                evidenceAttemptTargetCriteria.candidateListingId,
+                candidateListingId,
+              ),
+            ),
+          ),
+        tx
+          .select()
+          .from(evidencePageFetchTargets)
+          .where(
+            and(
+              eq(evidencePageFetchTargets.taskId, taskId),
+              eq(evidencePageFetchTargets.researchRunId, researchRunId),
+              eq(evidencePageFetchTargets.candidateRunId, run.searchRunId),
+              eq(
+                evidencePageFetchTargets.candidateListingId,
+                candidateListingId,
+              ),
+            ),
+          ),
+      ]);
+    const attempts = attemptRows.map((row) =>
+      parsePersisted({
+        recordType: "EvidenceAcquisitionAttempt",
+        recordId: row.id,
+        parse: () =>
+          mapAttemptRow(
+            row,
+            targetCriterionRows
+              .filter(({ attemptId }) => attemptId === row.id)
+              .map(({ criterionId }) => criterionId),
+          ),
+      }),
+    );
+    const organicAttempts = attempts.filter(
+      ({ stage }) => stage === "organic_search",
+    );
+    const extractionAttempts = attempts.filter(
+      ({ stage }) => stage === "observation_extraction",
+    );
+    const assessmentAttempts = attempts.filter(
+      ({ stage }) => stage === "criterion_assessment",
+    );
+    const existingPageAttempts = attempts.filter(
+      ({ stage }) => stage === "page_fetch",
+    );
+    if (
+      extractionAttempts.length !== 1 ||
+      assessmentAttempts.length !== 1 ||
+      !hasExactNonEmptyCriterionTargets(
+        extractionAttempts[0]?.targetCriterionIds ?? [],
+        assessmentAttempts[0]?.targetCriterionIds ?? [],
+        ...organicAttempts.map(({ targetCriterionIds }) => targetCriterionIds),
+      )
+    ) {
+      throw new EvidenceAttemptConflictError(
+        extractionAttempts[0]?.id ?? candidateListingId,
+      );
+    }
+    if (organicAttempts.some(({ status }) => status === "planned")) {
+      throw new EvidenceResearchAuthorityError(
+        "Organic evidence must be terminal before page planning",
+      );
+    }
+    if (
+      existingPageAttempts.length > MAX_PAGE_SOURCES_PER_CANDIDATE ||
+      pageTargetRows.length !== existingPageAttempts.length
+    ) {
+      failPersisted(
+        "EvidenceResearchRun",
+        researchRunId,
+        new Error("Fetched-page plan cardinality is invalid"),
+      );
+    }
+
+    const state = await loadCurrentShoppingState(tx, taskId);
+    const brief = projectShoppingBrief(state);
+    const exactTargetIds = extractionAttempts[0]!.targetCriterionIds;
+    const targetIdSet = new Set(exactTargetIds);
+    const targetCriteria = brief.items.filter(({ criterionId }) =>
+      targetIdSet.has(criterionId),
+    );
+    if (targetCriteria.length !== targetIdSet.size) {
+      throw new EvidenceResearchAuthorityError(
+        "Page attempt criteria are not current for this task revision",
+      );
+    }
+
+    const succeededOrganicAttemptIds = new Set(
+      organicAttempts
+        .filter(({ status }) => status === "succeeded")
+        .map(({ id }) => id),
+    );
+    const organicSourceRows =
+      succeededOrganicAttemptIds.size === 0
+        ? []
+        : await tx
+            .select()
+            .from(evidenceSources)
+            .where(
+              and(
+                eq(evidenceSources.taskId, taskId),
+                eq(evidenceSources.researchRunId, researchRunId),
+                eq(evidenceSources.candidateRunId, run.searchRunId),
+                eq(evidenceSources.candidateListingId, candidateListingId),
+                eq(evidenceSources.sourceKind, "organic_result"),
+                isNotNull(evidenceSources.acquisitionAttemptId),
+                inArray(evidenceSources.acquisitionAttemptId, [
+                  ...succeededOrganicAttemptIds,
+                ]),
+              ),
+            )
+            .orderBy(
+              asc(evidenceSources.providerResultId),
+              asc(evidenceSources.sourceUrl),
+              asc(evidenceSources.id),
+            );
+    const parsedOrganicSources = organicSourceRows.map((row) =>
+      parsePersisted({
+        recordType: "EvidenceSource",
+        recordId: row.id,
+        parse: () => mapEvidenceSourceRow(row),
+      }),
+    );
+    const organicSources = parsedOrganicSources.map((source) => {
+      if (
+        source.sourceKind !== "organic_result" ||
+        source.acquisitionAttemptId === null ||
+        !succeededOrganicAttemptIds.has(source.acquisitionAttemptId) ||
+        source.providerResultId === null ||
+        source.sourceRole === "listing" ||
+        source.sourceRole === "visual"
+      ) {
+        failPersisted(
+          "EvidenceResearchRun",
+          researchRunId,
+          new Error("Organic page discovery provenance is incomplete"),
+        );
+      }
+      return source as PlannedOrganicEvidenceSource;
+    });
+    const selections = selectPageSources({
+      candidateTitle: listing.title,
+      merchant: listing.merchant,
+      targetCriteria,
+      organicSources: organicSources.map((source, index) => ({
+        providerResultId: source.providerResultId,
+        rank: index + 1,
+        title: source.sourceTitle,
+        url: source.sourceUrl,
+        sourceRole: source.sourceRole,
+      })),
+    });
+    if (selections.length > MAX_PAGE_SOURCES_PER_CANDIDATE) {
+      throw new Error("Page source selector exceeded its hard bound");
+    }
+    const selected = selections.map((selection) => {
+      const discoveredSource = organicSources.find(
+        (source) =>
+          source.providerResultId === selection.providerResultId &&
+          source.sourceTitle === selection.title &&
+          normalizedPagePlanUrl(source.sourceUrl) === selection.url &&
+          source.sourceRole === selection.discoveredRole,
+      );
+      if (discoveredSource === undefined) {
+        throw new EvidenceResearchAuthorityError(
+          "Selected page source is not exact task-local organic evidence",
+        );
+      }
+      if (
+        !hasExactNonEmptyCriterionTargets(
+          selection.targetCriterionIds,
+          selection.targetCriterionIds.filter((criterionId) =>
+            targetIdSet.has(criterionId),
+          ),
+        )
+      ) {
+        throw new EvidenceResearchAuthorityError(
+          "Selected page criteria are outside the exact candidate generation",
+        );
+      }
+      return {
+        selection,
+        discoveredSource,
+        planKey: pageFetchPlanKey({
+          discoveredSourceId: discoveredSource.id,
+          purpose: selection.purpose,
+          targetCriterionIds: selection.targetCriterionIds,
+        }),
+      };
+    });
+
+    const existingByPlanKey = new Map(
+      existingPageAttempts.map((attempt) => [attempt.planKey, attempt]),
+    );
+    if (
+      existingPageAttempts.length !== 0 &&
+      (existingPageAttempts.length !== selected.length ||
+        selected.some(({ planKey }) => !existingByPlanKey.has(planKey)))
+    ) {
+      throw new EvidenceAttemptConflictError(
+        existingPageAttempts[0]?.id ?? candidateListingId,
+      );
+    }
+
+    if (existingPageAttempts.length === 0 && selected.length > 0) {
+      const newAttempts = selected.map(({ selection, planKey }) => ({
+        id: evidenceAcquisitionAttemptIdSchema.parse(randomUUID()),
+        taskId,
+        researchRunId,
+        candidateRunId: run.searchRunId,
+        candidateListingId,
+        stage: "page_fetch" as const,
+        purpose: "source_depth" as const,
+        planKey,
+        query: null,
+        status: "planned" as const,
+        provider,
+        model: null,
+        promptVersion: null,
+        providerRequestId: null,
+        receivedResultCount: null,
+        failureCode: null,
+        startedAt: null,
+        finishedAt: null,
+        targetCriterionIds: selection.targetCriterionIds,
+      }));
+      await tx.insert(evidenceAcquisitionAttempts).values(
+        newAttempts.map(({ targetCriterionIds, ...attempt }) => {
+          void targetCriterionIds;
+          return attempt;
+        }),
+      );
+      await tx.insert(evidenceAttemptTargetCriteria).values(
+        newAttempts.flatMap((attempt) =>
+          attempt.targetCriterionIds.map((criterionId) => ({
+            taskId,
+            researchRunId,
+            candidateRunId: run.searchRunId,
+            candidateListingId,
+            attemptId: attempt.id,
+            criterionId: criterionIdSchema.parse(criterionId),
+          })),
+        ),
+      );
+      await tx.insert(evidencePageFetchTargets).values(
+        newAttempts.map((attempt, index) => ({
+          taskId,
+          researchRunId,
+          candidateRunId: run.searchRunId,
+          candidateListingId,
+          attemptId: attempt.id,
+          discoveredSourceId: selected[index]!.discoveredSource.id,
+          requestedUrl: selected[index]!.selection.url,
+          policyVersion: PAGE_FETCH_POLICY_VERSION,
+        })),
+      );
+      return selected.map(({ selection, discoveredSource }, index) => ({
+        attempt: persistedAttemptSchema.parse(newAttempts[index]),
+        discoveredSource,
+        requestedUrl: selection.url,
+        policyVersion: PAGE_FETCH_POLICY_VERSION,
+        purpose: selection.purpose,
+      }));
+    }
+
+    return selected.map(
+      ({ selection, discoveredSource, planKey }): PlannedEvidencePageFetch => {
+        const attempt = existingByPlanKey.get(planKey);
+        const target = pageTargetRows.find(
+          ({ attemptId }) => attemptId === attempt?.id,
+        );
+        if (
+          attempt === undefined ||
+          attempt.provider !== provider ||
+          attempt.purpose !== "source_depth" ||
+          attempt.query !== null ||
+          !hasExactNonEmptyCriterionTargets(
+            selection.targetCriterionIds,
+            attempt.targetCriterionIds,
+          ) ||
+          target === undefined ||
+          target.discoveredSourceId !== discoveredSource.id ||
+          target.requestedUrl !== selection.url ||
+          target.policyVersion !== PAGE_FETCH_POLICY_VERSION
+        ) {
+          throw new EvidenceAttemptConflictError(
+            attempt?.id ?? candidateListingId,
+          );
+        }
+        return {
+          attempt: {
+            ...attempt,
+            targetCriterionIds: [...selection.targetCriterionIds],
+          },
+          discoveredSource,
+          requestedUrl: selection.url,
+          policyVersion: PAGE_FETCH_POLICY_VERSION,
+          purpose: selection.purpose,
+        };
+      },
+    );
+  });
+}
+
+async function loadOwnedPageAttemptContext(options: {
+  tx: ShoppingTransaction;
+  taskId: z.infer<typeof shoppingTaskIdSchema>;
+  researchRunId: z.infer<typeof evidenceResearchRunIdSchema>;
+  run: typeof evidenceResearchRuns.$inferSelect;
+  attempt: PersistedEvidenceAttempt;
+}) {
+  const { attempt } = options;
+  if (
+    attempt.stage !== "page_fetch" ||
+    attempt.purpose !== "source_depth" ||
+    (attempt.provider !== "server_http" && attempt.provider !== "fixture") ||
+    attempt.query !== null ||
+    attempt.model !== null ||
+    attempt.promptVersion !== null ||
+    attempt.candidateRunId !== options.run.searchRunId
+  ) {
+    throw new EvidenceAttemptConflictError(attempt.id);
+  }
+  const targetRows = await options.tx
+    .select()
+    .from(evidencePageFetchTargets)
+    .where(
+      and(
+        eq(evidencePageFetchTargets.taskId, options.taskId),
+        eq(evidencePageFetchTargets.researchRunId, options.researchRunId),
+        eq(evidencePageFetchTargets.attemptId, attempt.id),
+      ),
+    );
+  const target = targetRows[0];
+  if (targetRows.length !== 1 || target === undefined) {
+    failPersisted(
+      "EvidenceAcquisitionAttempt",
+      attempt.id,
+      new Error("Page attempt has no exact discovery binding"),
+    );
+  }
+  const [discoveredRow] = await options.tx
+    .select()
+    .from(evidenceSources)
+    .where(
+      and(
+        eq(evidenceSources.taskId, options.taskId),
+        eq(evidenceSources.id, target.discoveredSourceId),
+      ),
+    )
+    .limit(1);
+  if (discoveredRow === undefined) {
+    failPersisted(
+      "EvidencePageFetchTarget",
+      attempt.id,
+      new Error("Discovered source is unavailable"),
+    );
+  }
+  const discoveredSource = parsePersisted({
+    recordType: "EvidenceSource",
+    recordId: discoveredRow.id,
+    parse: () => mapEvidenceSourceRow(discoveredRow),
+  });
+  if (
+    target.attemptStage !== "page_fetch" ||
+    target.discoveredSourceKind !== "organic_result" ||
+    target.policyVersion !== PAGE_FETCH_POLICY_VERSION ||
+    target.candidateRunId !== attempt.candidateRunId ||
+    target.candidateListingId !== attempt.candidateListingId ||
+    discoveredSource.researchRunId !== options.researchRunId ||
+    discoveredSource.candidateRunId !== attempt.candidateRunId ||
+    discoveredSource.candidateListingId !== attempt.candidateListingId ||
+    discoveredSource.sourceKind !== "organic_result" ||
+    discoveredSource.acquisitionAttemptId === null ||
+    discoveredSource.providerResultId === null ||
+    normalizedPagePlanUrl(discoveredSource.sourceUrl) !== target.requestedUrl
+  ) {
+    failPersisted(
+      "EvidencePageFetchTarget",
+      attempt.id,
+      new Error("Page discovery provenance crosses an owned scope"),
+    );
+  }
+
+  const [discoveryAttemptRow] = await options.tx
+    .select()
+    .from(evidenceAcquisitionAttempts)
+    .where(
+      and(
+        eq(evidenceAcquisitionAttempts.taskId, options.taskId),
+        eq(evidenceAcquisitionAttempts.researchRunId, options.researchRunId),
+        eq(
+          evidenceAcquisitionAttempts.id,
+          discoveredSource.acquisitionAttemptId,
+        ),
+      ),
+    )
+    .limit(1);
+  if (discoveryAttemptRow === undefined) {
+    failPersisted(
+      "EvidenceSource",
+      discoveredSource.id,
+      new Error("Organic discovery attempt is unavailable"),
+    );
+  }
+  const discoveryCriterionRows = await options.tx
+    .select({ criterionId: evidenceAttemptTargetCriteria.criterionId })
+    .from(evidenceAttemptTargetCriteria)
+    .where(
+      and(
+        eq(evidenceAttemptTargetCriteria.taskId, options.taskId),
+        eq(
+          evidenceAttemptTargetCriteria.attemptId,
+          discoveredSource.acquisitionAttemptId,
+        ),
+      ),
+    );
+  const discoveryAttempt = parsePersisted({
+    recordType: "EvidenceAcquisitionAttempt",
+    recordId: discoveryAttemptRow.id,
+    parse: () =>
+      mapAttemptRow(
+        discoveryAttemptRow,
+        discoveryCriterionRows.map(({ criterionId }) => criterionId),
+      ),
+  });
+  const discoveryTargetIds = new Set(discoveryAttempt.targetCriterionIds);
+  if (
+    discoveryAttempt.stage !== "organic_search" ||
+    discoveryAttempt.status !== "succeeded" ||
+    discoveredSource.provider !== discoveryAttempt.provider ||
+    discoveryAttempt.candidateRunId !== attempt.candidateRunId ||
+    discoveryAttempt.candidateListingId !== attempt.candidateListingId ||
+    attempt.targetCriterionIds.length === 0 ||
+    attempt.targetCriterionIds.some(
+      (criterionId) => !discoveryTargetIds.has(criterionId),
+    )
+  ) {
+    failPersisted(
+      "EvidencePageFetchTarget",
+      attempt.id,
+      new Error("Page attempt is not a subset of its organic discovery"),
+    );
+  }
+
+  const searchRun = await loadPersistedSearchRunInTransaction({
+    tx: options.tx,
+    taskId: options.taskId,
+    runId: options.run.searchRunId,
+  });
+  const listing = searchRun?.listings.find(
+    ({ id }) => id === attempt.candidateListingId,
+  );
+  if (listing === undefined) {
+    throw new EvidenceResearchAuthorityError(
+      "Fetched-page candidate is unavailable",
+    );
+  }
+  const state = await loadCurrentShoppingState(options.tx, options.taskId);
+  const brief = projectShoppingBrief(state);
+  const pageTargetIds = new Set(attempt.targetCriterionIds);
+  const targetCriteria = brief.items.filter(({ criterionId }) =>
+    pageTargetIds.has(criterionId),
+  );
+  if (targetCriteria.length !== pageTargetIds.size) {
+    throw new EvidenceResearchAuthorityError(
+      "Fetched-page criteria are not current",
+    );
+  }
+  return {
+    target,
+    discoveredSource,
+    discoveryAttempt,
+    listing,
+    targetCriteria,
+  };
+}
+
+function expectedFetchedSource(options: {
+  id: z.infer<typeof evidenceSourceIdSchema>;
+  taskId: z.infer<typeof shoppingTaskIdSchema>;
+  researchRunId: z.infer<typeof evidenceResearchRunIdSchema>;
+  attempt: PersistedEvidenceAttempt;
+  discoveredSource: EvidenceSourceV1;
+  targetCriteria: Parameters<
+    typeof projectFetchedPageModelExcerpt
+  >[0]["targetCriteria"];
+  fetch: FetchedPageMetadata;
+  document: ExtractedProductPageDocumentV1;
+  admission: Extract<PageEvidenceAdmissionV1, { decision: "admit" }>;
+}): EvidenceSourceV1 {
+  const documentHash = computeExtractedPageDocumentHash(options.document);
+  return evidenceSourceV1Schema.parse({
+    schemaVersion: 1,
+    id: options.id,
+    researchRunId: options.researchRunId,
+    taskId: options.taskId,
+    candidateRunId: options.attempt.candidateRunId,
+    candidateListingId: options.attempt.candidateListingId,
+    acquisitionAttemptId: options.attempt.id,
+    sourceRole: options.admission.admittedRole,
+    sourceKind: "fetched_page",
+    sourceUrl: options.fetch.finalUrl,
+    sourceTitle: options.document.title ?? options.discoveredSource.sourceTitle,
+    excerpt: projectFetchedPageModelExcerpt({
+      document: options.document,
+      targetCriteria: options.targetCriteria,
+    }),
+    provider: options.attempt.provider === "fixture" ? "fixture" : "page_fetch",
+    providerResultId: options.discoveredSource.providerResultId,
+    observedAt: options.fetch.fetchedAt,
+    fingerprint: fetchedPageFingerprint({
+      attemptId: options.attempt.id,
+      discoveredSourceId: options.discoveredSource.id,
+      requestedUrl: options.fetch.requestedUrl,
+      finalUrl: options.fetch.finalUrl,
+      canonicalUrl: options.document.canonicalUrlCandidate,
+      responseHash: options.fetch.responseHash,
+      documentHash,
+      admission: options.admission,
+    }),
+  });
+}
+
+function exactFetchedSource(
+  actual: EvidenceSourceV1,
+  expected: EvidenceSourceV1,
+) {
+  return exactJson(actual, expected);
+}
+
+async function validateStoredFetchedDocument(options: {
+  tx: ShoppingTransaction;
+  row: typeof fetchedEvidenceDocuments.$inferSelect;
+  taskId: z.infer<typeof shoppingTaskIdSchema>;
+  researchRunId: z.infer<typeof evidenceResearchRunIdSchema>;
+  attempt: PersistedEvidenceAttempt;
+  context: Awaited<ReturnType<typeof loadOwnedPageAttemptContext>>;
+}) {
+  const document = parsePersisted({
+    recordType: "FetchedEvidenceDocument",
+    recordId: options.row.id,
+    parse: () => mapFetchedEvidenceDocumentRow(options.row),
+  });
+  if (
+    document.taskId !== options.taskId ||
+    document.researchRunId !== options.researchRunId ||
+    document.candidateRunId !== options.attempt.candidateRunId ||
+    document.candidateListingId !== options.attempt.candidateListingId ||
+    document.attemptId !== options.attempt.id ||
+    document.discoveredSourceId !== options.context.discoveredSource.id ||
+    document.requestedUrl !== options.context.target.requestedUrl
+  ) {
+    failPersisted(
+      "FetchedEvidenceDocument",
+      document.id,
+      new Error("Fetched document crosses its exact attempt scope"),
+    );
+  }
+  const [sourceRow] = await options.tx
+    .select()
+    .from(evidenceSources)
+    .where(
+      and(
+        eq(evidenceSources.taskId, options.taskId),
+        eq(evidenceSources.id, document.evidenceSourceId),
+      ),
+    )
+    .limit(1);
+  if (sourceRow === undefined) {
+    failPersisted(
+      "FetchedEvidenceDocument",
+      document.id,
+      new Error("Admitted fetched source is unavailable"),
+    );
+  }
+  const actualSource = parsePersisted({
+    recordType: "EvidenceSource",
+    recordId: sourceRow.id,
+    parse: () => mapEvidenceSourceRow(sourceRow),
+  });
+  const metadata = fetchedPageMetadataSchema.parse({
+    requestedUrl: document.requestedUrl,
+    finalUrl: document.finalUrl,
+    contentType: document.contentType,
+    encodedBytes: document.encodedBytes,
+    decodedBytes: document.decodedBytes,
+    fetchedAt: document.fetchedAt,
+    responseHash: document.responseHash,
+  });
+  const recomputedAdmission = admitFetchedPageEvidence({
+    candidateTitle: options.context.listing.title,
+    merchant: options.context.listing.merchant,
+    discovered: {
+      sourceRole: options.context.discoveredSource.sourceRole,
+      url: options.context.discoveredSource.sourceUrl,
+      title: options.context.discoveredSource.sourceTitle,
+    },
+    page: pageIdentityFromDocument({
+      fetch: metadata,
+      document: document.document,
+    }),
+  });
+  if (
+    recomputedAdmission.decision !== "admit" ||
+    !exactJson(recomputedAdmission, document.admission)
+  ) {
+    failPersisted(
+      "FetchedEvidenceDocument",
+      document.id,
+      new Error("Stored fetched-page admission is not reproducible"),
+    );
+  }
+  const expectedSource = expectedFetchedSource({
+    id: document.evidenceSourceId,
+    taskId: options.taskId,
+    researchRunId: options.researchRunId,
+    attempt: options.attempt,
+    discoveredSource: options.context.discoveredSource,
+    targetCriteria: options.context.targetCriteria,
+    fetch: metadata,
+    document: document.document,
+    admission: recomputedAdmission,
+  });
+  if (!exactFetchedSource(actualSource, expectedSource)) {
+    failPersisted(
+      "EvidenceSource",
+      actualSource.id,
+      new Error("Fetched source and document provenance differ"),
+    );
+  }
+  return document;
+}
+
+async function validateSnapshotFetchedPageChildren(options: {
+  tx: ShoppingTransaction;
+  taskId: z.infer<typeof shoppingTaskIdSchema>;
+  researchRunId: z.infer<typeof evidenceResearchRunIdSchema>;
+  runRow: typeof evidenceResearchRuns.$inferSelect;
+  attempts: readonly PersistedEvidenceAttempt[];
+  sourceRows: readonly (typeof evidenceSources.$inferSelect)[];
+  documentRows: readonly (typeof fetchedEvidenceDocuments.$inferSelect)[];
+}) {
+  const pageAttempts = options.attempts.filter(
+    (attempt) => attempt.stage === "page_fetch",
+  );
+  const pageAttemptsById = new Map<string, PersistedEvidenceAttempt>(
+    pageAttempts.map((attempt) => [attempt.id, attempt]),
+  );
+  const pageAttemptCountByCandidate = new Map<string, number>();
+  for (const attempt of pageAttempts) {
+    const count =
+      (pageAttemptCountByCandidate.get(attempt.candidateListingId) ?? 0) + 1;
+    if (count > MAX_PAGE_SOURCES_PER_CANDIDATE) {
+      failPersisted(
+        "EvidenceResearchRun",
+        options.researchRunId,
+        new Error("Research snapshot contains too many fetched-page attempts"),
+      );
+    }
+    pageAttemptCountByCandidate.set(attempt.candidateListingId, count);
+  }
+
+  const touchingSourceRows = options.sourceRows.filter(
+    (row) =>
+      row.sourceKind === "fetched_page" &&
+      (row.researchRunId === options.researchRunId ||
+        (row.acquisitionAttemptId !== null &&
+          pageAttemptsById.has(row.acquisitionAttemptId))),
+  );
+  const touchingSourceIds = new Set(touchingSourceRows.map(({ id }) => id));
+  const touchingDocumentRows = options.documentRows.filter(
+    (row) =>
+      row.researchRunId === options.researchRunId ||
+      pageAttemptsById.has(row.attemptId) ||
+      touchingSourceIds.has(row.evidenceSourceId),
+  );
+  const sourceRowsById = new Map(
+    options.sourceRows.map((row) => [row.id, row]),
+  );
+
+  for (const sourceRow of touchingSourceRows) {
+    const attempt =
+      sourceRow.acquisitionAttemptId === null
+        ? undefined
+        : pageAttemptsById.get(sourceRow.acquisitionAttemptId);
+    if (
+      attempt === undefined ||
+      sourceRow.researchRunId !== options.researchRunId ||
+      sourceRow.candidateRunId !== options.runRow.searchRunId ||
+      sourceRow.candidateRunId !== attempt.candidateRunId ||
+      sourceRow.candidateListingId !== attempt.candidateListingId
+    ) {
+      failPersisted(
+        "EvidenceSource",
+        sourceRow.id,
+        new Error("Fetched source crosses its exact page-attempt scope"),
+      );
+    }
+  }
+
+  for (const documentRow of touchingDocumentRows) {
+    const attempt = pageAttemptsById.get(documentRow.attemptId);
+    const sourceRow = sourceRowsById.get(documentRow.evidenceSourceId);
+    if (
+      attempt === undefined ||
+      sourceRow === undefined ||
+      sourceRow.sourceKind !== "fetched_page" ||
+      sourceRow.acquisitionAttemptId !== attempt.id ||
+      documentRow.researchRunId !== options.researchRunId ||
+      documentRow.candidateRunId !== options.runRow.searchRunId ||
+      documentRow.candidateRunId !== attempt.candidateRunId ||
+      documentRow.candidateListingId !== attempt.candidateListingId
+    ) {
+      failPersisted(
+        "FetchedEvidenceDocument",
+        documentRow.id,
+        new Error("Fetched document crosses its exact source-attempt scope"),
+      );
+    }
+  }
+
+  for (const attempt of pageAttempts) {
+    const context = await loadOwnedPageAttemptContext({
+      tx: options.tx,
+      taskId: options.taskId,
+      researchRunId: options.researchRunId,
+      run: options.runRow,
+      attempt,
+    });
+    const sourceChildren = touchingSourceRows.filter(
+      ({ acquisitionAttemptId }) => acquisitionAttemptId === attempt.id,
+    );
+    const documentChildren = touchingDocumentRows.filter(
+      ({ attemptId }) => attemptId === attempt.id,
+    );
+    const expectedChildCount = attempt.status === "succeeded" ? 1 : 0;
+    if (
+      sourceChildren.length !== expectedChildCount ||
+      documentChildren.length !== expectedChildCount
+    ) {
+      failPersisted(
+        "EvidenceAcquisitionAttempt",
+        attempt.id,
+        new Error(
+          "Page attempt does not have its exact terminal source-document aggregate",
+        ),
+      );
+    }
+    if (attempt.status !== "succeeded") continue;
+    const sourceRow = sourceChildren[0]!;
+    const documentRow = documentChildren[0]!;
+    if (
+      attempt.receivedResultCount !== 1 ||
+      attempt.failureCode !== null ||
+      documentRow.evidenceSourceId !== sourceRow.id
+    ) {
+      failPersisted(
+        "EvidenceAcquisitionAttempt",
+        attempt.id,
+        new Error("Page attempt does not contain one coherent success"),
+      );
+    }
+    await validateStoredFetchedDocument({
+      tx: options.tx,
+      row: documentRow,
+      taskId: options.taskId,
+      researchRunId: options.researchRunId,
+      attempt,
+      context,
+    });
+  }
+}
+
 async function finalizeResearchIfComplete(options: {
   tx: ShoppingTransaction;
   taskId: z.infer<typeof shoppingTaskIdSchema>;
@@ -1710,6 +2925,8 @@ export async function recordEvidenceSearchSuccess(options: {
           observedAt: finishedAt,
           fingerprint: fingerprint({
             kind: "organic_result",
+            researchRunId,
+            acquisitionAttemptId: attempt.id,
             url: result.url,
             title: result.title,
             snippet: result.snippet,
@@ -1777,6 +2994,9 @@ export async function recordEvidenceAttemptFailure(options: {
         attemptId,
       });
       if (attempt.status !== "planned") continue;
+      if (attempt.stage === "page_fetch") {
+        throw new EvidenceAttemptConflictError(attempt.id);
+      }
       const expectedFailure =
         attempt.stage === "organic_search"
           ? ["provider_failed", "invalid_provider_result"]
@@ -1807,6 +3027,551 @@ export async function recordEvidenceAttemptFailure(options: {
       finishedAt: options.finishedAt,
     });
   });
+}
+
+function parseTerminalWindow(startedAt: Date, finishedAt: Date) {
+  const parsedStartedAt = z.date().parse(startedAt);
+  const parsedFinishedAt = z.date().parse(finishedAt);
+  if (parsedFinishedAt.getTime() < parsedStartedAt.getTime()) {
+    throw new EvidenceResearchAuthorityError(
+      "Evidence completion cannot precede its start",
+    );
+  }
+  return { startedAt: parsedStartedAt, finishedAt: parsedFinishedAt };
+}
+
+export async function recordEvidencePageFetchFailure(options: {
+  db: ShoppingDatabase;
+  taskId: unknown;
+  researchRunId: unknown;
+  attemptId: unknown;
+  leaseToken: unknown;
+  failureCode: PageEvidenceFailureCode;
+  startedAt: Date;
+  finishedAt: Date;
+}): Promise<boolean> {
+  const taskId = shoppingTaskIdSchema.parse(options.taskId);
+  const researchRunId = evidenceResearchRunIdSchema.parse(
+    options.researchRunId,
+  );
+  const attemptId = evidenceAcquisitionAttemptIdSchema.parse(options.attemptId);
+  const leaseToken = z.uuid().parse(options.leaseToken);
+  const failureCode = pageEvidenceFailureCodeSchema.parse(options.failureCode);
+  const { startedAt, finishedAt } = parseTerminalWindow(
+    options.startedAt,
+    options.finishedAt,
+  );
+
+  return options.db.transaction(async (tx) => {
+    const run = await loadLockedResearchRow({ tx, taskId, researchRunId });
+    assertLease(run, leaseToken);
+    await assertCurrentResearchAuthority({ tx, taskId, run });
+    const attempt = await loadLockedAttempt({
+      tx,
+      taskId,
+      researchRunId,
+      attemptId,
+    });
+    await loadOwnedPageAttemptContext({
+      tx,
+      taskId,
+      researchRunId,
+      run,
+      attempt,
+    });
+    if (attempt.status === "failed") {
+      if (
+        attempt.failureCode === failureCode &&
+        attempt.providerRequestId === null &&
+        attempt.receivedResultCount === null &&
+        exactDate(attempt.startedAt, startedAt) &&
+        exactDate(attempt.finishedAt, finishedAt)
+      ) {
+        return false;
+      }
+      throw new EvidenceAttemptConflictError(attempt.id);
+    }
+    if (attempt.status !== "planned") {
+      throw new EvidenceAttemptConflictError(attempt.id);
+    }
+    const [documents, fetchedSources] = await Promise.all([
+      tx
+        .select({ id: fetchedEvidenceDocuments.id })
+        .from(fetchedEvidenceDocuments)
+        .where(
+          and(
+            eq(fetchedEvidenceDocuments.taskId, taskId),
+            eq(fetchedEvidenceDocuments.researchRunId, researchRunId),
+            eq(fetchedEvidenceDocuments.attemptId, attempt.id),
+          ),
+        ),
+      tx
+        .select({ id: evidenceSources.id })
+        .from(evidenceSources)
+        .where(
+          and(
+            eq(evidenceSources.taskId, taskId),
+            eq(evidenceSources.researchRunId, researchRunId),
+            eq(evidenceSources.acquisitionAttemptId, attempt.id),
+            eq(evidenceSources.sourceKind, "fetched_page"),
+          ),
+        ),
+    ]);
+    if (documents.length !== 0 || fetchedSources.length !== 0) {
+      throw new EvidenceAttemptConflictError(attempt.id);
+    }
+    const [updated] = await tx
+      .update(evidenceAcquisitionAttempts)
+      .set({
+        status: "failed",
+        failureCode,
+        startedAt,
+        finishedAt,
+      })
+      .where(
+        and(
+          eq(evidenceAcquisitionAttempts.taskId, taskId),
+          eq(evidenceAcquisitionAttempts.researchRunId, researchRunId),
+          eq(evidenceAcquisitionAttempts.id, attempt.id),
+          eq(evidenceAcquisitionAttempts.status, "planned"),
+        ),
+      )
+      .returning({ id: evidenceAcquisitionAttempts.id });
+    if (updated === undefined) {
+      throw new EvidenceAttemptConflictError(attempt.id);
+    }
+    await finalizeResearchIfComplete({
+      tx,
+      taskId,
+      researchRunId,
+      leaseToken,
+      finishedAt,
+    });
+    return true;
+  });
+}
+
+export async function recordFetchedPageSuccess(options: {
+  db: ShoppingDatabase;
+  taskId: unknown;
+  researchRunId: unknown;
+  attemptId: unknown;
+  leaseToken: unknown;
+  fetch: FetchedPageMetadata;
+  document: ExtractedProductPageDocumentV1;
+  admission: Extract<PageEvidenceAdmissionV1, { decision: "admit" }>;
+  startedAt: Date;
+  finishedAt: Date;
+}): Promise<PersistedFetchedEvidenceDocument> {
+  const taskId = shoppingTaskIdSchema.parse(options.taskId);
+  const researchRunId = evidenceResearchRunIdSchema.parse(
+    options.researchRunId,
+  );
+  const attemptId = evidenceAcquisitionAttemptIdSchema.parse(options.attemptId);
+  const leaseToken = z.uuid().parse(options.leaseToken);
+  const fetch = fetchedPageMetadataSchema.parse(options.fetch);
+  const document = extractedProductPageDocumentV1Schema.parse(options.document);
+  const admission = admittedPageEvidenceSchema.parse(options.admission);
+  const { startedAt, finishedAt } = parseTerminalWindow(
+    options.startedAt,
+    options.finishedAt,
+  );
+  const documentHash = computeExtractedPageDocumentHash(document);
+
+  return options.db.transaction(async (tx) => {
+    const run = await loadLockedResearchRow({ tx, taskId, researchRunId });
+    assertLease(run, leaseToken);
+    await assertCurrentResearchAuthority({ tx, taskId, run });
+    const attempt = await loadLockedAttempt({
+      tx,
+      taskId,
+      researchRunId,
+      attemptId,
+    });
+    const context = await loadOwnedPageAttemptContext({
+      tx,
+      taskId,
+      researchRunId,
+      run,
+      attempt,
+    });
+    const recomputedAdmission = admitFetchedPageEvidence({
+      candidateTitle: context.listing.title,
+      merchant: context.listing.merchant,
+      discovered: {
+        sourceRole: context.discoveredSource.sourceRole,
+        url: context.discoveredSource.sourceUrl,
+        title: context.discoveredSource.sourceTitle,
+      },
+      page: pageIdentityFromDocument({ fetch, document }),
+    });
+    if (
+      fetch.requestedUrl !== context.target.requestedUrl ||
+      document.sourceUrl !== fetch.finalUrl ||
+      recomputedAdmission.decision !== "admit" ||
+      !exactJson(recomputedAdmission, admission)
+    ) {
+      throw new EvidenceAttemptConflictError(attempt.id);
+    }
+
+    const existingRows = await tx
+      .select()
+      .from(fetchedEvidenceDocuments)
+      .where(
+        and(
+          eq(fetchedEvidenceDocuments.taskId, taskId),
+          eq(fetchedEvidenceDocuments.researchRunId, researchRunId),
+          eq(fetchedEvidenceDocuments.attemptId, attempt.id),
+        ),
+      );
+    if (attempt.status === "succeeded") {
+      const existing = existingRows[0];
+      if (
+        existingRows.length !== 1 ||
+        existing === undefined ||
+        attempt.providerRequestId !== null ||
+        attempt.receivedResultCount !== 1 ||
+        !exactDate(attempt.startedAt, startedAt) ||
+        !exactDate(attempt.finishedAt, finishedAt)
+      ) {
+        throw new EvidenceAttemptConflictError(attempt.id);
+      }
+      const stored = await validateStoredFetchedDocument({
+        tx,
+        row: existing,
+        taskId,
+        researchRunId,
+        attempt,
+        context,
+      });
+      if (
+        stored.requestedUrl !== fetch.requestedUrl ||
+        stored.finalUrl !== fetch.finalUrl ||
+        stored.contentType !== fetch.contentType ||
+        stored.encodedBytes !== fetch.encodedBytes ||
+        stored.decodedBytes !== fetch.decodedBytes ||
+        stored.responseHash !== fetch.responseHash ||
+        stored.fetchedAt.getTime() !== fetch.fetchedAt.getTime() ||
+        stored.documentHash !== documentHash ||
+        !exactJson(stored.document, document) ||
+        !exactJson(stored.admission, admission)
+      ) {
+        throw new EvidenceAttemptConflictError(attempt.id);
+      }
+      return stored;
+    }
+    if (attempt.status !== "planned" || existingRows.length !== 0) {
+      throw new EvidenceAttemptConflictError(attempt.id);
+    }
+    const existingFetchedSources = await tx
+      .select({ id: evidenceSources.id })
+      .from(evidenceSources)
+      .where(
+        and(
+          eq(evidenceSources.taskId, taskId),
+          eq(evidenceSources.researchRunId, researchRunId),
+          eq(evidenceSources.acquisitionAttemptId, attempt.id),
+          eq(evidenceSources.sourceKind, "fetched_page"),
+        ),
+      );
+    if (existingFetchedSources.length !== 0) {
+      throw new EvidenceAttemptConflictError(attempt.id);
+    }
+
+    const proposedSourceId = evidenceSourceIdSchema.parse(randomUUID());
+    const proposedSource = expectedFetchedSource({
+      id: proposedSourceId,
+      taskId,
+      researchRunId,
+      attempt,
+      discoveredSource: context.discoveredSource,
+      targetCriteria: context.targetCriteria,
+      fetch,
+      document,
+      admission,
+    });
+    const insertedSource = await insertSourceIdempotently({
+      tx,
+      value: {
+        id: proposedSource.id,
+        researchRunId: proposedSource.researchRunId,
+        taskId: proposedSource.taskId,
+        candidateRunId: proposedSource.candidateRunId,
+        candidateListingId: proposedSource.candidateListingId,
+        acquisitionAttemptId: proposedSource.acquisitionAttemptId,
+        sourceRole: proposedSource.sourceRole,
+        sourceKind: proposedSource.sourceKind,
+        sourceUrl: proposedSource.sourceUrl,
+        sourceTitle: proposedSource.sourceTitle,
+        excerpt: proposedSource.excerpt,
+        provider: proposedSource.provider,
+        providerResultId: proposedSource.providerResultId,
+        observedAt: proposedSource.observedAt,
+        fingerprint: proposedSource.fingerprint,
+      },
+    });
+    if (insertedSource.researchRunId !== researchRunId) {
+      throw new EvidenceAttemptConflictError(attempt.id);
+    }
+    const evidenceSourceId = insertedSource.id;
+    const [insertedSourceRow] = await tx
+      .select()
+      .from(evidenceSources)
+      .where(
+        and(
+          eq(evidenceSources.taskId, taskId),
+          eq(evidenceSources.id, evidenceSourceId),
+        ),
+      )
+      .limit(1);
+    if (insertedSourceRow === undefined) {
+      throw new Error("Inserted fetched source was not visible");
+    }
+    const actualSource = parsePersisted({
+      recordType: "EvidenceSource",
+      recordId: insertedSourceRow.id,
+      parse: () => mapEvidenceSourceRow(insertedSourceRow),
+    });
+    const exactExpectedSource = expectedFetchedSource({
+      id: evidenceSourceId,
+      taskId,
+      researchRunId,
+      attempt,
+      discoveredSource: context.discoveredSource,
+      targetCriteria: context.targetCriteria,
+      fetch,
+      document,
+      admission,
+    });
+    if (!exactFetchedSource(actualSource, exactExpectedSource)) {
+      throw new EvidenceAttemptConflictError(attempt.id);
+    }
+
+    const documentId = z.uuid().parse(randomUUID());
+    const documentValue = {
+      id: documentId,
+      taskId,
+      researchRunId,
+      candidateRunId: attempt.candidateRunId,
+      candidateListingId: attempt.candidateListingId,
+      attemptId: attempt.id,
+      discoveredSourceId: context.discoveredSource.id,
+      evidenceSourceId,
+      requestedUrl: fetch.requestedUrl,
+      finalUrl: fetch.finalUrl,
+      canonicalUrl: document.canonicalUrlCandidate,
+      contentType: fetch.contentType,
+      encodedBytes: fetch.encodedBytes,
+      decodedBytes: fetch.decodedBytes,
+      responseHash: fetch.responseHash,
+      documentHash,
+      extractionVersion: document.extractionVersion,
+      document,
+      admission,
+      fetchedAt: fetch.fetchedAt,
+    };
+    await tx.insert(fetchedEvidenceDocuments).values(documentValue);
+    const [updated] = await tx
+      .update(evidenceAcquisitionAttempts)
+      .set({
+        status: "succeeded",
+        providerRequestId: null,
+        receivedResultCount: 1,
+        startedAt,
+        finishedAt,
+      })
+      .where(
+        and(
+          eq(evidenceAcquisitionAttempts.taskId, taskId),
+          eq(evidenceAcquisitionAttempts.researchRunId, researchRunId),
+          eq(evidenceAcquisitionAttempts.id, attempt.id),
+          eq(evidenceAcquisitionAttempts.status, "planned"),
+        ),
+      )
+      .returning({ id: evidenceAcquisitionAttempts.id });
+    if (updated === undefined) {
+      throw new EvidenceAttemptConflictError(attempt.id);
+    }
+    await finalizeResearchIfComplete({
+      tx,
+      taskId,
+      researchRunId,
+      leaseToken,
+      finishedAt,
+    });
+    return persistedFetchedEvidenceDocumentSchema.parse({
+      ...documentValue,
+      attemptStage: "page_fetch",
+      evidenceSourceKind: "fetched_page",
+    });
+  });
+}
+
+export async function loadFetchedEvidenceDocuments(options: {
+  db: ShoppingDatabase;
+  taskId: unknown;
+  researchRunId: unknown;
+  candidateListingId: unknown;
+  evidenceSourceIdsInOrder?: readonly unknown[];
+  attemptIdsInOrder?: readonly unknown[];
+}): Promise<readonly PersistedFetchedEvidenceDocument[]> {
+  const taskId = shoppingTaskIdSchema.parse(options.taskId);
+  const researchRunId = evidenceResearchRunIdSchema.parse(
+    options.researchRunId,
+  );
+  const candidateListingId = candidateListingIdSchema.parse(
+    options.candidateListingId,
+  );
+  if (
+    (options.evidenceSourceIdsInOrder === undefined) ===
+    (options.attemptIdsInOrder === undefined)
+  ) {
+    throw new EvidenceResearchAuthorityError(
+      "Select fetched documents by exactly one owned identifier kind",
+    );
+  }
+  const evidenceSourceIds = options.evidenceSourceIdsInOrder?.map((id) =>
+    evidenceSourceIdSchema.parse(id),
+  );
+  const attemptIds = options.attemptIdsInOrder?.map((id) =>
+    evidenceAcquisitionAttemptIdSchema.parse(id),
+  );
+  const orderedIds: readonly string[] = evidenceSourceIds ?? attemptIds ?? [];
+  if (
+    orderedIds.length > MAX_PAGE_SOURCES_PER_CANDIDATE ||
+    new Set(orderedIds).size !== orderedIds.length
+  ) {
+    throw new EvidenceResearchAuthorityError(
+      "Fetched document selection must contain at most two unique IDs",
+    );
+  }
+  if (orderedIds.length === 0) return [];
+
+  return options.db.transaction(
+    async (tx) => {
+      const [run] = await tx
+        .select()
+        .from(evidenceResearchRuns)
+        .where(
+          and(
+            eq(evidenceResearchRuns.taskId, taskId),
+            eq(evidenceResearchRuns.id, researchRunId),
+          ),
+        )
+        .limit(1);
+      if (run === undefined) {
+        throw new EvidenceResearchAuthorityError(
+          "Evidence research was not found",
+        );
+      }
+      const rows = await tx
+        .select()
+        .from(fetchedEvidenceDocuments)
+        .where(
+          and(
+            eq(fetchedEvidenceDocuments.taskId, taskId),
+            eq(fetchedEvidenceDocuments.researchRunId, researchRunId),
+            eq(fetchedEvidenceDocuments.candidateRunId, run.searchRunId),
+            eq(fetchedEvidenceDocuments.candidateListingId, candidateListingId),
+            evidenceSourceIds !== undefined
+              ? inArray(
+                  fetchedEvidenceDocuments.evidenceSourceId,
+                  evidenceSourceIds,
+                )
+              : inArray(fetchedEvidenceDocuments.attemptId, attemptIds!),
+          ),
+        );
+      if (rows.length !== orderedIds.length) {
+        throw new EvidenceResearchAuthorityError(
+          "A requested fetched document is not in the exact candidate scope",
+        );
+      }
+      const rowById = new Map(
+        rows.map((row) => [
+          evidenceSourceIds !== undefined
+            ? row.evidenceSourceId
+            : row.attemptId,
+          row,
+        ]),
+      );
+      const result: PersistedFetchedEvidenceDocument[] = [];
+      for (const selectedId of orderedIds) {
+        const row = rowById.get(selectedId);
+        if (row === undefined) {
+          throw new EvidenceResearchAuthorityError(
+            "Fetched document ordering could not be reproduced",
+          );
+        }
+        const [attemptRow] = await tx
+          .select()
+          .from(evidenceAcquisitionAttempts)
+          .where(
+            and(
+              eq(evidenceAcquisitionAttempts.taskId, taskId),
+              eq(evidenceAcquisitionAttempts.researchRunId, researchRunId),
+              eq(evidenceAcquisitionAttempts.id, row.attemptId),
+            ),
+          )
+          .limit(1);
+        if (attemptRow === undefined) {
+          failPersisted(
+            "FetchedEvidenceDocument",
+            row.id,
+            new Error("Fetched-page attempt is unavailable"),
+          );
+        }
+        const criterionRows = await tx
+          .select({ criterionId: evidenceAttemptTargetCriteria.criterionId })
+          .from(evidenceAttemptTargetCriteria)
+          .where(
+            and(
+              eq(evidenceAttemptTargetCriteria.taskId, taskId),
+              eq(evidenceAttemptTargetCriteria.attemptId, row.attemptId),
+            ),
+          );
+        const attempt = parsePersisted({
+          recordType: "EvidenceAcquisitionAttempt",
+          recordId: attemptRow.id,
+          parse: () =>
+            mapAttemptRow(
+              attemptRow,
+              criterionRows.map(({ criterionId }) => criterionId),
+            ),
+        });
+        if (
+          attempt.status !== "succeeded" ||
+          attempt.receivedResultCount !== 1 ||
+          attempt.failureCode !== null ||
+          attempt.candidateListingId !== candidateListingId
+        ) {
+          failPersisted(
+            "EvidenceAcquisitionAttempt",
+            attempt.id,
+            new Error("Fetched document does not have one terminal success"),
+          );
+        }
+        const context = await loadOwnedPageAttemptContext({
+          tx,
+          taskId,
+          researchRunId,
+          run,
+          attempt,
+        });
+        result.push(
+          await validateStoredFetchedDocument({
+            tx,
+            row,
+            taskId,
+            researchRunId,
+            attempt,
+            context,
+          }),
+        );
+      }
+      return result;
+    },
+    { isolationLevel: "repeatable read", accessMode: "read only" },
+  );
 }
 
 function observationSourcePairs(options: {

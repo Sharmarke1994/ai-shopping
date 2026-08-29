@@ -7,6 +7,8 @@ import { persistedCandidateListingSchema } from "@/features/retrieval-spike/pers
 import {
   criterionAssessmentV1Schema,
   evidenceResearchRunIdSchema,
+  evidenceSourceV1Schema,
+  productObservationV1Schema,
 } from "./contracts";
 import { buildDecisionSupport } from "./decision-support";
 
@@ -160,6 +162,14 @@ describe("assessment-driven decision support", () => {
       strongestSupported: true,
       supportedMustHaveCount: 1,
       mustHaveCount: 1,
+      unknowns: [
+        expect.objectContaining({
+          criterionId: preferenceCriterionId,
+          label: "Colour",
+          reason: "not_checked",
+          explanation: "Colour has not been verified.",
+        }),
+      ],
     });
     expect(result.topOptions[1]).toMatchObject({
       readiness: "needs_verification",
@@ -224,15 +234,21 @@ describe("assessment-driven decision support", () => {
     const checkedButStillUnknown = buildDecisionSupport({
       support: {
         ...support,
-        candidates: [generic],
-        assessments: genericAssessments,
+        candidates: [verified],
+        assessments: verifiedAssessments,
         deepResearchCoverage: [
           {
             researchRunId: evidenceResearchRunIdSchema.parse(randomUUID()),
-            candidateListingId: generic.id,
+            candidateListingId: verified.id,
             runStatus: "succeeded",
             status: "succeeded",
-            criterionIds: [brief.items[0]!.criterionId],
+            criterionIds: [brief.items[1]!.criterionId],
+            checkedSourcesByCriterion: [
+              {
+                criterionId: brief.items[1]!.criterionId,
+                sourceIds: [],
+              },
+            ],
           },
         ],
       },
@@ -241,6 +257,247 @@ describe("assessment-driven decision support", () => {
     expect(checkedButStillUnknown.topOptions[0]?.researchState).toBe(
       "complete",
     );
+    expect(checkedButStillUnknown.topOptions[0]?.unknowns).toEqual([
+      expect.objectContaining({
+        criterionId: preferenceCriterionId,
+        reason: "not_checked",
+      }),
+    ]);
+
+    const checkedRunId = evidenceResearchRunIdSchema.parse(randomUUID());
+    const checkedSource = evidenceSourceV1Schema.parse({
+      schemaVersion: 1,
+      id: randomUUID(),
+      researchRunId: checkedRunId,
+      taskId,
+      candidateRunId: runId,
+      candidateListingId: verified.id,
+      acquisitionAttemptId: randomUUID(),
+      sourceRole: "manufacturer",
+      sourceKind: "fetched_page",
+      sourceUrl: "https://example.test/verified-mouse",
+      sourceTitle: "Verified mouse product page",
+      excerpt: "The exact page did not state a colour.",
+      provider: "page_fetch",
+      providerResultId: "verified-mouse",
+      observedAt: new Date("2026-01-01T00:00:00Z"),
+      fingerprint: "a".repeat(64),
+    });
+    const checkedSoftUnknown = buildDecisionSupport({
+      support: {
+        ...support,
+        candidates: [verified],
+        assessments: verifiedAssessments,
+        sources: [checkedSource],
+        deepResearchCoverage: [
+          {
+            researchRunId: checkedRunId,
+            candidateListingId: verified.id,
+            runStatus: "succeeded",
+            status: "succeeded",
+            criterionIds: [brief.items[1]!.criterionId],
+            checkedSourcesByCriterion: [
+              {
+                criterionId: brief.items[1]!.criterionId,
+                sourceIds: [checkedSource.id],
+              },
+            ],
+          },
+        ],
+      },
+      savedListingIds: new Set(),
+    });
+    expect(checkedSoftUnknown.topOptions[0]).toMatchObject({
+      unknowns: [
+        expect.objectContaining({
+          criterionId: preferenceCriterionId,
+          reason: "checked_no_answer",
+        }),
+      ],
+      evidenceSources: [
+        expect.objectContaining({
+          url: checkedSource.sourceUrl,
+          depth: "fetched_page",
+        }),
+      ],
+    });
+
+    const additionalPreferenceIds = [randomUUID(), randomUUID()];
+    const manyUnknownsBrief = shoppingBriefV1Schema.parse({
+      ...brief,
+      items: [
+        ...brief.items,
+        ...additionalPreferenceIds.map((criterionId, index) => ({
+          criterionId,
+          lineageId: randomUUID(),
+          conceptId: randomUUID(),
+          conceptLabel: `Preference ${index + 2}`,
+          conceptDefinition: "A preference that exact sources may not answer",
+          strength: "preference" as const,
+          targetSemantics: "qualitative" as const,
+          semanticValue: {
+            schemaVersion: 1 as const,
+            kind: "qualitative" as const,
+            mode: "text" as const,
+            text: `preference ${index + 2}`,
+          },
+        })),
+      ],
+    });
+    const citedRunId = evidenceResearchRunIdSchema.parse(randomUUID());
+    const citedSources = Array.from({ length: 5 }, (_, index) =>
+      evidenceSourceV1Schema.parse({
+        schemaVersion: 1,
+        id: randomUUID(),
+        researchRunId: citedRunId,
+        taskId,
+        candidateRunId: runId,
+        candidateListingId: verified.id,
+        acquisitionAttemptId: randomUUID(),
+        sourceRole: "manufacturer",
+        sourceKind: "fetched_page",
+        sourceUrl: `https://example.test/cited-${index}`,
+        sourceTitle: `Earlier cited page ${index}`,
+        excerpt: `Earlier cited fact ${index}`,
+        provider: "page_fetch",
+        providerResultId: `cited-${index}`,
+        observedAt: new Date("2026-01-01T00:00:00Z"),
+        fingerprint: (index + 1).toString(16).repeat(64),
+      }),
+    );
+    const citedObservations = citedSources.map((source, index) =>
+      productObservationV1Schema.parse({
+        schemaVersion: 1,
+        id: randomUUID(),
+        researchRunId: citedRunId,
+        taskId,
+        candidateRunId: runId,
+        candidateListingId: verified.id,
+        evidenceSourceId: source.id,
+        conceptId: manyUnknownsBrief.items[0]!.conceptId,
+        support: "supported",
+        observationKind: "source_assertion",
+        propertyLabel: `Earlier fact ${index}`,
+        claim: `Earlier fact ${index} is supported`,
+        value: {
+          schemaVersion: 1,
+          kind: "text",
+          text: `Earlier fact ${index}`,
+        },
+        derivation: "model_text",
+        model: "fixture",
+        promptVersion: "fixture-v1",
+        observedAt: new Date("2026-01-01T00:00:00Z"),
+        fingerprint: (index + 6).toString(16).repeat(64),
+      }),
+    );
+    const hardAssessmentWithCitations = criterionAssessmentV1Schema.parse({
+      ...verifiedAssessments[0]!,
+      id: randomUUID(),
+      researchRunId: citedRunId,
+      observationIds: citedObservations.map(({ id }) => id),
+    });
+    const unknownCriterionIds = manyUnknownsBrief.items
+      .slice(1)
+      .map(({ criterionId }) => criterionId);
+    const checkedRunWithManySources =
+      evidenceResearchRunIdSchema.parse(randomUUID());
+    const representativeSources = unknownCriterionIds.map(
+      (criterionId, index) =>
+        evidenceSourceV1Schema.parse({
+          schemaVersion: 1,
+          id: randomUUID(),
+          researchRunId: checkedRunWithManySources,
+          taskId,
+          candidateRunId: runId,
+          candidateListingId: verified.id,
+          acquisitionAttemptId: randomUUID(),
+          sourceRole: "retailer",
+          sourceKind: "fetched_page",
+          sourceUrl: `https://example.test/checked-${index}`,
+          sourceTitle: `Checked page for ${criterionId}`,
+          excerpt: "The exact page did not answer this preference.",
+          provider: "page_fetch",
+          providerResultId: `checked-${index}`,
+          observedAt: new Date("2026-01-01T00:01:00Z"),
+          fingerprint: ["b", "c", "d"][index]!.repeat(64),
+        }),
+    );
+    const prioritizedCheckedSources = buildDecisionSupport({
+      support: {
+        brief: manyUnknownsBrief,
+        researchRuns: [],
+        candidates: [verified],
+        sources: [...citedSources, ...representativeSources],
+        observations: citedObservations,
+        assessments: [
+          hardAssessmentWithCitations,
+          verifiedAssessments[1]!,
+          ...additionalPreferenceIds.map((criterionId, index) =>
+            assessment({
+              listingId: verified.id,
+              criterionId,
+              status: "uncertain",
+              explanation: `Preference ${index + 2} remains unknown.`,
+            }),
+          ),
+        ],
+        deepResearchCoverage: [
+          {
+            researchRunId: checkedRunWithManySources,
+            candidateListingId: verified.id,
+            runStatus: "succeeded",
+            status: "succeeded",
+            criterionIds: unknownCriterionIds,
+            checkedSourcesByCriterion: unknownCriterionIds.map(
+              (criterionId, index) => ({
+                criterionId,
+                sourceIds: [representativeSources[index]!.id],
+              }),
+            ),
+          },
+        ],
+      },
+      savedListingIds: new Set(),
+    });
+    const visibleSourceUrls = new Set(
+      prioritizedCheckedSources.topOptions[0]?.evidenceSources.map(
+        ({ url }) => url,
+      ),
+    );
+    for (const source of representativeSources) {
+      expect(visibleSourceUrls).toContain(source.sourceUrl);
+    }
+
+    const failedSoftCheck = buildDecisionSupport({
+      support: {
+        ...support,
+        candidates: [verified],
+        assessments: verifiedAssessments,
+        deepResearchCoverage: [
+          {
+            researchRunId: evidenceResearchRunIdSchema.parse(randomUUID()),
+            candidateListingId: verified.id,
+            runStatus: "failed",
+            status: "failed",
+            criterionIds: [brief.items[1]!.criterionId],
+            checkedSourcesByCriterion: [
+              {
+                criterionId: brief.items[1]!.criterionId,
+                sourceIds: [],
+              },
+            ],
+          },
+        ],
+      },
+      savedListingIds: new Set(),
+    });
+    expect(failedSoftCheck.topOptions[0]?.unknowns).toEqual([
+      expect.objectContaining({
+        criterionId: preferenceCriterionId,
+        reason: "check_failed",
+      }),
+    ]);
   });
 
   it("surfaces assessment content without manufacturing percentages", () => {

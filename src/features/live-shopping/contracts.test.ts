@@ -51,6 +51,22 @@ describe("live shopping browser contract", () => {
         candidateListingId: "8a0e451f-0471-4693-81d2-761c19a6ea7d",
       }),
     ).toMatchObject({ operation: "research_candidate" });
+    expect(
+      liveShoppingMutationSchema.parse({
+        operation: "resolve_destinations",
+        sessionId: "4318c9d8-2460-4cc2-9861-91dcf681a23e",
+      }),
+    ).toEqual({
+      operation: "resolve_destinations",
+      sessionId: "4318c9d8-2460-4cc2-9861-91dcf681a23e",
+    });
+    expect(() =>
+      liveShoppingMutationSchema.parse({
+        operation: "resolve_destinations",
+        sessionId: "4318c9d8-2460-4cc2-9861-91dcf681a23e",
+        candidateListingIds: ["8a0e451f-0471-4693-81d2-761c19a6ea7d"],
+      }),
+    ).toThrow();
   });
 
   it("accepts one exact optional criterion target for candidate research", () => {

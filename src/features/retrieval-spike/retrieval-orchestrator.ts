@@ -17,6 +17,7 @@ import {
 } from "./contracts";
 import { executeSearchQuery } from "./execution";
 import {
+  loadPersistedSearchRun,
   loadPersistedSearchRunByTrigger,
   loadPersistedSearchRunInTransaction,
   persistSearchPlan,
@@ -26,6 +27,14 @@ import {
 } from "./persistence/search-runs";
 import type { PersistedSearchRun } from "./persistence/contracts";
 import { buildSearchQueryPortfolio } from "./query-strategy";
+import {
+  RETRIEVAL_QUERY_CONCURRENCY,
+  settleWithBoundedWorkers,
+} from "./bounded-workers";
+import {
+  createRetrievalTimingRecorder,
+  type RetrievalTiming,
+} from "./retrieval-timing";
 
 const DEFAULT_LEASE_DURATION_MS = 60_000;
 const MINIMUM_LEASE_MARGIN_MS = 5_000;
@@ -51,11 +60,23 @@ export class SearchRunLeaseLostError extends Error {
   }
 }
 
-type RetrievalRunResult = Readonly<{
+export type RetrievalRunResult = Readonly<{
   state: "completed" | "in_progress";
   created: boolean;
   run: PersistedSearchRun;
+  timings: RetrievalTiming;
 }>;
+
+type PrepareRetrievalRunOptions = Readonly<{
+  db: ShoppingDatabase;
+  taskId: unknown;
+  contextActionId: unknown;
+  provider: ShoppingSearchProvider;
+  now?: () => Date;
+  createPortfolioId?: () => string;
+}>;
+
+type RetrievalTimingRecorder = ReturnType<typeof createRetrievalTimingRecorder>;
 
 type LeaseResult =
   | Readonly<{
@@ -276,22 +297,22 @@ async function releaseSearchRunLease(options: {
     );
 }
 
-export async function prepareRetrievalRun(options: {
-  db: ShoppingDatabase;
-  taskId: unknown;
-  contextActionId: unknown;
-  provider: ShoppingSearchProvider;
-  now?: () => Date;
-  createPortfolioId?: () => string;
-}): Promise<{ created: boolean; run: PersistedSearchRun }> {
+async function prepareRetrievalRunInternal(
+  options: PrepareRetrievalRunOptions,
+  timing?: RetrievalTimingRecorder,
+): Promise<{ created: boolean; run: PersistedSearchRun }> {
   const taskId = shoppingTaskIdSchema.parse(options.taskId);
   const contextActionId = contextActionIdSchema.parse(options.contextActionId);
   const provider = shoppingProviderSchema.parse(options.provider.provider);
-  const existing = await loadPersistedSearchRunByTrigger({
-    db: options.db,
-    taskId,
-    contextActionId,
-  });
+  const measurePersistence = <Value>(operation: () => Promise<Value>) =>
+    timing?.measurePersistence(operation) ?? operation();
+  const existing = await measurePersistence(() =>
+    loadPersistedSearchRunByTrigger({
+      db: options.db,
+      taskId,
+      contextActionId,
+    }),
+  );
   if (existing !== null) {
     if (existing.status === "running" && existing.provider !== provider) {
       throw new SearchTriggerConflictError(contextActionId);
@@ -299,23 +320,35 @@ export async function prepareRetrievalRun(options: {
     return { created: false, run: existing };
   }
 
-  const authority = await loadRetrievalContextFromPersistedState({
-    db: options.db,
-    taskId,
-    contextActionId,
-  });
-  const portfolio = buildSearchQueryPortfolio(authority.context, {
-    ...(options.now === undefined ? {} : { now: options.now }),
-    ...(options.createPortfolioId === undefined
-      ? {}
-      : { createId: options.createPortfolioId }),
-  });
-  return persistSearchPlan({
-    db: options.db,
-    contextActionId,
-    provider,
-    portfolio,
-  });
+  const authority = await measurePersistence(() =>
+    loadRetrievalContextFromPersistedState({
+      db: options.db,
+      taskId,
+      contextActionId,
+    }),
+  );
+  const buildPortfolio = () =>
+    buildSearchQueryPortfolio(authority.context, {
+      ...(options.now === undefined ? {} : { now: options.now }),
+      ...(options.createPortfolioId === undefined
+        ? {}
+        : { createId: options.createPortfolioId }),
+    });
+  const portfolio = timing?.measurePlanning(buildPortfolio) ?? buildPortfolio();
+  return measurePersistence(() =>
+    persistSearchPlan({
+      db: options.db,
+      contextActionId,
+      provider,
+      portfolio,
+    }),
+  );
+}
+
+export async function prepareRetrievalRun(
+  options: PrepareRetrievalRunOptions,
+): Promise<{ created: boolean; run: PersistedSearchRun }> {
+  return prepareRetrievalRunInternal(options);
 }
 
 /**
@@ -333,103 +366,180 @@ export async function executeOrResumeRetrieval(options: {
   createPortfolioId?: () => string;
   createLeaseToken?: () => string;
   leaseDurationMs?: number;
+  queryConcurrency?: number;
+  monotonicClock?: () => number;
 }): Promise<RetrievalRunResult> {
+  const timing = createRetrievalTimingRecorder(options.monotonicClock);
+  const result = (
+    value: Omit<RetrievalRunResult, "timings">,
+  ): RetrievalRunResult => ({ ...value, timings: timing.snapshot() });
   const taskId = shoppingTaskIdSchema.parse(options.taskId);
   const contextActionId = contextActionIdSchema.parse(options.contextActionId);
   const clock = options.clock ?? (() => new Date());
+  const timedProvider: ShoppingSearchProvider = {
+    provider: options.provider.provider,
+    maxRequestDurationMs: options.provider.maxRequestDurationMs,
+    search: (query) =>
+      timing.measureProvider(() => options.provider.search(query)),
+  };
   const durationMs = leaseDuration(
     options.leaseDurationMs,
     options.provider.maxRequestDurationMs,
   );
-  const prepared = await prepareRetrievalRun({
-    db: options.db,
-    taskId,
-    contextActionId,
-    provider: options.provider,
-    now: clock,
-    ...(options.createPortfolioId === undefined
-      ? {}
-      : { createPortfolioId: options.createPortfolioId }),
-  });
+  const queryConcurrency = z
+    .number()
+    .int()
+    .positive()
+    .max(RETRIEVAL_QUERY_CONCURRENCY)
+    .parse(options.queryConcurrency ?? RETRIEVAL_QUERY_CONCURRENCY);
+  const prepared = await prepareRetrievalRunInternal(
+    {
+      db: options.db,
+      taskId,
+      contextActionId,
+      provider: options.provider,
+      now: clock,
+      ...(options.createPortfolioId === undefined
+        ? {}
+        : { createPortfolioId: options.createPortfolioId }),
+    },
+    timing,
+  );
   if (prepared.run.status !== "running") {
-    return { state: "completed", created: prepared.created, run: prepared.run };
+    return result({
+      state: "completed",
+      created: prepared.created,
+      run: prepared.run,
+    });
   }
 
-  const claim = await claimSearchRun({
-    db: options.db,
-    taskId,
-    runId: prepared.run.portfolio.run.id,
-    durationMs,
-    createToken: options.createLeaseToken ?? randomUUID,
-  });
+  const claim = await timing.measurePersistence(() =>
+    claimSearchRun({
+      db: options.db,
+      taskId,
+      runId: prepared.run.portfolio.run.id,
+      durationMs,
+      createToken: options.createLeaseToken ?? randomUUID,
+    }),
+  );
   if (claim.state !== "acquired") {
-    return {
+    return result({
       state: claim.state,
       created: prepared.created,
       run: claim.run,
-    };
-  }
-
-  let currentRun = claim.run;
-  let providerCallMayBeUnrecorded = false;
-  try {
-    for (const query of currentRun.portfolio.queries) {
-      currentRun = await renewSearchRunLease({
-        db: options.db,
-        taskId,
-        runId: currentRun.portfolio.run.id,
-        token: claim.token,
-        durationMs,
-      });
-      if (currentRun.status !== "running") break;
-      if (
-        currentRun.queryExecutions.some(
-          (execution) => execution.queryId === query.id,
-        )
-      ) {
-        continue;
-      }
-
-      const startedAt = clock();
-      providerCallMayBeUnrecorded = true;
-      const execution = await executeSearchQuery({
-        query,
-        provider: options.provider,
-      });
-      currentRun = await recordLeasedQueryResult({
-        db: options.db,
-        taskId,
-        runId: currentRun.portfolio.run.id,
-        token: claim.token,
-        execution,
-        startedAt,
-        finishedAt: clock(),
-      });
-      providerCallMayBeUnrecorded = false;
-    }
-  } catch (error) {
-    if (!providerCallMayBeUnrecorded) {
-      await releaseSearchRunLease({
-        db: options.db,
-        taskId,
-        runId: currentRun.portfolio.run.id,
-        token: claim.token,
-      });
-    }
-    throw error;
-  }
-
-  if (currentRun.status === "running") {
-    await releaseSearchRunLease({
-      db: options.db,
-      taskId,
-      runId: currentRun.portfolio.run.id,
-      token: claim.token,
     });
   }
-  return {
+
+  const runId = claim.run.portfolio.run.id;
+  const receiptedQueryIds = new Set(
+    claim.run.queryExecutions.map(({ queryId }) => queryId),
+  );
+  const missingQueries = claim.run.portfolio.queries.filter(
+    ({ id }) => !receiptedQueryIds.has(id),
+  );
+  const startedNotDurablyReceipted = new Set<string>();
+  let stopStartingReason: unknown;
+  const settlements = await settleWithBoundedWorkers({
+    inputs: missingQueries,
+    concurrency: queryConcurrency,
+    execute: async (query) => {
+      if (stopStartingReason !== undefined) return;
+      try {
+        const currentRun = await timing.measurePersistence(() =>
+          renewSearchRunLease({
+            db: options.db,
+            taskId,
+            runId,
+            token: claim.token,
+            durationMs,
+          }),
+        );
+        if (
+          currentRun.status !== "running" ||
+          currentRun.queryExecutions.some(
+            (execution) => execution.queryId === query.id,
+          )
+        ) {
+          return;
+        }
+
+        const startedAt = clock();
+        startedNotDurablyReceipted.add(query.id);
+        const execution = await executeSearchQuery({
+          query,
+          provider: timedProvider,
+        });
+        await timing.measurePersistence(() =>
+          recordLeasedQueryResult({
+            db: options.db,
+            taskId,
+            runId,
+            token: claim.token,
+            execution,
+            startedAt,
+            finishedAt: clock(),
+          }),
+        );
+        startedNotDurablyReceipted.delete(query.id);
+      } catch (error) {
+        stopStartingReason ??= error;
+        throw error;
+      }
+    },
+  });
+  const firstRejected = settlements.find(
+    (settlement): settlement is PromiseRejectedResult =>
+      settlement.status === "rejected",
+  );
+  if (firstRejected !== undefined || stopStartingReason !== undefined) {
+    if (startedNotDurablyReceipted.size === 0) {
+      await timing.measurePersistence(() =>
+        releaseSearchRunLease({
+          db: options.db,
+          taskId,
+          runId,
+          token: claim.token,
+        }),
+      );
+    }
+    throw firstRejected?.reason ?? stopStartingReason;
+  }
+
+  let currentRun: PersistedSearchRun;
+  try {
+    const loaded = await timing.measurePersistence(() =>
+      loadPersistedSearchRun({
+        db: options.db,
+        taskId,
+        runId,
+      }),
+    );
+    if (loaded === null) throw new SearchRunNotFoundError(runId);
+    currentRun = loaded;
+  } catch (error) {
+    await timing.measurePersistence(() =>
+      releaseSearchRunLease({
+        db: options.db,
+        taskId,
+        runId,
+        token: claim.token,
+      }),
+    );
+    throw error;
+  }
+  if (currentRun.status === "running") {
+    await timing.measurePersistence(() =>
+      releaseSearchRunLease({
+        db: options.db,
+        taskId,
+        runId,
+        token: claim.token,
+      }),
+    );
+  }
+  return result({
     state: currentRun.status === "running" ? "in_progress" : "completed",
     created: prepared.created,
     run: currentRun,
-  };
+  });
 }

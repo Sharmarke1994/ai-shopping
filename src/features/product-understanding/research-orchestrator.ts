@@ -1,6 +1,10 @@
 import { projectShoppingBrief } from "@/domain/shopping-state/brief";
 import { loadCurrentShoppingState } from "@/features/shopping-state/persistence/state-loaders";
+import { loadPersistedSearchRun } from "@/features/retrieval-spike/persistence/search-runs";
 import type { ShoppingDatabase } from "@/infrastructure/database/clients";
+import { admitFetchedPageEvidence } from "./page-evidence-admission";
+import { extractProductPageDocument } from "./page-extraction";
+import { type BoundedPageFetch, PageFetchError } from "./page-fetch";
 import type {
   EvidenceSearchProvider,
   EvidenceSearchResponse,
@@ -8,6 +12,7 @@ import type {
 import type {
   ProductUnderstandingCallPolicy,
   ProductUnderstandingModel,
+  ProductUnderstandingModelResult,
 } from "./model-port";
 import { PRODUCT_UNDERSTANDING_PROMPT_VERSION } from "./prompts";
 import {
@@ -18,18 +23,42 @@ import {
 import {
   claimEvidenceResearch,
   loadEvidenceResearchRun,
+  planEvidencePageFetches,
   prepareEvidenceResearch,
   recordCandidateUnderstanding,
   recordEvidenceAttemptFailure,
+  recordEvidencePageFetchFailure,
   recordEvidenceSearchSuccess,
+  recordFetchedPageSuccess,
   releaseEvidenceResearchLease,
   renewEvidenceResearchLease,
   type EvidenceResearchSnapshot,
 } from "./persistence";
 
+export const EVIDENCE_SEARCH_CONCURRENCY = 3;
+export const PAGE_FETCH_CONCURRENCY = 2;
+export const PRODUCT_UNDERSTANDING_CONCURRENCY = 2;
+
+export type EvidencePageFetcher = Readonly<{
+  provider: "server_http" | "fixture";
+  fetch(input: {
+    url: string;
+    candidateTitle: string;
+    merchant: string | null;
+    discoveredTitle: string;
+    discoveredRole:
+      | "retailer"
+      | "manufacturer"
+      | "independent_review"
+      | "retailer_review_aggregate"
+      | "other";
+  }): Promise<BoundedPageFetch>;
+}>;
+
 export type EvidenceResearchDependencies = Readonly<{
   db: ShoppingDatabase;
   evidenceProvider: EvidenceSearchProvider;
+  pageFetcher?: EvidencePageFetcher;
   model: ProductUnderstandingModel;
   modelIdentity: Readonly<{
     provider: "openai" | "fixture";
@@ -50,8 +79,9 @@ function hasVisualCriterion(
 
 function sourcePriority(source: EvidenceResearchSnapshot["sources"][number]) {
   if (source.sourceKind === "listing_field") return 0;
-  if (source.sourceKind === "organic_result") return 1;
-  return 2;
+  if (source.sourceKind === "fetched_page") return 1;
+  if (source.sourceKind === "organic_result") return 2;
+  return 3;
 }
 
 async function buildUnderstandingInput(options: {
@@ -69,15 +99,11 @@ async function buildUnderstandingInput(options: {
   if (brief.revision !== options.snapshot.run.taskRevision) {
     throw new Error("Research snapshot is stale before model acquisition");
   }
-  const run =
-    await import("@/features/retrieval-spike/persistence/search-runs").then(
-      ({ loadPersistedSearchRun }) =>
-        loadPersistedSearchRun({
-          db: options.dependencies.db,
-          taskId: options.snapshot.run.taskId,
-          runId: options.snapshot.run.searchRunId,
-        }),
-    );
+  const run = await loadPersistedSearchRun({
+    db: options.dependencies.db,
+    taskId: options.snapshot.run.taskId,
+    runId: options.snapshot.run.searchRunId,
+  });
   const listing = run?.listings.find(
     ({ id }) => id === options.candidateListingId,
   );
@@ -158,6 +184,65 @@ async function buildUnderstandingInput(options: {
   return { input, sourceIdsInOrder: sources.map(({ id }) => id) };
 }
 
+function throwFirstRejected(
+  settlements: readonly PromiseSettledResult<unknown>[],
+) {
+  const rejected = settlements.find(
+    (settlement): settlement is PromiseRejectedResult =>
+      settlement.status === "rejected",
+  );
+  if (rejected !== undefined) throw rejected.reason;
+}
+
+function createStageLimiter(concurrency: number) {
+  let active = 0;
+  const waiting: Array<() => void> = [];
+  const acquire = () => {
+    if (active < concurrency) {
+      active += 1;
+      return Promise.resolve();
+    }
+    return new Promise<void>((resolve) => waiting.push(resolve));
+  };
+  const release = () => {
+    const next = waiting.shift();
+    if (next === undefined) {
+      active -= 1;
+      return;
+    }
+    // Transfer the released permit directly to the oldest waiter. `active`
+    // remains unchanged, so a newly arriving task cannot steal the permit.
+    next();
+  };
+  return async <Value>(operation: () => Promise<Value>) => {
+    await acquire();
+    try {
+      return await operation();
+    } finally {
+      release();
+    }
+  };
+}
+
+function extractedPageIdentity(
+  fetch: BoundedPageFetch,
+  document: ReturnType<typeof extractProductPageDocument>,
+) {
+  return {
+    finalUrl: fetch.finalUrl,
+    canonicalUrl: document.canonicalUrlCandidate,
+    title: document.title,
+    openGraphTitle: document.metadata.openGraphTitle,
+    products: document.jsonLdProducts.map((product) => ({
+      productName: product.name,
+      brand: product.brand,
+      model: product.model,
+      sku: product.sku,
+      mpn: product.mpn,
+    })),
+  } as const;
+}
+
 export async function executeOrResumeEvidenceResearch(options: {
   dependencies: EvidenceResearchDependencies;
   taskId: unknown;
@@ -204,165 +289,348 @@ export async function executeOrResumeEvidenceResearch(options: {
     );
   }
 
-  let unsafeToRelease = false;
+  const unsafeAttemptIds = new Set<string>();
   try {
-    let snapshot = prepared;
-    for (const attempt of snapshot.attempts.filter(
-      (entry) => entry.stage === "organic_search" && entry.status === "planned",
-    )) {
-      await renewEvidenceResearchLease({
-        db: options.dependencies.db,
-        taskId: snapshot.run.taskId,
-        researchRunId: snapshot.run.id,
-        leaseToken,
-      });
-      const startedAt = new Date();
-      unsafeToRelease = true;
-      let response: EvidenceSearchResponse;
-      try {
-        const candidateRun =
-          await import("@/features/retrieval-spike/persistence/search-runs").then(
-            ({ loadPersistedSearchRun }) =>
-              loadPersistedSearchRun({
-                db: options.dependencies.db,
-                taskId: snapshot.run.taskId,
-                runId: snapshot.run.searchRunId,
-              }),
-          );
-        const listing = candidateRun?.listings.find(
-          ({ id }) => id === attempt.candidateListingId,
-        );
-        if (listing === undefined || attempt.query === null) {
-          throw new Error("Planned evidence candidate is unavailable");
-        }
-        response = await options.dependencies.evidenceProvider.search({
-          query: attempt.query,
-          candidateTitle: listing.title,
-          merchant: listing.merchant,
-        });
-      } catch {
-        await recordEvidenceAttemptFailure({
-          db: options.dependencies.db,
-          taskId: snapshot.run.taskId,
-          researchRunId: snapshot.run.id,
-          attemptIds: [attempt.id],
-          leaseToken,
-          failureCode: "provider_failed",
-          startedAt,
-          finishedAt: new Date(),
-        });
-        unsafeToRelease = false;
-        snapshot =
-          (await loadEvidenceResearchRun({
-            db: options.dependencies.db,
-            taskId: snapshot.run.taskId,
-            researchRunId: snapshot.run.id,
-          })) ?? snapshot;
-        continue;
-      }
-      await recordEvidenceSearchSuccess({
-        db: options.dependencies.db,
-        taskId: snapshot.run.taskId,
-        researchRunId: snapshot.run.id,
-        attemptId: attempt.id,
-        leaseToken,
-        response,
-        startedAt,
-        finishedAt: new Date(),
-      });
-      unsafeToRelease = false;
-      snapshot =
-        (await loadEvidenceResearchRun({
-          db: options.dependencies.db,
-          taskId: snapshot.run.taskId,
-          researchRunId: snapshot.run.id,
-        })) ?? snapshot;
+    const claimedSnapshot = await loadEvidenceResearchRun({
+      db: options.dependencies.db,
+      taskId: prepared.run.taskId,
+      researchRunId: prepared.run.id,
+    });
+    if (claimedSnapshot === null) {
+      throw new Error("Claimed research run is unavailable");
     }
-
-    const candidateIds = [
-      ...new Set(
-        snapshot.attempts.map(({ candidateListingId }) => candidateListingId),
+    const candidateRun = await loadPersistedSearchRun({
+      db: options.dependencies.db,
+      taskId: claimedSnapshot.run.taskId,
+      runId: claimedSnapshot.run.searchRunId,
+    });
+    if (candidateRun === null) {
+      throw new Error("Research search run is unavailable");
+    }
+    const listingsById = new Map(
+      candidateRun.listings.map((listing) => [listing.id, listing]),
+    );
+    const pageFetcher = options.dependencies.pageFetcher;
+    if (
+      pageFetcher === undefined &&
+      claimedSnapshot.attempts.some(
+        ({ stage, status }) => stage === "page_fetch" && status === "planned",
+      )
+    ) {
+      throw new Error("Planned page acquisition has no configured fetcher");
+    }
+    const selectedCandidateIds = new Set(
+      claimedSnapshot.attempts.map(
+        ({ candidateListingId }) => candidateListingId,
       ),
-    ];
-    for (const candidateListingId of candidateIds) {
-      const extraction = snapshot.attempts.find(
-        (attempt) =>
-          attempt.candidateListingId === candidateListingId &&
-          attempt.stage === "observation_extraction",
-      );
-      const assessment = snapshot.attempts.find(
-        (attempt) =>
-          attempt.candidateListingId === candidateListingId &&
-          attempt.stage === "criterion_assessment",
-      );
-      if (
-        extraction?.status !== "planned" ||
-        assessment?.status !== "planned"
-      ) {
-        continue;
-      }
-      await renewEvidenceResearchLease({
-        db: options.dependencies.db,
-        taskId: snapshot.run.taskId,
-        researchRunId: snapshot.run.id,
-        leaseToken,
-      });
-      const { input, sourceIdsInOrder } = await buildUnderstandingInput({
-        dependencies: options.dependencies,
-        snapshot,
-        candidateListingId,
-      });
-      const callPolicy: ProductUnderstandingCallPolicy = {
-        requireCriterionBinding: snapshot.run.phase === "deepening",
-      };
-      const startedAt = new Date();
-      unsafeToRelease = true;
-      const result = await options.dependencies.model.understand(
-        input,
-        callPolicy,
-      );
-      const scopedResult =
-        result.status === "completed"
-          ? productUnderstandingProviderWireV1SchemaForInput({
-              input,
-              requireCriterionBinding: callPolicy.requireCriterionBinding,
-            }).safeParse(result.value)
-          : null;
-      await recordCandidateUnderstanding({
-        db: options.dependencies.db,
-        taskId: snapshot.run.taskId,
-        researchRunId: snapshot.run.id,
-        candidateListingId,
-        extractionAttemptId: extraction.id,
-        assessmentAttemptId: assessment.id,
-        leaseToken,
-        sourceIdsInOrder,
-        result:
-          result.status === "completed" && scopedResult?.success === true
-            ? scopedResult.data
-            : null,
-        metadata: result.metadata,
-        ...(result.status === "completed" && scopedResult?.success === true
-          ? {}
-          : {
-              failureCode:
-                result.status === "malformed" ||
-                (result.status === "completed" &&
-                  scopedResult?.success === false)
-                  ? ("invalid_model_output" as const)
-                  : ("model_failed" as const),
-            }),
-        startedAt,
-        finishedAt: new Date(),
-      });
-      unsafeToRelease = false;
-      snapshot =
-        (await loadEvidenceResearchRun({
-          db: options.dependencies.db,
-          taskId: snapshot.run.taskId,
-          researchRunId: snapshot.run.id,
-        })) ?? snapshot;
+    );
+    const candidateIds = candidateRun.listings
+      .filter(({ id }) => selectedCandidateIds.has(id))
+      .map(({ id }) => id);
+    if (candidateIds.length !== selectedCandidateIds.size) {
+      throw new Error("Research candidate portfolio is incomplete");
     }
+    const runEvidenceSearch = createStageLimiter(EVIDENCE_SEARCH_CONCURRENCY);
+    const runPageFetch = createStageLimiter(PAGE_FETCH_CONCURRENCY);
+    const runUnderstanding = createStageLimiter(
+      PRODUCT_UNDERSTANDING_CONCURRENCY,
+    );
+    const loadCurrentSnapshot = async () =>
+      (await loadEvidenceResearchRun({
+        db: options.dependencies.db,
+        taskId: prepared.run.taskId,
+        researchRunId: prepared.run.id,
+      })) ?? claimedSnapshot;
+
+    const candidateSettlements = await Promise.allSettled(
+      candidateIds.map(async (candidateListingId) => {
+        const organicSettlements = await Promise.allSettled(
+          claimedSnapshot.attempts
+            .filter(
+              (attempt) =>
+                attempt.candidateListingId === candidateListingId &&
+                attempt.stage === "organic_search" &&
+                attempt.status === "planned",
+            )
+            .map((attempt) =>
+              runEvidenceSearch(async () => {
+                await renewEvidenceResearchLease({
+                  db: options.dependencies.db,
+                  taskId: prepared.run.taskId,
+                  researchRunId: prepared.run.id,
+                  leaseToken,
+                });
+                const listing = listingsById.get(attempt.candidateListingId);
+                if (listing === undefined || attempt.query === null) {
+                  throw new Error("Planned evidence candidate is unavailable");
+                }
+                const startedAt = new Date();
+                unsafeAttemptIds.add(attempt.id);
+                let response: EvidenceSearchResponse;
+                try {
+                  response = await options.dependencies.evidenceProvider.search(
+                    {
+                      query: attempt.query,
+                      candidateTitle: listing.title,
+                      merchant: listing.merchant,
+                    },
+                  );
+                } catch {
+                  await recordEvidenceAttemptFailure({
+                    db: options.dependencies.db,
+                    taskId: prepared.run.taskId,
+                    researchRunId: prepared.run.id,
+                    attemptIds: [attempt.id],
+                    leaseToken,
+                    failureCode: "provider_failed",
+                    startedAt,
+                    finishedAt: new Date(),
+                  });
+                  unsafeAttemptIds.delete(attempt.id);
+                  return;
+                }
+                await recordEvidenceSearchSuccess({
+                  db: options.dependencies.db,
+                  taskId: prepared.run.taskId,
+                  researchRunId: prepared.run.id,
+                  attemptId: attempt.id,
+                  leaseToken,
+                  response,
+                  startedAt,
+                  finishedAt: new Date(),
+                });
+                unsafeAttemptIds.delete(attempt.id);
+              }),
+            ),
+        );
+        throwFirstRejected(organicSettlements);
+
+        if (pageFetcher !== undefined) {
+          const pagePlans = (
+            await planEvidencePageFetches({
+              db: options.dependencies.db,
+              taskId: prepared.run.taskId,
+              researchRunId: prepared.run.id,
+              candidateListingId,
+              leaseToken,
+              provider: pageFetcher.provider,
+            })
+          ).filter(({ attempt }) => attempt.status === "planned");
+          const pageSettlements = await Promise.allSettled(
+            pagePlans.map((plan) =>
+              runPageFetch(async () => {
+                await renewEvidenceResearchLease({
+                  db: options.dependencies.db,
+                  taskId: prepared.run.taskId,
+                  researchRunId: prepared.run.id,
+                  leaseToken,
+                });
+                const listing = listingsById.get(
+                  plan.attempt.candidateListingId,
+                );
+                if (listing === undefined) {
+                  throw new Error("Planned page candidate is unavailable");
+                }
+                const startedAt = new Date();
+                unsafeAttemptIds.add(plan.attempt.id);
+                let fetch: BoundedPageFetch;
+                try {
+                  fetch = await pageFetcher.fetch({
+                    url: plan.requestedUrl,
+                    candidateTitle: listing.title,
+                    merchant: listing.merchant,
+                    discoveredTitle: plan.discoveredSource.sourceTitle,
+                    discoveredRole: plan.discoveredSource.sourceRole,
+                  });
+                } catch (error) {
+                  await recordEvidencePageFetchFailure({
+                    db: options.dependencies.db,
+                    taskId: prepared.run.taskId,
+                    researchRunId: prepared.run.id,
+                    attemptId: plan.attempt.id,
+                    leaseToken,
+                    failureCode:
+                      error instanceof PageFetchError
+                        ? error.code
+                        : "network_failed",
+                    startedAt,
+                    finishedAt: new Date(),
+                  });
+                  unsafeAttemptIds.delete(plan.attempt.id);
+                  return;
+                }
+                let document: ReturnType<typeof extractProductPageDocument>;
+                try {
+                  document = extractProductPageDocument({
+                    html: fetch.text,
+                    sourceUrl: fetch.finalUrl,
+                  });
+                } catch {
+                  await recordEvidencePageFetchFailure({
+                    db: options.dependencies.db,
+                    taskId: prepared.run.taskId,
+                    researchRunId: prepared.run.id,
+                    attemptId: plan.attempt.id,
+                    leaseToken,
+                    failureCode: "invalid_extraction",
+                    startedAt,
+                    finishedAt: new Date(),
+                  });
+                  unsafeAttemptIds.delete(plan.attempt.id);
+                  return;
+                }
+                const admission = admitFetchedPageEvidence({
+                  candidateTitle: listing.title,
+                  merchant: listing.merchant,
+                  discovered: {
+                    sourceRole: plan.discoveredSource.sourceRole,
+                    url: plan.discoveredSource.sourceUrl,
+                    title: plan.discoveredSource.sourceTitle,
+                  },
+                  page: extractedPageIdentity(fetch, document),
+                });
+                if (admission.decision === "reject") {
+                  await recordEvidencePageFetchFailure({
+                    db: options.dependencies.db,
+                    taskId: prepared.run.taskId,
+                    researchRunId: prepared.run.id,
+                    attemptId: plan.attempt.id,
+                    leaseToken,
+                    failureCode: "identity_mismatch",
+                    startedAt,
+                    finishedAt: new Date(),
+                  });
+                  unsafeAttemptIds.delete(plan.attempt.id);
+                  return;
+                }
+                await recordFetchedPageSuccess({
+                  db: options.dependencies.db,
+                  taskId: prepared.run.taskId,
+                  researchRunId: prepared.run.id,
+                  attemptId: plan.attempt.id,
+                  leaseToken,
+                  fetch: {
+                    requestedUrl: fetch.requestedUrl,
+                    finalUrl: fetch.finalUrl,
+                    contentType: fetch.contentType,
+                    encodedBytes: fetch.encodedBytes,
+                    decodedBytes: fetch.decodedBytes,
+                    fetchedAt: fetch.fetchedAt,
+                    responseHash: fetch.responseHash,
+                  },
+                  document,
+                  admission,
+                  startedAt,
+                  finishedAt: new Date(),
+                });
+                unsafeAttemptIds.delete(plan.attempt.id);
+              }),
+            ),
+          );
+          throwFirstRejected(pageSettlements);
+        }
+
+        await runUnderstanding(async () => {
+          const snapshot = await loadCurrentSnapshot();
+          const extraction = snapshot.attempts.find(
+            (attempt) =>
+              attempt.candidateListingId === candidateListingId &&
+              attempt.stage === "observation_extraction",
+          );
+          const assessment = snapshot.attempts.find(
+            (attempt) =>
+              attempt.candidateListingId === candidateListingId &&
+              attempt.stage === "criterion_assessment",
+          );
+          if (
+            extraction?.status !== "planned" ||
+            assessment?.status !== "planned"
+          ) {
+            return;
+          }
+          await renewEvidenceResearchLease({
+            db: options.dependencies.db,
+            taskId: prepared.run.taskId,
+            researchRunId: prepared.run.id,
+            leaseToken,
+          });
+          const { input, sourceIdsInOrder } = await buildUnderstandingInput({
+            dependencies: options.dependencies,
+            snapshot,
+            candidateListingId,
+          });
+          const callPolicy: ProductUnderstandingCallPolicy = {
+            requireCriterionBinding: snapshot.run.phase === "deepening",
+          };
+          const startedAt = new Date();
+          unsafeAttemptIds.add(extraction.id);
+          unsafeAttemptIds.add(assessment.id);
+          let result: ProductUnderstandingModelResult;
+          try {
+            result = await options.dependencies.model.understand(
+              input,
+              callPolicy,
+            );
+          } catch {
+            await recordCandidateUnderstanding({
+              db: options.dependencies.db,
+              taskId: prepared.run.taskId,
+              researchRunId: prepared.run.id,
+              candidateListingId,
+              extractionAttemptId: extraction.id,
+              assessmentAttemptId: assessment.id,
+              leaseToken,
+              sourceIdsInOrder,
+              result: null,
+              metadata: null,
+              failureCode: "model_failed",
+              startedAt,
+              finishedAt: new Date(),
+            });
+            unsafeAttemptIds.delete(extraction.id);
+            unsafeAttemptIds.delete(assessment.id);
+            return;
+          }
+          const scopedResult =
+            result.status === "completed"
+              ? productUnderstandingProviderWireV1SchemaForInput({
+                  input,
+                  requireCriterionBinding: callPolicy.requireCriterionBinding,
+                }).safeParse(result.value)
+              : null;
+          await recordCandidateUnderstanding({
+            db: options.dependencies.db,
+            taskId: prepared.run.taskId,
+            researchRunId: prepared.run.id,
+            candidateListingId,
+            extractionAttemptId: extraction.id,
+            assessmentAttemptId: assessment.id,
+            leaseToken,
+            sourceIdsInOrder,
+            result:
+              result.status === "completed" && scopedResult?.success === true
+                ? scopedResult.data
+                : null,
+            metadata: result.metadata,
+            ...(result.status === "completed" && scopedResult?.success === true
+              ? {}
+              : {
+                  failureCode:
+                    result.status === "malformed" ||
+                    (result.status === "completed" &&
+                      scopedResult?.success === false)
+                      ? ("invalid_model_output" as const)
+                      : ("model_failed" as const),
+                }),
+            startedAt,
+            finishedAt: new Date(),
+          });
+          unsafeAttemptIds.delete(extraction.id);
+          unsafeAttemptIds.delete(assessment.id);
+        });
+      }),
+    );
+    throwFirstRejected(candidateSettlements);
     return (
       (await loadEvidenceResearchRun({
         db: options.dependencies.db,
@@ -371,7 +639,7 @@ export async function executeOrResumeEvidenceResearch(options: {
       })) ?? prepared
     );
   } finally {
-    if (!unsafeToRelease) {
+    if (unsafeAttemptIds.size === 0) {
       const current = await loadEvidenceResearchRun({
         db: options.dependencies.db,
         taskId: prepared.run.taskId,

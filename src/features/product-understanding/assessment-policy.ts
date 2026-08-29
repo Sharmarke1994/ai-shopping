@@ -2,6 +2,7 @@ import type {
   BriefItemV1,
   ShoppingBriefV1,
 } from "@/domain/shopping-state/brief";
+import { normalizeMeasurementAmount } from "@/domain/shopping-state/semantic-value";
 import type { PersistedCandidateListing } from "@/features/retrieval-spike/persistence/contracts";
 import type {
   CriterionAssessmentV1,
@@ -204,6 +205,13 @@ export function directTitleSoftContradiction(
 function conceptMatches(item: BriefItemV1, pattern: RegExp) {
   return pattern.test(
     normalized(`${item.conceptLabel} ${item.conceptDefinition}`),
+  );
+}
+
+function criterionNeedsExactPageDepth(item: BriefItemV1) {
+  return conceptMatches(
+    item,
+    /battery|runtime|charge life|durab|noise|noisy|quiet|sound level|comfort|long session|long workday/,
   );
 }
 
@@ -475,8 +483,14 @@ function explicitBooleanAssessment(options: {
     options.item,
     /comfort|ergonom|long session|long work/,
   );
-  const eligible = options.observations.filter(({ observation }) => {
+  const eligible = options.observations.filter(({ observation, source }) => {
     if (observation.value.kind !== "boolean") return false;
+    if (
+      criterionNeedsExactPageDepth(options.item) &&
+      source.sourceKind !== "fetched_page"
+    ) {
+      return false;
+    }
     return booleanObservationAddressesCriterion(options.item, observation);
   });
   const supported = eligible.filter(
@@ -634,8 +648,11 @@ function proposalHasRelevantEvidence(options: {
   if (options.proposal.status === "uncertain") return true;
   if (options.proposal.observations.length === 0) return false;
   if (options.item.semanticValue.kind === "boolean") {
-    return options.proposal.observations.some(({ observation }) =>
-      booleanObservationAddressesCriterion(options.item, observation),
+    return options.proposal.observations.some(
+      ({ observation, source }) =>
+        booleanObservationAddressesCriterion(options.item, observation) &&
+        (!criterionNeedsExactPageDepth(options.item) ||
+          source.sourceKind === "fetched_page"),
     );
   }
   const battery = conceptMatches(options.item, /battery|runtime|charge life/);
@@ -651,11 +668,18 @@ function proposalHasRelevantEvidence(options: {
     options.item,
     /review|customer evidence|customer sentiment/,
   );
+  const needsExactPageDepth = criterionNeedsExactPageDepth(options.item);
   return options.proposal.observations.some(({ observation, source }) => {
     const property = normalized(observation.propertyLabel);
-    if (battery) return /battery|runtime|charge life/.test(property);
+    if (battery) {
+      return (
+        source.sourceKind === "fetched_page" &&
+        /battery|runtime|charge life/.test(property)
+      );
+    }
     if (comfort) {
       return (
+        source.sourceKind === "fetched_page" &&
         /comfort|palm|wrist|support|shape|profile/.test(property) &&
         !(
           source.sourceRole === "listing" &&
@@ -664,11 +688,12 @@ function proposalHasRelevantEvidence(options: {
       );
     }
     if (reputation) {
-      return [
-        "manufacturer",
-        "independent_review",
-        "retailer_review_aggregate",
-      ].includes(source.sourceRole);
+      return (
+        source.sourceKind === "fetched_page" &&
+        ["independent_review", "retailer_review_aggregate"].includes(
+          source.sourceRole,
+        )
+      );
     }
     if (reviews) {
       return (
@@ -680,8 +705,85 @@ function proposalHasRelevantEvidence(options: {
         ].includes(source.sourceRole)
       );
     }
+    if (needsExactPageDepth) return source.sourceKind === "fetched_page";
     return true;
   });
+}
+
+function hasMaterialSourceDisagreement(
+  observations: readonly ObservationWithSource[],
+) {
+  const valuesByProperty = new Map<string, Map<string, Set<string>>>();
+  for (const { observation, source } of observations) {
+    if (observation.support !== "supported") continue;
+    if (source.sourceKind !== "fetched_page") continue;
+    const property = normalized(observation.propertyLabel);
+    const value = disagreementComparableValue(observation.value);
+    if (value === null) continue;
+    const identity = `${property}:${value.family}`;
+    const byValue = valuesByProperty.get(identity) ?? new Map();
+    const sourceIds = byValue.get(value.value) ?? new Set<string>();
+    sourceIds.add(source.id);
+    byValue.set(value.value, sourceIds);
+    valuesByProperty.set(identity, byValue);
+  }
+  return [...valuesByProperty.values()].some((byValue) => {
+    if (byValue.size < 2) return false;
+    return new Set([...byValue.values()].flatMap((ids) => [...ids])).size >= 2;
+  });
+}
+
+function disagreementComparableValue(
+  value: ProductObservationV1["value"],
+): { family: string; value: string } | null {
+  if (value.kind === "boolean") {
+    return { family: "boolean", value: String(value.value) };
+  }
+  if (value.kind === "money") {
+    return {
+      family: `money:${value.currency}`,
+      value: String(value.amountMinor),
+    };
+  }
+  if (value.kind === "quantity") {
+    if (["mm", "cm", "m"].includes(value.unit)) {
+      return {
+        family: `quantity:length:${value.qualifier}`,
+        value: normalizeMeasurementAmount(
+          value.amount,
+          value.unit as "mm" | "cm" | "m",
+          "mm",
+        ),
+      };
+    }
+    if (["g", "kg"].includes(value.unit)) {
+      return {
+        family: `quantity:mass:${value.qualifier}`,
+        value: normalizeMeasurementAmount(
+          value.amount,
+          value.unit as "g" | "kg",
+          "g",
+        ),
+      };
+    }
+    return {
+      family: `quantity:${value.unit}:${value.qualifier}`,
+      value: value.amount,
+    };
+  }
+  if (value.kind === "categorical") {
+    return {
+      family: "categorical",
+      value: [...value.values].map(normalized).sort().join("\u0000"),
+    };
+  }
+  if (value.kind === "text") {
+    const scalar = /^(\d+(?:\.\d+)?)\s*([a-z%]+)$/.exec(normalized(value.text));
+    return scalar === null
+      ? null
+      : { family: `scalar_text:${scalar[2]}`, value: scalar[1]! };
+  }
+  return null;
 }
 
 export function guardCriterionAssessment(options: {
@@ -710,6 +812,22 @@ export function guardCriterionAssessment(options: {
   if (directBoolean !== null) return directBoolean;
   const directTitle = explicitTitleSoftAssessment(guardedOptions);
   if (directTitle !== null) return directTitle;
+  if (hasMaterialSourceDisagreement(observations)) {
+    return {
+      status: "uncertain",
+      relation: "source_disagreement",
+      explanation:
+        "The checked exact product pages make incompatible claims, so this remains unresolved.",
+      method: "deterministic",
+      observationIds: observations
+        .filter(
+          ({ observation, source }) =>
+            observation.support === "supported" &&
+            source.sourceKind === "fetched_page",
+        )
+        .map(({ observation }) => observation.id),
+    };
+  }
   if (proposal === null) {
     return {
       status: "uncertain",
