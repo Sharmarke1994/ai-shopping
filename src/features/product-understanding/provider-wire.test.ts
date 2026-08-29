@@ -1,9 +1,46 @@
 import { describe, expect, it } from "vitest";
 import {
   productUnderstandingInputV1Schema,
+  productUnderstandingProviderStructuredOutputSchema,
   productUnderstandingProviderWireV1Schema,
   productUnderstandingProviderWireV1SchemaForInput,
 } from "./provider-wire";
+
+function focusedInput(criterionCount = 1) {
+  return productUnderstandingInputV1Schema.parse({
+    schemaVersion: 1,
+    market: { country: "GB", language: "en-GB", currency: "GBP" },
+    candidate: {
+      title: "Exact candidate",
+      merchant: null,
+      observedPriceText: null,
+    },
+    criteria: Array.from({ length: criterionCount }, (_, ordinal) => ({
+      ordinal,
+      label: ordinal === 0 ? "Battery life" : "Long-session comfort",
+      definition:
+        ordinal === 0 ? "Battery endurance" : "Comfort over a working day",
+      strength: "strong_preference" as const,
+      targetSemantics: "qualitative" as const,
+      value: {
+        schemaVersion: 1,
+        kind: "qualitative",
+        mode: "text",
+        text: ordinal === 0 ? "long battery life" : "comfortable all day",
+      },
+    })),
+    sources: [
+      {
+        ordinal: 0,
+        role: "manufacturer",
+        kind: "organic_result",
+        title: "Exact candidate specifications",
+        url: "https://example.test/specifications",
+        excerpt: "The manufacturer states a battery specification.",
+      },
+    ],
+  });
+}
 
 function proposal(options: {
   observationCriterionOrdinal: number | null;
@@ -120,40 +157,7 @@ describe("product-understanding provider wire", () => {
   });
 
   it("rejects non-target ordinals and criterion-free observations for a focused call", () => {
-    const input = productUnderstandingInputV1Schema.parse({
-      schemaVersion: 1,
-      market: { country: "GB", language: "en-GB", currency: "GBP" },
-      candidate: {
-        title: "Exact candidate",
-        merchant: null,
-        observedPriceText: null,
-      },
-      criteria: [
-        {
-          ordinal: 0,
-          label: "Battery life",
-          definition: "Battery endurance",
-          strength: "strong_preference",
-          targetSemantics: "qualitative",
-          value: {
-            schemaVersion: 1,
-            kind: "qualitative",
-            mode: "text",
-            text: "long battery life",
-          },
-        },
-      ],
-      sources: [
-        {
-          ordinal: 0,
-          role: "manufacturer",
-          kind: "organic_result",
-          title: "Exact candidate specifications",
-          url: "https://example.test/specifications",
-          excerpt: "The manufacturer states a battery specification.",
-        },
-      ],
-    });
+    const input = focusedInput();
     const focusedSchema = productUnderstandingProviderWireV1SchemaForInput({
       input,
       requireCriterionBinding: true,
@@ -196,5 +200,165 @@ describe("product-understanding provider wire", () => {
         assessments: [],
       }).success,
     ).toBe(false);
+  });
+
+  it("uses a structurally focused schema while preserving an honest evidence-free result", () => {
+    const focusedSchema = productUnderstandingProviderStructuredOutputSchema({
+      input: focusedInput(),
+      requireCriterionBinding: true,
+    });
+
+    expect(
+      focusedSchema.safeParse({
+        providerSchemaVersion: 1,
+        observations: [],
+        assessments: [
+          {
+            criterionOrdinal: 0,
+            status: "uncertain",
+            relation: "insufficient_evidence",
+            explanation: "No supplied source supports this criterion.",
+            observationRefs: [],
+          },
+        ],
+      }).success,
+    ).toBe(true);
+    expect(
+      focusedSchema.safeParse({
+        providerSchemaVersion: 1,
+        observations: [
+          {
+            localRef: "generic_fact",
+            sourceOrdinal: 0,
+            criterionOrdinal: null,
+            support: "supported",
+            observationKind: "source_assertion",
+            propertyLabel: "Unrelated fact",
+            claim: "This fact has no target binding.",
+            value: {
+              schemaVersion: 1,
+              kind: "text",
+              text: "unrelated",
+            },
+            derivation: "model_text",
+          },
+        ],
+        assessments: [
+          {
+            criterionOrdinal: 0,
+            status: "uncertain",
+            relation: "insufficient_evidence",
+            explanation: "No target evidence was emitted.",
+            observationRefs: [],
+          },
+        ],
+      }).success,
+    ).toBe(false);
+  });
+
+  it("limits both focused ordinal positions and their cross-references", () => {
+    const focusedSchema = productUnderstandingProviderStructuredOutputSchema({
+      input: focusedInput(2),
+      requireCriterionBinding: true,
+    });
+    const observation = {
+      localRef: "battery",
+      sourceOrdinal: 0,
+      criterionOrdinal: 0,
+      support: "supported",
+      observationKind: "source_assertion",
+      propertyLabel: "Battery life",
+      claim: "The source states a battery specification.",
+      value: {
+        schemaVersion: 1,
+        kind: "text",
+        text: "battery specification",
+      },
+      derivation: "model_text",
+    };
+
+    expect(
+      focusedSchema.safeParse({
+        providerSchemaVersion: 1,
+        observations: [{ ...observation, criterionOrdinal: 2 }],
+        assessments: [
+          {
+            criterionOrdinal: 0,
+            status: "uncertain",
+            relation: "insufficient_evidence",
+            explanation: "No source supports this criterion.",
+            observationRefs: [],
+          },
+          {
+            criterionOrdinal: 1,
+            status: "uncertain",
+            relation: "insufficient_evidence",
+            explanation: "No source supports this criterion.",
+            observationRefs: [],
+          },
+        ],
+      }).success,
+    ).toBe(false);
+    expect(
+      focusedSchema.safeParse({
+        providerSchemaVersion: 1,
+        observations: [observation],
+        assessments: [
+          {
+            criterionOrdinal: 0,
+            status: "uncertain",
+            relation: "insufficient_evidence",
+            explanation: "No source supports this criterion.",
+            observationRefs: [],
+          },
+          {
+            criterionOrdinal: 1,
+            status: "meets",
+            relation: "source_support",
+            explanation: "This incorrectly cites the battery observation.",
+            observationRefs: ["battery"],
+          },
+        ],
+      }).success,
+    ).toBe(false);
+  });
+
+  it("does not infer focused mode from a one-criterion input", () => {
+    const broadSchema = productUnderstandingProviderStructuredOutputSchema({
+      input: focusedInput(),
+      requireCriterionBinding: false,
+    });
+    expect(
+      broadSchema.safeParse({
+        providerSchemaVersion: 1,
+        observations: [
+          {
+            localRef: "general_fact",
+            sourceOrdinal: 0,
+            criterionOrdinal: null,
+            support: "supported",
+            observationKind: "source_assertion",
+            propertyLabel: "General fact",
+            claim: "The source contains a general product fact.",
+            value: {
+              schemaVersion: 1,
+              kind: "text",
+              text: "general product fact",
+            },
+            derivation: "model_text",
+          },
+        ],
+        assessments: [],
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects an empty focused target before a provider contract can be built", () => {
+    expect(() =>
+      productUnderstandingProviderStructuredOutputSchema({
+        input: focusedInput(0),
+        requireCriterionBinding: true,
+      }),
+    ).toThrow("Focused product understanding requires a criterion");
   });
 });

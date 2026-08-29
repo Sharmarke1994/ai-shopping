@@ -108,6 +108,14 @@ type Counts = {
   understandingCalls: number;
 };
 
+type UnderstandingCallTrace = Readonly<{
+  callOrdinal: number;
+  candidateTitle: string;
+  criteria: readonly Readonly<{ ordinal: number; label: string }>[];
+  requireCriterionBinding: boolean;
+  structuredOutputContract: "focused" | "broad";
+}>;
+
 type ArmedEvidenceGate = Readonly<{
   entered: Promise<void>;
   release: () => void;
@@ -151,6 +159,7 @@ function createCountedDependencies(options: {
     evidenceSearchCalls: 0,
     understandingCalls: 0,
   };
+  const understandingCallTrace: UnderstandingCallTrace[] = [];
   const context = createOpenAIContextAcquisitionModel({
     environment: { ...process.env, OPENAI_API_KEY: options.openAIKey },
   });
@@ -239,13 +248,26 @@ function createCountedDependencies(options: {
     apiKey: options.openAIKey,
   });
   const understanding: ProductUnderstandingModel = {
-    understand: (input) => {
+    understand: (input, policy) => {
       counts.understandingCalls += 1;
-      return productUnderstanding.understand(input);
+      understandingCallTrace.push({
+        callOrdinal: counts.understandingCalls,
+        candidateTitle: input.candidate.title,
+        criteria: input.criteria.map(({ ordinal, label }) => ({
+          ordinal,
+          label,
+        })),
+        requireCriterionBinding: policy.requireCriterionBinding,
+        structuredOutputContract: policy.requireCriterionBinding
+          ? "focused"
+          : "broad",
+      });
+      return productUnderstanding.understand(input, policy);
     },
   };
   return {
     counts,
+    understandingCallTrace,
     armEvidenceGate,
     armPostResponseEvidenceFailure: (candidateTitle: string) => {
       if (postResponseFailureCandidateTitle !== null) {
@@ -277,6 +299,26 @@ function delta(after: Counts, before: Counts): Counts {
       value - before[key as keyof Counts],
     ]),
   ) as Counts;
+}
+
+function exactFocusedCallTrace(options: {
+  traces: readonly UnderstandingCallTrace[];
+  target: ReturnType<typeof chooseNamedGapTarget>;
+}) {
+  const matches = options.traces.filter(
+    (trace) =>
+      trace.candidateTitle === options.target.candidateTitle &&
+      trace.requireCriterionBinding &&
+      trace.structuredOutputContract === "focused" &&
+      trace.criteria.length === 1 &&
+      trace.criteria[0]?.ordinal === 0 &&
+      trace.criteria[0]?.label === options.target.criterionLabel,
+  );
+  assertProof(
+    matches.length === 1,
+    `${options.target.criterionLabel} did not use exactly one focused provider contract with only the named local criterion`,
+  );
+  return matches[0]!;
 }
 
 async function waitForEvidenceGate(gate: ArmedEvidenceGate, label: string) {
@@ -1553,6 +1595,7 @@ async function runCase(options: {
   fixture: (typeof cases)[number];
   dependencies: LiveShoppingDependencies;
   counts: Counts;
+  understandingCallTrace: UnderstandingCallTrace[];
   armEvidenceGate: (candidateTitle: string) => ArmedEvidenceGate;
   armPostResponseEvidenceFailure: (candidateTitle: string) => void;
   onSessionCreated: (sessionId: string) => void;
@@ -1561,6 +1604,7 @@ async function runCase(options: {
   options.onSessionCreated(sessionId);
   const questions: Array<Record<string, unknown>> = [];
   const startCounts = { ...options.counts };
+  const startUnderstandingTraceIndex = options.understandingCallTrace.length;
   const startedAt = performance.now();
   let view = await startLiveShopping({
     dependencies: options.dependencies,
@@ -1618,6 +1662,7 @@ async function runCase(options: {
   });
   const beforeDeepStageCounts = { ...options.counts };
   const beforeTargetCounts = { ...options.counts };
+  const beforeTargetTraceIndex = options.understandingCallTrace.length;
   let targetedPersistence: PersistenceSnapshot;
   let targetedCalls: Counts;
   let targeted: ReturnType<typeof targetedPersistenceProof>;
@@ -1756,6 +1801,10 @@ async function runCase(options: {
       "mouse exact targeted evidence search did not succeed",
     );
   }
+  const targetedUnderstandingTrace = exactFocusedCallTrace({
+    traces: options.understandingCallTrace.slice(beforeTargetTraceIndex),
+    target,
+  });
   const afterDeep = decisionSnapshot(view);
   const deepCalls = delta(options.counts, beforeDeepStageCounts);
   const afterDeepPersistence = await scopedPersistence({
@@ -1985,6 +2034,7 @@ async function runCase(options: {
     afterDeep,
     targeted: {
       ...targeted,
+      modelContract: targetedUnderstandingTrace,
       decision: targetedDecision,
       statusProjection: targetStatusProof,
     },
@@ -1995,6 +2045,9 @@ async function runCase(options: {
     comparisonEvidence,
     titleTradeoffEvidence,
     categoryHonesty,
+    productUnderstandingCallTrace: options.understandingCallTrace.slice(
+      startUnderstandingTraceIndex,
+    ),
     refinement,
     restored: decisionSnapshot(restored),
     persistence,
@@ -2075,6 +2128,7 @@ const completedFlows: FounderFlow[] = [];
 let activeCaseName: CaseName | null = null;
 let activeSessionId: string | null = null;
 let runtimeCounts: Counts | null = null;
+let runtimeUnderstandingCallTrace: UnderstandingCallTrace[] | null = null;
 
 try {
   await mkdir(outputDirectory, { recursive: true });
@@ -2104,6 +2158,7 @@ try {
     serperKey,
   });
   runtimeCounts = runtime.counts;
+  runtimeUnderstandingCallTrace = runtime.understandingCallTrace;
   for (const fixture of cases) {
     activeCaseName = fixture.name;
     completedFlows.push(
@@ -2111,6 +2166,7 @@ try {
         fixture,
         dependencies: runtime.dependencies,
         counts: runtime.counts,
+        understandingCallTrace: runtime.understandingCallTrace,
         armEvidenceGate: runtime.armEvidenceGate,
         armPostResponseEvidenceFailure: runtime.armPostResponseEvidenceFailure,
         onSessionCreated: (sessionId) => {
@@ -2224,6 +2280,7 @@ try {
     completedFlows,
     activeCaseSnapshot,
     logicalPortInvocationsAtFailure: runtimeCounts,
+    productUnderstandingCallTraceAtFailure: runtimeUnderstandingCallTrace,
     failure: {
       name: error instanceof Error ? error.name : "UnknownError",
       message: sanitizedMessage,

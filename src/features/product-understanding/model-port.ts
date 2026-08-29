@@ -10,9 +10,14 @@ import type {
 export type ProductUnderstandingModelResult =
   ModelCallResult<ProductUnderstandingProviderWireV1>;
 
+export type ProductUnderstandingCallPolicy = Readonly<{
+  requireCriterionBinding: boolean;
+}>;
+
 export interface ProductUnderstandingModel {
   understand(
     input: ProductUnderstandingInputV1,
+    policy: ProductUnderstandingCallPolicy,
   ): Promise<ProductUnderstandingModelResult>;
 }
 

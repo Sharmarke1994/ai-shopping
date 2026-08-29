@@ -5,7 +5,10 @@ import type {
   EvidenceSearchProvider,
   EvidenceSearchResponse,
 } from "./evidence-search";
-import type { ProductUnderstandingModel } from "./model-port";
+import type {
+  ProductUnderstandingCallPolicy,
+  ProductUnderstandingModel,
+} from "./model-port";
 import { PRODUCT_UNDERSTANDING_PROMPT_VERSION } from "./prompts";
 import {
   productUnderstandingInputV1Schema,
@@ -309,14 +312,20 @@ export async function executeOrResumeEvidenceResearch(options: {
         snapshot,
         candidateListingId,
       });
+      const callPolicy: ProductUnderstandingCallPolicy = {
+        requireCriterionBinding: snapshot.run.phase === "deepening",
+      };
       const startedAt = new Date();
       unsafeToRelease = true;
-      const result = await options.dependencies.model.understand(input);
+      const result = await options.dependencies.model.understand(
+        input,
+        callPolicy,
+      );
       const scopedResult =
         result.status === "completed"
           ? productUnderstandingProviderWireV1SchemaForInput({
               input,
-              requireCriterionBinding: snapshot.run.phase === "deepening",
+              requireCriterionBinding: callPolicy.requireCriterionBinding,
             }).safeParse(result.value)
           : null;
       await recordCandidateUnderstanding({

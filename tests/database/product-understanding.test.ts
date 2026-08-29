@@ -29,6 +29,7 @@ import {
   FakeEvidenceSearchProvider,
   FakeProductUnderstandingModel,
 } from "../../src/features/product-understanding/fakes";
+import type { ProductUnderstandingCallPolicy } from "../../src/features/product-understanding/model-port";
 import {
   claimEvidenceResearch,
   EvidenceResearchAuthorityError,
@@ -244,11 +245,17 @@ const understandingMetadata = {
 function assessmentOnlyModel(status: "meets" | "uncertain" = "uncertain") {
   const calls: Parameters<FakeProductUnderstandingModel["understand"]>[0][] =
     [];
+  const policies: ProductUnderstandingCallPolicy[] = [];
   return {
     calls,
+    policies,
     understand: vi.fn(
-      (input: Parameters<FakeProductUnderstandingModel["understand"]>[0]) => {
+      (
+        input: Parameters<FakeProductUnderstandingModel["understand"]>[0],
+        policy: ProductUnderstandingCallPolicy,
+      ) => {
         calls.push(input);
+        policies.push(policy);
         const source = input.sources.find(
           ({ kind }) => kind !== "listing_image",
         );
@@ -395,16 +402,17 @@ describe("evidence-backed product understanding persistence", () => {
     expect(model.calls).toHaveLength(modelCallCount);
   });
 
-  it("persists an exact title descriptor as evidence and projects a soft appearance trade-off", async () => {
+  it("keeps first-pass and reassessment model calls broad while preserving a title trade-off", async () => {
     const { session, run } = await seedSearch(appearanceContextModel());
     await connection.db
       .update(candidateListings)
       .set({ title: "Mesh Gaming Chair with Footrest" })
       .where(eq(candidateListings.taskId, session.taskId));
+    const firstPassModel = assessmentOnlyModel("uncertain");
     const dependencies = {
       db: connection.db,
       evidenceProvider: new FakeEvidenceSearchProvider(),
-      model: assessmentOnlyModel("uncertain"),
+      model: firstPassModel,
       modelIdentity: {
         provider: "fixture" as const,
         model: "fixture-product-understanding",
@@ -416,6 +424,12 @@ describe("evidence-backed product understanding persistence", () => {
       taskId: session.taskId,
       searchRunId: run.id,
     });
+    expect(firstPassModel.policies.length).toBeGreaterThan(0);
+    expect(
+      firstPassModel.policies.every(
+        ({ requireCriterionBinding }) => !requireCriterionBinding,
+      ),
+    ).toBe(true);
     const titleAssessment = completed.assessments.find(
       ({ relation }) => relation === "direct_title_preference_mismatch",
     );
@@ -461,10 +475,11 @@ describe("evidence-backed product understanding persistence", () => {
       taskId: session.taskId,
       candidateListingId: titleAssessment.candidateListingId,
     });
+    const reassessmentModel = assessmentOnlyModel("uncertain");
     const reassessed = await executeOrResumeEvidenceResearch({
       dependencies: {
         ...dependencies,
-        model: assessmentOnlyModel("uncertain"),
+        model: reassessmentModel,
       },
       taskId: session.taskId,
       searchRunId: run.id,
@@ -472,6 +487,9 @@ describe("evidence-backed product understanding persistence", () => {
       savedCandidateListingIds: [titleAssessment.candidateListingId],
     });
     expect(reassessed.run.id).not.toBe(completed.run.id);
+    expect(reassessmentModel.policies).toEqual([
+      { requireCriterionBinding: false },
+    ]);
     const [storedDescriptor] = await connection.db
       .select({
         observationRunId: productObservations.researchRunId,
@@ -567,7 +585,7 @@ describe("evidence-backed product understanding persistence", () => {
     ).toBe(true);
   });
 
-  it("scopes targeted model work and assessment supersession to one exact authoritative criterion", async () => {
+  it("requires criterion binding while scoping targeted supersession to one exact criterion", async () => {
     const { session, run } = await seedSearch(fourCriteriaContextModel());
     const initialModel = assessmentOnlyModel();
     const baseDependencies = {
@@ -586,6 +604,12 @@ describe("evidence-backed product understanding persistence", () => {
       searchRunId: run.id,
       mode: "first_pass",
     });
+    expect(initialModel.policies.length).toBeGreaterThan(0);
+    expect(
+      initialModel.policies.every(
+        ({ requireCriterionBinding }) => !requireCriterionBinding,
+      ),
+    ).toBe(true);
     const candidateListingId = first.assessments[0]?.candidateListingId;
     if (candidateListingId === undefined) {
       throw new Error("Expected a first-pass candidate");
@@ -625,6 +649,7 @@ describe("evidence-backed product understanding persistence", () => {
     });
 
     expect(targetedModel.calls).toHaveLength(1);
+    expect(targetedModel.policies).toEqual([{ requireCriterionBinding: true }]);
     expect(targetedModel.calls[0]?.criteria).toEqual([
       expect.objectContaining({ ordinal: 0, label: "Battery life" }),
     ]);
@@ -676,6 +701,48 @@ describe("evidence-backed product understanding persistence", () => {
         expect(lineage).toEqual([previous]);
       }
     }
+  });
+
+  it("requires criterion binding for every automatic deepening model call", async () => {
+    const { session, run } = await seedSearch(fourCriteriaContextModel());
+    const firstPassModel = assessmentOnlyModel();
+    const baseDependencies = {
+      db: connection.db,
+      evidenceProvider: new FakeEvidenceSearchProvider(),
+      model: firstPassModel,
+      modelIdentity: {
+        provider: "fixture" as const,
+        model: "fixture-product-understanding",
+        promptVersion: "product-understanding-v1",
+      },
+    };
+    await executeOrResumeEvidenceResearch({
+      dependencies: baseDependencies,
+      taskId: session.taskId,
+      searchRunId: run.id,
+      mode: "first_pass",
+    });
+
+    const deepeningModel = assessmentOnlyModel("meets");
+    const deepening = await executeOrResumeEvidenceResearch({
+      dependencies: {
+        ...baseDependencies,
+        evidenceProvider: new FakeEvidenceSearchProvider(),
+        model: deepeningModel,
+      },
+      taskId: session.taskId,
+      searchRunId: run.id,
+      mode: "deepening",
+    });
+
+    expect(deepening.run.phase).toBe("deepening");
+    expect(deepeningModel.calls.length).toBeGreaterThan(0);
+    expect(deepeningModel.policies).toHaveLength(deepeningModel.calls.length);
+    expect(
+      deepeningModel.policies.every(
+        ({ requireCriterionBinding }) => requireCriterionBinding,
+      ),
+    ).toBe(true);
   });
 
   it("fails malformed non-target model output closed without changing any current assessment", async () => {

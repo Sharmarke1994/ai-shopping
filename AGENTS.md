@@ -20,12 +20,13 @@ readiness, hard-unknown-aware ordering, progressive evidence research, exact
 listing reject/undo, and decision-oriented saved comparison. It remains
 unmerged in draft stacked PR #12. Independently reviewed pre-correction head
 `c28c891885462eb2990f0b098f3817e744afdec0` is green; the final bounded
-correction is implemented, but its single fresh release proof completed mouse,
-failed closed during chair product-understanding output and did not reach
-vacuum. Exact correction/evidence commit
-`76549c7abcefb81429d5ddda7c8f0069c2be78ce` is not release-accepted. Do not
-rerun the proof, merge or start V0-09 before independent review of that exact
-correction/failure checkpoint.
+correction and focused product-understanding contract alignment are
+implemented. Exactly one newly authorized fresh release proof completed the
+ergonomic-mouse, office-chair and cordless-vacuum journeys successfully with
+real Terra + Serper calls and a disposable PostgreSQL database. The sanitized
+success artifact replaces the prior fail-closed diagnostic artifact. V0-08 is
+still pending independent release review: do not rerun the proof, merge or
+start V0-09 before that review accepts the exact pushed checkpoint.
 ProductIdentity, fuzzy deduplication, broad crawling, rejection learning, auth,
 deployment and V0-09 have not started. Do not broaden a task because later work
 is documented.

@@ -16,18 +16,19 @@ and comparison are meaningfully better than beginning with Google.
   `149f93cd43092996e20621e8976003b341a82c6a`.
 - Independently reviewed V0-08 pre-correction head:
   `c28c891885462eb2990f0b098f3817e744afdec0` in draft stacked PR #12.
-- The final bounded six-issue correction and hardened one-shot proof harness are
-  committed with the honest failure evidence at
-  `76549c7abcefb81429d5ddda7c8f0069c2be78ce`. Their single fresh release
-  attempt completed mouse, failed closed during chair product-understanding
-  output and did not reach vacuum. Release acceptance is therefore still open;
-  the honest failure artifact replaces the stale success artifact.
+- The final bounded six-issue correction and hardened one-shot proof harness
+  were committed with honest diagnostic evidence at
+  `76549c7abcefb81429d5ddda7c8f0069c2be78ce`. The subsequent focused
+  product-understanding contract alignment has now completed exactly one newly
+  authorized fresh mouse/chair/vacuum release proof. Sanitized success evidence
+  replaces the earlier failure artifact. Release acceptance remains open only
+  for independent review of the exact delivered checkpoint.
 - Correction/evidence plus ledger delivery head
   `4e891f81f581d8c2614bbdf76bf5ae1073399c43` passed exact-head quality,
   PostgreSQL persistence and browser-smoke in GitHub run `33228469926`.
 - V0-07 remains draft stacked PR #11 and is not merged. PR #12 remains draft,
   stacked and unmerged. Do not rerun the live proof, merge, or begin V0-09
-  without independent review of the failure checkpoint.
+  without independent review of the successful release-evidence checkpoint.
 - Original V0-05 checkout and draft PR #9 remain separate, unmodified,
   unmerged and formally unaccepted. The 21/21 Terra rule has not been weakened
   and Luna remains diagnostic only. V0-08 does not redefine that separate
@@ -265,10 +266,11 @@ V0-08 is implemented in the active isolated branch. The original bounded review
 and the final six-issue code correction review are complete. Draft stacked PR
 #12 is open, mergeable and intentionally unmerged. The independently reviewed
 pre-correction head is `c28c891885462eb2990f0b098f3817e744afdec0`;
-the correction/evidence checkpoint is
-`76549c7abcefb81429d5ddda7c8f0069c2be78ce`. Its ledger delivery head
-`4e891f81f581d8c2614bbdf76bf5ae1073399c43` is exact-head green; the current
-follow-up records only that CI result.
+the prior fail-closed diagnostic checkpoint is
+`76549c7abcefb81429d5ddda7c8f0069c2be78ce`, with its historical ledger head
+`4e891f81f581d8c2614bbdf76bf5ae1073399c43`. The current checkpoint adds only
+the bounded focused model-contract alignment and one successful fresh release
+artifact; its exact pushed head and CI are recorded after delivery.
 
 - Decision readiness is derived, qualitative and score-free: qualified, needs
   verification, trade-off or ineligible.
@@ -322,14 +324,19 @@ follow-up records only that CI result.
   provider/model call.
 - The first destination-cost diagnostic spent 25 merchant lookups for only one
   useful top-card direct link. The bounded policy now checks at most the leading
-  distinct merchant per shopping query. The corrected one-shot attempt stopped
-  after 9 shopping and 6 merchant-resolution requests.
-- Fresh real Terra + Serper evidence completed ergonomic mouse plus refinement.
-  Office-chair targeted research then failed closed at product-understanding
-  structured-output validation; cordless vacuum was not started. Sanitized
-  evidence is in
-  `docs/evals/v0-08-live-founder-proof-failure.{json,md}` and is explicitly not
-  release evidence.
+  distinct merchant per shopping query. The successful release run used 12
+  shopping and 7 merchant-resolution requests; direct retailer coverage remains
+  thin and is measured rather than hidden.
+- Focused deepening now has an explicit server-owned call policy. Its provider
+  schema structurally requires non-null exact local criterion ordinals and one
+  assessment per supplied criterion, while zero observations plus an honest
+  uncertain assessment remains valid. First pass and reassessment remain broad;
+  the authoritative post-call validator remains fail-closed.
+- Exactly one newly authorized fresh real Terra + Serper proof completed
+  ergonomic mouse plus refinement, office chair and cordless vacuum. Every
+  named target used the focused `product-understanding-v2` contract, advanced
+  one assessment generation and wrote zero out-of-scope assessments. Sanitized
+  release evidence is in `docs/evals/v0-08-live-founder-proof.{json,md}`.
 - Eight production-rendered desktop/mobile screenshots cover automatic,
   decision, comparison, rejection, refinement, verification and partial
   research states in `docs/screenshots/v0-08/`.
@@ -339,13 +346,12 @@ V0-09 has not started.
 
 ## Next validated checkpoints
 
-1. Stop for independent review of the final correction delta and exact one-shot
-   failure evidence in draft stacked PR #12. Do not merge any stacked PR, rerun
-   the live proof or start V0-09.
-2. The reviewer must decide whether the persisted
-   `invalid_model_output` evidence warrants a bounded diagnostic improvement or
-   a newly authorized fresh proof. Do not guess a prompt/schema fix from a raw
-   response that was intentionally not stored.
+1. Stop for independent review of the focused model-contract alignment and
+   exact one-shot successful release evidence in draft stacked PR #12. Do not
+   merge any stacked PR, rerun the live proof or start V0-09.
+2. The reviewer must verify that the exact targeted contract, generation,
+   scope, cost, partial-failure and category-honesty evidence is non-vacuous.
+   No additional proof is authorized from this checkpoint.
 3. Only after V0-08 is independently accepted should the measured
    leave-the-app gaps choose the next product layer. Direct destination coverage
    and richer decision-critical sources remain real gaps; do not turn them into
@@ -375,12 +381,13 @@ V0-09 has not started.
 ## Latest verification
 
 - `pnpm check`: formatting, lint, generated route types, strict TypeScript,
-  216/216 deterministic unit/component tests and the production build pass on
-  the final correction tree.
-- Focused V0-08 PostgreSQL suite: 20/20 passes, including exact gap targeting,
-  A/B/C/D generation identity, malformed non-target output, active reservation,
-  cross-stage target corruption, title evidence and failed-deep preservation.
-- Full PostgreSQL suite: 113 functional tests pass. The sole local failure is
+  225/225 deterministic unit/component tests and the production build pass on
+  the model-contract-aligned tree.
+- Focused V0-08 PostgreSQL suite: 21/21 passes, including explicit broad versus
+  focused model-call policy, exact gap targeting, A/B/C/D generation identity,
+  malformed non-target output, active reservation, cross-stage target
+  corruption, title evidence and failed-deep preservation.
+- Full PostgreSQL suite: 114 functional tests pass. The sole local failure is
   the intentional PostgreSQL 17.6 version assertion against Homebrew 17.11; the
   repository pin remains unchanged.
 - `pnpm test:e2e`: 8/8 Chromium tests pass, including automatic first/deep
@@ -391,23 +398,22 @@ V0-09 has not started.
 - Eight production-server desktop/mobile/partial screenshots were regenerated,
   passed explicit horizontal-overflow checks and were inspected without Next
   development chrome.
-- The single corrected live attempt generated at
-  `2026-08-29T02:00:38.691Z` is **not accepted**. Mouse completed; chair's exact
-  `Lower-back support` Serper search succeeded with zero results, then one Terra
-  invocation produced two fail-closed `invalid_model_output` attempt rows. The
-  prior generation-1 assessment remained current, deep status stayed partial
-  and vacuum was not reached.
-- Logical port counts at that stop were interpretation 3, action 3, shopping 9,
-  merchant resolution 6, evidence search 18 and product understanding 20.
-  These are not transport-retry counts.
-- The old success JSON/Markdown were removed before the run. The failure JSON
-  and Markdown preserve the completed mouse flow and active chair DB/decision
-  snapshot, contain no repository credentials, and strip known third-party
-  tracking parameters.
-- Exact delivery head `4e891f81f581d8c2614bbdf76bf5ae1073399c43`
+- Exactly one newly authorized fresh live attempt generated at
+  `2026-08-29T10:39:53.483Z` completed mouse, chair and vacuum. Each exact named
+  target used a focused one-criterion provider contract, advanced exactly one
+  current generation and wrote one in-scope assessment with no out-of-scope
+  assessment writes. Mouse also proved one prevented duplicate call; vacuum
+  proved an honest controlled partial run after a real provider response.
+- Logical port counts were interpretation 4, action 4, shopping 12, merchant
+  resolution 7, evidence search 27 and product understanding 29. These are
+  logical application/port invocations, not transport-retry counts.
+- The prior failure JSON/Markdown were removed before success evidence was
+  written. The success JSON and Markdown contain no repository credentials or
+  private local paths and strip known third-party tracking parameters.
+- Historical delivery head `4e891f81f581d8c2614bbdf76bf5ae1073399c43`
   passed GitHub quality, PostgreSQL persistence and browser-smoke in run
-  `33228469926`. PR #12 remains draft and unmerged; this CI-record follow-up
-  changes documentation only.
+  `33228469926`. The successful release-evidence delta still requires its exact
+  pushed-head CI before independent review. PR #12 remains draft and unmerged.
 
 ## Exact resume instructions
 
@@ -416,19 +422,20 @@ V0-09 has not started.
    `codex/v0-08-founder-decision-loop`; confirm branch, stacked base, exact head
    and tree state first.
 2. Read this file, `docs/plans/v0-08.md` and the concise
-   `docs/evals/v0-08-live-founder-proof-failure.md`. Do not reopen accepted
+   `docs/evals/v0-08-live-founder-proof.md`. Do not reopen accepted
    V0-03/V0-04/V0-06/V0-07 architecture.
 3. Preserve V0-05 PR #9, V0-06 PR #10 and V0-07 PR #11 exactly. Do not merge
    them and do not weaken V0-05's Terra rule.
 4. Do not rerun the live three-category proof from this checkpoint. First obtain
-   independent review of the exact failure artifact and correction delta. If
-   review reports a material deterministic issue, make only a bounded V0-08
-   correction and rerun affected plus full deterministic gates. Never weaken
-   unknown, evidence, money, task authority or revision boundaries.
+   independent review of the exact success artifact and contract-alignment
+   delta. If review reports a material deterministic issue, make only a bounded
+   V0-08 correction and rerun affected plus full deterministic gates; a new live
+   proof still requires explicit authorization. Never weaken unknown, evidence,
+   money, task authority or revision boundaries.
 5. Keep the V0-08 PR draft and stacked on
    `codex/v0-07-evidence-assessment`. Do not begin V0-09, ProductIdentity,
    crawling, auth, deployment, checkout or affiliate work.
 6. Confirm exact-head PR quality/persistence/browser-smoke are green, leave the
-   worktree clean and stop for independent failure review. V0-08 is not release
-   accepted until a separately authorized fresh proof satisfies all three
-   category requirements.
+   worktree clean and stop for independent release-evidence review. V0-08 is not
+   accepted until that review approves the already completed three-category
+   proof.

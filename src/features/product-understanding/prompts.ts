@@ -1,4 +1,6 @@
-export const PRODUCT_UNDERSTANDING_PROMPT_VERSION = "product-understanding-v1";
+import type { ProductUnderstandingCallPolicy } from "./model-port";
+
+export const PRODUCT_UNDERSTANDING_PROMPT_VERSION = "product-understanding-v2";
 
 export const PRODUCT_UNDERSTANDING_INSTRUCTIONS = `You extract bounded product observations from supplied evidence and assess them against supplied shopper criteria.
 
@@ -31,3 +33,19 @@ ASSESSMENTS
 - Reference only observation localRefs you emitted.
 
 Keep claims concise, factual and shopper-readable.`;
+
+const PRODUCT_UNDERSTANDING_FOCUSED_INSTRUCTIONS = `
+
+FOCUSED CALL
+- This call addresses only the supplied target criteria. Omit unrelated facts.
+- Every observation must address exactly one supplied criterion and must use its non-null local criterionOrdinal.
+- If no supplied source supports a criterion, emit no observation for it. Do not fabricate evidence.
+- Still emit exactly one assessment for every supplied criterion. With no supporting observation, use uncertain and an empty observationRefs array.`;
+
+export function productUnderstandingInstructionsForCall(
+  policy: ProductUnderstandingCallPolicy,
+) {
+  return policy.requireCriterionBinding
+    ? `${PRODUCT_UNDERSTANDING_INSTRUCTIONS}${PRODUCT_UNDERSTANDING_FOCUSED_INSTRUCTIONS}`
+    : PRODUCT_UNDERSTANDING_INSTRUCTIONS;
+}
