@@ -18,8 +18,9 @@ unmerged PR. V0-07 is independently accepted at
 isolated V0-08 branch is the current checkpoint: deterministic decision
 readiness, hard-unknown-aware ordering, progressive evidence research, exact
 listing reject/undo, and decision-oriented saved comparison. It remains
-unmerged; its bounded independent review is complete, and it must stop for
-founder review after exact-head CI.
+unmerged at implementation checkpoint
+`6a5bd991bf70237acb6b25fbe2f73519cf0561f6`; its bounded independent review is
+complete, and it must stop for founder review after exact-head CI.
 ProductIdentity, fuzzy deduplication, broad crawling, rejection learning, auth,
 deployment and V0-09 have not started. Do not broaden a task because later work
 is documented.

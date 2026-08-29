@@ -14,10 +14,12 @@ and comparison are meaningfully better than beginning with Google.
 - Active branch: `codex/v0-08-founder-decision-loop`, stacked exactly on the
   independently accepted V0-07 head
   `149f93cd43092996e20621e8976003b341a82c6a`.
+- Bounded V0-08 implementation, proof and review-correction checkpoint:
+  `6a5bd991bf70237acb6b25fbe2f73519cf0561f6`.
 - V0-07 remains draft stacked PR #11 and is not merged. V0-08 is implemented,
-  founder-dogfooded and locally verified; its final commit, draft stacked PR
-  and exact-head CI are the current delivery checkpoint. Do not merge or begin
-  V0-09.
+  founder-dogfooded, independently reviewed and locally verified; its push,
+  draft stacked PR and exact-head CI are the current delivery checkpoint. Do
+  not merge or begin V0-09.
 - Original V0-05 checkout and draft PR #9 remain separate, unmodified,
   unmerged and formally unaccepted. The 21/21 Terra rule has not been weakened
   and Luna remains diagnostic only. V0-08 does not redefine that separate
@@ -253,7 +255,8 @@ absence of evidence.
 
 V0-08 is implemented in the active isolated branch. Its one bounded independent
 review is complete and all four material findings are closed. It awaits its
-final commit, stacked draft PR and exact-head CI.
+stacked draft PR and exact-head CI; implementation and evidence are committed at
+`6a5bd991bf70237acb6b25fbe2f73519cf0561f6`.
 
 - Decision readiness is derived, qualitative and score-free: qualified, needs
   verification, trade-off or ineligible.
