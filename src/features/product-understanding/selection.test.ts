@@ -278,4 +278,46 @@ describe("selective evidence research", () => {
       "Battery life",
     ]);
   });
+
+  it("selects one exact unresolved criterion without blocking a distinct target", () => {
+    const { brief, run } = fixture();
+    const [candidate] = selectResearchCandidates({ brief, run });
+    if (candidate === undefined) throw new Error("Expected a candidate");
+    const batteryId = brief.items[1]!.criterionId;
+    const comfortId = brief.items[2]!.criterionId;
+    const base = {
+      brief,
+      run,
+      orderedCandidateIds: [candidate.listing.id],
+      assessments: [],
+      savedCandidateListingIds: new Set<string>(),
+      targetCandidateListingId: candidate.listing.id,
+      limit: 1,
+    } as const;
+
+    expect(
+      selectDeepResearchCandidates({
+        ...base,
+        targetCriterionId: batteryId,
+      })[0]?.criterionIds,
+    ).toEqual([batteryId]);
+    expect(
+      selectDeepResearchCandidates({
+        ...base,
+        targetCriterionId: batteryId,
+        completedCriterionIdsByCandidate: new Map([
+          [candidate.listing.id, new Set([batteryId])],
+        ]),
+      }),
+    ).toEqual([]);
+    expect(
+      selectDeepResearchCandidates({
+        ...base,
+        targetCriterionId: comfortId,
+        completedCriterionIdsByCandidate: new Map([
+          [candidate.listing.id, new Set([batteryId])],
+        ]),
+      })[0]?.criterionIds,
+    ).toEqual([comfortId]);
+  });
 });

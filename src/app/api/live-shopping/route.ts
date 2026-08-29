@@ -18,6 +18,7 @@ import {
   setLiveListingRejected,
   startLiveShopping,
 } from "@/features/live-shopping/application";
+import { EvidenceResearchAuthorityError } from "@/features/product-understanding/persistence";
 import {
   liveSessionIdSchema,
   liveShoppingErrorSchema,
@@ -91,7 +92,8 @@ function safeError(error: unknown) {
   }
   if (
     error instanceof LiveShoppingQuestionUnavailableError ||
-    error instanceof LiveShoppingSearchUnavailableError
+    error instanceof LiveShoppingSearchUnavailableError ||
+    error instanceof EvidenceResearchAuthorityError
   ) {
     return response(
       { error: { code: "operation_unavailable", message: error.message } },

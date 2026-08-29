@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { productUnderstandingProviderWireV1Schema } from "./provider-wire";
+import {
+  productUnderstandingInputV1Schema,
+  productUnderstandingProviderWireV1Schema,
+  productUnderstandingProviderWireV1SchemaForInput,
+} from "./provider-wire";
 
 function proposal(options: {
   observationCriterionOrdinal: number | null;
@@ -112,6 +116,85 @@ describe("product-understanding provider wire", () => {
           },
         }),
       ).success,
+    ).toBe(false);
+  });
+
+  it("rejects non-target ordinals and criterion-free observations for a focused call", () => {
+    const input = productUnderstandingInputV1Schema.parse({
+      schemaVersion: 1,
+      market: { country: "GB", language: "en-GB", currency: "GBP" },
+      candidate: {
+        title: "Exact candidate",
+        merchant: null,
+        observedPriceText: null,
+      },
+      criteria: [
+        {
+          ordinal: 0,
+          label: "Battery life",
+          definition: "Battery endurance",
+          strength: "strong_preference",
+          targetSemantics: "qualitative",
+          value: {
+            schemaVersion: 1,
+            kind: "qualitative",
+            mode: "text",
+            text: "long battery life",
+          },
+        },
+      ],
+      sources: [
+        {
+          ordinal: 0,
+          role: "manufacturer",
+          kind: "organic_result",
+          title: "Exact candidate specifications",
+          url: "https://example.test/specifications",
+          excerpt: "The manufacturer states a battery specification.",
+        },
+      ],
+    });
+    const focusedSchema = productUnderstandingProviderWireV1SchemaForInput({
+      input,
+      requireCriterionBinding: true,
+    });
+    expect(
+      focusedSchema.safeParse({
+        providerSchemaVersion: 1,
+        observations: [],
+        assessments: [
+          {
+            criterionOrdinal: 1,
+            status: "uncertain",
+            relation: "attempted_non_target",
+            explanation: "This ordinal was not supplied to the model.",
+            observationRefs: [],
+          },
+        ],
+      }).success,
+    ).toBe(false);
+    expect(
+      focusedSchema.safeParse({
+        providerSchemaVersion: 1,
+        observations: [
+          {
+            localRef: "generic_fact",
+            sourceOrdinal: 0,
+            criterionOrdinal: null,
+            support: "supported",
+            observationKind: "source_assertion",
+            propertyLabel: "Unrelated fact",
+            claim: "A generic fact must not escape a focused extraction.",
+            value: {
+              schemaVersion: 1,
+              kind: "text",
+              text: "unrelated",
+            },
+            derivation: "model_text",
+          },
+        ],
+        assessments: [],
+      }).success,
     ).toBe(false);
   });
 });

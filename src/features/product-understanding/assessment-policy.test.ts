@@ -8,7 +8,10 @@ import {
   productObservationV1Schema,
 } from "./contracts";
 import {
+  DIRECT_TITLE_DESCRIPTOR_PROPERTY,
+  directTitleSoftContradiction,
   guardCriterionAssessment,
+  isPurchasePriceCriterion,
   orderCandidatesByAssessments,
 } from "./assessment-policy";
 
@@ -88,6 +91,8 @@ function evidence(options: {
     | "independent_review"
     | "retailer_review_aggregate"
     | "other";
+  observationKind?: "structured_field" | "source_assertion";
+  derivation?: "deterministic" | "model_text";
 }) {
   const source = evidenceSourceV1Schema.parse({
     schemaVersion: 1,
@@ -125,13 +130,18 @@ function evidence(options: {
     conceptId: options.conceptId ?? null,
     support: "supported",
     observationKind:
-      options.role === "visual" ? "visual_inference" : "source_assertion",
+      options.role === "visual"
+        ? "visual_inference"
+        : (options.observationKind ?? "source_assertion"),
     propertyLabel: options.propertyLabel,
     claim: options.claim,
     value: options.value,
-    derivation: options.role === "visual" ? "model_visual" : "model_text",
-    model: "fixture",
-    promptVersion: "fixture-v1",
+    derivation:
+      options.role === "visual"
+        ? "model_visual"
+        : (options.derivation ?? "model_text"),
+    model: options.derivation === "deterministic" ? null : "fixture",
+    promptVersion: options.derivation === "deterministic" ? null : "fixture-v1",
     observedAt: new Date("2026-01-01T00:00:00Z"),
     fingerprint: "b".repeat(64),
   });
@@ -139,6 +149,52 @@ function evidence(options: {
 }
 
 describe("criterion assessment guard", () => {
+  it("recognises only monetary purchase targets as purchase-price criteria", () => {
+    expect(
+      isPurchasePriceCriterion(
+        item({
+          label: "Purchase budget",
+          targetSemantics: "exact",
+          semanticValue: {
+            schemaVersion: 1,
+            kind: "money",
+            mode: "ceiling",
+            amountMinor: 25_000,
+            currency: "GBP",
+          },
+        }),
+      ),
+    ).toBe(true);
+    expect(
+      isPurchasePriceCriterion(
+        item({
+          label: "Delivery budget",
+          targetSemantics: "exact",
+          semanticValue: {
+            schemaVersion: 1,
+            kind: "money",
+            mode: "ceiling",
+            amountMinor: 2_000,
+            currency: "GBP",
+          },
+        }),
+      ),
+    ).toBe(false);
+    expect(
+      isPurchasePriceCriterion(
+        item({
+          label: "Budget aesthetic",
+          targetSemantics: "qualitative",
+          semanticValue: {
+            schemaVersion: 1,
+            kind: "qualitative",
+            mode: "text",
+            text: "does not look cheap",
+          },
+        }),
+      ),
+    ).toBe(false);
+  });
   it("treats a direct ceiling breach as a conflict", () => {
     const assessment = guardCriterionAssessment({
       item: item({
@@ -755,6 +811,361 @@ describe("criterion assessment guard", () => {
     expect(assessment).toMatchObject({
       status: "conflicts",
       relation: "visual_preference_mismatch",
+    });
+  });
+
+  it("turns an explicit listing-title soft mismatch into an evidenced trade-off", () => {
+    const appearance = item({
+      label: "Chair appearance",
+      strength: "preference",
+      targetSemantics: "qualitative",
+      semanticValue: {
+        schemaVersion: 1,
+        kind: "qualitative",
+        mode: "text",
+        text: "not huge or gamer-looking",
+      },
+    });
+    const gamingChair = persistedCandidateListingSchema.parse({
+      ...listing,
+      title: "Mesh Gaming Chair with Footrest",
+    });
+    const directTitle = evidence({
+      conceptId: appearance.conceptId,
+      propertyLabel: DIRECT_TITLE_DESCRIPTOR_PROPERTY,
+      claim: "The exact listing title uses “Gaming”.",
+      value: {
+        schemaVersion: 1,
+        kind: "text",
+        text: "Gaming",
+      },
+      role: "listing",
+      observationKind: "structured_field",
+      derivation: "deterministic",
+    });
+    expect(
+      guardCriterionAssessment({
+        item: appearance,
+        listing: gamingChair,
+        observations: [directTitle],
+        proposal: null,
+      }),
+    ).toMatchObject({
+      status: "conflicts",
+      relation: "direct_title_preference_mismatch",
+      observationIds: [directTitle.observation.id],
+    });
+
+    const inadmissibleDescriptors = [
+      evidence({
+        conceptId: randomUUID(),
+        propertyLabel: DIRECT_TITLE_DESCRIPTOR_PROPERTY,
+        claim: "The exact listing title uses “Gaming”.",
+        value: { schemaVersion: 1, kind: "text", text: "Gaming" },
+        role: "listing",
+        observationKind: "structured_field",
+        derivation: "deterministic",
+      }),
+      evidence({
+        conceptId: appearance.conceptId,
+        propertyLabel: DIRECT_TITLE_DESCRIPTOR_PROPERTY,
+        claim: "An independent page uses “Gaming”.",
+        value: { schemaVersion: 1, kind: "text", text: "Gaming" },
+        role: "independent_review",
+        observationKind: "source_assertion",
+        derivation: "model_text",
+      }),
+      evidence({
+        conceptId: appearance.conceptId,
+        propertyLabel: DIRECT_TITLE_DESCRIPTOR_PROPERTY,
+        claim: "A model says the title uses “Gaming”.",
+        value: { schemaVersion: 1, kind: "text", text: "Gaming" },
+        role: "listing",
+        observationKind: "source_assertion",
+        derivation: "model_text",
+      }),
+      evidence({
+        conceptId: appearance.conceptId,
+        propertyLabel: DIRECT_TITLE_DESCRIPTOR_PROPERTY,
+        claim: "The exact listing title uses “Mesh”.",
+        value: { schemaVersion: 1, kind: "text", text: "Mesh" },
+        role: "listing",
+        observationKind: "structured_field",
+        derivation: "deterministic",
+      }),
+    ];
+    for (const marker of inadmissibleDescriptors) {
+      expect(
+        guardCriterionAssessment({
+          item: appearance,
+          listing: gamingChair,
+          observations: [marker],
+          proposal: null,
+        }),
+      ).toMatchObject({
+        status: "uncertain",
+        relation: "insufficient_evidence",
+      });
+    }
+
+    const hardAppearance = { ...appearance, strength: "hard" as const };
+    expect(
+      guardCriterionAssessment({
+        item: hardAppearance,
+        listing: gamingChair,
+        observations: [directTitle],
+        proposal: null,
+      }),
+    ).toMatchObject({
+      status: "uncertain",
+      relation: "insufficient_evidence",
+    });
+  });
+
+  it("applies direct-title soft exclusions across categories without broad token guessing", () => {
+    const pattern = item({
+      label: "Pattern",
+      strength: "strong_preference",
+      targetSemantics: "categorical",
+      semanticValue: {
+        schemaVersion: 1,
+        kind: "categorical",
+        operator: "exclude",
+        values: ["floral"],
+      },
+    });
+    const floralDuvet = persistedCandidateListingSchema.parse({
+      ...listing,
+      title: "Soft Floral Cotton Duvet Cover",
+    });
+    const directTitle = evidence({
+      conceptId: pattern.conceptId,
+      propertyLabel: DIRECT_TITLE_DESCRIPTOR_PROPERTY,
+      claim: "The exact listing title uses “Floral”.",
+      value: {
+        schemaVersion: 1,
+        kind: "text",
+        text: "Floral",
+      },
+      role: "listing",
+      observationKind: "structured_field",
+      derivation: "deterministic",
+    });
+    expect(
+      guardCriterionAssessment({
+        item: pattern,
+        listing: floralDuvet,
+        observations: [directTitle],
+        proposal: null,
+      }),
+    ).toMatchObject({
+      status: "conflicts",
+      relation: "direct_title_preference_mismatch",
+    });
+
+    const leatherAvoidance = item({
+      label: "Material",
+      strength: "preference",
+      targetSemantics: "qualitative",
+      semanticValue: {
+        schemaVersion: 1,
+        kind: "qualitative",
+        mode: "text",
+        text: "avoid leather",
+      },
+    });
+    expect(
+      guardCriterionAssessment({
+        item: leatherAvoidance,
+        listing: floralDuvet,
+        observations: [
+          evidence({
+            conceptId: leatherAvoidance.conceptId,
+            propertyLabel: DIRECT_TITLE_DESCRIPTOR_PROPERTY,
+            claim: "This deliberately unrelated marker must not be trusted.",
+            value: {
+              schemaVersion: 1,
+              kind: "text",
+              text: "Floral",
+            },
+            role: "listing",
+            observationKind: "structured_field",
+            derivation: "deterministic",
+          }),
+        ],
+        proposal: null,
+      }),
+    ).toMatchObject({
+      status: "uncertain",
+      relation: "insufficient_evidence",
+    });
+  });
+
+  it("requires exact, affirmatively titled negative phrases before inferring a soft mismatch", () => {
+    const appearance = item({
+      label: "Chair appearance",
+      strength: "preference",
+      targetSemantics: "qualitative",
+      semanticValue: {
+        schemaVersion: 1,
+        kind: "qualitative",
+        mode: "text",
+        text: "not huge or gamer-looking",
+      },
+    });
+    const roseGoldExclusion = item({
+      label: "Finish",
+      strength: "preference",
+      targetSemantics: "categorical",
+      semanticValue: {
+        schemaVersion: 1,
+        kind: "categorical",
+        operator: "exclude",
+        values: ["rose gold"],
+      },
+    });
+    const flowerAvoidance = item({
+      label: "Pattern",
+      strength: "preference",
+      targetSemantics: "qualitative",
+      semanticValue: {
+        schemaVersion: 1,
+        kind: "qualitative",
+        mode: "text",
+        text: "avoid flower",
+      },
+    });
+    const flowerAppearanceAvoidance = item({
+      label: "Pattern",
+      strength: "preference",
+      targetSemantics: "qualitative",
+      semanticValue: {
+        schemaVersion: 1,
+        kind: "qualitative",
+        mode: "text",
+        text: "not flower-looking",
+      },
+    });
+    const positiveAppearance = item({
+      label: "Chair appearance",
+      strength: "preference",
+      targetSemantics: "qualitative",
+      semanticValue: {
+        schemaVersion: 1,
+        kind: "qualitative",
+        mode: "text",
+        text: "gamer-looking",
+      },
+    });
+    const nonNegativeFrame = item({
+      label: "Comfort",
+      strength: "preference",
+      targetSemantics: "qualitative",
+      semanticValue: {
+        schemaVersion: 1,
+        kind: "qualitative",
+        mode: "text",
+        text: "without sacrificing comfort",
+      },
+    });
+    const toleratedMaterial = item({
+      label: "Material",
+      strength: "preference",
+      targetSemantics: "qualitative",
+      semanticValue: {
+        schemaVersion: 1,
+        kind: "qualitative",
+        mode: "text",
+        text: "don't mind leather",
+      },
+    });
+    const additiveColour = item({
+      label: "Colour",
+      strength: "preference",
+      targetSemantics: "qualitative",
+      semanticValue: {
+        schemaVersion: 1,
+        kind: "qualitative",
+        mode: "text",
+        text: "not only black",
+      },
+    });
+    const mixedPolarity = item({
+      label: "Chair appearance",
+      strength: "preference",
+      targetSemantics: "qualitative",
+      semanticValue: {
+        schemaVersion: 1,
+        kind: "qualitative",
+        mode: "text",
+        text: "not huge and comfortable",
+      },
+    });
+    const includedPattern = item({
+      label: "Pattern",
+      strength: "preference",
+      targetSemantics: "categorical",
+      semanticValue: {
+        schemaVersion: 1,
+        kind: "categorical",
+        operator: "include",
+        values: ["floral"],
+      },
+    });
+
+    expect(
+      directTitleSoftContradiction(appearance, "Non-gaming office chair"),
+    ).toBeNull();
+    expect(
+      directTitleSoftContradiction(roseGoldExclusion, "Gold watch"),
+    ).toBeNull();
+    expect(
+      directTitleSoftContradiction(flowerAvoidance, "Flowing summer dress"),
+    ).toBeNull();
+    expect(
+      directTitleSoftContradiction(
+        flowerAppearanceAvoidance,
+        "Flowing summer dress",
+      ),
+    ).toBeNull();
+    expect(
+      directTitleSoftContradiction(nonNegativeFrame, "Comfort chair"),
+    ).toBeNull();
+    expect(
+      directTitleSoftContradiction(toleratedMaterial, "Leather chair"),
+    ).toBeNull();
+    expect(
+      directTitleSoftContradiction(additiveColour, "Black chair"),
+    ).toBeNull();
+    expect(
+      directTitleSoftContradiction(appearance, "Cover for Gaming Chair"),
+    ).toBeNull();
+    expect(
+      directTitleSoftContradiction(appearance, "Cover for the Gaming Chair"),
+    ).toBeNull();
+    expect(
+      directTitleSoftContradiction(
+        appearance,
+        "Cover compatible with Gaming Chair",
+      ),
+    ).toBeNull();
+    expect(
+      directTitleSoftContradiction(mixedPolarity, "Comfortable office chair"),
+    ).toBeNull();
+    expect(
+      directTitleSoftContradiction(appearance, "Gaming-free office chair"),
+    ).toBeNull();
+    expect(
+      directTitleSoftContradiction(positiveAppearance, "Gaming chair"),
+    ).toBeNull();
+    expect(
+      directTitleSoftContradiction(includedPattern, "Floral duvet cover"),
+    ).toBeNull();
+    expect(
+      directTitleSoftContradiction(roseGoldExclusion, "Rose Gold watch"),
+    ).toEqual({
+      targetTerm: "rose gold",
+      titleTerm: "Rose Gold",
     });
   });
 

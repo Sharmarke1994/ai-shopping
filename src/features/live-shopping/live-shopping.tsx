@@ -179,7 +179,7 @@ function ProductCard({
   busy: boolean;
   onToggleSaved: (listing: LiveListing) => void;
   onToggleRejected: (listing: LiveListing) => void;
-  onResearchCandidate?: (listing: LiveListing) => void;
+  onResearchCandidate?: (listing: LiveListing, criterionId?: string) => void;
   decision?: DecisionOption;
 }) {
   const [imageFailed, setImageFailed] = useState(false);
@@ -524,7 +524,9 @@ function SearchResults({
   );
   const researched =
     view.decisionSupport !== null &&
-    ["ready", "partial"].includes(view.decisionSupport.researchStatus) &&
+    ["researching", "ready", "partial"].includes(
+      view.decisionSupport.researchStatus,
+    ) &&
     view.decisionSupport.topOptions.length > 0;
   if (!researched) return results;
   return (
@@ -556,7 +558,7 @@ function EvidenceDecisionSupport({
   onDeepen: () => void;
   onToggleSaved: (listing: LiveListing) => void;
   onToggleRejected: (listing: LiveListing) => void;
-  onResearchCandidate: (listing: LiveListing) => void;
+  onResearchCandidate: (listing: LiveListing, criterionId?: string) => void;
 }) {
   if (view.action.kind !== "search" || view.decisionSupport === null)
     return null;
@@ -589,7 +591,10 @@ function EvidenceDecisionSupport({
       </section>
     );
   }
-  if (support.researchStatus === "researching") {
+  if (
+    support.researchStatus === "researching" &&
+    support.topOptions.length === 0
+  ) {
     return (
       <section className={styles.researchInvitation} aria-busy="true">
         <p className={styles.eyebrow}>Research is safely resumable</p>
@@ -624,11 +629,13 @@ function EvidenceDecisionSupport({
       <div className={styles.decisionIntro}>
         <div>
           <p className={styles.eyebrow}>
-            {support.researchStatus === "partial"
-              ? "Supported from partial research"
-              : support.sectionMode === "qualified_options"
-                ? "Best-supported options"
-                : "Promising options · verification still needed"}
+            {support.researchStatus === "researching"
+              ? "Early evidence · research still running"
+              : support.researchStatus === "partial"
+                ? "Supported from partial research"
+                : support.sectionMode === "qualified_options"
+                  ? "Best-supported options"
+                  : "Promising options · verification still needed"}
           </p>
           <h2 id="decision-support-heading">
             {support.sectionMode === "qualified_options"
@@ -637,11 +644,16 @@ function EvidenceDecisionSupport({
           </h2>
           <p>
             {support.researchedCandidateCount} promising{" "}
-            {support.researchedCandidateCount === 1
-              ? "product was"
-              : "products were"}{" "}
-            checked criterion by criterion. Hard unknowns matter before softer
-            preference wins, without being mislabeled as conflicts.
+            {support.researchedCandidateCount === 1 ? "product" : "products"}{" "}
+            {support.researchStatus === "researching"
+              ? support.researchedCandidateCount === 1
+                ? "has early criterion-level evidence while the saved research continues."
+                : "have early criterion-level evidence while the saved research continues."
+              : support.researchedCandidateCount === 1
+                ? "was checked criterion by criterion."
+                : "were checked criterion by criterion."}{" "}
+            Hard unknowns matter before softer preference wins, without being
+            mislabeled as conflicts.
           </p>
           {support.excludedCandidateCount > 0 ? (
             <p className={styles.excludedNote}>
@@ -654,6 +666,19 @@ function EvidenceDecisionSupport({
           ) : null}
         </div>
       </div>
+      {support.researchStatus === "researching" ? (
+        <div className={styles.progressiveResearch} aria-live="polite">
+          <span className={styles.spinner} aria-hidden="true" />
+          <div>
+            <strong>
+              Early evidence is available; research is still running
+            </strong>
+            <p>
+              These cards will update as the remaining saved work completes.
+            </p>
+          </div>
+        </div>
+      ) : null}
       {support.deepResearchStatus === "researching" ||
       (busy && support.deepResearchStatus === "available") ? (
         <div className={styles.progressiveResearch} aria-live="polite">
@@ -711,7 +736,9 @@ function EvidenceDecisionSupport({
                     <button
                       className={styles.researchMoreButton}
                       disabled={busy}
-                      onClick={() => onResearchCandidate(option.listing)}
+                      onClick={() =>
+                        onResearchCandidate(option.listing, gap.criterionId)
+                      }
                     >
                       Investigate
                     </button>
@@ -767,7 +794,7 @@ function SavedComparison({
 }: {
   view: LiveShoppingView;
   busy: boolean;
-  onResearchCandidate: (listing: LiveListing) => void;
+  onResearchCandidate: (listing: LiveListing, criterionId?: string) => void;
   onToggleSaved: (listing: LiveListing) => void;
 }) {
   const comparison = view.decisionSupport?.comparison;
@@ -880,7 +907,9 @@ function SavedComparison({
                   {candidate !== undefined && researchState === "available" ? (
                     <button
                       disabled={busy}
-                      onClick={() => onResearchCandidate(candidate)}
+                      onClick={() =>
+                        onResearchCandidate(candidate, gap.criterionId)
+                      }
                     >
                       Investigate
                     </button>
@@ -1318,12 +1347,13 @@ export function LiveShopping() {
     });
   };
 
-  const researchCandidate = (listing: LiveListing) => {
+  const researchCandidate = (listing: LiveListing, criterionId?: string) => {
     if (view === null || busy || listing.rejected) return;
     void runMutation({
       operation: "research_candidate",
       sessionId: view.sessionId,
       candidateListingId: listing.candidateListingId,
+      ...(criterionId === undefined ? {} : { criterionId }),
     });
   };
 

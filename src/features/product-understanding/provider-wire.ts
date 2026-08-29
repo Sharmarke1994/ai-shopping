@@ -122,6 +122,57 @@ export const productUnderstandingProviderWireV1Schema = z
     }
   });
 
+/**
+ * Binds provider-local criterion ordinals to the exact server-owned criterion
+ * subset sent in a particular model call. Focused calls additionally forbid
+ * criterion-free observations so they cannot introduce unrelated concepts.
+ */
+export function productUnderstandingProviderWireV1SchemaForInput(options: {
+  input: z.infer<typeof productUnderstandingInputV1Schema>;
+  requireCriterionBinding: boolean;
+}) {
+  const criterionOrdinals = new Set(
+    options.input.criteria.map(({ ordinal }) => ordinal),
+  );
+  return productUnderstandingProviderWireV1Schema.superRefine(
+    (value, context) => {
+      for (const [index, observation] of value.observations.entries()) {
+        if (
+          observation.criterionOrdinal === null &&
+          options.requireCriterionBinding
+        ) {
+          context.addIssue({
+            code: "custom",
+            path: ["observations", index, "criterionOrdinal"],
+            message:
+              "Focused observations must bind to a criterion in the authoritative target subset",
+          });
+        } else if (
+          observation.criterionOrdinal !== null &&
+          !criterionOrdinals.has(observation.criterionOrdinal)
+        ) {
+          context.addIssue({
+            code: "custom",
+            path: ["observations", index, "criterionOrdinal"],
+            message:
+              "Observation criterion ordinal is outside the authoritative target subset",
+          });
+        }
+      }
+      for (const [index, assessment] of value.assessments.entries()) {
+        if (!criterionOrdinals.has(assessment.criterionOrdinal)) {
+          context.addIssue({
+            code: "custom",
+            path: ["assessments", index, "criterionOrdinal"],
+            message:
+              "Assessment criterion ordinal is outside the authoritative target subset",
+          });
+        }
+      }
+    },
+  );
+}
+
 export type ProductUnderstandingInputV1 = z.infer<
   typeof productUnderstandingInputV1Schema
 >;

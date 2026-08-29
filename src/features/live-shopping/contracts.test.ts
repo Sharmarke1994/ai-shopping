@@ -21,7 +21,7 @@ describe("live shopping browser contract", () => {
     });
   });
 
-  it("accepts bounded same-task refinement and task-scoped save operations", () => {
+  it("accepts bounded same-task refinement and task-scoped listing operations", () => {
     expect(
       liveShoppingMutationSchema.parse({
         operation: "refine",
@@ -51,6 +51,49 @@ describe("live shopping browser contract", () => {
         candidateListingId: "8a0e451f-0471-4693-81d2-761c19a6ea7d",
       }),
     ).toMatchObject({ operation: "research_candidate" });
+  });
+
+  it("accepts one exact optional criterion target for candidate research", () => {
+    expect(
+      liveShoppingMutationSchema.parse({
+        operation: "research_candidate",
+        sessionId: "4318c9d8-2460-4cc2-9861-91dcf681a23e",
+        candidateListingId: "8a0e451f-0471-4693-81d2-761c19a6ea7d",
+        criterionId: "70b74650-a485-4aeb-a507-0ca9b448f64f",
+      }),
+    ).toEqual({
+      operation: "research_candidate",
+      sessionId: "4318c9d8-2460-4cc2-9861-91dcf681a23e",
+      candidateListingId: "8a0e451f-0471-4693-81d2-761c19a6ea7d",
+      criterionId: "70b74650-a485-4aeb-a507-0ca9b448f64f",
+    });
+
+    expect(() =>
+      liveShoppingMutationSchema.parse({
+        operation: "research_candidate",
+        sessionId: "4318c9d8-2460-4cc2-9861-91dcf681a23e",
+        candidateListingId: "8a0e451f-0471-4693-81d2-761c19a6ea7d",
+        criterionId: "not-a-criterion-id",
+      }),
+    ).toThrow();
+  });
+
+  it.each([
+    "revision",
+    "researchRunId",
+    "policyGeneration",
+    "sourceUrl",
+    "targetCriterionId",
+  ])("rejects client-selected research authority field %s", (field) => {
+    expect(() =>
+      liveShoppingMutationSchema.parse({
+        operation: "research_candidate",
+        sessionId: "4318c9d8-2460-4cc2-9861-91dcf681a23e",
+        candidateListingId: "8a0e451f-0471-4693-81d2-761c19a6ea7d",
+        criterionId: "70b74650-a485-4aeb-a507-0ca9b448f64f",
+        [field]: "client-chosen",
+      }),
+    ).toThrow();
   });
 
   it.each([

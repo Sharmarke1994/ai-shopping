@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { candidateListingIdSchema } from "@/domain/shopping-state/ids";
+import {
+  candidateListingIdSchema,
+  criterionIdSchema,
+} from "@/domain/shopping-state/ids";
 
 export const liveSessionIdSchema = z.uuid().brand<"LiveSessionId">();
 export const liveTurnIdSchema = z.uuid().brand<"LiveTurnId">();
@@ -67,6 +70,7 @@ export const researchLiveCandidateRequestSchema = z.strictObject({
   operation: z.literal("research_candidate"),
   sessionId: liveSessionIdSchema,
   candidateListingId: candidateListingIdSchema,
+  criterionId: criterionIdSchema.optional(),
 });
 
 export const rejectLiveListingRequestSchema = z.strictObject({

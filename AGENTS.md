@@ -18,9 +18,12 @@ unmerged PR. V0-07 is independently accepted at
 isolated V0-08 branch is the current checkpoint: deterministic decision
 readiness, hard-unknown-aware ordering, progressive evidence research, exact
 listing reject/undo, and decision-oriented saved comparison. It remains
-unmerged in draft stacked PR #12; exact implementation/test head
-`6fa16564ad8eb35c0136afe948c1fa4f77283294` is green, its bounded independent
-review is complete, and it must stop for founder review after current-head CI.
+unmerged in draft stacked PR #12. Independently reviewed pre-correction head
+`c28c891885462eb2990f0b098f3817e744afdec0` is green; the final bounded
+correction is implemented, but its single fresh release proof completed mouse,
+failed closed during chair product-understanding output and did not reach
+vacuum. V0-08 is not release-accepted. Do not rerun the proof, merge or start
+V0-09 before independent review of the exact correction/failure checkpoint.
 ProductIdentity, fuzzy deduplication, broad crawling, rejection learning, auth,
 deployment and V0-09 have not started. Do not broaden a task because later work
 is documented.

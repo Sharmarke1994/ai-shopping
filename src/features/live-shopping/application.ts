@@ -912,6 +912,9 @@ export async function researchLiveCandidate(options: {
       searchRunId: authority.runId,
       mode: "targeted",
       targetCandidateListingId: input.candidateListingId,
+      ...(input.criterionId === undefined
+        ? {}
+        : { targetCriterionId: input.criterionId }),
     });
   } catch (error) {
     if (!(error instanceof EvidenceResearchNotNeededError)) throw error;

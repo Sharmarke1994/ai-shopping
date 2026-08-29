@@ -14,14 +14,16 @@ and comparison are meaningfully better than beginning with Google.
 - Active branch: `codex/v0-08-founder-decision-loop`, stacked exactly on the
   independently accepted V0-07 head
   `149f93cd43092996e20621e8976003b341a82c6a`.
-- Bounded V0-08 implementation, proof and review-correction checkpoint:
-  `6a5bd991bf70237acb6b25fbe2f73519cf0561f6`.
-- V0-07 remains draft stacked PR #11 and is not merged. V0-08 is implemented,
-  founder-dogfooded, independently reviewed and locally verified in draft
-  stacked PR #12. Implementation head
-  `6fa16564ad8eb35c0136afe948c1fa4f77283294` passed exact-head quality,
-  PostgreSQL persistence and browser-smoke in GitHub run `33223808962`. Do not
-  merge or begin V0-09.
+- Independently reviewed V0-08 pre-correction head:
+  `c28c891885462eb2990f0b098f3817e744afdec0` in draft stacked PR #12.
+- The final bounded six-issue correction and hardened one-shot proof harness are
+  implemented locally. Their single fresh release attempt completed mouse,
+  failed closed during chair product-understanding output and did not reach
+  vacuum. Release acceptance is therefore still open; the honest failure
+  artifact replaces the stale success artifact.
+- V0-07 remains draft stacked PR #11 and is not merged. PR #12 remains draft,
+  stacked and unmerged. Do not rerun the live proof, merge, or begin V0-09
+  without independent review of the failure checkpoint.
 - Original V0-05 checkout and draft PR #9 remain separate, unmodified,
   unmerged and formally unaccepted. The 21/21 Terra rule has not been weakened
   and Luna remains diagnostic only. V0-08 does not redefine that separate
@@ -255,12 +257,12 @@ absence of evidence.
 
 ## Current V0-08 founder decision loop
 
-V0-08 is implemented in the active isolated branch. Its one bounded independent
-review is complete and all four material findings are closed. Draft stacked PR
-#12 is open, mergeable and intentionally unmerged. Implementation and evidence
-are committed at `6a5bd991bf70237acb6b25fbe2f73519cf0561f6`;
-the migration-shape correction and exact green code head are
-`6fa16564ad8eb35c0136afe948c1fa4f77283294`.
+V0-08 is implemented in the active isolated branch. The original bounded review
+and the final six-issue code correction review are complete. Draft stacked PR
+#12 is open, mergeable and intentionally unmerged. The independently reviewed
+pre-correction head is `c28c891885462eb2990f0b098f3817e744afdec0`;
+the correction/evidence delivery head and its exact CI are pending this bounded
+checkpoint commit.
 
 - Decision readiness is derived, qualitative and score-free: qualified, needs
   verification, trade-off or ineligible.
@@ -290,13 +292,38 @@ the migration-shape correction and exact green code head are
   boundaries are enforced at provider parsing, policy and persistence layers.
 - Research target persistence now matches the authoritative/provider maximum
   of 50 criteria; a 13-criterion PostgreSQL regression protects the boundary.
+- Named-gap investigation carries the exact current criterion while card-level
+  research remains server-selected. Foreign, stale, resolved and rejected
+  targets fail closed or converge without paid work as appropriate.
+- Deep/targeted model input, attempt bindings, output validation and assessment
+  publication are restricted to the exact server-owned criterion subset. The
+  target generation alone changes; non-target current assessment identities
+  remain unchanged.
+- Active candidate+criterion targets are reserved across automatic, card and
+  gap policy identities, preventing duplicate calls while leaving different
+  criteria independently researchable.
+- Comparison uses only one authoritative purchase-price criterion; delivery and
+  running-cost money concepts cannot masquerade as purchase price.
+- Running and partial research now remain visibly honest while progressive
+  cards stay usable. Failed runs count as useful only when evidence tied to that
+  exact run survived.
+- Exact direct-title soft contradictions can create a factual concept-bound
+  descriptor plus a trade-off/watchout. The bounded matcher fails closed on
+  negation, accessory and morphology ambiguity and never creates a hard
+  exclusion from a soft preference.
+- Deep-run read and publish boundaries require organic/extraction/assessment
+  target-set coherence; raw cross-stage corruption is rejected before another
+  provider/model call.
 - The first destination-cost diagnostic spent 25 merchant lookups for only one
   useful top-card direct link. The bounded policy now checks at most the leading
-  distinct merchant per shopping query; the exact-code release proof used 9
-  lookups across 12 shopping queries.
-- Fresh real Terra + Serper evidence covers ergonomic mouse plus refinement,
-  office chair, and cordless vacuum in guarded disposable databases. Sanitized
-  evidence is in `docs/evals/v0-08-live-founder-proof.{json,md}`.
+  distinct merchant per shopping query. The corrected one-shot attempt stopped
+  after 9 shopping and 6 merchant-resolution requests.
+- Fresh real Terra + Serper evidence completed ergonomic mouse plus refinement.
+  Office-chair targeted research then failed closed at product-understanding
+  structured-output validation; cordless vacuum was not started. Sanitized
+  evidence is in
+  `docs/evals/v0-08-live-founder-proof-failure.{json,md}` and is explicitly not
+  release evidence.
 - Eight production-rendered desktop/mobile screenshots cover automatic,
   decision, comparison, rejection, refinement, verification and partial
   research states in `docs/screenshots/v0-08/`.
@@ -306,12 +333,17 @@ V0-09 has not started.
 
 ## Next validated checkpoints
 
-1. Stop for founder review of draft stacked PR #12. Do not merge any stacked PR
-   and do not start V0-09.
-2. If V0-08 is accepted, use the measured leave-the-app gaps to choose the
-   next smallest product layer. Direct destination coverage and richer
-   decision-critical sources remain real gaps; do not turn them into a crawler
-   or fabricate personal-fit evidence.
+1. Stop for independent review of the final correction delta and exact one-shot
+   failure evidence in draft stacked PR #12. Do not merge any stacked PR, rerun
+   the live proof or start V0-09.
+2. The reviewer must decide whether the persisted
+   `invalid_model_output` evidence warrants a bounded diagnostic improvement or
+   a newly authorized fresh proof. Do not guess a prompt/schema fix from a raw
+   response that was intentionally not stored.
+3. Only after V0-08 is independently accepted should the measured
+   leave-the-app gaps choose the next product layer. Direct destination coverage
+   and richer decision-critical sources remain real gaps; do not turn them into
+   a crawler or fabricate personal-fit evidence.
 
 ## Credentials and blockers
 
@@ -337,46 +369,37 @@ V0-09 has not started.
 ## Latest verification
 
 - `pnpm check`: formatting, lint, generated route types, strict TypeScript,
-  200/200 deterministic unit/component tests and the production build pass on
-  the final V0-08 working tree.
-- Focused V0-08 PostgreSQL suites: 17/17 pass, including progressive research,
-  append-only assessment generations, failed-deep preservation, exact
-  criterion/evidence scope, 13-criterion targeting, concurrent save caps,
-  reject/undo, cross-task rejection and revision preservation.
-- Full PostgreSQL suite: 107/107 functional tests pass. The sole local failure
-  is the intentional PostgreSQL 17.6 version assertion against Homebrew 17.11.
+  216/216 deterministic unit/component tests and the production build pass on
+  the final correction tree.
+- Focused V0-08 PostgreSQL suite: 20/20 passes, including exact gap targeting,
+  A/B/C/D generation identity, malformed non-target output, active reservation,
+  cross-stage target corruption, title evidence and failed-deep preservation.
+- Full PostgreSQL suite: 113 functional tests pass. The sole local failure is
+  the intentional PostgreSQL 17.6 version assertion against Homebrew 17.11; the
+  repository pin remains unchanged.
 - `pnpm test:e2e`: 8/8 Chromium tests pass, including automatic first/deep
-  research, two saves, decision comparison, exact rejection/undo, refinement,
-  refresh, mobile hard-unknown presentation and no horizontal overflow.
-- `pnpm db:generate`: no schema drift after migration 0015. A guarded empty
-  database applied all 16 migrations and was dropped.
-- `pnpm audit --prod` reports no known production dependency vulnerabilities;
-  `git diff --check` and the changed-file secret-pattern scan are clean.
-- Exact-code real Terra + Serper proof: 12 shopping queries, 9 merchant
-  resolution calls, 27 evidence searches and 29 product-understanding calls
-  across mouse (including refinement), chair and vacuum. Mouse plus chair used
-  20 evidence searches versus V0-07's 40 while using 22 understanding calls
-  versus 20. Important unresolved facts remained unknown.
-- Mouse hard unknowns moved 12 → 6 → 6; top/saved direct coverage was 1/4 and
-  0/2. Chair had no explicit hard criteria and correctly preserved target versus
-  conditional-stretch semantics; direct coverage was 0/4 and 0/2. Vacuum hard
-  unknowns moved 12 → 8 → 8 and floor/noise stayed unresolved; direct coverage
-  was 0/4 and 0/2.
-- All three real journeys exercised two saves, atomic reject+unsave, undo without
-  re-save, comparison and reload. The mouse refinement changed current
-  authoritative priorities and allocated new research without rewriting the
-  immutable subject or old assessments.
-- Eight production-rendered desktop/mobile/partial screenshots passed explicit
-  horizontal-overflow checks and were inspected visually after the final
-  decision-gap action correction.
-- Production dependency audit: no known vulnerabilities. Local diff, drift and
-  changed-file secret checks are clean.
-- Exact implementation head
-  `6fa16564ad8eb35c0136afe948c1fa4f77283294` passed GitHub quality,
-  persistence and browser-smoke in run `33223808962`. The first CI attempt
-  correctly exposed that the migration-shape test omitted the two migration
-  0015 table names; commit `6fa1656` corrected only that expected list before
-  the green rerun.
+  research, progressive cards, two saves, comparison, exact rejection/undo,
+  refinement, refresh, mobile hard-unknown presentation and no overflow.
+- `pnpm db:generate` reports 28 tables and no schema drift; V0-08 adds no
+  migration. Production audit reports no known vulnerabilities.
+- Eight production-server desktop/mobile/partial screenshots were regenerated,
+  passed explicit horizontal-overflow checks and were inspected without Next
+  development chrome.
+- The single corrected live attempt generated at
+  `2026-08-29T02:00:38.691Z` is **not accepted**. Mouse completed; chair's exact
+  `Lower-back support` Serper search succeeded with zero results, then one Terra
+  invocation produced two fail-closed `invalid_model_output` attempt rows. The
+  prior generation-1 assessment remained current, deep status stayed partial
+  and vacuum was not reached.
+- Logical port counts at that stop were interpretation 3, action 3, shopping 9,
+  merchant resolution 6, evidence search 18 and product understanding 20.
+  These are not transport-retry counts.
+- The old success JSON/Markdown were removed before the run. The failure JSON
+  and Markdown preserve the completed mouse flow and active chair DB/decision
+  snapshot, contain no repository credentials, and strip known third-party
+  tracking parameters.
+- Exact-head GitHub quality, persistence and browser-smoke are pending the final
+  correction/evidence push. PR #12 remains draft and unmerged.
 
 ## Exact resume instructions
 
@@ -385,15 +408,19 @@ V0-09 has not started.
    `codex/v0-08-founder-decision-loop`; confirm branch, stacked base, exact head
    and tree state first.
 2. Read this file, `docs/plans/v0-08.md` and the concise
-   `docs/evals/v0-08-live-founder-proof.md`. Do not reopen accepted
+   `docs/evals/v0-08-live-founder-proof-failure.md`. Do not reopen accepted
    V0-03/V0-04/V0-06/V0-07 architecture.
 3. Preserve V0-05 PR #9, V0-06 PR #10 and V0-07 PR #11 exactly. Do not merge
    them and do not weaken V0-05's Terra rule.
-4. If current PR CI or founder review reports a material issue,
-   make only a bounded V0-08 correction and rerun affected plus full gates.
-   Never weaken unknown, evidence, money, task authority or revision boundaries.
+4. Do not rerun the live three-category proof from this checkpoint. First obtain
+   independent review of the exact failure artifact and correction delta. If
+   review reports a material deterministic issue, make only a bounded V0-08
+   correction and rerun affected plus full deterministic gates. Never weaken
+   unknown, evidence, money, task authority or revision boundaries.
 5. Keep the V0-08 PR draft and stacked on
    `codex/v0-07-evidence-assessment`. Do not begin V0-09, ProductIdentity,
    crawling, auth, deployment, checkout or affiliate work.
-6. Confirm current PR quality/persistence/browser-smoke remain green, leave the
-   worktree clean and stop for founder review.
+6. Confirm exact-head PR quality/persistence/browser-smoke are green, leave the
+   worktree clean and stop for independent failure review. V0-08 is not release
+   accepted until a separately authorized fresh proof satisfies all three
+   category requirements.

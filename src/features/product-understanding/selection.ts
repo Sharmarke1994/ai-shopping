@@ -168,6 +168,7 @@ export function selectDeepResearchCandidates(options: {
   rejectedCandidateListingIds?: ReadonlySet<string>;
   completedCriterionIdsByCandidate?: ReadonlyMap<string, ReadonlySet<string>>;
   targetCandidateListingId?: string;
+  targetCriterionId?: string;
   limit?: number;
 }): readonly SelectedDeepResearchCandidate[] {
   const byId = new Map<string, PersistedSearchRun["listings"][number]>(
@@ -204,6 +205,12 @@ export function selectDeepResearchCandidates(options: {
       new Set<string>();
     const unresolved = prioritizedCriteria(options.brief)
       .filter((item) => {
+        if (
+          options.targetCriterionId !== undefined &&
+          item.criterionId !== options.targetCriterionId
+        ) {
+          return false;
+        }
         if (completedCriteria.has(item.criterionId)) return false;
         const assessment = assessmentByIdentity.get(
           `${candidateId}:${item.criterionId}`,

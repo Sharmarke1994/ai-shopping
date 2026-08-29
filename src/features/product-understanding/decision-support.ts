@@ -1,6 +1,9 @@
 import type { BriefItemV1 } from "@/domain/shopping-state/brief";
 import type { PersistedCandidateListing } from "@/features/retrieval-spike/persistence/contracts";
-import { orderCandidatesByAssessments } from "./assessment-policy";
+import {
+  isPurchasePriceCriterion,
+  orderCandidatesByAssessments,
+} from "./assessment-policy";
 import type {
   CriterionAssessmentV1,
   EvidenceSourceV1,
@@ -483,24 +486,32 @@ function buildComparison(options: {
       };
     }),
   }));
-  const moneyItems = options.support.brief.items.filter(({ semanticValue }) =>
-    ["money", "money_stretch"].includes(semanticValue.kind),
+  const purchasePriceItems = options.support.brief.items.filter(
+    (item) =>
+      (item.semanticValue.kind === "money" ||
+        item.semanticValue.kind === "money_stretch") &&
+      isPurchasePriceCriterion(item),
   );
+  const purchasePriceItem =
+    purchasePriceItems.length === 1 ? purchasePriceItems[0] : undefined;
   const purchaseSummaries = candidates.map((candidate) => {
-    const assessment = moneyItems
-      .map((item) =>
-        options.support.assessments.find(
-          (entry) =>
-            entry.candidateListingId === candidate.id &&
-            entry.criterionId === item.criterionId,
-        ),
-      )
-      .find((entry) => entry !== undefined);
+    const assessment =
+      purchasePriceItem === undefined
+        ? undefined
+        : options.support.assessments.find(
+            (entry) =>
+              entry.candidateListingId === candidate.id &&
+              entry.criterionId === purchasePriceItem.criterionId,
+          );
     return {
       candidateListingId: candidate.id,
       priceRelationship:
         assessment?.explanation ??
-        "Its observed price has not been related to a stated target.",
+        (purchasePriceItems.length === 0
+          ? "No purchase-price target is stated in the current brief."
+          : purchasePriceItems.length > 1
+            ? "Multiple purchase-price targets are stated, so no single purchase summary is assumed."
+            : "Its observed purchase price has not been related to the stated purchase-price target."),
     };
   });
   const researchStates = candidates.map((candidate) => {
@@ -741,34 +752,42 @@ export function buildDecisionSupport(options: {
   const deepeningRuns = options.support.researchRuns.filter(
     ({ phase }) => phase === "deepening",
   );
-  const hasCurrentAssessments = options.support.assessments.length > 0;
+  const assessmentRunIds = new Set(
+    options.support.assessments
+      .filter(({ observationIds }) => observationIds.length > 0)
+      .map(({ researchRunId }) => researchRunId),
+  );
+  const firstPassHasUsefulAssessment = firstPassRuns.some(({ id }) =>
+    assessmentRunIds.has(id),
+  );
+  const deepeningHasUsefulAssessment = deepeningRuns.some(({ id }) =>
+    assessmentRunIds.has(id),
+  );
   const researchStatus =
     firstPassRuns.length === 0
       ? ("not_started" as const)
-      : firstPassRuns.some(({ status }) => status === "running") &&
-          !hasCurrentAssessments
+      : firstPassRuns.some(({ status }) => status === "running")
         ? ("researching" as const)
-        : !hasCurrentAssessments &&
-            firstPassRuns.every(({ status }) => status === "failed")
-          ? ("failed" as const)
+        : firstPassRuns.every(({ status }) => status === "succeeded")
+          ? ("ready" as const)
           : firstPassRuns.some(
-                ({ status }) => status === "partial" || status === "failed",
-              )
+                ({ status }) => status === "partial" || status === "succeeded",
+              ) || firstPassHasUsefulAssessment
             ? ("partial" as const)
-            : ("ready" as const);
+            : ("failed" as const);
   const deepResearchStatus =
-    currentGaps.length === 0
-      ? ("not_needed" as const)
-      : deepeningRuns.length === 0
-        ? ("available" as const)
-        : deepeningRuns.some(({ status }) => status === "running")
-          ? ("researching" as const)
-          : deepeningRuns.some(({ status }) => status === "succeeded")
-            ? deepeningRuns.some(
-                ({ status }) => status === "partial" || status === "failed",
-              )
-              ? ("partial" as const)
-              : ("complete" as const)
+    deepeningRuns.length === 0
+      ? currentGaps.length === 0
+        ? ("not_needed" as const)
+        : ("available" as const)
+      : deepeningRuns.some(({ status }) => status === "running")
+        ? ("researching" as const)
+        : deepeningRuns.every(({ status }) => status === "succeeded")
+          ? ("complete" as const)
+          : deepeningRuns.some(
+                ({ status }) => status === "succeeded" || status === "partial",
+              ) || deepeningHasUsefulAssessment
+            ? ("partial" as const)
             : ("failed" as const);
   return {
     researchStatus,

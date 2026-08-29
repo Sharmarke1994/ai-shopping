@@ -54,6 +54,8 @@ import {
 import type { EvidenceSearchResponse } from "./evidence-search";
 import { isCandidateEvidenceRelevant } from "./evidence-relevance";
 import {
+  DIRECT_TITLE_DESCRIPTOR_PROPERTY,
+  directTitleSoftContradiction,
   guardCriterionAssessment,
   isPurchasePriceCriterion,
   orderCandidatesByAssessments,
@@ -173,6 +175,26 @@ function fingerprint(value: unknown) {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex");
 }
 
+function deepPolicyVersion(
+  selected: readonly {
+    listing: PersistedCandidateListing;
+    criterionIds: readonly string[];
+  }[],
+) {
+  const identity = createHash("sha256")
+    .update(
+      JSON.stringify(
+        selected.map(({ listing, criterionIds }) => ({
+          candidateListingId: listing.id,
+          criterionIds: [...criterionIds].sort(),
+        })),
+      ),
+    )
+    .digest("hex")
+    .slice(0, 20);
+  return `${EVIDENCE_POLICY_VERSION}:deep:${identity}`;
+}
+
 function failPersisted(
   recordType: string,
   recordId: string,
@@ -200,6 +222,65 @@ function mapAttemptRow(
   const { createdAt, ...value } = row;
   void createdAt;
   return persistedAttemptSchema.parse({ ...value, targetCriterionIds });
+}
+
+function hasExactNonEmptyCriterionTargets(
+  expected: readonly string[],
+  ...actualSets: readonly (readonly string[])[]
+) {
+  const expectedSet = new Set(expected);
+  return (
+    expectedSet.size > 0 &&
+    actualSets.every((actual) => {
+      const actualSet = new Set(actual);
+      return (
+        actualSet.size === expectedSet.size &&
+        [...expectedSet].every((criterionId) => actualSet.has(criterionId))
+      );
+    })
+  );
+}
+
+function validateDeepAttemptTargetCoherence(options: {
+  run: EvidenceResearchSnapshot["run"];
+  attempts: readonly PersistedEvidenceAttempt[];
+}) {
+  if (options.run.phase !== "deepening") return;
+  const candidateListingIds = new Set(
+    options.attempts.map(({ candidateListingId }) => candidateListingId),
+  );
+  for (const candidateListingId of candidateListingIds) {
+    const attempts = options.attempts.filter(
+      (attempt) => attempt.candidateListingId === candidateListingId,
+    );
+    const searchAttempts = attempts.filter(
+      ({ stage }) => stage === "organic_search",
+    );
+    const extractionAttempts = attempts.filter(
+      ({ stage }) => stage === "observation_extraction",
+    );
+    const assessmentAttempts = attempts.filter(
+      ({ stage }) => stage === "criterion_assessment",
+    );
+    if (
+      searchAttempts.length !== 1 ||
+      extractionAttempts.length !== 1 ||
+      assessmentAttempts.length !== 1 ||
+      !hasExactNonEmptyCriterionTargets(
+        searchAttempts[0]?.targetCriterionIds ?? [],
+        extractionAttempts[0]?.targetCriterionIds ?? [],
+        assessmentAttempts[0]?.targetCriterionIds ?? [],
+      )
+    ) {
+      failPersisted(
+        "EvidenceResearchRun",
+        options.run.id,
+        new Error(
+          `Deep research target scope is incoherent for candidate ${candidateListingId}`,
+        ),
+      );
+    }
+  }
 }
 
 function mapEvidenceSourceRow(
@@ -348,6 +429,7 @@ async function loadResearchSnapshotInTransaction(options: {
       new Error("Selected candidate count does not match its attempts"),
     );
   }
+  validateDeepAttemptTargetCoherence({ run, attempts });
   const sources = relevantSources.map((row) =>
     parsePersisted({
       recordType: "EvidenceSource",
@@ -430,7 +512,10 @@ async function insertSourceIdempotently(options: {
   value: Omit<EvidenceSourceV1, "schemaVersion">;
 }) {
   const [existing] = await options.tx
-    .select({ id: evidenceSources.id })
+    .select({
+      id: evidenceSources.id,
+      researchRunId: evidenceSources.researchRunId,
+    })
     .from(evidenceSources)
     .where(
       and(
@@ -444,9 +529,17 @@ async function insertSourceIdempotently(options: {
       ),
     )
     .limit(1);
-  if (existing !== undefined) return evidenceSourceIdSchema.parse(existing.id);
+  if (existing !== undefined) {
+    return {
+      id: evidenceSourceIdSchema.parse(existing.id),
+      researchRunId: evidenceResearchRunIdSchema.parse(existing.researchRunId),
+    };
+  }
   await options.tx.insert(evidenceSources).values(options.value);
-  return options.value.id;
+  return {
+    id: options.value.id,
+    researchRunId: options.value.researchRunId,
+  };
 }
 
 async function insertObservationIdempotently(options: {
@@ -495,7 +588,8 @@ async function insertDirectEvidence(options: {
   tx: ShoppingTransaction;
   researchRunId: z.infer<typeof evidenceResearchRunIdSchema>;
   listing: PersistedCandidateListing;
-  brief: ReturnType<typeof projectShoppingBrief>;
+  items: ReturnType<typeof projectShoppingBrief>["items"];
+  allowCriterionFreeObservations: boolean;
 }) {
   const listingFingerprint = fingerprint({
     kind: "listing_field",
@@ -505,7 +599,7 @@ async function insertDirectEvidence(options: {
     price: options.listing.price,
     reviewEvidence: options.listing.reviewEvidence,
   });
-  const listingSourceId = await insertSourceIdempotently({
+  const listingSource = await insertSourceIdempotently({
     tx: options.tx,
     value: {
       id: evidenceSourceIdSchema.parse(randomUUID()),
@@ -525,18 +619,21 @@ async function insertDirectEvidence(options: {
       fingerprint: listingFingerprint,
     },
   });
-  if (options.listing.price !== null) {
+  const purchasePriceItem = options.items.find(isPurchasePriceCriterion);
+  if (
+    options.listing.price !== null &&
+    (purchasePriceItem !== undefined || options.allowCriterionFreeObservations)
+  ) {
     await insertObservationIdempotently({
       tx: options.tx,
       value: {
         id: productObservationIdSchema.parse(randomUUID()),
-        researchRunId: options.researchRunId,
+        researchRunId: listingSource.researchRunId,
         taskId: options.listing.taskId,
         candidateRunId: options.listing.runId,
         candidateListingId: options.listing.id,
-        evidenceSourceId: listingSourceId,
-        conceptId:
-          options.brief.items.find(isPurchasePriceCriterion)?.conceptId ?? null,
+        evidenceSourceId: listingSource.id,
+        conceptId: purchasePriceItem?.conceptId ?? null,
         support: "supported",
         observationKind: "structured_field",
         propertyLabel: "Observed price",
@@ -558,9 +655,15 @@ async function insertDirectEvidence(options: {
       },
     });
   }
-  if (options.listing.reviewEvidence !== null) {
+  const reviewItem = options.items.find(({ conceptLabel, conceptDefinition }) =>
+    /review|customer sentiment/i.test(`${conceptLabel} ${conceptDefinition}`),
+  );
+  if (
+    options.listing.reviewEvidence !== null &&
+    (reviewItem !== undefined || options.allowCriterionFreeObservations)
+  ) {
     const review = options.listing.reviewEvidence;
-    const reviewSourceId = await insertSourceIdempotently({
+    const reviewSource = await insertSourceIdempotently({
       tx: options.tx,
       value: {
         id: evidenceSourceIdSchema.parse(randomUUID()),
@@ -588,17 +691,12 @@ async function insertDirectEvidence(options: {
       tx: options.tx,
       value: {
         id: productObservationIdSchema.parse(randomUUID()),
-        researchRunId: options.researchRunId,
+        researchRunId: reviewSource.researchRunId,
         taskId: options.listing.taskId,
         candidateRunId: options.listing.runId,
         candidateListingId: options.listing.id,
-        evidenceSourceId: reviewSourceId,
-        conceptId:
-          options.brief.items.find(({ conceptLabel, conceptDefinition }) =>
-            /review|customer sentiment/i.test(
-              `${conceptLabel} ${conceptDefinition}`,
-            ),
-          )?.conceptId ?? null,
+        evidenceSourceId: reviewSource.id,
+        conceptId: reviewItem?.conceptId ?? null,
         support: "supported",
         observationKind: "structured_field",
         propertyLabel: "Retailer review aggregate",
@@ -618,7 +716,7 @@ async function insertDirectEvidence(options: {
       },
     });
   }
-  const wirelessItem = options.brief.items.find(({ conceptLabel }) =>
+  const wirelessItem = options.items.find(({ conceptLabel }) =>
     /wireless/i.test(conceptLabel),
   );
   const title = options.listing.title.toLocaleLowerCase("en-GB");
@@ -629,11 +727,11 @@ async function insertDirectEvidence(options: {
       tx: options.tx,
       value: {
         id: productObservationIdSchema.parse(randomUUID()),
-        researchRunId: options.researchRunId,
+        researchRunId: listingSource.researchRunId,
         taskId: options.listing.taskId,
         candidateRunId: options.listing.runId,
         candidateListingId: options.listing.id,
-        evidenceSourceId: listingSourceId,
+        evidenceSourceId: listingSource.id,
         conceptId: wirelessItem.conceptId,
         support: "supported",
         observationKind: "structured_field",
@@ -651,6 +749,43 @@ async function insertDirectEvidence(options: {
         promptVersion: null,
         observedAt: options.listing.retrievedAt,
         fingerprint: fingerprint({ property: "wireless", explicitWireless }),
+      },
+    });
+  }
+  for (const item of options.items) {
+    const contradiction = directTitleSoftContradiction(
+      item,
+      options.listing.title,
+    );
+    if (contradiction === null) continue;
+    await insertObservationIdempotently({
+      tx: options.tx,
+      value: {
+        id: productObservationIdSchema.parse(randomUUID()),
+        researchRunId: listingSource.researchRunId,
+        taskId: options.listing.taskId,
+        candidateRunId: options.listing.runId,
+        candidateListingId: options.listing.id,
+        evidenceSourceId: listingSource.id,
+        conceptId: item.conceptId,
+        support: "supported",
+        observationKind: "structured_field",
+        propertyLabel: DIRECT_TITLE_DESCRIPTOR_PROPERTY,
+        claim: `The exact listing title uses “${contradiction.titleTerm}”.`,
+        value: {
+          schemaVersion: 1,
+          kind: "text",
+          text: contradiction.titleTerm,
+        },
+        derivation: "deterministic",
+        model: null,
+        promptVersion: null,
+        observedAt: options.listing.retrievedAt,
+        fingerprint: fingerprint({
+          conceptId: item.conceptId,
+          property: DIRECT_TITLE_DESCRIPTOR_PROPERTY,
+          titleTerm: contradiction.titleTerm,
+        }),
       },
     });
   }
@@ -691,6 +826,7 @@ export async function prepareEvidenceResearch(options: {
   promptVersion: string;
   mode?: "first_pass" | "deepening" | "targeted" | "reassessment";
   targetCandidateListingId?: unknown;
+  targetCriterionId?: unknown;
   savedCandidateListingIds?: readonly unknown[];
   now?: Date;
 }): Promise<EvidenceResearchSnapshot> {
@@ -700,6 +836,10 @@ export async function prepareEvidenceResearch(options: {
     options.targetCandidateListingId === undefined
       ? undefined
       : candidateListingIdSchema.parse(options.targetCandidateListingId);
+  const targetCriterionId =
+    options.targetCriterionId === undefined
+      ? undefined
+      : criterionIdSchema.parse(options.targetCriterionId);
   const savedCandidateListingIds = [
     ...new Set(
       (options.savedCandidateListingIds ?? []).map((id) =>
@@ -713,6 +853,11 @@ export async function prepareEvidenceResearch(options: {
   if ((mode === "targeted") !== (targetCandidateListingId !== undefined)) {
     throw new EvidenceResearchAuthorityError(
       "Targeted research requires exactly one candidate listing",
+    );
+  }
+  if (targetCriterionId !== undefined && mode !== "targeted") {
+    throw new EvidenceResearchAuthorityError(
+      "An exact criterion target is accepted only for targeted research",
     );
   }
   if (savedCandidateListingIds.length > 8) {
@@ -767,6 +912,26 @@ export async function prepareEvidenceResearch(options: {
     const rejectedIds = new Set(
       rejectedRows.map(({ candidateListingId }) => candidateListingId),
     );
+    if (targetCandidateListingId !== undefined) {
+      if (!run.listings.some(({ id }) => id === targetCandidateListingId)) {
+        throw new EvidenceResearchAuthorityError(
+          "Target candidate does not belong to this task-local search run",
+        );
+      }
+      if (rejectedIds.has(targetCandidateListingId)) {
+        throw new EvidenceResearchAuthorityError(
+          "A rejected candidate cannot be researched",
+        );
+      }
+    }
+    if (
+      targetCriterionId !== undefined &&
+      !brief.items.some(({ criterionId }) => criterionId === targetCriterionId)
+    ) {
+      throw new EvidenceResearchAuthorityError(
+        "Target criterion is not current for this shopping task",
+      );
+    }
     let selected: {
       listing: PersistedCandidateListing;
       foundAcrossQueryCount: number;
@@ -806,32 +971,81 @@ export async function prepareEvidenceResearch(options: {
         assessments: support.assessments,
       }).map(({ id }) => id);
       const completedCriterionIdsByCandidate = new Map<string, Set<string>>();
+      const unavailableCriterionIdsByCandidate = new Map<string, Set<string>>();
       for (const coverage of support.deepResearchCoverage) {
+        const unavailable =
+          unavailableCriterionIdsByCandidate.get(coverage.candidateListingId) ??
+          new Set<string>();
+        for (const criterionId of coverage.criterionIds) {
+          unavailable.add(criterionId);
+        }
+        unavailableCriterionIdsByCandidate.set(
+          coverage.candidateListingId,
+          unavailable,
+        );
         if (coverage.runStatus === "running") continue;
-        const criterionIds =
+        const completed =
           completedCriterionIdsByCandidate.get(coverage.candidateListingId) ??
           new Set<string>();
         for (const criterionId of coverage.criterionIds) {
-          criterionIds.add(criterionId);
+          completed.add(criterionId);
         }
         completedCriterionIdsByCandidate.set(
           coverage.candidateListingId,
-          criterionIds,
+          completed,
         );
       }
-      selected = selectDeepResearchCandidates({
-        brief,
-        run,
-        orderedCandidateIds,
-        assessments: support.assessments,
-        savedCandidateListingIds: savedIds,
-        rejectedCandidateListingIds: rejectedIds,
+      const selectDeep = (
+        unavailable: ReadonlyMap<string, ReadonlySet<string>>,
+      ) =>
+        selectDeepResearchCandidates({
+          brief,
+          run,
+          orderedCandidateIds,
+          assessments: support.assessments,
+          savedCandidateListingIds: savedIds,
+          rejectedCandidateListingIds: rejectedIds,
+          completedCriterionIdsByCandidate: unavailable,
+          ...(targetCandidateListingId === undefined
+            ? {}
+            : { targetCandidateListingId }),
+          ...(targetCriterionId === undefined ? {} : { targetCriterionId }),
+          limit: mode === "targeted" ? 1 : 2,
+        }).map((candidate) => ({ ...candidate, foundAcrossQueryCount: 1 }));
+      const intendedWithoutActiveReservations = selectDeep(
         completedCriterionIdsByCandidate,
-        ...(targetCandidateListingId === undefined
-          ? {}
-          : { targetCandidateListingId }),
-        limit: mode === "targeted" ? 1 : 2,
-      }).map((candidate) => ({ ...candidate, foundAcrossQueryCount: 1 }));
+      );
+      if (intendedWithoutActiveReservations.length > 0) {
+        const intendedPolicyVersion = deepPolicyVersion(
+          intendedWithoutActiveReservations,
+        );
+        const [existingIntended] = await tx
+          .select({ id: evidenceResearchRuns.id })
+          .from(evidenceResearchRuns)
+          .where(
+            and(
+              eq(evidenceResearchRuns.taskId, taskId),
+              eq(evidenceResearchRuns.searchRunId, searchRunId),
+              eq(evidenceResearchRuns.taskRevision, brief.revision),
+              eq(evidenceResearchRuns.policyVersion, intendedPolicyVersion),
+            ),
+          )
+          .limit(1);
+        if (existingIntended !== undefined) {
+          const snapshot = await loadResearchSnapshotInTransaction({
+            tx,
+            taskId,
+            researchRunId: evidenceResearchRunIdSchema.parse(
+              existingIntended.id,
+            ),
+          });
+          if (snapshot === null) {
+            throw new Error("Existing research disappeared");
+          }
+          return snapshot;
+        }
+      }
+      selected = selectDeep(unavailableCriterionIdsByCandidate);
     } else {
       const selectedBase = selectResearchCandidates({ brief, run });
       selected = selectedBase
@@ -874,18 +1088,11 @@ export async function prepareEvidenceResearch(options: {
               .update(JSON.stringify(savedCandidateListingIds))
               .digest("hex")
               .slice(0, 16)}`
-          : `deep:${createHash("sha256")
-              .update(
-                JSON.stringify(
-                  selected.map(({ listing, criterionIds }) => ({
-                    candidateListingId: listing.id,
-                    criterionIds: [...criterionIds].sort(),
-                  })),
-                ),
-              )
-              .digest("hex")
-              .slice(0, 20)}`;
-    const policyVersion = `${EVIDENCE_POLICY_VERSION}:${policyIdentity}`;
+          : null;
+    const policyVersion =
+      policyIdentity === null
+        ? deepPolicyVersion(selected)
+        : `${EVIDENCE_POLICY_VERSION}:${policyIdentity}`;
     const [existing] = await tx
       .select({ id: evidenceResearchRuns.id })
       .from(evidenceResearchRuns)
@@ -952,7 +1159,7 @@ export async function prepareEvidenceResearch(options: {
         promptVersion: null,
         targetCriterionIds: plan.criterionIds,
       })),
-      ...selected.flatMap(({ listing }) => [
+      ...selected.flatMap(({ listing, criterionIds }) => [
         {
           id: evidenceAcquisitionAttemptIdSchema.parse(randomUUID()),
           taskId,
@@ -967,7 +1174,7 @@ export async function prepareEvidenceResearch(options: {
           provider: options.modelProvider,
           model: options.model,
           promptVersion: options.promptVersion,
-          targetCriterionIds: brief.items.map(({ criterionId }) => criterionId),
+          targetCriterionIds: criterionIds,
         },
         {
           id: evidenceAcquisitionAttemptIdSchema.parse(randomUUID()),
@@ -983,7 +1190,7 @@ export async function prepareEvidenceResearch(options: {
           provider: options.modelProvider,
           model: options.model,
           promptVersion: options.promptVersion,
-          targetCriterionIds: brief.items.map(({ criterionId }) => criterionId),
+          targetCriterionIds: criterionIds,
         },
       ]),
     ];
@@ -1006,8 +1213,17 @@ export async function prepareEvidenceResearch(options: {
     if (targetBindings.length > 0) {
       await tx.insert(evidenceAttemptTargetCriteria).values(targetBindings);
     }
-    for (const { listing } of selected) {
-      await insertDirectEvidence({ tx, researchRunId, listing, brief });
+    for (const { listing, criterionIds } of selected) {
+      const targetCriterionIds = new Set(criterionIds);
+      await insertDirectEvidence({
+        tx,
+        researchRunId,
+        listing,
+        items: brief.items.filter(({ criterionId }) =>
+          targetCriterionIds.has(criterionId),
+        ),
+        allowCriterionFreeObservations: phase !== "deepening",
+      });
     }
     const snapshot = await loadResearchSnapshotInTransaction({
       tx,
@@ -1362,7 +1578,19 @@ async function loadLockedAttempt(options: {
     .limit(1);
   if (row === undefined)
     throw new EvidenceResearchAuthorityError("Evidence attempt was not found");
-  return mapAttemptRow(row, []);
+  const targetRows = await options.tx
+    .select({ criterionId: evidenceAttemptTargetCriteria.criterionId })
+    .from(evidenceAttemptTargetCriteria)
+    .where(
+      and(
+        eq(evidenceAttemptTargetCriteria.taskId, options.taskId),
+        eq(evidenceAttemptTargetCriteria.attemptId, options.attemptId),
+      ),
+    );
+  return mapAttemptRow(
+    row,
+    targetRows.map(({ criterionId }) => criterionId),
+  );
 }
 
 async function finalizeResearchIfComplete(options: {
@@ -1610,7 +1838,7 @@ async function persistAssessments(options: {
   researchRunId: z.infer<typeof evidenceResearchRunIdSchema>;
   listing: PersistedCandidateListing;
   taskRevision: bigint;
-  brief: ReturnType<typeof projectShoppingBrief>;
+  targetItems: ReturnType<typeof projectShoppingBrief>["items"];
   sources: readonly EvidenceSourceV1[];
   observations: readonly ProductObservationV1[];
   proposals: ProductUnderstandingProviderWireV1["assessments"];
@@ -1624,7 +1852,7 @@ async function persistAssessments(options: {
     observations: options.observations,
     candidateListingId: options.listing.id,
   });
-  for (const [criterionOrdinal, item] of options.brief.items.entries()) {
+  for (const [criterionOrdinal, item] of options.targetItems.entries()) {
     const proposed = options.proposals.find(
       (entry) => entry.criterionOrdinal === criterionOrdinal,
     );
@@ -1845,6 +2073,78 @@ export async function recordCandidateUnderstanding(options: {
     }
     const state = await loadCurrentShoppingState(tx, taskId);
     const brief = projectShoppingBrief(state);
+    const extractionTargetIds = new Set(extractionAttempt.targetCriterionIds);
+    const assessmentTargetIds = new Set(assessmentAttempt.targetCriterionIds);
+    if (
+      extractionTargetIds.size === 0 ||
+      extractionTargetIds.size !== assessmentTargetIds.size ||
+      [...extractionTargetIds].some(
+        (criterionId) => !assessmentTargetIds.has(criterionId),
+      )
+    ) {
+      throw new EvidenceAttemptConflictError(extractionAttempt.id);
+    }
+    if (runRow.phase === "deepening") {
+      const organicAttemptRows = await tx
+        .select({ id: evidenceAcquisitionAttempts.id })
+        .from(evidenceAcquisitionAttempts)
+        .where(
+          and(
+            eq(evidenceAcquisitionAttempts.taskId, taskId),
+            eq(evidenceAcquisitionAttempts.researchRunId, researchRunId),
+            eq(
+              evidenceAcquisitionAttempts.candidateListingId,
+              candidateListingId,
+            ),
+            eq(evidenceAcquisitionAttempts.stage, "organic_search"),
+          ),
+        );
+      if (organicAttemptRows.length !== 1) {
+        throw new EvidenceAttemptConflictError(extractionAttempt.id);
+      }
+      const organicAttempt = await loadLockedAttempt({
+        tx,
+        taskId,
+        researchRunId,
+        attemptId: evidenceAcquisitionAttemptIdSchema.parse(
+          organicAttemptRows[0]?.id,
+        ),
+      });
+      if (
+        !hasExactNonEmptyCriterionTargets(
+          organicAttempt.targetCriterionIds,
+          extractionAttempt.targetCriterionIds,
+          assessmentAttempt.targetCriterionIds,
+        )
+      ) {
+        throw new EvidenceAttemptConflictError(organicAttempt.id);
+      }
+    }
+    const targetItems = brief.items.filter(({ criterionId }) =>
+      extractionTargetIds.has(criterionId),
+    );
+    if (targetItems.length !== extractionTargetIds.size) {
+      throw new EvidenceResearchAuthorityError(
+        "Research attempt targets are not current for this task revision",
+      );
+    }
+    if (result !== null) {
+      const outOfScopeObservation = result.observations.find(
+        ({ criterionOrdinal }) =>
+          (runRow.phase === "deepening" && criterionOrdinal === null) ||
+          (criterionOrdinal !== null &&
+            targetItems[criterionOrdinal] === undefined),
+      );
+      const outOfScopeAssessment = result.assessments.find(
+        ({ criterionOrdinal }) => targetItems[criterionOrdinal] === undefined,
+      );
+      if (
+        outOfScopeObservation !== undefined ||
+        outOfScopeAssessment !== undefined
+      ) {
+        throw new EvidenceAttemptConflictError(assessmentAttempt.id);
+      }
+    }
     const sourceRows =
       sourceIdsInOrder.length === 0
         ? []
@@ -1884,7 +2184,7 @@ export async function recordCandidateUnderstanding(options: {
         const item =
           proposed.criterionOrdinal === null
             ? null
-            : brief.items[proposed.criterionOrdinal];
+            : targetItems[proposed.criterionOrdinal];
         if (proposed.criterionOrdinal !== null && item === undefined) {
           throw new EvidenceAttemptConflictError(proposed.localRef);
         }
@@ -1959,7 +2259,7 @@ export async function recordCandidateUnderstanding(options: {
       researchRunId,
       listing,
       taskRevision: runRow.taskRevision,
-      brief,
+      targetItems,
       sources: allSourceRows.map(mapEvidenceSourceRow),
       observations: allObservationRows.map(mapObservationRow),
       proposals: result?.assessments ?? [],

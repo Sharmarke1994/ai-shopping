@@ -25,6 +25,7 @@ const secondCandidateListingId = candidateListingIdSchema.parse(
   "5c6f055c-01e4-4dfa-b065-306f656be061",
 );
 const criterionId = "70b74650-a485-4aeb-a507-0ca9b448f64f";
+const secondCriterionId = "b7d6b761-c9c5-4c62-96fb-90900a57b48d";
 
 const listing: LiveShoppingView["savedListings"][number] = {
   candidateListingId,
@@ -145,6 +146,33 @@ describe("founder live shopping decision loop", () => {
     localStorage.clear();
     vi.restoreAllMocks();
     window.history.replaceState({}, "", "/live");
+  });
+
+  it("keeps progressive decision cards visible while first-pass research is still running", async () => {
+    localStorage.setItem("consider-live-session-v1", sessionId);
+    const progressive = view({
+      researchStatus: "researching",
+      deepResearchStatus: "available",
+      includeDecision: true,
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(jsonResponse(progressive))),
+    );
+
+    render(<LiveShopping />);
+
+    expect(
+      await screen.findByText(
+        "Early evidence is available; research is still running",
+      ),
+    ).toBeVisible();
+    expect(
+      (await screen.findAllByRole("article", { name: listing.title }))[0],
+    ).toBeVisible();
+    expect(
+      screen.queryByText("Supported from partial research"),
+    ).not.toBeInTheDocument();
   });
 
   it("shows listings immediately and starts each progressive research phase once", async () => {
@@ -292,6 +320,14 @@ describe("founder live shopping decision loop", () => {
         ...completeLeader.decisionSupport,
         decisionGaps: [
           {
+            criterionId: secondCriterionId,
+            label: "Brand reputation",
+            strength: "preference",
+            candidateListingIds: [secondCandidateListingId],
+            candidateTitles: [secondListing.title],
+            explanation: "Brand reputation remains unresolved.",
+          },
+          {
             criterionId,
             label: "Battery life",
             strength: "strong_preference",
@@ -319,7 +355,11 @@ describe("founder live shopping decision loop", () => {
         },
       },
     });
-    const operations: { operation: string; candidateListingId?: string }[] = [];
+    const operations: {
+      operation: string;
+      candidateListingId?: string;
+      criterionId?: string;
+    }[] = [];
     vi.stubGlobal(
       "fetch",
       vi.fn(async (_request: RequestInfo | URL, init?: RequestInit) => {
@@ -327,6 +367,7 @@ describe("founder live shopping decision loop", () => {
         const body = JSON.parse(String(init.body)) as {
           operation: string;
           candidateListingId?: string;
+          criterionId?: string;
         };
         operations.push(body);
         return jsonResponse(researchable);
@@ -334,13 +375,67 @@ describe("founder live shopping decision loop", () => {
     );
 
     render(<LiveShopping />);
-    fireEvent.click(await screen.findByRole("button", { name: "Investigate" }));
+    const batteryGap = (await screen.findByText("Battery life")).closest("li");
+    if (batteryGap === null) throw new Error("Expected the battery-life gap");
+    fireEvent.click(
+      within(batteryGap).getByRole("button", { name: "Investigate" }),
+    );
     await waitFor(() =>
       expect(operations).toEqual([
         {
           operation: "research_candidate",
           sessionId,
           candidateListingId: secondCandidateListingId,
+          criterionId,
+        },
+      ]),
+    );
+  });
+
+  it("keeps card-level candidate research untargeted", async () => {
+    localStorage.setItem("consider-live-session-v1", sessionId);
+    const complete = view({
+      researchStatus: "ready",
+      deepResearchStatus: "complete",
+      includeDecision: true,
+    });
+    const option = complete.decisionSupport?.topOptions[0];
+    if (complete.decisionSupport === null || option === undefined) {
+      throw new Error("Expected the decision option");
+    }
+    const researchable = liveShoppingViewSchema.parse({
+      ...complete,
+      decisionSupport: {
+        ...complete.decisionSupport,
+        topOptions: [{ ...option, researchState: "available" }],
+      },
+    });
+    const operations: unknown[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_request: RequestInfo | URL, init?: RequestInit) => {
+        if (init?.method !== "POST") return jsonResponse(researchable);
+        const body: unknown = JSON.parse(String(init.body));
+        operations.push(body);
+        return jsonResponse(researchable);
+      }),
+    );
+
+    render(<LiveShopping />);
+    const cards = await screen.findAllByRole("article", {
+      name: listing.title,
+    });
+    const card = cards[0];
+    if (card === undefined) throw new Error("Expected the decision card");
+    fireEvent.click(
+      within(card).getByRole("button", { name: "Research this more" }),
+    );
+    await waitFor(() =>
+      expect(operations).toEqual([
+        {
+          operation: "research_candidate",
+          sessionId,
+          candidateListingId,
         },
       ]),
     );
