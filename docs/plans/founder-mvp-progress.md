@@ -17,9 +17,11 @@ and comparison are meaningfully better than beginning with Google.
 - Bounded V0-08 implementation, proof and review-correction checkpoint:
   `6a5bd991bf70237acb6b25fbe2f73519cf0561f6`.
 - V0-07 remains draft stacked PR #11 and is not merged. V0-08 is implemented,
-  founder-dogfooded, independently reviewed and locally verified; its push,
-  draft stacked PR and exact-head CI are the current delivery checkpoint. Do
-  not merge or begin V0-09.
+  founder-dogfooded, independently reviewed and locally verified in draft
+  stacked PR #12. Implementation head
+  `6fa16564ad8eb35c0136afe948c1fa4f77283294` passed exact-head quality,
+  PostgreSQL persistence and browser-smoke in GitHub run `33223808962`. Do not
+  merge or begin V0-09.
 - Original V0-05 checkout and draft PR #9 remain separate, unmodified,
   unmerged and formally unaccepted. The 21/21 Terra rule has not been weakened
   and Luna remains diagnostic only. V0-08 does not redefine that separate
@@ -254,9 +256,11 @@ absence of evidence.
 ## Current V0-08 founder decision loop
 
 V0-08 is implemented in the active isolated branch. Its one bounded independent
-review is complete and all four material findings are closed. It awaits its
-stacked draft PR and exact-head CI; implementation and evidence are committed at
-`6a5bd991bf70237acb6b25fbe2f73519cf0561f6`.
+review is complete and all four material findings are closed. Draft stacked PR
+#12 is open, mergeable and intentionally unmerged. Implementation and evidence
+are committed at `6a5bd991bf70237acb6b25fbe2f73519cf0561f6`;
+the migration-shape correction and exact green code head are
+`6fa16564ad8eb35c0136afe948c1fa4f77283294`.
 
 - Decision readiness is derived, qualitative and score-free: qualified, needs
   verification, trade-off or ineligible.
@@ -302,11 +306,9 @@ V0-09 has not started.
 
 ## Next validated checkpoints
 
-1. Commit and push `codex/v0-08-founder-decision-loop`, open a draft stacked PR
-   against `codex/v0-07-evidence-assessment`, and wait for exact-head quality,
-   pinned PostgreSQL persistence and browser-smoke CI.
-2. Stop for founder review. Do not merge any stacked PR and do not start V0-09.
-3. After V0-08 acceptance, use the measured leave-the-app gaps to choose the
+1. Stop for founder review of draft stacked PR #12. Do not merge any stacked PR
+   and do not start V0-09.
+2. If V0-08 is accepted, use the measured leave-the-app gaps to choose the
    next smallest product layer. Direct destination coverage and richer
    decision-critical sources remain real gaps; do not turn them into a crawler
    or fabricate personal-fit evidence.
@@ -368,8 +370,13 @@ V0-09 has not started.
   horizontal-overflow checks and were inspected visually after the final
   decision-gap action correction.
 - Production dependency audit: no known vulnerabilities. Local diff, drift and
-  changed-file secret checks are clean; exact-head CI remains the delivery-tail
-  check after commit and push.
+  changed-file secret checks are clean.
+- Exact implementation head
+  `6fa16564ad8eb35c0136afe948c1fa4f77283294` passed GitHub quality,
+  persistence and browser-smoke in run `33223808962`. The first CI attempt
+  correctly exposed that the migration-shape test omitted the two migration
+  0015 table names; commit `6fa1656` corrected only that expected list before
+  the green rerun.
 
 ## Exact resume instructions
 
@@ -382,11 +389,11 @@ V0-09 has not started.
    V0-03/V0-04/V0-06/V0-07 architecture.
 3. Preserve V0-05 PR #9, V0-06 PR #10 and V0-07 PR #11 exactly. Do not merge
    them and do not weaken V0-05's Terra rule.
-4. If exact-head CI or founder review reports a material issue,
+4. If current PR CI or founder review reports a material issue,
    make only a bounded V0-08 correction and rerun affected plus full gates.
    Never weaken unknown, evidence, money, task authority or revision boundaries.
 5. Keep the V0-08 PR draft and stacked on
    `codex/v0-07-evidence-assessment`. Do not begin V0-09, ProductIdentity,
    crawling, auth, deployment, checkout or affiliate work.
-6. After exact-head quality/persistence/browser-smoke are green, leave the
+6. Confirm current PR quality/persistence/browser-smoke remain green, leave the
    worktree clean and stop for founder review.
