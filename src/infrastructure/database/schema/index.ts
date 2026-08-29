@@ -9,9 +9,12 @@ export { criterionAssessmentObservations } from "./criterion-assessment-observat
 export { criterionAssessments } from "./criterion-assessments";
 export { evidenceAcquisitionAttempts } from "./evidence-acquisition-attempts";
 export { evidenceAttemptTargetCriteria } from "./evidence-attempt-target-criteria";
+export { evidencePageFetchTargets } from "./evidence-page-fetch-targets";
 export { evidenceResearchRuns } from "./evidence-research-runs";
 export { evidenceSources } from "./evidence-sources";
+export { fetchedEvidenceDocuments } from "./fetched-evidence-documents";
 export { founderLiveSessions } from "./founder-live-sessions";
+export { merchantDestinationResolutions } from "./merchant-destination-resolutions";
 export { productObservations } from "./product-observations";
 export { rejectedCandidateListings } from "./rejected-candidate-listings";
 export {

@@ -10,10 +10,10 @@ and comparison are meaningfully better than beginning with Google.
 - Repository: `Sharmarke1994/ai-shopping`.
 - Founder-MVP execution brief: `docs/plans/founder-usable-mvp.md`.
 - Active isolated worktree:
-  `/Users/alchemist32/Documents/AI Shopping/ai-shopping-v0-08-founder-loop`.
-- Active branch: `codex/v0-08-founder-decision-loop`, stacked exactly on the
-  independently accepted V0-07 head
-  `149f93cd43092996e20621e8976003b341a82c6a`.
+  `/Users/alchemist32/Documents/AI Shopping/ai-shopping-v0-09-source-depth`.
+- Active branch: `codex/v0-09-source-depth-purchase-path`, starting exactly at
+  the independently accepted V0-08 head
+  `cfd809740ae64be307798eb7870feaf56227d9dc`.
 - Independently reviewed V0-08 pre-correction head:
   `c28c891885462eb2990f0b098f3817e744afdec0` in draft stacked PR #12.
 - The final bounded six-issue correction and hardened one-shot proof harness
@@ -31,9 +31,15 @@ and comparison are meaningfully better than beginning with Google.
 - Correction/evidence plus ledger delivery head
   `4e891f81f581d8c2614bbdf76bf5ae1073399c43` passed exact-head quality,
   PostgreSQL persistence and browser-smoke in GitHub run `33228469926`.
-- V0-07 remains draft stacked PR #11 and is not merged. PR #12 remains draft,
-  stacked and unmerged. Do not rerun the live proof, merge, or begin V0-09
-  without independent review of the successful release-evidence checkpoint.
+- V0-08 was independently accepted at
+  `cfd809740ae64be307798eb7870feaf56227d9dc`. PR #12 remains draft, stacked
+  and unmerged. V0-09 is now the active isolated implementation checkpoint and
+  will be delivered as a new draft PR stacked on
+  `codex/v0-08-founder-decision-loop`; do not merge the stacked chain.
+- V0-09 deterministic implementation head
+  `080495089ef4a6c619302f0675e35eb0a5e74ac6` is pushed in draft stacked PR
+  #13. Its single guarded live proof produced an honest diagnostic failure; the
+  implementation PR remains draft and unmerged pending independent review.
 - Original V0-05 checkout and draft PR #9 remain separate, unmodified,
   unmerged and formally unaccepted. The 21/21 Terra rule has not been weakened
   and Luna remains diagnostic only. V0-08 does not redefine that separate
@@ -265,11 +271,12 @@ presentation grouping, and exact saved-listing comparison. Unknown remains a
 valid result and cannot become a conflict or a suitability claim through
 absence of evidence.
 
-## Current V0-08 founder decision loop
+## Accepted V0-08 founder decision loop
 
-V0-08 is implemented in the active isolated branch. The original bounded review
-and the final six-issue code correction review are complete. Draft stacked PR
-#12 is open, mergeable and intentionally unmerged. The independently reviewed
+V0-08 is independently accepted at
+`cfd809740ae64be307798eb7870feaf56227d9dc`. The original bounded review and
+the final six-issue code correction review are complete. Draft stacked PR #12
+is open, mergeable and intentionally unmerged. The independently reviewed
 pre-correction head is `c28c891885462eb2990f0b098f3817e744afdec0`;
 the prior fail-closed diagnostic checkpoint is
 `76549c7abcefb81429d5ddda7c8f0069c2be78ce`, with its historical ledger head
@@ -347,20 +354,75 @@ artifact at `f35f2fe718704726fe3f26a131f3fb696cf06c45`.
   research states in `docs/screenshots/v0-08/`.
 
 V0-05 PR #9, V0-06 PR #10 and V0-07 PR #11 remain unmodified and unmerged.
-V0-09 has not started.
+
+## Current V0-09 source-depth, purchase-path and speed checkpoint
+
+V0-09 is active from the exact accepted V0-08 head in the isolated worktree and
+branch recorded above. The durable execution contract is
+`docs/plans/v0-09.md`.
+
+- Implemented a no-crawler, server-owned fetch boundary for at most two
+  already-discovered exact product pages. DNS pinning, redirect revalidation,
+  deadlines, byte/encoding/content-type bounds and HTML extraction keep raw
+  pages out of persistence and model input.
+- Added replayable page-attempt, exact-target, admitted-source and typed
+  extracted-document provenance. Read and write paths fail closed on orphaned,
+  mutated, cross-scope or variant-conflicting evidence; unsupported product
+  facts remain unknown.
+- Added candidate-local organic -> page -> model pipelines with explicit
+  concurrency caps 3/2/2. Terminal units persist as they finish and useful
+  candidate decisions can project while slower candidates continue.
+- Removed merchant resolution from initial Shopping retrieval. A separate
+  task/run/candidate/policy-bound receipt now resolves only exact same-merchant
+  destinations for current top or saved offers; accepted result title and URL
+  are independently replayed, while Google Shopping remains the fallback.
+- Projected fetched source depth, attributable checked-no-answer states,
+  progressive research, page failures and direct/fallback purchase paths into
+  the existing calm responsive decision UI.
+- Added a guarded four-category Terra + Serper proof harness and eight-state
+  production-server visual workflow. Both independent static audits returned
+  GO. The single original live proof was consumed once and failed closed in
+  the first mouse case before page/model work; its durable marker and sanitized
+  diagnostic are preserved as historical evidence.
+- Corrected the phase-specific page-planning invariant. First-pass organic
+  attempts may be non-empty prioritized subsets of the full extraction /
+  assessment criteria; deepening still requires exact cross-stage equality;
+  reassessment still creates no organic/page work. Persisted page targets are
+  intersected with the exact discovering organic attempt's criteria, so page
+  authority cannot broaden. Deterministic and PostgreSQL regressions now cover
+  the six-criterion / five-criterion real shape and foreign/deepening failures.
+- The proof harness has a durable, non-resettable attempt ledger. Attempt 1 is
+  preserved under the original `*-prior.*` names; Attempt 2 is preserved under
+  the explicit `*-attempt-2.*` names; exactly one independent-review-authorized
+  Attempt 3 may be claimed, after which a fourth attempt is refused.
+- Attempt 2 (2026-08-29) failed closed in inherited ergonomic-mouse
+  interpretation. The first model call produced an invalid state patch; its
+  one safe retry produced a structured-output validation failure. No state
+  mutation or downstream provider work occurred. This is diagnostic evidence,
+  not release acceptance; Attempt 3 is authorized only to exercise the still
+  untested V0-09 layers, with no production context-acquisition changes.
+- Attempt 3 was the one independently authorized final full Terra + Serper
+  proof, claimed at `2026-08-29T22:29:02.934Z` and failed at the ergonomic-mouse
+  founder-intent semantic gate after V0-09 retrieval/evidence work had begun.
+  Context, action, Shopping, organic evidence and product-understanding calls
+  completed; four page fetches failed and no fetched document or destination
+  receipt was accepted. The proof detected that the conditional wireless/battery
+  request had been represented with `Battery life` as a hard criterion, which
+  reverses/invents the protected founder semantics. This is not a V0-09 source
+  depth defect and no production context, evaluator or V0-04 change is allowed.
+  The enriched sanitized diagnostic is preserved in the primary failure files;
+  the durable marker now refuses Attempt 4.
 
 ## Next validated checkpoints
 
-1. Stop for independent review of the focused model-contract alignment and
-   exact one-shot successful release evidence in draft stacked PR #12. Do not
-   merge any stacked PR, rerun the live proof or start V0-09.
-2. The reviewer must verify that the exact targeted contract, generation,
-   scope, cost, partial-failure and category-honesty evidence is non-vacuous.
-   No additional proof is authorized from this checkpoint.
-3. Only after V0-08 is independently accepted should the measured
-   leave-the-app gaps choose the next product layer. Direct destination coverage
-   and richer decision-critical sources remain real gaps; do not turn them into
-   a crawler or fabricate personal-fit evidence.
+1. Preserve the immutable Attempt 1, Attempt 2 and Attempt 3 artifacts and
+   their non-resettable markers. Attempt 3 did not meet release acceptance.
+2. Treat the earliest evidenced blocker as the inherited V0-05 founder-intent
+   semantic interpretation surfaced by the proof predicate; do not patch it
+   inside V0-09 and do not create Attempt 4.
+3. Commit/push only the exact proof evidence and ledger delta, obtain exact-head
+   CI, stop for independent review, keep PR #13 draft/unmerged and do not begin
+   V0-10.
 
 ## Credentials and blockers
 
@@ -377,73 +439,100 @@ V0-09 has not started.
 - The full local database suite therefore reports one expected version-pin
   assertion failure. Do not weaken the pin to make the local result green.
 - Public deployment/auth and any second paid provider remain unresolved
-  product/security decisions. The current bounded Serper policy performs at
-  most one merchant-resolution attempt per shopping query and still leaves most
-  top/saved products on an honest Google Shopping fallback. Moving resolution
-  post-shortlist requires an immutable enrichment boundary and remains a
-  measured product gap, not permission for scraping or a second paid vendor.
+  product/security decisions. The bounded post-shortlist Serper destination
+  layer is category-independent and exact-offer-only; unverifiable offers stay
+  on an honest Google Shopping fallback. It is not permission for scraping or
+  a second paid vendor.
 
 ## Latest verification
 
 - `pnpm check`: formatting, lint, generated route types, strict TypeScript,
-  225/225 deterministic unit/component tests and the production build pass on
-  the model-contract-aligned tree.
-- Focused V0-08 PostgreSQL suite: 21/21 passes, including explicit broad versus
-  focused model-call policy, exact gap targeting, A/B/C/D generation identity,
-  malformed non-target output, active reservation, cross-stage target
-  corruption, title evidence and failed-deep preservation.
-- Full PostgreSQL suite: 114 functional tests pass. The sole local failure is
+  342/342 deterministic unit/component tests and the production build pass on
+  the corrected tree.
+- Focused page-persistence PostgreSQL regression: 12/12 passes, including the
+  first-pass prioritized subset and exact discovering-attempt page scope.
+- Full PostgreSQL suite: 140/141 functional tests pass. The sole local failure is
   the intentional PostgreSQL 17.6 version assertion against Homebrew 17.11; the
   repository pin remains unchanged.
-- `pnpm test:e2e`: 8/8 Chromium tests pass, including automatic first/deep
-  research, progressive cards, two saves, comparison, exact rejection/undo,
-  refinement, refresh, mobile hard-unknown presentation and no overflow.
-- `pnpm db:generate` reports 28 tables and no schema drift; V0-08 adds no
-  migration. Production audit reports no known vulnerabilities.
-- Eight production-server desktop/mobile/partial screenshots were regenerated,
-  passed explicit horizontal-overflow checks and were inspected without Next
-  development chrome.
-- Exactly one newly authorized fresh live attempt generated at
-  `2026-08-29T10:39:53.483Z` completed mouse, chair and vacuum. Each exact named
-  target used a focused one-criterion provider contract, advanced exactly one
-  current generation and wrote one in-scope assessment with no out-of-scope
-  assessment writes. Mouse also proved one prevented duplicate call; vacuum
-  proved an honest controlled partial run after a real provider response.
-- Logical port counts were interpretation 4, action 4, shopping 12, merchant
-  resolution 7, evidence search 27 and product understanding 29. These are
-  logical application/port invocations, not transport-retry counts.
-- The prior failure JSON/Markdown were removed before success evidence was
-  written. The success JSON and Markdown contain no repository credentials or
-  private local paths and strip known third-party tracking parameters.
-- Historical delivery head `4e891f81f581d8c2614bbdf76bf5ae1073399c43`
-  passed GitHub quality, PostgreSQL persistence and browser-smoke in run
-  `33228469926`. The successful release checkpoint
-  `5874ed96c071e73679b374293bddfcaf6623cbbe` passed exact-head quality, pinned
-  PostgreSQL persistence and browser-smoke in run `33248668320`. PR #12 remains
-  draft and unmerged; the following CI-record commit changes only this durable
-  progress documentation.
+- `pnpm test:e2e`: 8/8 Chromium tests pass against a fresh migrated disposable
+  local database, including automatic first/deep research, progressive cards,
+  two saves, comparison, exact rejection/undo, refinement, refresh, mobile
+  hard-unknown presentation and no overflow.
+- `pnpm db:generate` reports 31 tables and no schema drift. The final additive
+  `0016_lame_wolfpack.sql` migration runs from empty, revokes PUBLIC/anon/
+  authenticated access to all new private tables, and preserves the accepted
+  PostgreSQL 17.6 pin. Production dependency audit reports no vulnerabilities.
+- Eight production `next start` desktop/mobile screenshots passed explicit
+  horizontal-overflow assertions and were visually inspected without framework
+  development chrome. They cover fast listings, progressive evidence, fetched
+  source depth, an attributed page failure, exact direct/fallback purchase,
+  comparison, targeted research and reject/undo.
+- Credential-shape scanning found no OpenAI/Serper/Bearer key values in the
+  deterministic checkpoint.
+- The single original guarded live attempt ran once at
+  `2026-08-29T14:26:58.216Z` and failed in the ergonomic-mouse first pass with
+  `EvidenceAttemptConflictError`. Interpretation 1/1, action selection 1/1,
+  Shopping 3/3 and organic evidence search 4/4 logical calls succeeded. No page
+  fetch, product-understanding or destination logical call began.
+- The exact failed candidate had six observation/assessment target criteria but
+  its valid first-pass organic attempt targeted the prioritized maximum of five,
+  omitting only `Wireless battery suitability`. Page planning required all three
+  sets to be identical and raised on the still-planned extraction attempt. This
+  is the earliest evidenced layer: a deepening-style cross-stage equality
+  invariant was applied to the intentionally broader first-pass model scope.
+  The error wording about different terminal content is misleading; no terminal
+  replay conflict occurred. No semantic product result was produced and no
+  evaluator was weakened.
+- The original sanitized failure and marker are preserved under
+  `docs/evals/v0-09-live-founder-proof-*-prior.*`; Attempt 2 is preserved under
+  `docs/evals/v0-09-live-founder-proof-*-attempt-2.*`; Attempt 3 remains under
+  the primary names. Attempts 2 and 3 destroyed their disposable databases
+  with zero cleanup errors. All failures are diagnostic only.
+- Post-correction proof attempt `d1e01d17-5116-4e56-bc0c-6e8ca6d75e6a` ran at
+  `2026-08-29T17:11:44.503Z` and stopped in ergonomic-mouse interpretation.
+  The first call was rejected as `invalid_state_patch`; the one safe retry was
+  rejected as `structured_output_validation_failed`. The sanitized artifact
+  records 2 interpretation calls (both provider-port operations), zero action,
+  Shopping, evidence, page, model or destination calls, an empty revision-0
+  brief, and no persisted SearchRun. This is a model-contract/provider result,
+  not rate-limit or timeout noise; no speculative correction is authorized.
+- Final independent-review-authorized Attempt 3
+  `4ac724de-6576-49a3-b9b5-e419c45829f5` ran at
+  `2026-08-29T22:30:23.817Z` and reached V0-09 before failing the ergonomic-
+  mouse founder-intent semantic gate. It completed 2 interpretation, 2 action,
+  6 Shopping, 11 organic evidence-search and 11 product-understanding logical
+  provider operations; 4 page-fetch attempts failed, no fetched document was
+  admitted, and no destination call began. The protected Battery life
+  condition was represented as a hard criterion rather than the requested
+  conditional wireless preference, so release acceptance is false. The exact
+  sanitized diagnostic is `docs/evals/v0-09-live-founder-proof-failure.json`
+  with its Markdown companion; its marker records both prior attempt IDs and
+  permanently refuses Attempt 4.
+- Exact diagnostic head `259722f` passed GitHub quality, pinned PostgreSQL
+  persistence and browser-smoke in run `33278612605`. Draft stacked PR #13
+  remains mergeable and unmerged. No production context-acquisition code,
+  prompt or schema changed in the proof attempt.
 
 ## Exact resume instructions
 
 1. Work only in
-   `/Users/alchemist32/Documents/AI Shopping/ai-shopping-v0-08-founder-loop` on
-   `codex/v0-08-founder-decision-loop`; confirm branch, stacked base, exact head
-   and tree state first.
-2. Read this file, `docs/plans/v0-08.md` and the concise
-   `docs/evals/v0-08-live-founder-proof.md`. Do not reopen accepted
-   V0-03/V0-04/V0-06/V0-07 architecture.
+   `/Users/alchemist32/Documents/AI Shopping/ai-shopping-v0-09-source-depth` on
+   `codex/v0-09-source-depth-purchase-path`; confirm it descends exactly from
+   accepted V0-08 head `cfd809740ae64be307798eb7870feaf56227d9dc`
+   and inspect the tree first.
+2. Read this file and `docs/plans/v0-09.md`. Read only the V0-08 seams required
+   by the current implementation layer; do not reopen accepted V0-03/V0-04 or
+   earlier retrieval/evidence architecture.
 3. Preserve V0-05 PR #9, V0-06 PR #10 and V0-07 PR #11 exactly. Do not merge
    them and do not weaken V0-05's Terra rule.
-4. Do not rerun the live three-category proof from this checkpoint. First obtain
-   independent review of the exact success artifact and contract-alignment
-   delta. If review reports a material deterministic issue, make only a bounded
-   V0-08 correction and rerun affected plus full deterministic gates; a new live
-   proof still requires explicit authorization. Never weaken unknown, evidence,
-   money, task authority or revision boundaries.
-5. Keep the V0-08 PR draft and stacked on
-   `codex/v0-07-evidence-assessment`. Do not begin V0-09, ProductIdentity,
-   crawling, auth, deployment, checkout or affiliate work.
-6. Confirm exact-head PR quality/persistence/browser-smoke are green, leave the
-   worktree clean and stop for independent release-evidence review. V0-08 is not
-   accepted until that review approves the already completed three-category
-   proof.
+4. Do not rerun V0-08 evidence. Build V0-09 in the ordered layers recorded in
+   its plan. Never weaken unknown, exact offer identity, evidence provenance,
+   money, task authority, revisions, leases or focused target scope.
+5. Do not fetch arbitrary user URLs, crawl links, create ProductIdentity,
+   substitute another merchant, add auth/deployment/checkout/affiliate work or
+   begin V0-10.
+6. Attempts 1, 2 and 3 are immutable diagnostics. Attempt 3 is the final
+   independent-review-authorized run and did not satisfy release acceptance.
+   Preserve the complete three-attempt ledger, keep PR #13 draft/unmerged,
+   leave the worktree clean and stop for independent review. Do not begin
+   V0-10 or attempt another live proof from this checkpoint.

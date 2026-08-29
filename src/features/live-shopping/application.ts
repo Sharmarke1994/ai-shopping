@@ -18,8 +18,12 @@ import {
   type PersistedContextAction,
 } from "@/features/context-acquisition/persistence/context-actions";
 import type { ShoppingSearchProvider } from "@/features/retrieval-spike/contracts";
+import type { MerchantDestinationResolver } from "@/features/purchase-destinations/contracts";
+import { executeOrResumeMerchantDestinationResolution } from "@/features/purchase-destinations/orchestrator";
 import type { EvidenceResearchDependencies } from "@/features/product-understanding/research-orchestrator";
 import { executeOrResumeEvidenceResearch } from "@/features/product-understanding/research-orchestrator";
+import { loadMerchantDestinationResolutionMap } from "@/features/purchase-destinations/persistence";
+import { projectMerchantDestination } from "@/features/purchase-destinations/projection";
 import {
   EvidenceResearchNotNeededError,
   loadCurrentDecisionSupportInTransaction,
@@ -56,6 +60,7 @@ import {
   refineLiveShoppingRequestSchema,
   researchLiveCandidateRequestSchema,
   researchLiveShoppingRequestSchema,
+  resolveLiveDestinationsRequestSchema,
   saveLiveListingRequestSchema,
   startLiveShoppingRequestSchema,
   type LiveShoppingView,
@@ -92,6 +97,7 @@ export type LiveShoppingDependencies = Readonly<{
   model: ContextAcquisitionModel;
   provider: ShoppingSearchProvider;
   research?: Omit<EvidenceResearchDependencies, "db">;
+  destinationResolver?: MerchantDestinationResolver;
 }>;
 
 export class LiveShoppingSessionNotFoundError extends Error {
@@ -925,6 +931,65 @@ export async function researchLiveCandidate(options: {
   });
 }
 
+export async function resolveLivePurchaseDestinations(options: {
+  dependencies: LiveShoppingDependencies;
+  input: unknown;
+}) {
+  const input = resolveLiveDestinationsRequestSchema.parse(options.input);
+  if (options.dependencies.destinationResolver === undefined) {
+    throw new LiveShoppingSearchUnavailableError();
+  }
+  const authority = await options.dependencies.db.transaction(async (tx) => {
+    const loaded = await loadSessionInTransaction({
+      tx,
+      sessionId: input.sessionId,
+    });
+    if (loaded.currentContextActionId === null) {
+      throw new LiveShoppingSearchUnavailableError();
+    }
+    const action = await loadContextActionByIdInTransaction({
+      tx,
+      taskId: loaded.taskId,
+      contextActionId: loaded.currentContextActionId,
+    });
+    if (action?.action !== "search") {
+      throw new LiveShoppingSearchUnavailableError();
+    }
+    return { action, session: loaded };
+  });
+  const currentRun = await loadPersistedSearchRunByTrigger({
+    db: options.dependencies.db,
+    taskId: authority.session.taskId,
+    contextActionId: authority.action.id,
+  });
+  if (currentRun === null || currentRun.status === "running") {
+    throw new LiveShoppingSearchUnavailableError();
+  }
+  const current = await loadLiveShoppingSession({
+    db: options.dependencies.db,
+    sessionId: authority.session.id,
+  });
+  await executeOrResumeMerchantDestinationResolution({
+    db: options.dependencies.db,
+    taskId: authority.session.taskId,
+    visibleTopCandidateListingIds:
+      current.decisionSupport?.topOptions.map(
+        ({ listing }) => listing.candidateListingId,
+      ) ?? [],
+    visibleTopAuthority: {
+      sessionId: authority.session.id,
+      contextActionId: authority.action.id,
+      searchRunId: currentRun.portfolio.run.id,
+      taskRevision: authority.action.selectedAtRevision,
+    },
+    resolver: options.dependencies.destinationResolver,
+  });
+  return loadLiveShoppingSession({
+    db: options.dependencies.db,
+    sessionId: authority.session.id,
+  });
+}
+
 function briefEmphasis(strength: "hard" | "strong_preference" | "preference") {
   return strength === "hard"
     ? ("must" as const)
@@ -939,10 +1004,17 @@ function liveListingDto(options: {
   >["listings"][number];
   brief: ReturnType<typeof projectShoppingBrief>;
   saved: boolean;
+  destinationResolutions?:
+    | Awaited<ReturnType<typeof loadMerchantDestinationResolutionMap>>
+    | undefined;
   rejected?: boolean;
   foundAcrossQueries?: number;
 }) {
   const listing = options.listing;
+  const destination = projectMerchantDestination({
+    listing,
+    resolutions: options.destinationResolutions ?? new Map(),
+  });
   const evidence = summarizeListingEvidence({
     brief: options.brief,
     listing,
@@ -964,19 +1036,14 @@ function liveListingDto(options: {
             currency: "GBP",
           }).format(listing.price.amountMinor / 100)),
     imageUrl: listing.imageUrl,
-    destinationUrl: listing.merchantDestinationUrl ?? listing.url,
-    destinationLabel:
-      listing.merchantDestinationUrl === null
-        ? "View on Google Shopping"
-        : `View at ${(listing.merchant ?? "retailer").slice(0, 100)}`,
-    sourceUrl:
-      listing.merchantDestinationUrl === null ||
-      listing.merchantDestinationUrl === listing.url
-        ? null
-        : listing.url,
+    destinationUrl: destination.destinationUrl,
+    destinationLabel: destination.hasDirectDestination
+      ? `View at ${(listing.merchant ?? "retailer").slice(0, 100)}`
+      : "View on Google Shopping",
+    purchaseState: destination.purchaseState,
+    sourceUrl: destination.googleShoppingSourceUrl,
     sourceLabel:
-      listing.merchantDestinationUrl === null ||
-      listing.merchantDestinationUrl === listing.url
+      destination.googleShoppingSourceUrl === null
         ? null
         : ("View Google Shopping source" as const),
     deliveryText: listing.deliveryText,
@@ -1000,6 +1067,9 @@ export function displayListings(
     brief: ReturnType<typeof projectShoppingBrief>;
     savedListingIds: ReadonlySet<string>;
     rejectedListingIds?: ReadonlySet<string>;
+    destinationResolutions?:
+      | Awaited<ReturnType<typeof loadMerchantDestinationResolutionMap>>
+      | undefined;
   },
 ) {
   const queryOrdinals = new Map(
@@ -1051,10 +1121,19 @@ export function displayListings(
       grouped.set(key, { listing, queryIds: new Set([listing.queryId]) });
     } else {
       existing.queryIds.add(listing.queryId);
-      if (
-        existing.listing.merchantDestinationUrl === null &&
-        listing.merchantDestinationUrl !== null
-      ) {
+      const existingResolution = options.destinationResolutions?.get(
+        existing.listing.id,
+      );
+      const listingResolution = options.destinationResolutions?.get(listing.id);
+      const existingDestinationPriority =
+        existingResolution?.status === "resolved"
+          ? 2
+          : Number(existing.listing.merchantDestinationUrl !== null);
+      const listingDestinationPriority =
+        listingResolution?.status === "resolved"
+          ? 2
+          : Number(listing.merchantDestinationUrl !== null);
+      if (listingDestinationPriority > existingDestinationPriority) {
         existing.listing = listing;
       }
     }
@@ -1080,6 +1159,7 @@ export function displayListings(
         listing,
         brief: options.brief,
         saved: options.savedListingIds.has(listing.id),
+        destinationResolutions: options.destinationResolutions,
         foundAcrossQueries: queryIds.size,
       }),
     ),
@@ -1175,6 +1255,16 @@ export async function loadLiveShoppingSession(options: {
     savedListings: snapshot.saved.map(({ listing }) => listing),
     rejectedListingIds,
   });
+  const destinationResolutions = await loadMerchantDestinationResolutionMap({
+    db: options.db,
+    taskId: snapshot.session.taskId,
+    candidateListingIds: [
+      ...new Set([
+        ...snapshot.saved.map(({ listing }) => listing.id),
+        ...decision.topOptions.map(({ listing }) => listing.id),
+      ]),
+    ],
+  });
   const decisionSupport = {
     researchStatus: decision.researchStatus,
     deepResearchStatus: decision.deepResearchStatus,
@@ -1188,6 +1278,7 @@ export async function loadLiveShoppingSession(options: {
         listing: option.listing,
         brief: snapshot.brief,
         saved: savedListingIds.has(option.listing.id),
+        destinationResolutions,
       }),
       strongestSupported: option.strongestSupported,
       readiness: option.readiness,
@@ -1209,6 +1300,7 @@ export async function loadLiveShoppingSession(options: {
                 listing,
                 brief: snapshot.brief,
                 saved: true,
+                destinationResolutions,
               }),
             ),
             researchStates: decision.comparison.researchStates,
@@ -1223,7 +1315,20 @@ export async function loadLiveShoppingSession(options: {
     sessionId,
     viewEpoch: createHash("sha256")
       .update(
-        `${snapshot.session.taskId}:${snapshot.brief.revision}:${snapshot.session.currentContextActionId ?? "none"}`,
+        `${snapshot.session.taskId}:${snapshot.brief.revision}:${snapshot.session.currentContextActionId ?? "none"}:${[
+          ...destinationResolutions.values(),
+        ]
+          .sort((left, right) => left.id.localeCompare(right.id))
+          .map((resolution) =>
+            [
+              resolution.id,
+              resolution.status,
+              resolution.status === "resolved"
+                ? resolution.destinationUrl
+                : resolution.outcomeCode,
+            ].join("/"),
+          )
+          .join("|")}`,
       )
       .digest("hex")
       .slice(0, 24),
@@ -1238,6 +1343,7 @@ export async function loadLiveShoppingSession(options: {
         listing,
         brief: snapshot.brief,
         saved: true,
+        destinationResolutions,
       }),
     ),
     rejectedListings: snapshot.rejected.map(({ listing }) =>
@@ -1328,6 +1434,7 @@ export async function loadLiveShoppingSession(options: {
                   snapshot.saved.map(({ listing }) => listing.id),
                 ),
                 rejectedListingIds,
+                destinationResolutions,
               });
               return {
                 status: run.status,

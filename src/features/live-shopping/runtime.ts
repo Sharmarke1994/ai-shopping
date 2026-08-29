@@ -12,6 +12,7 @@ import type {
 } from "@/features/context-acquisition/provider-wire";
 import { createOpenAIContextAcquisitionModel } from "@/features/context-acquisition/openai-adapter";
 import {
+  FakeEvidencePageFetcher,
   FakeEvidenceSearchProvider,
   FakeProductUnderstandingModel,
 } from "@/features/product-understanding/fakes";
@@ -20,6 +21,8 @@ import {
   V0_07_OPENAI_DEFAULT_CONFIG,
 } from "@/features/product-understanding/openai-adapter";
 import { PRODUCT_UNDERSTANDING_PROMPT_VERSION } from "@/features/product-understanding/prompts";
+import { fetchBoundedPage } from "@/features/product-understanding/page-fetch";
+import { SerperMerchantDestinationResolver } from "@/features/purchase-destinations/serper-merchant-destination-resolver";
 import { SerperEvidenceSearchAdapter } from "@/features/product-understanding/serper-evidence-adapter";
 import { FakeShoppingProvider } from "@/features/retrieval-spike/fake-shopping-provider";
 import { SerperShoppingAdapter } from "@/features/retrieval-spike/serper-shopping-adapter";
@@ -234,10 +237,30 @@ function fixtureModel(): ContextAcquisitionModel {
 export async function createLiveShoppingDependencies(): Promise<LiveShoppingDependencies> {
   const connection = createLiveShoppingDatabase();
   if (process.env.LIVE_SHOPPING_TEST_MODE === "fixture") {
+    const fixtureScenario = process.env.LIVE_SHOPPING_TEST_SCENARIO?.trim();
+    if (fixtureScenario !== undefined && fixtureScenario !== "v0-09-visual") {
+      throw new Error("LIVE_SHOPPING_TEST_SCENARIO is not recognised");
+    }
+    const v009Visual = fixtureScenario === "v0-09-visual";
     return {
       db: connection.db,
       model: fixtureModel(),
-      provider: new FakeShoppingProvider(),
+      provider: new FakeShoppingProvider(() => new Date(), {
+        purchasePaths: v009Visual ? "mixed" : "direct",
+      }),
+      ...(v009Visual
+        ? {
+            destinationResolver: {
+              provider: "fixture" as const,
+              maxRequestDurationMs: 0,
+              resolve: async () => ({
+                outcome: "rejected" as const,
+                rejectionCode: "no_results" as const,
+                consideredResultCount: 0,
+              }),
+            },
+          }
+        : {}),
       research: {
         evidenceProvider: new FakeEvidenceSearchProvider({
           failOnCalls:
@@ -245,6 +268,17 @@ export async function createLiveShoppingDependencies(): Promise<LiveShoppingDepe
               ? [1]
               : [],
         }),
+        pageFetcher: new FakeEvidencePageFetcher(
+          v009Visual
+            ? {
+                // One candidate becomes visible before a deliberately slow
+                // neighbour, and another exact page fails honestly. These
+                // hooks exist only inside explicit fixture mode.
+                delayOnCalls: { 2: 7_000 },
+                failOnCalls: [1],
+              }
+            : undefined,
+        ),
         model: new FakeProductUnderstandingModel(),
         modelIdentity: {
           provider: "fixture",
@@ -270,8 +304,15 @@ export async function createLiveShoppingDependencies(): Promise<LiveShoppingDepe
       environment: { ...process.env, OPENAI_API_KEY: openAIKey },
     }),
     provider: new SerperShoppingAdapter({ apiKey: serperKey }),
+    destinationResolver: new SerperMerchantDestinationResolver({
+      apiKey: serperKey,
+    }),
     research: {
       evidenceProvider: new SerperEvidenceSearchAdapter({ apiKey: serperKey }),
+      pageFetcher: {
+        provider: "server_http",
+        fetch: ({ url }) => fetchBoundedPage({ url }),
+      },
       model: createOpenAIProductUnderstandingModel({ apiKey: openAIKey }),
       modelIdentity: {
         provider: "openai",

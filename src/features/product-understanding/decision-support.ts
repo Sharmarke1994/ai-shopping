@@ -25,11 +25,22 @@ export type DecisionSupportCandidate = Readonly<{
   }>[];
   whyItFits: readonly string[];
   watchouts: readonly string[];
-  unknowns: readonly string[];
+  unknowns: readonly Readonly<{
+    criterionId: string;
+    label: string;
+    reason:
+      | "not_checked"
+      | "checked_no_answer"
+      | "source_disagreement"
+      | "check_failed"
+      | "personal_fit";
+    explanation: string;
+  }>[];
   evidenceSources: readonly Readonly<{
     title: string;
     url: string;
     role: EvidenceSourceV1["sourceRole"];
+    depth: EvidenceSourceV1["sourceKind"];
   }>[];
 }>;
 
@@ -51,7 +62,12 @@ export type SavedComparison = Readonly<{
       candidateListingId: string;
       status: CriterionAssessmentV1["status"];
       explanation: string;
-      sources: readonly Readonly<{ title: string; url: string }>[];
+      sources: readonly Readonly<{
+        title: string;
+        url: string;
+        role: EvidenceSourceV1["sourceRole"];
+        depth: EvidenceSourceV1["sourceKind"];
+      }>[];
     }>[];
   }>[];
   judgement: string;
@@ -307,6 +323,53 @@ function candidateResearchState(options: {
     : ("complete" as const);
 }
 
+function unknownReason(options: {
+  item: BriefItemV1;
+  assessment: CriterionAssessmentV1 | undefined;
+  candidateListingId: string;
+  coverage: CurrentDecisionSupport["deepResearchCoverage"];
+  sources: ReadonlyMap<string, EvidenceSourceV1>;
+}): DecisionSupportCandidate["unknowns"][number]["reason"] {
+  if (options.assessment?.relation === "personal_fit_unresolved") {
+    return "personal_fit";
+  }
+  if (options.assessment?.relation === "source_disagreement") {
+    return "source_disagreement";
+  }
+  const relevant = options.coverage.filter(
+    ({ candidateListingId, criterionIds }) =>
+      candidateListingId === options.candidateListingId &&
+      criterionIds.includes(options.item.criterionId),
+  );
+  if (
+    relevant.some(
+      ({ runStatus, status }) => runStatus !== "running" && status === "failed",
+    )
+  ) {
+    return "check_failed";
+  }
+  if (
+    relevant.some(
+      ({ runStatus, status, checkedSourcesByCriterion }) =>
+        runStatus !== "running" &&
+        status === "succeeded" &&
+        (checkedSourcesByCriterion
+          .find(({ criterionId }) => criterionId === options.item.criterionId)
+          ?.sourceIds.some((sourceId) => {
+            const source = options.sources.get(sourceId);
+            return (
+              source?.candidateListingId === options.candidateListingId &&
+              source.sourceKind === "fetched_page"
+            );
+          }) ??
+          false),
+    )
+  ) {
+    return "checked_no_answer";
+  }
+  return "not_checked";
+}
+
 function candidateDecision(options: {
   listing: PersistedCandidateListing;
   items: readonly BriefItemV1[];
@@ -315,6 +378,7 @@ function candidateDecision(options: {
   sourceMap: ReadonlyMap<string, EvidenceSourceV1>;
   strongestSupported: boolean;
   researchState: DecisionSupportCandidate["researchState"];
+  coverage: CurrentDecisionSupport["deepResearchCoverage"];
 }): DecisionSupportCandidate {
   const unresolved = unresolvedMustHaves({
     items: options.items,
@@ -344,18 +408,47 @@ function candidateDecision(options: {
       .map(({ explanation }) => explanation),
     3,
   );
-  const unknowns = conciseUnique(
-    options.assessments
-      .filter(
-        ({ status, criterionId }) =>
-          status === "uncertain" &&
-          options.items.find((item) => item.criterionId === criterionId)
-            ?.strength !== "hard",
-      )
-      .map(({ explanation }) => explanation),
-    3,
-  );
+  const unknowns = options.items
+    .filter((item) => {
+      if (item.strength === "hard") return false;
+      const assessment = assessmentForCriterion(
+        options.assessments,
+        item.criterionId,
+      );
+      return (
+        assessment === undefined ||
+        assessment.status === "uncertain" ||
+        assessment.status === "not_applicable"
+      );
+    })
+    .slice(0, 3)
+    .map((item) => {
+      const assessment = assessmentForCriterion(
+        options.assessments,
+        item.criterionId,
+      );
+      const reason = unknownReason({
+        item,
+        assessment,
+        candidateListingId: options.listing.id,
+        coverage: options.coverage,
+        sources: options.sourceMap,
+      });
+      const fallback =
+        reason === "check_failed"
+          ? "The focused source check did not complete; existing evidence is preserved."
+          : reason === "not_checked"
+            ? "This has not been checked against an exact product page yet."
+            : "The checked exact sources did not establish this criterion.";
+      return {
+        criterionId: item.criterionId,
+        label: item.conceptLabel,
+        reason,
+        explanation: assessment?.explanation ?? fallback,
+      };
+    });
   const sourceMap = new Map<string, EvidenceSourceV1>();
+  const checkedRepresentativeSourceIds: string[] = [];
   for (const assessment of options.assessments) {
     for (const source of sourcesForAssessment({
       assessment,
@@ -365,6 +458,58 @@ function candidateDecision(options: {
       sourceMap.set(source.id, source);
     }
   }
+  for (const unknown of unknowns) {
+    const criterionSources: EvidenceSourceV1[] = [];
+    for (const coverage of options.coverage) {
+      if (
+        coverage.candidateListingId !== options.listing.id ||
+        coverage.runStatus === "running"
+      ) {
+        continue;
+      }
+      const checked = coverage.checkedSourcesByCriterion.find(
+        ({ criterionId }) => criterionId === unknown.criterionId,
+      );
+      for (const sourceId of checked?.sourceIds ?? []) {
+        const source = options.sourceMap.get(sourceId);
+        if (
+          source?.candidateListingId === options.listing.id &&
+          source.sourceKind === "fetched_page"
+        ) {
+          sourceMap.set(source.id, source);
+          criterionSources.push(source);
+        }
+      }
+    }
+    if (unknown.reason === "checked_no_answer") {
+      const [representative] = criterionSources.sort(
+        (left, right) =>
+          left.observedAt.getTime() - right.observedAt.getTime() ||
+          left.id.localeCompare(right.id),
+      );
+      if (
+        representative !== undefined &&
+        !checkedRepresentativeSourceIds.includes(representative.id)
+      ) {
+        checkedRepresentativeSourceIds.push(representative.id);
+      }
+    }
+  }
+  const sortedSources = [...sourceMap.values()].sort(
+    (left, right) =>
+      Number(right.sourceKind === "fetched_page") -
+        Number(left.sourceKind === "fetched_page") ||
+      left.observedAt.getTime() - right.observedAt.getTime() ||
+      left.id.localeCompare(right.id),
+  );
+  const representativeIds = new Set(checkedRepresentativeSourceIds);
+  const prioritizedSources = [
+    ...checkedRepresentativeSourceIds.flatMap((sourceId) => {
+      const source = sourceMap.get(sourceId);
+      return source === undefined ? [] : [source];
+    }),
+    ...sortedSources.filter(({ id }) => !representativeIds.has(id)),
+  ];
   return {
     listing: options.listing,
     readiness: readinessForCandidate({
@@ -379,10 +524,11 @@ function candidateDecision(options: {
     whyItFits,
     watchouts,
     unknowns,
-    evidenceSources: [...sourceMap.values()].slice(0, 5).map((source) => ({
+    evidenceSources: prioritizedSources.slice(0, 5).map((source) => ({
       title: source.sourceTitle,
       url: source.sourceUrl,
       role: source.sourceRole,
+      depth: source.sourceKind,
     })),
   };
 }
@@ -482,6 +628,8 @@ function buildComparison(options: {
         }).map((source) => ({
           title: source.sourceTitle,
           url: source.sourceUrl,
+          role: source.sourceRole,
+          depth: source.sourceKind,
         })),
       };
     }),
@@ -704,6 +852,7 @@ export function buildDecisionSupport(options: {
           assessments,
           coverage: options.support.deepResearchCoverage,
         }),
+        coverage: options.support.deepResearchCoverage,
       });
     });
   const hasHardResolvedOption = topOptions.some(

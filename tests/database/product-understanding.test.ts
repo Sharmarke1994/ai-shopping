@@ -26,6 +26,7 @@ import {
 import { saveCandidateListing } from "../../src/features/live-shopping/saved-listings";
 import { rejectCandidateListing } from "../../src/features/live-shopping/rejected-listings";
 import {
+  FakeEvidencePageFetcher,
   FakeEvidenceSearchProvider,
   FakeProductUnderstandingModel,
 } from "../../src/features/product-understanding/fakes";
@@ -256,9 +257,9 @@ function assessmentOnlyModel(status: "meets" | "uncertain" = "uncertain") {
       ) => {
         calls.push(input);
         policies.push(policy);
-        const source = input.sources.find(
-          ({ kind }) => kind !== "listing_image",
-        );
+        const source =
+          input.sources.find(({ kind }) => kind === "fetched_page") ??
+          input.sources.find(({ kind }) => kind !== "listing_image");
         const observations =
           status === "meets" && source !== undefined
             ? input.criteria.map((criterion) => ({
@@ -355,6 +356,7 @@ describe("evidence-backed product understanding persistence", () => {
     const dependencies = {
       db: connection.db,
       evidenceProvider,
+      pageFetcher: new FakeEvidencePageFetcher(),
       model,
       modelIdentity: {
         provider: "fixture" as const,
@@ -975,6 +977,7 @@ describe("evidence-backed product understanding persistence", () => {
     const dependencies = {
       db: connection.db,
       evidenceProvider,
+      pageFetcher: new FakeEvidencePageFetcher(),
       model,
       modelIdentity: {
         provider: "fixture" as const,
@@ -1078,6 +1081,18 @@ describe("evidence-backed product understanding persistence", () => {
         modelProvider: "fixture",
         model: "fixture-product-understanding",
         promptVersion: "product-understanding-v1",
+        mode: "first_pass",
+      }),
+    ).rejects.toBeInstanceOf(EvidenceResearchAuthorityError);
+    await expect(
+      prepareEvidenceResearch({
+        db: connection.db,
+        taskId: session.taskId,
+        searchRunId: run.id,
+        evidenceProvider: "fixture",
+        modelProvider: "fixture",
+        model: "fixture-product-understanding",
+        promptVersion: "product-understanding-v1",
         mode: "targeted",
         targetCandidateListingId: candidateListingId,
         targetCriterionId: battery.criterionId,
@@ -1092,6 +1107,20 @@ describe("evidence-backed product understanding persistence", () => {
     if (currentCriterion === undefined) {
       throw new Error("Expected a remaining current criterion");
     }
+    await expect(
+      prepareEvidenceResearch({
+        db: connection.db,
+        taskId: session.taskId,
+        searchRunId: run.id,
+        evidenceProvider: "fixture",
+        modelProvider: "fixture",
+        model: "fixture-product-understanding",
+        promptVersion: "product-understanding-v1",
+        mode: "targeted",
+        targetCandidateListingId: candidateListingId,
+        targetCriterionId: currentCriterion.criterionId,
+      }),
+    ).rejects.toBeInstanceOf(EvidenceResearchAuthorityError);
     await rejectCandidateListing({
       db: connection.db,
       taskId: session.taskId,

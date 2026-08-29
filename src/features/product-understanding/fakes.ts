@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { ModelCallMetadata } from "@/features/context-acquisition/model-port";
 import {
   evidenceSearchResponseSchema,
@@ -6,6 +7,7 @@ import {
 import type { ProductUnderstandingModel } from "./model-port";
 import { PRODUCT_UNDERSTANDING_PROMPT_VERSION } from "./prompts";
 import type { ProductUnderstandingInputV1 } from "./provider-wire";
+import type { EvidencePageFetcher } from "./research-orchestrator";
 
 export class FakeEvidenceSearchProvider implements EvidenceSearchProvider {
   readonly provider = "fixture" as const;
@@ -48,6 +50,84 @@ export class FakeEvidenceSearchProvider implements EvidenceSearchProvider {
         },
       ],
     });
+  }
+}
+
+function escapeHtml(value: string) {
+  return value.replace(
+    /[&<>"']/g,
+    (character) =>
+      ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+      })[character] ?? character,
+  );
+}
+
+export class FakeEvidencePageFetcher implements EvidencePageFetcher {
+  readonly provider = "fixture" as const;
+  readonly calls: string[] = [];
+  readonly #failOnCalls: ReadonlySet<number>;
+  readonly #delayOnCalls: ReadonlyMap<number, number>;
+
+  constructor(options?: {
+    failOnCalls?: readonly number[];
+    delayOnCalls?: Readonly<Record<number, number>>;
+  }) {
+    this.#failOnCalls = new Set(options?.failOnCalls ?? []);
+    this.#delayOnCalls = new Map(
+      Object.entries(options?.delayOnCalls ?? {}).map(([call, durationMs]) => [
+        Number(call),
+        durationMs,
+      ]),
+    );
+  }
+
+  async fetch(input: Parameters<EvidencePageFetcher["fetch"]>[0]) {
+    this.calls.push(input.url);
+    const call = this.calls.length;
+    const delayMs = this.#delayOnCalls.get(call) ?? 0;
+    if (delayMs > 0) {
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+    if (this.#failOnCalls.has(call)) {
+      throw new Error(`Fixture product-page failure on call ${call}`);
+    }
+    const independent =
+      input.discoveredRole === "independent_review" ||
+      input.discoveredRole === "retailer_review_aggregate";
+    const productJson = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Product",
+      name: input.candidateTitle,
+      description: independent
+        ? "An independent reviewer reports a supportive sculpted shape during extended use."
+        : "The manufacturer lists wireless connectivity and up to 18 months battery life.",
+      ...(independent
+        ? { aggregateRating: { ratingValue: "4.4", reviewCount: 128 } }
+        : {}),
+    }).replace(/</g, "\\u003c");
+    const title = escapeHtml(input.candidateTitle);
+    const html = `<!doctype html><html><head><title>${title}</title><script type="application/ld+json">${productJson}</script></head><body><main><h1>${title}</h1><dl><dt>Battery life</dt><dd>Up to 18 months</dd><dt>Connectivity</dt><dd>Wireless</dd></dl><p>${
+      independent
+        ? "The reviewer found the sculpted shape supportive over longer sessions."
+        : "Official product specifications for this exact model."
+    }</p></main></body></html>`;
+    const bytes = Buffer.byteLength(html, "utf8");
+    return {
+      requestedUrl: input.url,
+      finalUrl: input.url,
+      contentType: "text/html" as const,
+      text: html,
+      encodedBytes: bytes,
+      decodedBytes: bytes,
+      redirectCount: 0,
+      fetchedAt: new Date(),
+      responseHash: createHash("sha256").update(html, "utf8").digest("hex"),
+    };
   }
 }
 

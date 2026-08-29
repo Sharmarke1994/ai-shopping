@@ -41,6 +41,16 @@ const actionConfig = {
 
 const baseTime = new Date("2026-08-24T12:00:00.000Z");
 
+const reverseLexicalPortfolioIds = [
+  "90000000-0000-4000-8000-000000000001",
+  "91000000-0000-4000-8000-000000000002",
+  "f0000000-0000-4000-8000-000000000003",
+  "92000000-0000-4000-8000-000000000004",
+  "b0000000-0000-4000-8000-000000000005",
+  "93000000-0000-4000-8000-000000000006",
+  "10000000-0000-4000-8000-000000000007",
+] as const;
+
 function deferred() {
   let resolve!: () => void;
   const promise = new Promise<void>((done) => {
@@ -73,6 +83,26 @@ function countingProvider(
     },
   };
   return { calls, provider };
+}
+
+async function waitForPersistedQueryCount(options: {
+  connection: TestDatabaseConnection;
+  taskId: string;
+  runId: string;
+  expected: number;
+}) {
+  for (let attempt = 0; attempt < 250; attempt += 1) {
+    const run = await loadPersistedSearchRun({
+      db: options.connection.db,
+      taskId: options.taskId,
+      runId: options.runId,
+    });
+    if (run?.queryExecutions.length === options.expected) return run;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  throw new Error(
+    `Timed out waiting for ${options.expected} persisted query receipts`,
+  );
 }
 
 describe("retrieval orchestration", () => {
@@ -123,13 +153,35 @@ describe("retrieval orchestration", () => {
             op: "add_criterion",
             concept: { kind: "created", localRef: "breathability" },
             target: {
-              strength: "preference",
+              strength: "strong_preference",
               targetSemantics: "qualitative",
               semanticValue: {
                 schemaVersion: 1,
                 kind: "qualitative",
                 mode: "text",
                 text: "breathable in hot weather",
+              },
+            },
+          },
+          {
+            op: "create_concept",
+            localRef: "sweat_wicking",
+            label: "Sweat wicking",
+            definition: "How well the cap manages sweat during a run",
+            valueFamily: "qualitative",
+            canonicalUnit: null,
+          },
+          {
+            op: "add_criterion",
+            concept: { kind: "created", localRef: "sweat_wicking" },
+            target: {
+              strength: "preference",
+              targetSemantics: "qualitative",
+              semanticValue: {
+                schemaVersion: 1,
+                kind: "qualitative",
+                mode: "text",
+                text: "wick sweat during a run",
               },
             },
           },
@@ -177,10 +229,20 @@ describe("retrieval orchestration", () => {
     expect(first.created).toBe(true);
     expect(first.run.status).toBe("succeeded");
     expect(callsAfterFirstResponse).toBe(first.run.portfolio.queries.length);
+    expect(first.timings).toMatchObject({
+      schemaVersion: 1,
+      providerLogicalCallCount: callsAfterFirstResponse,
+      transportAttemptCount: null,
+      durationSemantics: "non_additive_monotonic_wall_intervals",
+      providerCallSemantics:
+        "logical_provider_port_invocations_transport_attempts_unobserved",
+    });
+    expect(first.timings.totalMs).toBeGreaterThanOrEqual(0);
     expect(retry).toMatchObject({
       state: "completed",
       created: false,
       run: { status: "succeeded" },
+      timings: { providerLogicalCallCount: 0, transportAttemptCount: null },
     });
     expect(retry.run.portfolio.run.id).toBe(first.run.portfolio.run.id);
     expect(retry.run.queryExecutions).toEqual(first.run.queryExecutions);
@@ -199,8 +261,7 @@ describe("retrieval orchestration", () => {
     const allowFirstProviderCallToFinish = deferred();
     const counted = countingProvider({
       beforeSearch: async (_query, callIndex) => {
-        if (callIndex !== 0) return;
-        firstProviderCallStarted.resolve();
+        if (callIndex === 0) firstProviderCallStarted.resolve();
         await allowFirstProviderCallToFinish.promise;
       },
     });
@@ -226,7 +287,8 @@ describe("retrieval orchestration", () => {
 
       expect(concurrentRetry.state).toBe("in_progress");
       expect(concurrentRetry.created).toBe(false);
-      expect(counted.calls).toHaveLength(1);
+      expect(counted.calls.length).toBeGreaterThanOrEqual(1);
+      expect(counted.calls.length).toBeLessThanOrEqual(3);
       const missingQuery = concurrentRetry.run.portfolio.queries[1];
       if (missingQuery === undefined) throw new Error("Expected another query");
       await expect(
@@ -251,8 +313,8 @@ describe("retrieval orchestration", () => {
       expect(concurrentRetry.run.portfolio.run.id).toBe(
         completed.run.portfolio.run.id,
       );
-      expect(counted.calls.map((query) => query.id)).toEqual(
-        completed.run.portfolio.queries.map((query) => query.id),
+      expect(new Set(counted.calls.map((query) => query.id))).toEqual(
+        new Set(completed.run.portfolio.queries.map((query) => query.id)),
       );
       expect(new Set(counted.calls.map((query) => query.id)).size).toBe(
         counted.calls.length,
@@ -260,6 +322,109 @@ describe("retrieval orchestration", () => {
     } finally {
       allowFirstProviderCallToFinish.resolve();
       await Promise.all([firstConnection.close(), retryConnection.close()]);
+    }
+  });
+
+  it("runs three missing queries concurrently, persists each completion immediately, and returns portfolio order", async () => {
+    const { action, task } = await authority();
+    let idCursor = 0;
+    const prepared = await prepareRetrievalRun({
+      db: connection.db,
+      taskId: task.id,
+      contextActionId: action.id,
+      provider: countingProvider().provider,
+      now: tickingClock(),
+      createPortfolioId: () => reverseLexicalPortfolioIds[idCursor++]!,
+    });
+    expect(prepared.run.portfolio.queries).toHaveLength(3);
+
+    const gates = new Map(
+      prepared.run.portfolio.queries.map((query) => [query.id, deferred()]),
+    );
+    const allProviderCallsStarted = deferred();
+    let active = 0;
+    let maximumActive = 0;
+    const counted = countingProvider({
+      beforeSearch: async (query) => {
+        active += 1;
+        maximumActive = Math.max(maximumActive, active);
+        if (active === prepared.run.portfolio.queries.length) {
+          allProviderCallsStarted.resolve();
+        }
+        const gate = gates.get(query.id);
+        if (gate === undefined) throw new Error("Unexpected provider query");
+        await gate.promise;
+        active -= 1;
+      },
+    });
+    let orchestrationSettled = false;
+    const orchestration = executeOrResumeRetrieval({
+      db: connection.db,
+      taskId: task.id,
+      contextActionId: action.id,
+      provider: counted.provider,
+      clock: tickingClock(new Date("2026-08-24T12:00:01.000Z")),
+    }).finally(() => {
+      orchestrationSettled = true;
+    });
+
+    try {
+      await allProviderCallsStarted.promise;
+      expect(maximumActive).toBe(3);
+      expect(counted.calls).toHaveLength(3);
+
+      const lastQuery = prepared.run.portfolio.queries[2];
+      if (lastQuery === undefined) throw new Error("Expected a third query");
+      gates.get(lastQuery.id)?.resolve();
+      const firstDurableCompletion = await waitForPersistedQueryCount({
+        connection,
+        taskId: task.id,
+        runId: prepared.run.portfolio.run.id,
+        expected: 1,
+      });
+      expect(orchestrationSettled).toBe(false);
+      expect(firstDurableCompletion.status).toBe("running");
+      expect(
+        firstDurableCompletion.queryExecutions.map(({ queryId }) => queryId),
+      ).toEqual([lastQuery.id]);
+      expect(
+        firstDurableCompletion.listings.map(({ queryId }) => queryId),
+      ).toEqual([lastQuery.id]);
+
+      const middleQuery = prepared.run.portfolio.queries[1];
+      const firstQuery = prepared.run.portfolio.queries[0];
+      if (middleQuery === undefined || firstQuery === undefined) {
+        throw new Error("Expected a complete query portfolio");
+      }
+      gates.get(middleQuery.id)?.resolve();
+      await waitForPersistedQueryCount({
+        connection,
+        taskId: task.id,
+        runId: prepared.run.portfolio.run.id,
+        expected: 2,
+      });
+      gates.get(firstQuery.id)?.resolve();
+      const completed = await orchestration;
+
+      const portfolioQueryIds = prepared.run.portfolio.queries.map(
+        ({ id }) => id,
+      );
+      expect(completed).toMatchObject({
+        state: "completed",
+        created: false,
+        run: { status: "succeeded" },
+      });
+      expect(
+        completed.run.queryExecutions.map(({ queryId }) => queryId),
+      ).toEqual(portfolioQueryIds);
+      expect(completed.run.listings.map(({ queryId }) => queryId)).toEqual(
+        portfolioQueryIds,
+      );
+      expect(new Set(counted.calls.map(({ id }) => id))).toEqual(
+        new Set(portfolioQueryIds),
+      );
+    } finally {
+      for (const gate of gates.values()) gate.resolve();
     }
   });
 
@@ -375,9 +540,14 @@ describe("retrieval orchestration", () => {
     expect(resumed.state).toBe("completed");
     expect(resumed.created).toBe(false);
     expect(resumed.run.status).toBe("partial");
-    expect(counted.calls.map((query) => query.id)).toEqual(missingQueryIds);
+    expect(new Set(counted.calls.map((query) => query.id))).toEqual(
+      new Set(missingQueryIds),
+    );
     expect(resumed.run.queryExecutions).toHaveLength(
       prepared.run.portfolio.queries.length,
+    );
+    expect(resumed.run.queryExecutions.map(({ queryId }) => queryId)).toEqual(
+      prepared.run.portfolio.queries.map(({ id }) => id),
     );
   });
 
@@ -399,6 +569,7 @@ describe("retrieval orchestration", () => {
       contextActionId: action.id,
       provider: counted.provider,
       clock: tickingClock(),
+      queryConcurrency: 1,
     });
 
     try {
@@ -560,8 +731,7 @@ describe("retrieval orchestration", () => {
     const allowTakeoverCallToFinish = deferred();
     const counted = countingProvider({
       beforeSearch: async (_query, callIndex) => {
-        if (callIndex !== 0) return;
-        takeoverCallStarted.resolve();
+        if (callIndex === 0) takeoverCallStarted.resolve();
         await allowTakeoverCallToFinish.promise;
       },
     });

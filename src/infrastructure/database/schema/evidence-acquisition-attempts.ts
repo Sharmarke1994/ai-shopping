@@ -55,6 +55,14 @@ export const evidenceAcquisitionAttempts = shoppingPrivate.table(
       table.candidateListingId,
       table.id,
     ),
+    unique("evidence_acquisition_attempts_candidate_stage_id_unique").on(
+      table.taskId,
+      table.researchRunId,
+      table.candidateRunId,
+      table.candidateListingId,
+      table.id,
+      table.stage,
+    ),
     unique("evidence_acquisition_attempts_plan_unique").on(
       table.taskId,
       table.researchRunId,
@@ -81,11 +89,11 @@ export const evidenceAcquisitionAttempts = shoppingPrivate.table(
     }).onDelete("restrict"),
     check(
       "evidence_acquisition_attempts_stage_allowed",
-      sql`${table.stage} in ('organic_search', 'observation_extraction', 'criterion_assessment')`,
+      sql`${table.stage} in ('organic_search', 'page_fetch', 'observation_extraction', 'criterion_assessment')`,
     ),
     check(
       "evidence_acquisition_attempts_purpose_allowed",
-      sql`${table.purpose} in ('specifications', 'experience', 'first_pass', 'decision_gap', 'combined', 'current_brief')`,
+      sql`${table.purpose} in ('specifications', 'experience', 'source_depth', 'first_pass', 'decision_gap', 'combined', 'current_brief')`,
     ),
     check(
       "evidence_acquisition_attempts_text_bounds",
@@ -93,7 +101,7 @@ export const evidenceAcquisitionAttempts = shoppingPrivate.table(
     ),
     check(
       "evidence_acquisition_attempts_stage_shape",
-      sql`(${table.stage} = 'organic_search' and ${table.query} is not null and ${table.provider} in ('serper', 'fixture') and ${table.model} is null and ${table.promptVersion} is null) or (${table.stage} in ('observation_extraction', 'criterion_assessment') and ${table.query} is null and ${table.provider} in ('openai', 'fixture') and ${table.model} is not null and ${table.promptVersion} is not null)`,
+      sql`(${table.stage} = 'organic_search' and ${table.query} is not null and ${table.provider} in ('serper', 'fixture') and ${table.model} is null and ${table.promptVersion} is null) or (${table.stage} = 'page_fetch' and ${table.query} is null and ${table.provider} in ('server_http', 'fixture') and ${table.model} is null and ${table.promptVersion} is null) or (${table.stage} in ('observation_extraction', 'criterion_assessment') and ${table.query} is null and ${table.provider} in ('openai', 'fixture') and ${table.model} is not null and ${table.promptVersion} is not null)`,
     ),
     check(
       "evidence_acquisition_attempts_status_allowed",
@@ -101,7 +109,7 @@ export const evidenceAcquisitionAttempts = shoppingPrivate.table(
     ),
     check(
       "evidence_acquisition_attempts_terminal_shape",
-      sql`(${table.status} = 'planned' and ${table.startedAt} is null and ${table.finishedAt} is null and ${table.receivedResultCount} is null and ${table.failureCode} is null) or (${table.status} = 'succeeded' and ${table.startedAt} is not null and ${table.finishedAt} is not null and ${table.finishedAt} >= ${table.startedAt} and ${table.receivedResultCount} is not null and ${table.receivedResultCount} >= 0 and ${table.failureCode} is null) or (${table.status} = 'failed' and ${table.startedAt} is not null and ${table.finishedAt} is not null and ${table.finishedAt} >= ${table.startedAt} and ${table.receivedResultCount} is null and ${table.failureCode} in ('provider_failed', 'invalid_provider_result', 'model_failed', 'invalid_model_output'))`,
+      sql`(${table.status} = 'planned' and ${table.startedAt} is null and ${table.finishedAt} is null and ${table.receivedResultCount} is null and ${table.failureCode} is null) or (${table.status} = 'succeeded' and ${table.startedAt} is not null and ${table.finishedAt} is not null and ${table.finishedAt} >= ${table.startedAt} and ${table.receivedResultCount} is not null and ${table.receivedResultCount} >= 0 and ${table.failureCode} is null) or (${table.status} = 'failed' and ${table.startedAt} is not null and ${table.finishedAt} is not null and ${table.finishedAt} >= ${table.startedAt} and ${table.receivedResultCount} is null and ${table.failureCode} is not null and ${table.failureCode} in ('provider_failed', 'invalid_provider_result', 'unsafe_url', 'dns_failed', 'network_failed', 'timeout', 'redirect_invalid', 'redirect_limit', 'http_status', 'unsupported_content_type', 'unsupported_content_encoding', 'response_too_large', 'invalid_text', 'invalid_extraction', 'identity_mismatch', 'model_failed', 'invalid_model_output'))`,
     ),
   ],
 );

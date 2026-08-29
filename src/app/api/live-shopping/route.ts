@@ -12,6 +12,7 @@ import {
   refineLiveShopping,
   researchLiveShopping,
   researchLiveCandidate,
+  resolveLivePurchaseDestinations,
   resumeLiveShoppingSearch,
   retryLiveShoppingContext,
   setLiveListingSaved,
@@ -210,6 +211,12 @@ export async function POST(request: Request) {
       case "research_candidate": {
         const dependencies = await createLiveShoppingDependencies();
         return response(await researchLiveCandidate({ dependencies, input }));
+      }
+      case "resolve_destinations": {
+        const dependencies = await createLiveShoppingDependencies();
+        return response(
+          await resolveLivePurchaseDestinations({ dependencies, input }),
+        );
       }
     }
   } catch (error) {

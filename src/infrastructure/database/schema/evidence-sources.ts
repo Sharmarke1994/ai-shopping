@@ -46,6 +46,22 @@ export const evidenceSources = shoppingPrivate.table(
       table.candidateListingId,
       table.id,
     ),
+    unique("evidence_sources_candidate_kind_id_unique").on(
+      table.taskId,
+      table.candidateRunId,
+      table.candidateListingId,
+      table.id,
+      table.sourceKind,
+    ),
+    unique("evidence_sources_attempt_kind_id_unique").on(
+      table.taskId,
+      table.researchRunId,
+      table.candidateRunId,
+      table.candidateListingId,
+      table.acquisitionAttemptId,
+      table.id,
+      table.sourceKind,
+    ),
     unique("evidence_sources_fingerprint_unique").on(
       table.taskId,
       table.candidateRunId,
@@ -93,11 +109,11 @@ export const evidenceSources = shoppingPrivate.table(
     ),
     check(
       "evidence_sources_kind_allowed",
-      sql`${table.sourceKind} in ('listing_field', 'organic_result', 'listing_image')`,
+      sql`${table.sourceKind} in ('listing_field', 'organic_result', 'fetched_page', 'listing_image')`,
     ),
     check(
       "evidence_sources_kind_role_shape",
-      sql`(${table.sourceKind} = 'listing_field' and ${table.sourceRole} in ('listing', 'retailer_review_aggregate')) or (${table.sourceKind} = 'organic_result' and ${table.sourceRole} in ('retailer', 'manufacturer', 'independent_review', 'retailer_review_aggregate', 'other')) or (${table.sourceKind} = 'listing_image' and ${table.sourceRole} = 'visual')`,
+      sql`(${table.sourceKind} = 'listing_field' and ${table.sourceRole} in ('listing', 'retailer_review_aggregate')) or (${table.sourceKind} = 'organic_result' and ${table.sourceRole} in ('retailer', 'manufacturer', 'independent_review', 'retailer_review_aggregate', 'other')) or (${table.sourceKind} = 'fetched_page' and ${table.sourceRole} in ('retailer', 'manufacturer', 'independent_review', 'retailer_review_aggregate') and ${table.acquisitionAttemptId} is not null) or (${table.sourceKind} = 'listing_image' and ${table.sourceRole} = 'visual')`,
     ),
     check(
       "evidence_sources_url_shape",
@@ -109,7 +125,7 @@ export const evidenceSources = shoppingPrivate.table(
     ),
     check(
       "evidence_sources_provider_allowed",
-      sql`${table.provider} in ('listing', 'serper', 'fixture')`,
+      sql`${table.provider} in ('listing', 'serper', 'page_fetch', 'fixture')`,
     ),
     check(
       "evidence_sources_fingerprint_shape",

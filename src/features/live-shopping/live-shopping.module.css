@@ -810,6 +810,19 @@
   margin-top: 4px;
 }
 
+.decisionUnknown li span {
+  display: block;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.decisionUnknown li small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
 .evidenceSources {
   padding: 0 !important;
   background: transparent !important;
@@ -864,6 +877,13 @@
 
 .purchaseRow .productLink {
   margin-top: 0;
+}
+
+.purchaseStatus {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.4;
 }
 
 .sourceLink {
@@ -1360,6 +1380,22 @@
   color: var(--forest);
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.comparisonScroller .comparisonSource {
+  display: grid;
+  margin-top: 7px;
+  gap: 1px;
+}
+
+.comparisonScroller .comparisonSource a {
+  margin-top: 0;
+}
+
+.comparisonScroller .comparisonSource small {
+  color: var(--muted);
+  font-size: 9px;
+  text-transform: uppercase;
 }
 
 .rejectedDisclosure {

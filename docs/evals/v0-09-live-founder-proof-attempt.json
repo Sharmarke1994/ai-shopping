@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 3,
+  "proofMode": "independent_review_final_v009_attempt",
+  "attemptId": "4ac724de-6576-49a3-b9b5-e419c45829f5",
+  "claimedAt": "2026-08-29T22:29:02.934Z",
+  "state": "claimed",
+  "priorAttemptIds": [
+    "6a736dde-90c5-447a-8313-b564872ae5c3",
+    "d1e01d17-5116-4e56-bc0c-6e8ca6d75e6a"
+  ],
+  "authorizationReason": "Independent review authorized exactly one additional full attempt because the previous post-correction attempt failed upstream of V0-09 while the source-depth layer remained untested.",
+  "refusalPolicy": "This marker is intentionally durable after the independently authorized final attempt. A fourth V0-09 release attempt is refused; Attempts 1 and 2 remain preserved under separate filenames."
+}
