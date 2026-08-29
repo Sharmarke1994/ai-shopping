@@ -93,6 +93,18 @@ const priorFailureMarkdown = new URL(
   "v0-09-live-founder-proof-failure-prior.md",
   outputDirectory,
 );
+const attemptTwoMarker = new URL(
+  "v0-09-live-founder-proof-attempt-2.json",
+  outputDirectory,
+);
+const attemptTwoFailureJson = new URL(
+  "v0-09-live-founder-proof-failure-attempt-2.json",
+  outputDirectory,
+);
+const attemptTwoFailureMarkdown = new URL(
+  "v0-09-live-founder-proof-failure-attempt-2.md",
+  outputDirectory,
+);
 const releaseModel = "gpt-5.6-terra" as const;
 
 const cases = [
@@ -766,6 +778,229 @@ function createInstrumentedDependencies(options: {
 function elapsedMs(startedAt: Date | null, finishedAt: Date | null) {
   if (startedAt === null || finishedAt === null) return null;
   return Math.max(0, finishedAt.getTime() - startedAt.getTime());
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function boundedDiagnosticText(value: unknown, maximum: number) {
+  return typeof value === "string" ? value.slice(0, maximum) : null;
+}
+
+function sanitizeDiagnosticSemanticValue(value: unknown): unknown {
+  const source = asRecord(value);
+  if (source === null) return null;
+  const result: Record<string, unknown> = {};
+  for (const key of [
+    "schemaVersion",
+    "kind",
+    "mode",
+    "value",
+    "relation",
+    "anchor",
+    "amount",
+    "unit",
+    "inclusive",
+    "amountMinor",
+    "currency",
+    "targetMinor",
+    "stretchCeilingMinor",
+    "condition",
+    "operator",
+  ]) {
+    const entry = source[key];
+    if (
+      typeof entry === "string" ||
+      typeof entry === "number" ||
+      typeof entry === "boolean"
+    ) {
+      result[key] =
+        typeof entry === "string" ? boundedDiagnosticText(entry, 500) : entry;
+    }
+  }
+  for (const key of ["text"]) {
+    if (typeof source[key] === "string") {
+      result[key] = boundedDiagnosticText(source[key], 500);
+    }
+  }
+  for (const key of ["values"]) {
+    if (Array.isArray(source[key])) {
+      result[key] = source[key]
+        .filter((entry): entry is string => typeof entry === "string")
+        .slice(0, 50)
+        .map((entry) => entry.slice(0, 120));
+    }
+  }
+  for (const key of ["lower", "upper"]) {
+    const bound = asRecord(source[key]);
+    if (bound !== null) {
+      result[key] = {
+        amount: boundedDiagnosticText(bound.amount, 80),
+        inclusive:
+          typeof bound.inclusive === "boolean" ? bound.inclusive : null,
+      };
+    }
+  }
+  return result;
+}
+
+function sanitizeDiagnosticConcept(value: unknown): unknown {
+  const source = asRecord(value);
+  if (source === null) return null;
+  if (source.kind === "existing") {
+    return {
+      kind: "existing",
+      conceptId: boundedDiagnosticText(source.conceptId, 120),
+    };
+  }
+  if (source.kind === "created") {
+    return {
+      kind: "created",
+      localRef: boundedDiagnosticText(source.localRef, 120),
+    };
+  }
+  return { kind: "unknown" };
+}
+
+function sanitizeDiagnosticTarget(value: unknown): unknown {
+  const source = asRecord(value);
+  if (source === null) return null;
+  return {
+    strength: boundedDiagnosticText(source.strength, 40),
+    targetSemantics: boundedDiagnosticText(source.targetSemantics, 40),
+    semanticValue: sanitizeDiagnosticSemanticValue(source.semanticValue),
+  };
+}
+
+function sanitizeInterpretationProposal(value: unknown): unknown {
+  const source = asRecord(value);
+  if (source === null) return null;
+  const patch = asRecord(source.patch);
+  const operations =
+    patch !== null && Array.isArray(patch.operations)
+      ? patch.operations
+          .map((entry) => {
+            const operation = asRecord(entry);
+            if (operation === null || typeof operation.op !== "string") {
+              return { op: "unknown" };
+            }
+            if (operation.op === "create_concept") {
+              return {
+                op: operation.op,
+                localRef: boundedDiagnosticText(operation.localRef, 120),
+                label: boundedDiagnosticText(operation.label, 120),
+                definition: boundedDiagnosticText(operation.definition, 500),
+                valueFamily: boundedDiagnosticText(operation.valueFamily, 40),
+                canonicalUnit: boundedDiagnosticText(
+                  operation.canonicalUnit,
+                  40,
+                ),
+              };
+            }
+            if (operation.op === "add_criterion") {
+              return {
+                op: operation.op,
+                concept: sanitizeDiagnosticConcept(operation.concept),
+                target: sanitizeDiagnosticTarget(operation.target),
+              };
+            }
+            if (
+              operation.op === "replace_target" ||
+              operation.op === "relax" ||
+              operation.op === "tighten"
+            ) {
+              return {
+                op: operation.op,
+                targetCriterionId: boundedDiagnosticText(
+                  operation.targetCriterionId,
+                  120,
+                ),
+                result: sanitizeDiagnosticTarget(operation.result),
+              };
+            }
+            if (operation.op === "remove") {
+              return {
+                op: operation.op,
+                targetCriterionId: boundedDiagnosticText(
+                  operation.targetCriterionId,
+                  120,
+                ),
+              };
+            }
+            if (operation.op === "mark_indifferent") {
+              return {
+                op: operation.op,
+                concept: sanitizeDiagnosticConcept(operation.concept),
+                replacesCriterionIds: Array.isArray(
+                  operation.replacesCriterionIds,
+                )
+                  ? operation.replacesCriterionIds
+                      .filter((id): id is string => typeof id === "string")
+                      .slice(0, 100)
+                      .map((id) => id.slice(0, 120))
+                  : [],
+              };
+            }
+            return { op: boundedDiagnosticText(operation.op, 40) };
+          })
+          .slice(0, 32)
+      : [];
+  const ambiguities = Array.isArray(source.ambiguities)
+    ? source.ambiguities
+        .map((entry) => {
+          const ambiguity = asRecord(entry);
+          if (ambiguity === null) return { kind: "unknown" };
+          return {
+            kind: boundedDiagnosticText(ambiguity.kind, 40),
+            summary: boundedDiagnosticText(ambiguity.summary, 500),
+            existingConceptId: boundedDiagnosticText(
+              ambiguity.existingConceptId,
+              120,
+            ),
+            affectedCriterionIds: Array.isArray(ambiguity.affectedCriterionIds)
+              ? ambiguity.affectedCriterionIds
+                  .filter((id): id is string => typeof id === "string")
+                  .slice(0, 100)
+                  .map((id) => id.slice(0, 120))
+              : [],
+          };
+        })
+        .slice(0, 4)
+    : [];
+  return {
+    schemaVersion: source.schemaVersion === 1 ? 1 : null,
+    outcome: patch?.outcome === "no_change" ? "no_change" : "change",
+    operationKinds: operations.map((operation) => operation.op),
+    operations,
+    ambiguities,
+  };
+}
+
+async function loadInterpretationDiagnostics(
+  db: LiveShoppingDependencies["db"],
+  taskId: string,
+) {
+  const rows = await db.select().from(contextAcquisitionAttempts);
+  return rows
+    .filter((row) => row.taskId === taskId && row.stage === "interpretation")
+    .map((row) => ({
+      id: row.id,
+      status: row.status,
+      errorCode: row.errorCode,
+      providerRequestId: row.providerRequestId,
+      promptVersion: row.promptVersion,
+      providerSchemaVersion: row.providerSchemaVersion,
+      interpretationProposal:
+        row.interpretationProposal === null
+          ? { present: false, reason: "no_valid_provider_wire" }
+          : {
+              present: true,
+              value: sanitizeInterpretationProposal(row.interpretationProposal),
+            },
+    }));
 }
 
 async function scopedPersistence(options: {
@@ -3696,32 +3931,41 @@ async function claimOneShotAttempt() {
     );
   }
   if (await exists(attemptMarker)) {
-    let previous: { schemaVersion?: unknown; attemptId?: unknown };
+    let previous: {
+      schemaVersion?: unknown;
+      attemptId?: unknown;
+      proofMode?: unknown;
+    };
     try {
       previous = JSON.parse(await readFile(attemptMarker, "utf8")) as {
         schemaVersion?: unknown;
         attemptId?: unknown;
+        proofMode?: unknown;
       };
     } catch {
       throw new Error("V0-09 live proof attempt marker is unreadable");
     }
-    const canConsumeAuthorizedCorrection =
-      previous.schemaVersion === 1 &&
+    const canConsumeFinalIndependentReviewAttempt =
+      previous.schemaVersion === 2 &&
+      previous.proofMode === "fresh_four_category_v009_release" &&
       (await exists(failureJson)) &&
       (await exists(failureMarkdown)) &&
-      !(await exists(priorAttemptMarker)) &&
-      !(await exists(priorFailureJson)) &&
-      !(await exists(priorFailureMarkdown));
-    if (!canConsumeAuthorizedCorrection) {
+      (await exists(priorAttemptMarker)) &&
+      (await exists(priorFailureJson)) &&
+      (await exists(priorFailureMarkdown)) &&
+      !(await exists(attemptTwoMarker)) &&
+      !(await exists(attemptTwoFailureJson)) &&
+      !(await exists(attemptTwoFailureMarkdown));
+    if (!canConsumeFinalIndependentReviewAttempt) {
       throw new Error(
         "V0-09 live proof has already been attempted or has preserved evidence; refusing to overwrite or consume another release run",
       );
     }
-    await rename(attemptMarker, priorAttemptMarker);
-    await rename(failureJson, priorFailureJson);
-    await rename(failureMarkdown, priorFailureMarkdown);
+    await rename(attemptMarker, attemptTwoMarker);
+    await rename(failureJson, attemptTwoFailureJson);
+    await rename(failureMarkdown, attemptTwoFailureMarkdown);
     if (typeof previous.attemptId !== "string") {
-      throw new Error("V0-09 prior attempt marker has no attempt id");
+      throw new Error("V0-09 attempt-2 marker has no attempt id");
     }
   } else if (
     (await Promise.all([failureJson, failureMarkdown].map(exists))).some(
@@ -3732,14 +3976,31 @@ async function claimOneShotAttempt() {
       "V0-09 live proof has preserved failure evidence without its attempt marker",
     );
   }
+  const priorMarker = JSON.parse(
+    await readFile(priorAttemptMarker, "utf8"),
+  ) as {
+    attemptId?: unknown;
+  };
+  const attemptTwoMarkerRecord = JSON.parse(
+    await readFile(attemptTwoMarker, "utf8"),
+  ) as { attemptId?: unknown };
+  if (
+    typeof priorMarker.attemptId !== "string" ||
+    typeof attemptTwoMarkerRecord.attemptId !== "string"
+  ) {
+    throw new Error("V0-09 historical attempt markers are missing ids");
+  }
   const marker = {
-    schemaVersion: 2,
-    proofMode: "fresh_four_category_v009_release" as const,
+    schemaVersion: 3,
+    proofMode: "independent_review_final_v009_attempt" as const,
     attemptId: randomUUID(),
     claimedAt: new Date().toISOString(),
     state: "claimed" as const,
+    priorAttemptIds: [priorMarker.attemptId, attemptTwoMarkerRecord.attemptId],
+    authorizationReason:
+      "Independent review authorized exactly one additional full attempt because the previous post-correction attempt failed upstream of V0-09 while the source-depth layer remained untested.",
     refusalPolicy:
-      "This marker is intentionally durable after the one authorized post-correction attempt. A further V0-09 release attempt is refused; any prior diagnostic is retired under a separate prior-attempt filename.",
+      "This marker is intentionally durable after the independently authorized final attempt. A fourth V0-09 release attempt is refused; Attempts 1 and 2 remain preserved under separate filenames.",
   };
   try {
     await writeFile(attemptMarker, `${json(marker)}\n`, {
@@ -3840,6 +4101,9 @@ const completedFlows: FounderFlow[] = [];
 let runtimeTraces: ExternalTrace[] = [];
 let runtime: ReturnType<typeof createInstrumentedDependencies> | null = null;
 let activeCaseSnapshot: PersistenceSnapshot | null = null;
+let activeContextInterpretationDiagnostics: Awaited<
+  ReturnType<typeof loadInterpretationDiagnostics>
+> = [];
 let operationError: unknown = null;
 
 try {
@@ -3900,7 +4164,7 @@ try {
 const releaseRuntime = runtime as NonNullable<typeof runtime>;
 let successReport: Readonly<{
   schemaVersion: 2;
-  proofMode: "fresh_four_category_v009_release";
+  proofMode: "independent_review_final_v009_attempt";
   attemptId: string;
   generatedAt: string;
   models: {
@@ -3967,7 +4231,7 @@ try {
   const acceptance = releaseAcceptance(completedFlows);
   successReport = {
     schemaVersion: 2,
-    proofMode: "fresh_four_category_v009_release",
+    proofMode: "independent_review_final_v009_attempt",
     attemptId: attempt.attemptId,
     generatedAt: new Date().toISOString(),
     models: {
@@ -3994,8 +4258,14 @@ try {
         db: connection.db,
         sessionId: activeSessionId,
       });
+      activeContextInterpretationDiagnostics =
+        await loadInterpretationDiagnostics(
+          connection.db,
+          activeCaseSnapshot.taskId,
+        );
     } catch {
       activeCaseSnapshot = null;
+      activeContextInterpretationDiagnostics = [];
     }
   }
 }
@@ -4037,7 +4307,7 @@ if (operationError !== null || cleanupErrors.length > 0) {
   );
   const failureReport = {
     schemaVersion: 2,
-    proofMode: "fresh_four_category_v009_release_failed" as const,
+    proofMode: "independent_review_final_v009_attempt_failed" as const,
     attemptId: attempt.attemptId,
     generatedAt: new Date().toISOString(),
     models: {
@@ -4048,6 +4318,7 @@ if (operationError !== null || cleanupErrors.length > 0) {
     failedSessionId: activeSessionId,
     completedFlows,
     activeCaseSnapshot,
+    contextInterpretationDiagnostics: activeContextInterpretationDiagnostics,
     logicalProviderOperationsAtFailure: traceSummary(runtimeTraces),
     transportAccounting: {
       actualHttpAttempts: null,
@@ -4078,7 +4349,7 @@ if (operationError !== null || cleanupErrors.length > 0) {
     }),
     writeFile(
       failureMarkdown,
-      `# V0-09 deep-source founder proof — failed\n\nGenerated: ${failureReport.generatedAt}\n\n- Failed case: ${failureReport.failedCase ?? "before a category started"}\n- Completed categories: ${failureReport.completedFlows.map(({ name }) => name).join(", ") || "none"}\n- Active-case state captured: ${failureReport.activeCaseSnapshot === null ? "no" : "yes"}\n- Disposable database destroyed: ${failureReport.cleanup.disposableDatabaseDestroyed ? "yes" : "no"}\n- Sanitized failure: ${failureReport.failure.name}: ${failureReport.failure.message}\n- Release accepted: no\n\nThe durable post-correction one-shot marker remains in place. This diagnostic is preserved and is not release evidence; any further live attempt is refused.\n`,
+      `# V0-09 deep-source founder proof — failed\n\nGenerated: ${failureReport.generatedAt}\n\n- Failed case: ${failureReport.failedCase ?? "before a category started"}\n- Completed categories: ${failureReport.completedFlows.map(({ name }) => name).join(", ") || "none"}\n- Active-case state captured: ${failureReport.activeCaseSnapshot === null ? "no" : "yes"}\n- Interpretation diagnostics captured: ${failureReport.contextInterpretationDiagnostics.length}\n- Disposable database destroyed: ${failureReport.cleanup.disposableDatabaseDestroyed ? "yes" : "no"}\n- Sanitized failure: ${failureReport.failure.name}: ${failureReport.failure.message}\n- Release accepted: no\n\nThis independently authorized final attempt is preserved as diagnostic evidence only. Attempts 1 and 2 remain archived under separate filenames; a fourth live attempt is refused.\n`,
       { encoding: "utf8", flag: "wx" },
     ),
   ]);

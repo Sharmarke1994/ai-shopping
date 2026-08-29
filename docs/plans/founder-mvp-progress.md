@@ -391,23 +391,27 @@ branch recorded above. The durable execution contract is
   intersected with the exact discovering organic attempt's criteria, so page
   authority cannot broaden. Deterministic and PostgreSQL regressions now cover
   the six-criterion / five-criterion real shape and foreign/deepening failures.
-- The proof harness has a narrowly guarded post-correction continuation path:
-  the old failed marker/artifacts are retired under prior-attempt filenames,
-  exactly one fresh proof may be claimed, and any further attempt is refused.
-- The one authorized post-correction Terra + Serper proof was consumed once on
-  2026-08-29 and failed closed in ergonomic-mouse interpretation. The first
-  model call produced an invalid state patch; its one safe retry produced a
-  structured-output validation failure. No state mutation or downstream
-  provider work occurred. This is diagnostic evidence, not release acceptance;
-  no further V0-09 proof is permitted from this checkpoint.
+- The proof harness has a durable, non-resettable attempt ledger. Attempt 1 is
+  preserved under the original `*-prior.*` names; Attempt 2 is preserved under
+  the explicit `*-attempt-2.*` names; exactly one independent-review-authorized
+  Attempt 3 may be claimed, after which a fourth attempt is refused.
+- Attempt 2 (2026-08-29) failed closed in inherited ergonomic-mouse
+  interpretation. The first model call produced an invalid state patch; its
+  one safe retry produced a structured-output validation failure. No state
+  mutation or downstream provider work occurred. This is diagnostic evidence,
+  not release acceptance; Attempt 3 is authorized only to exercise the still
+  untested V0-09 layers, with no production context-acquisition changes.
 
 ## Next validated checkpoints
 
-1. Preserve the exact post-correction attempt marker and sanitized failure,
-   commit/push the correction, evidence and ledger, and obtain exact-head CI.
-2. Stop for independent review. The release predicate was not met (no 21/21
-   result), and the one authorized post-correction proof is consumed; do not
-   retry, weaken the evaluator, merge PR #13 or begin V0-10.
+1. Preserve Attempts 1 and 2, claim exactly one independent-review-authorized
+   Attempt 3, and retain its enriched context proposal diagnostic if it fails.
+2. If Attempt 3 reaches V0-09, preserve its exact success/failure artifact;
+   otherwise classify the inherited context boundary as the blocker. Do not
+   patch production context acquisition or create Attempt 4.
+3. Commit/push only the proof-harness/ledger/evidence delta, obtain exact-head
+   CI, stop for independent review, keep PR #13 draft/unmerged and do not begin
+   V0-10.
 
 ## Credentials and blockers
 
@@ -505,8 +509,8 @@ branch recorded above. The durable execution contract is
 5. Do not fetch arbitrary user URLs, crawl links, create ProductIdentity,
    substitute another merchant, add auth/deployment/checkout/affiliate work or
    begin V0-10.
-6. The original and the one separately authorized post-correction V0-09 live
-   proofs are both consumed and failed closed. Preserve both sanitized
-   diagnostics, keep PR #13 draft/unmerged, leave the worktree clean and stop
-   for independent review. Do not run another proof or begin V0-10 from this
-   checkpoint.
+6. The original proof (Attempt 1) and post-correction proof (Attempt 2) remain
+   immutable diagnostics. One final independent-review-authorized Attempt 3 is
+   allowed from this checkpoint; after it, preserve the complete three-attempt
+   ledger, keep PR #13 draft/unmerged, leave the worktree clean and stop for
+   independent review. Do not begin V0-10.
