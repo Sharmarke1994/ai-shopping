@@ -4078,7 +4078,7 @@ if (operationError !== null || cleanupErrors.length > 0) {
     }),
     writeFile(
       failureMarkdown,
-      `# V0-09 deep-source founder proof — failed\n\nGenerated: ${failureReport.generatedAt}\n\n- Failed case: ${failureReport.failedCase ?? "before a category started"}\n- Completed categories: ${failureReport.completedFlows.map(({ name }) => name).join(", ") || "none"}\n- Active-case state captured: ${failureReport.activeCaseSnapshot === null ? "no" : "yes"}\n- Disposable database destroyed: ${failureReport.cleanup.disposableDatabaseDestroyed ? "yes" : "no"}\n- Sanitized failure: ${failureReport.failure.name}: ${failureReport.failure.message}\n- Release accepted: no\n\nThe durable one-shot marker remains in place. This diagnostic is preserved and is not release evidence; a second live attempt is refused.\n`,
+      `# V0-09 deep-source founder proof — failed\n\nGenerated: ${failureReport.generatedAt}\n\n- Failed case: ${failureReport.failedCase ?? "before a category started"}\n- Completed categories: ${failureReport.completedFlows.map(({ name }) => name).join(", ") || "none"}\n- Active-case state captured: ${failureReport.activeCaseSnapshot === null ? "no" : "yes"}\n- Disposable database destroyed: ${failureReport.cleanup.disposableDatabaseDestroyed ? "yes" : "no"}\n- Sanitized failure: ${failureReport.failure.name}: ${failureReport.failure.message}\n- Release accepted: no\n\nThe durable post-correction one-shot marker remains in place. This diagnostic is preserved and is not release evidence; any further live attempt is refused.\n`,
       { encoding: "utf8", flag: "wx" },
     ),
   ]);

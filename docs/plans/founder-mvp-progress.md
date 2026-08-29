@@ -394,19 +394,20 @@ branch recorded above. The durable execution contract is
 - The proof harness has a narrowly guarded post-correction continuation path:
   the old failed marker/artifacts are retired under prior-attempt filenames,
   exactly one fresh proof may be claimed, and any further attempt is refused.
+- The one authorized post-correction Terra + Serper proof was consumed once on
+  2026-08-29 and failed closed in ergonomic-mouse interpretation. The first
+  model call produced an invalid state patch; its one safe retry produced a
+  structured-output validation failure. No state mutation or downstream
+  provider work occurred. This is diagnostic evidence, not release acceptance;
+  no further V0-09 proof is permitted from this checkpoint.
 
 ## Next validated checkpoints
 
-1. Finish the bounded page-planning correction and run all deterministic,
-   PostgreSQL, security, build, browser, migration/drift and audit gates.
-2. Commit and push the correction plus this ledger update, update draft PR #13,
-   and obtain exact-head CI so the corrected checkpoint is reviewable.
-3. Consume exactly one newly authorized guarded Terra + Serper proof across
-   mouse, chair, vacuum and coffee. Preserve sanitized success or failure
-   evidence; do not retry or weaken any evaluator/invariant.
-4. If and only if that proof passes its full predicate, update the evidence,
-   ledger and PR, obtain exact-head CI, and stop for independent review. Do not
-   merge or begin V0-10.
+1. Preserve the exact post-correction attempt marker and sanitized failure,
+   commit/push the correction, evidence and ledger, and obtain exact-head CI.
+2. Stop for independent review. The release predicate was not met (no 21/21
+   result), and the one authorized post-correction proof is consumed; do not
+   retry, weaken the evaluator, merge PR #13 or begin V0-10.
 
 ## Credentials and blockers
 
@@ -467,11 +468,20 @@ branch recorded above. The durable execution contract is
   The error wording about different terminal content is misleading; no terminal
   replay conflict occurred. No semantic product result was produced and no
   evaluator was weakened.
-- The sanitized failure JSON/Markdown and durable attempt marker are under the
-  `docs/evals/v0-09-live-founder-proof-*` names. The bounded continuation path
-  will retire these three old files under `*-prior.*` before the single new
-  authorized proof; the old diagnostic remains recoverable and the new run is
-  still forbidden until every correction gate is green.
+- The original sanitized failure and marker are preserved under
+  `docs/evals/v0-09-live-founder-proof-*-prior.*`; the post-correction marker
+  and failure are under the primary `docs/evals/v0-09-live-founder-proof-*`
+  names. The post-correction disposable database was destroyed with zero
+  cleanup errors. The failure is diagnostic only and the one authorized
+  post-correction run is consumed.
+- Post-correction proof attempt `d1e01d17-5116-4e56-bc0c-6e8ca6d75e6a` ran at
+  `2026-08-29T17:11:44.503Z` and stopped in ergonomic-mouse interpretation.
+  The first call was rejected as `invalid_state_patch`; the one safe retry was
+  rejected as `structured_output_validation_failed`. The sanitized artifact
+  records 2 interpretation calls (both provider-port operations), zero action,
+  Shopping, evidence, page, model or destination calls, an empty revision-0
+  brief, and no persisted SearchRun. This is a model-contract/provider result,
+  not rate-limit or timeout noise; no speculative correction is authorized.
 - Exact diagnostic head `4be44ded367efec6a650e29a7b9649f8520c57a1`
   passed GitHub quality, pinned PostgreSQL persistence and browser-smoke in run
   `33257880181`. Draft stacked PR #13 remains mergeable and unmerged. The
@@ -495,8 +505,8 @@ branch recorded above. The durable execution contract is
 5. Do not fetch arbitrary user URLs, crawl links, create ProductIdentity,
    substitute another merchant, add auth/deployment/checkout/affiliate work or
    begin V0-10.
-6. The original V0-09 live proof was consumed and failed closed. After the
-   separately authorized bounded page-planning correction and all gates, the
-   harness may consume exactly one post-correction proof; never run a second
-   attempt. Keep PR #13 draft/unmerged, leave the worktree clean and stop for
-   independent review after the proof result and exact-head CI.
+6. The original and the one separately authorized post-correction V0-09 live
+   proofs are both consumed and failed closed. Preserve both sanitized
+   diagnostics, keep PR #13 draft/unmerged, leave the worktree clean and stop
+   for independent review. Do not run another proof or begin V0-10 from this
+   checkpoint.

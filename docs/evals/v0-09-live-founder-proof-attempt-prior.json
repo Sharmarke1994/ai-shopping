@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "proofMode": "fresh_four_category_v009_release",
+  "attemptId": "6a736dde-90c5-447a-8313-b564872ae5c3",
+  "claimedAt": "2026-08-29T14:26:38.429Z",
+  "state": "claimed",
+  "refusalPolicy": "This marker is intentionally durable after success, failure, or interruption. A second live V0-09 release attempt is refused and prior failure evidence is never deleted."
+}
