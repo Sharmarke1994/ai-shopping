@@ -10,10 +10,10 @@ and comparison are meaningfully better than beginning with Google.
 - Repository: `Sharmarke1994/ai-shopping`.
 - Founder-MVP execution brief: `docs/plans/founder-usable-mvp.md`.
 - Active isolated worktree:
-  `/Users/alchemist32/Documents/AI Shopping/ai-shopping-v0-08-founder-loop`.
-- Active branch: `codex/v0-08-founder-decision-loop`, stacked exactly on the
-  independently accepted V0-07 head
-  `149f93cd43092996e20621e8976003b341a82c6a`.
+  `/Users/alchemist32/Documents/AI Shopping/ai-shopping-v0-09-source-depth`.
+- Active branch: `codex/v0-09-source-depth-purchase-path`, starting exactly at
+  the independently accepted V0-08 head
+  `cfd809740ae64be307798eb7870feaf56227d9dc`.
 - Independently reviewed V0-08 pre-correction head:
   `c28c891885462eb2990f0b098f3817e744afdec0` in draft stacked PR #12.
 - The final bounded six-issue correction and hardened one-shot proof harness
@@ -31,9 +31,11 @@ and comparison are meaningfully better than beginning with Google.
 - Correction/evidence plus ledger delivery head
   `4e891f81f581d8c2614bbdf76bf5ae1073399c43` passed exact-head quality,
   PostgreSQL persistence and browser-smoke in GitHub run `33228469926`.
-- V0-07 remains draft stacked PR #11 and is not merged. PR #12 remains draft,
-  stacked and unmerged. Do not rerun the live proof, merge, or begin V0-09
-  without independent review of the successful release-evidence checkpoint.
+- V0-08 was independently accepted at
+  `cfd809740ae64be307798eb7870feaf56227d9dc`. PR #12 remains draft, stacked
+  and unmerged. V0-09 is now the active isolated implementation checkpoint and
+  will be delivered as a new draft PR stacked on
+  `codex/v0-08-founder-decision-loop`; do not merge the stacked chain.
 - Original V0-05 checkout and draft PR #9 remain separate, unmodified,
   unmerged and formally unaccepted. The 21/21 Terra rule has not been weakened
   and Luna remains diagnostic only. V0-08 does not redefine that separate
@@ -265,11 +267,12 @@ presentation grouping, and exact saved-listing comparison. Unknown remains a
 valid result and cannot become a conflict or a suitability claim through
 absence of evidence.
 
-## Current V0-08 founder decision loop
+## Accepted V0-08 founder decision loop
 
-V0-08 is implemented in the active isolated branch. The original bounded review
-and the final six-issue code correction review are complete. Draft stacked PR
-#12 is open, mergeable and intentionally unmerged. The independently reviewed
+V0-08 is independently accepted at
+`cfd809740ae64be307798eb7870feaf56227d9dc`. The original bounded review and
+the final six-issue code correction review are complete. Draft stacked PR #12
+is open, mergeable and intentionally unmerged. The independently reviewed
 pre-correction head is `c28c891885462eb2990f0b098f3817e744afdec0`;
 the prior fail-closed diagnostic checkpoint is
 `76549c7abcefb81429d5ddda7c8f0069c2be78ce`, with its historical ledger head
@@ -347,20 +350,47 @@ artifact at `f35f2fe718704726fe3f26a131f3fb696cf06c45`.
   research states in `docs/screenshots/v0-08/`.
 
 V0-05 PR #9, V0-06 PR #10 and V0-07 PR #11 remain unmodified and unmerged.
-V0-09 has not started.
+
+## Current V0-09 source-depth, purchase-path and speed checkpoint
+
+V0-09 is active from the exact accepted V0-08 head in the isolated worktree and
+branch recorded above. The durable execution contract is
+`docs/plans/v0-09.md`.
+
+- Add no-crawler, server-owned fetching of at most two already-discovered exact
+  source pages for one candidate/focused generation, behind a DNS-pinned SSRF,
+  redirect, deadline, byte, encoding and content-type boundary.
+- Extend the existing evidence attempt/source architecture with replayable
+  bounded extracted-page provenance. Raw HTML is never persisted or sent to
+  the model; page text is hostile input and the focused Structured Output
+  contract remains authoritative.
+- Select source roles according to the unresolved criterion, recheck exact
+  candidate identity after fetch and leave unsupported facts unknown.
+- Remove merchant resolution from initial retrieval, run independent shopping
+  and candidate work under explicit small concurrency caps, persist every
+  terminal unit independently and report honest comparable latency.
+- Resolve exact same-merchant destinations only for current top/saved offers in
+  an immutable idempotent post-shortlist layer; Google Shopping remains the
+  honest fallback.
+- Project source depth, useful reasons for unknown and progressive purchase
+  state into the calm consumer UI without exposing implementation internals.
+- Run deterministic, PostgreSQL, browser, security, drift and production gates
+  before exactly one guarded four-category Terra + Serper proof. Stop for
+  independent review after exact-head CI; do not merge or start V0-10.
 
 ## Next validated checkpoints
 
-1. Stop for independent review of the focused model-contract alignment and
-   exact one-shot successful release evidence in draft stacked PR #12. Do not
-   merge any stacked PR, rerun the live proof or start V0-09.
-2. The reviewer must verify that the exact targeted contract, generation,
-   scope, cost, partial-failure and category-honesty evidence is non-vacuous.
-   No additional proof is authorized from this checkpoint.
-3. Only after V0-08 is independently accepted should the measured
-   leave-the-app gaps choose the next product layer. Direct destination coverage
-   and richer decision-critical sources remain real gaps; do not turn them into
-   a crawler or fabricate personal-fit evidence.
+1. Implement the V0-09 security/extraction boundary and page-evidence
+   persistence with focused deterministic and PostgreSQL proof.
+2. Implement post-shortlist exact-offer destinations and bounded retrieval /
+   evidence concurrency with deferred-provider proof and measured timings.
+3. Complete consumer projection and browser visual QA, then run all repository,
+   migration, security and production gates.
+4. Only when those gates and independent static review are green, run exactly
+   one fresh guarded Terra + Serper proof across mouse, chair, vacuum and the
+   exact compact-coffee-machine prompt. Preserve an honest diagnostic on
+   failure; on success update evidence/ledger/PR, obtain exact-head CI and stop
+   for independent review. Do not merge or begin V0-10.
 
 ## Credentials and blockers
 
@@ -426,24 +456,23 @@ V0-09 has not started.
 ## Exact resume instructions
 
 1. Work only in
-   `/Users/alchemist32/Documents/AI Shopping/ai-shopping-v0-08-founder-loop` on
-   `codex/v0-08-founder-decision-loop`; confirm branch, stacked base, exact head
-   and tree state first.
-2. Read this file, `docs/plans/v0-08.md` and the concise
-   `docs/evals/v0-08-live-founder-proof.md`. Do not reopen accepted
-   V0-03/V0-04/V0-06/V0-07 architecture.
+   `/Users/alchemist32/Documents/AI Shopping/ai-shopping-v0-09-source-depth` on
+   `codex/v0-09-source-depth-purchase-path`; confirm it descends exactly from
+   accepted V0-08 head `cfd809740ae64be307798eb7870feaf56227d9dc`
+   and inspect the tree first.
+2. Read this file and `docs/plans/v0-09.md`. Read only the V0-08 seams required
+   by the current implementation layer; do not reopen accepted V0-03/V0-04 or
+   earlier retrieval/evidence architecture.
 3. Preserve V0-05 PR #9, V0-06 PR #10 and V0-07 PR #11 exactly. Do not merge
    them and do not weaken V0-05's Terra rule.
-4. Do not rerun the live three-category proof from this checkpoint. First obtain
-   independent review of the exact success artifact and contract-alignment
-   delta. If review reports a material deterministic issue, make only a bounded
-   V0-08 correction and rerun affected plus full deterministic gates; a new live
-   proof still requires explicit authorization. Never weaken unknown, evidence,
-   money, task authority or revision boundaries.
-5. Keep the V0-08 PR draft and stacked on
-   `codex/v0-07-evidence-assessment`. Do not begin V0-09, ProductIdentity,
-   crawling, auth, deployment, checkout or affiliate work.
-6. Confirm exact-head PR quality/persistence/browser-smoke are green, leave the
-   worktree clean and stop for independent release-evidence review. V0-08 is not
-   accepted until that review approves the already completed three-category
-   proof.
+4. Do not rerun V0-08 evidence. Build V0-09 in the ordered layers recorded in
+   its plan. Never weaken unknown, exact offer identity, evidence provenance,
+   money, task authority, revisions, leases or focused target scope.
+5. Do not fetch arbitrary user URLs, crawl links, create ProductIdentity,
+   substitute another merchant, add auth/deployment/checkout/affiliate work or
+   begin V0-10.
+6. Before the single V0-09 live proof, require all deterministic, PostgreSQL,
+   security, browser, migration and production checks plus independent static
+   review to be green. After the one guarded proof, keep the new stacked PR
+   draft/unmerged, confirm exact-head quality/persistence/browser-smoke, leave
+   the worktree clean and stop for independent review.
