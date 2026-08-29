@@ -36,6 +36,10 @@ and comparison are meaningfully better than beginning with Google.
   and unmerged. V0-09 is now the active isolated implementation checkpoint and
   will be delivered as a new draft PR stacked on
   `codex/v0-08-founder-decision-loop`; do not merge the stacked chain.
+- V0-09 deterministic implementation head
+  `080495089ef4a6c619302f0675e35eb0a5e74ac6` is pushed in draft stacked PR
+  #13. Its single guarded live proof produced an honest diagnostic failure; the
+  implementation PR remains draft and unmerged pending independent review.
 - Original V0-05 checkout and draft PR #9 remain separate, unmodified,
   unmerged and formally unaccepted. The 21/21 Terra rule has not been weakened
   and Luna remains diagnostic only. V0-08 does not redefine that separate
@@ -376,19 +380,20 @@ branch recorded above. The durable execution contract is
   progressive research, page failures and direct/fallback purchase paths into
   the existing calm responsive decision UI.
 - Added a guarded four-category Terra + Serper proof harness and eight-state
-  production-server visual workflow. The one authorized live proof has not yet
-  been consumed; independent static proof review is the final precondition.
+  production-server visual workflow. Both independent static audits returned
+  GO. The single authorized live proof was consumed once and failed closed in
+  the first mouse case before page/model work; its durable marker and sanitized
+  diagnostic are preserved.
 
 ## Next validated checkpoints
 
-1. Receive explicit GO from the final production and proof-harness read-only
-   audits, then commit and push the deterministic V0-09 checkpoint.
-2. Run exactly one fresh guarded Terra + Serper proof across mouse, chair,
-   vacuum and the exact compact-coffee-machine prompt. Preserve an honest
-   diagnostic on failure and make no speculative retry.
-3. On success only, commit the sanitized JSON/Markdown evidence, update this
-   ledger and the draft stacked PR, obtain exact-head quality/persistence/
-   browser-smoke, and stop for independent review. Do not merge or begin V0-10.
+1. Preserve the exact attempt marker and sanitized diagnostic from the one
+   authorized run; do not rerun or make a speculative correction.
+2. Commit and push the evidence/ledger-only checkpoint, update draft PR #13 and
+   obtain exact-head CI so the diagnostic is independently reviewable.
+3. Stop. Independent review must decide whether the first-pass page-planning
+   target-set mismatch warrants a bounded correction and separately authorize
+   any future live attempt. Do not merge or begin V0-10.
 
 ## Credentials and blockers
 
@@ -431,8 +436,26 @@ branch recorded above. The durable execution contract is
   source depth, an attributed page failure, exact direct/fallback purchase,
   comparison, targeted research and reject/undo.
 - Credential-shape scanning found no OpenAI/Serper/Bearer key values in the
-  worktree. The guarded four-category live proof remains unrun at this
-  checkpoint; no V0-09 success artifact or claim exists yet.
+  deterministic checkpoint.
+- The single guarded live attempt ran once at
+  `2026-08-29T14:26:58.216Z` and failed in the ergonomic-mouse first pass with
+  `EvidenceAttemptConflictError`. Interpretation 1/1, action selection 1/1,
+  Shopping 3/3 and organic evidence search 4/4 logical calls succeeded. No page
+  fetch, product-understanding or destination logical call began.
+- The exact failed candidate had six observation/assessment target criteria but
+  its valid first-pass organic attempt targeted the prioritized maximum of five,
+  omitting only `Wireless battery suitability`. Page planning required all three
+  sets to be identical and raised on the still-planned extraction attempt. This
+  is the earliest evidenced layer: a deepening-style cross-stage equality
+  invariant was applied to the intentionally broader first-pass model scope.
+  The error wording about different terminal content is misleading; no terminal
+  replay conflict occurred. No semantic product result was produced and no
+  evaluator was weakened.
+- The sanitized failure JSON/Markdown and durable attempt marker are under
+  `docs/evals/v0-09-live-founder-proof-*`. The disposable database was destroyed
+  with zero cleanup errors and no V0-09 disposable database remains. This is
+  diagnostic evidence, not release acceptance; `releaseAccepted` is false and
+  no second run is permitted without independent review and new authorization.
 
 ## Exact resume instructions
 
@@ -452,8 +475,8 @@ branch recorded above. The durable execution contract is
 5. Do not fetch arbitrary user URLs, crawl links, create ProductIdentity,
    substitute another merchant, add auth/deployment/checkout/affiliate work or
    begin V0-10.
-6. Before the single V0-09 live proof, require all deterministic, PostgreSQL,
-   security, browser, migration and production checks plus independent static
-   review to be green. After the one guarded proof, keep the new stacked PR
-   draft/unmerged, confirm exact-head quality/persistence/browser-smoke, leave
+6. The single V0-09 live proof has already been consumed and failed closed. Do
+   not remove its marker, rerun it, or change production/proof code in this
+   checkpoint. Preserve the diagnostic, keep PR #13 draft/unmerged, obtain
+   exact-head quality/persistence/browser-smoke for the evidence commit, leave
    the worktree clean and stop for independent review.

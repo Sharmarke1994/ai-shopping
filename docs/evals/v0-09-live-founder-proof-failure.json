@@ -1,0 +1,1140 @@
+{
+  "schemaVersion": 2,
+  "proofMode": "fresh_four_category_v009_release_failed",
+  "attemptId": "6a736dde-90c5-447a-8313-b564872ae5c3",
+  "generatedAt": "2026-08-29T14:26:58.216Z",
+  "models": {
+    "contextAcquisition": "gpt-5.6-terra",
+    "productUnderstanding": "gpt-5.6-terra"
+  },
+  "failedCase": "ergonomic-mouse",
+  "failedSessionId": "cd20603e-3cce-402c-a84f-b1e363eb7dbc",
+  "completedFlows": [],
+  "activeCaseSnapshot": {
+    "taskId": "ac111238-da7e-4e60-a56b-6de369bbaf30",
+    "currentRevision": "1",
+    "brief": {
+      "schemaVersion": 1,
+      "taskId": "ac111238-da7e-4e60-a56b-6de369bbaf30",
+      "revision": "1",
+      "market": {
+        "country": "GB",
+        "language": "en-GB",
+        "currency": "GBP"
+      },
+      "items": [
+        {
+          "criterionId": "ff5e9572-cdc6-4920-8617-839912672b72",
+          "lineageId": "d8f21b9c-4941-488c-84d2-00074ab2673c",
+          "conceptId": "066ed0d3-df51-451f-8854-31a47b5ec75d",
+          "conceptLabel": "Ergonomic design",
+          "conceptDefinition": "The mouse's ergonomic comfort and hand-supporting design.",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "Ergonomic design"
+          }
+        },
+        {
+          "criterionId": "ba94f917-ace3-4f46-b444-208f5df44048",
+          "lineageId": "0ec7ee81-1d79-43cb-8c28-e4a464864127",
+          "conceptId": "3a732fbb-dd1f-4cc4-b5e8-ca6eebea9767",
+          "conceptLabel": "Review quality",
+          "conceptDefinition": "The strength and quality of product reviews.",
+          "strength": "strong_preference",
+          "targetSemantics": "qualitative",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "Strong reviews"
+          }
+        },
+        {
+          "criterionId": "b3e39004-eff0-4d41-8028-8985a029b08e",
+          "lineageId": "b76c2e45-3e82-458a-b779-1191ba871b8f",
+          "conceptId": "3f1a4c74-99a4-4e13-869c-9802d0c83961",
+          "conceptLabel": "Wireless battery suitability",
+          "conceptDefinition": "Preference for a wireless mouse when it has very good battery life.",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "Wireless only when battery life is very good"
+          }
+        },
+        {
+          "criterionId": "68c95229-1449-417c-97f5-52a84a943091",
+          "lineageId": "e266a3e1-803a-4b3e-a1b9-84d4347ae717",
+          "conceptId": "8e5e737b-14f3-4903-9ece-f38b6f76b7ea",
+          "conceptLabel": "Mouse shape and profile",
+          "conceptDefinition": "The mouse's body shape, chunkiness, sculpting, side profile, and thumb-rest form.",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "A little chunkier and sculpted, with a noticeable side profile or thumb-rest shape rather than flat and minimal"
+          }
+        },
+        {
+          "criterionId": "d866a583-ff99-4720-81c3-e58d61199650",
+          "lineageId": "6dd259f7-309a-4ebd-8c98-1d8cfb1120eb",
+          "conceptId": "d98ef310-b2cc-4f64-9695-bd3a78e496e0",
+          "conceptLabel": "Price",
+          "conceptDefinition": "The purchase price of the mouse.",
+          "strength": "hard",
+          "targetSemantics": "range",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "money",
+            "mode": "ceiling",
+            "amountMinor": 5000,
+            "currency": "GBP"
+          }
+        },
+        {
+          "criterionId": "9795d942-82cd-449e-a015-b8bd6a50b566",
+          "lineageId": "1a8762b6-35af-405f-a8b8-6509653a4e6b",
+          "conceptId": "f9d4d585-454a-4d19-ae97-d31d5898c3e1",
+          "conceptLabel": "Brand reputation",
+          "conceptDefinition": "The quality and reputation of the mouse brand.",
+          "strength": "hard",
+          "targetSemantics": "qualitative",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "Good brands only; exclude Amazon Basics and bad brands"
+          }
+        }
+      ]
+    },
+    "contextAcquisitionAttempts": [
+      {
+        "id": "00c6acb2-919d-4014-b161-1d95e2cd4515",
+        "orchestrationRunId": "7e08df77-22c5-48a2-8ed4-6734a12f8429",
+        "stage": "interpretation",
+        "status": "completed",
+        "provider": "openai",
+        "model": "gpt-5.6-terra",
+        "durationMs": 13640,
+        "errorCode": null,
+        "createdAt": "2026-08-29T14:26:52.188Z"
+      },
+      {
+        "id": "af99218d-0785-4743-888d-26ec5ff15986",
+        "orchestrationRunId": "7e08df77-22c5-48a2-8ed4-6734a12f8429",
+        "stage": "context_action",
+        "status": "completed",
+        "provider": "openai",
+        "model": "gpt-5.6-terra",
+        "durationMs": 1948,
+        "errorCode": null,
+        "createdAt": "2026-08-29T14:26:54.203Z"
+      }
+    ],
+    "searchRuns": [
+      {
+        "id": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "status": "succeeded",
+        "searchRunId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "taskRevision": "1",
+        "startedAt": "2026-08-29T14:26:54.257Z",
+        "finishedAt": "2026-08-29T14:26:55.918Z"
+      }
+    ],
+    "queries": [
+      {
+        "id": "145cc848-51d7-4965-aaf0-2320247bcd0d",
+        "text": "I need an ergonomic mouse under £50",
+        "purpose": "literal_precision"
+      },
+      {
+        "id": "2a72e626-3917-411a-921c-4f71c68c2d26",
+        "text": "ergonomic mouse under £50 Strong reviews",
+        "purpose": "brief_recall"
+      },
+      {
+        "id": "8d1a49b2-2010-4c2c-91c3-6664b7afc05c",
+        "text": "ergonomic mouse under £50 Ergonomic design Wireless only when battery life is very good A little chunkier and sculpted, with a noticeable side profile or thumb-rest",
+        "purpose": "brief_recall"
+      }
+    ],
+    "queryExecutions": [
+      {
+        "queryId": "8d1a49b2-2010-4c2c-91c3-6664b7afc05c",
+        "status": "succeeded",
+        "receivedResultCount": 40,
+        "rejectedResultCount": 0,
+        "failureCode": null,
+        "startedAt": "2026-08-29T14:26:54.376Z",
+        "finishedAt": "2026-08-29T14:26:55.420Z",
+        "receiptElapsedMs": 1044
+      },
+      {
+        "queryId": "145cc848-51d7-4965-aaf0-2320247bcd0d",
+        "status": "succeeded",
+        "receivedResultCount": 40,
+        "rejectedResultCount": 0,
+        "failureCode": null,
+        "startedAt": "2026-08-29T14:26:54.355Z",
+        "finishedAt": "2026-08-29T14:26:55.472Z",
+        "receiptElapsedMs": 1117
+      },
+      {
+        "queryId": "2a72e626-3917-411a-921c-4f71c68c2d26",
+        "status": "succeeded",
+        "receivedResultCount": 40,
+        "rejectedResultCount": 0,
+        "failureCode": null,
+        "startedAt": "2026-08-29T14:26:54.339Z",
+        "finishedAt": "2026-08-29T14:26:55.918Z",
+        "receiptElapsedMs": 1579
+      }
+    ],
+    "listings": [
+      {
+        "id": "22816396-3b5e-49b6-a458-c8b08ba3d8c7",
+        "runId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "title": "ProtoArc em11 nl Ergonomic Mouse Wireless Vertical Mouse Rechargeable",
+        "merchant": "Amazon.co.uk - Amazon.co.uk-Seller",
+        "priceText": "£26.99",
+        "googleShoppingUrl": "https://www.google.com/search?ibp=oshop&q=ergonomic+mouse+under+%C2%A350+Ergonomic+design+Wireless+only+when+battery+life+is+very+good+A+little+chunkier+and+sculpted%2C+with+a+noticeable+side+profile+or+thumb-rest&prds=localAnnotatedOfferId:1,catalogid:4472557352910100300,pvo:2,pvt:hg,rds:PC_6027158597472037202%7CPROD_PC_6027158597472037202&gl=gb&udm=28&pvorigin=2",
+        "originalMerchantDestinationUrl": null
+      },
+      {
+        "id": "c9e83c9b-916e-4aff-9224-34f108ec893e",
+        "runId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "title": "Anker 2.4G Wireless Vertical Ergonomic Optical Mouse",
+        "merchant": "Amazon.co.uk - Amazon.co.uk-Seller",
+        "priceText": "£17.99",
+        "googleShoppingUrl": "https://www.google.com/search?ibp=oshop&q=ergonomic+mouse+under+%C2%A350+Ergonomic+design+Wireless+only+when+battery+life+is+very+good+A+little+chunkier+and+sculpted%2C+with+a+noticeable+side+profile+or+thumb-rest&prds=localAnnotatedOfferId:1,catalogid:9110018147573973766,pvo:2,pvt:hg,rds:PC_6027158597472037202%7CPROD_PC_6027158597472037202&gl=gb&udm=28&pvorigin=2",
+        "originalMerchantDestinationUrl": null
+      },
+      {
+        "id": "35c11ed0-2d7d-4d94-bd27-057672e37637",
+        "runId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "title": "Wireless Ergonomic Design Vertical Optical Mouse Mice For Computer Laptop 2.4Ghz",
+        "merchant": "B&Q",
+        "priceText": "£23.99",
+        "googleShoppingUrl": "https://www.google.com/search?ibp=oshop&q=ergonomic+mouse+under+%C2%A350+Ergonomic+design+Wireless+only+when+battery+life+is+very+good+A+little+chunkier+and+sculpted%2C+with+a+noticeable+side+profile+or+thumb-rest&prds=localAnnotatedOfferId:1,catalogid:14804052169530813219,pvo:2,pvt:hg,rds:PC_6027158597472037202%7CPROD_PC_6027158597472037202&gl=gb&udm=28&pvorigin=2",
+        "originalMerchantDestinationUrl": null
+      },
+      {
+        "id": "be34d235-f0fb-4579-ac17-b7d78d41e342",
+        "runId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "title": "ECHTPower Vertical Ergonomic Mouse Wireless Rechargeable 2.4G Optical USB Mouse for Laptop/Desktop/PC/Macbook with 1000/1600/2400/3200/4000/4800",
+        "merchant": "Amazon.co.uk - Amazon.co.uk-Seller",
+        "priceText": "£18.99",
+        "googleShoppingUrl": "https://www.google.com/search?ibp=oshop&q=ergonomic+mouse+under+%C2%A350+Ergonomic+design+Wireless+only+when+battery+life+is+very+good+A+little+chunkier+and+sculpted%2C+with+a+noticeable+side+profile+or+thumb-rest&prds=localAnnotatedOfferId:1,catalogid:5909730719057788234,pvo:2,pvt:hg,rds:PC_6027158597472037202%7CPROD_PC_6027158597472037202&gl=gb&udm=28&pvorigin=2",
+        "originalMerchantDestinationUrl": null
+      },
+      {
+        "id": "6e7fa006-62ef-4301-a369-ecda0eb1a0af",
+        "runId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "title": "TECKNET 2.4G Ergonomic Mouse Vertical Wireless 4800 dpi Optical Carpal Tunnel Mouse Right Hand",
+        "merchant": "Amazon.co.uk - Amazon.co.uk-Seller",
+        "priceText": "£21.95",
+        "googleShoppingUrl": "https://www.google.com/search?ibp=oshop&q=ergonomic+mouse+under+%C2%A350+Ergonomic+design+Wireless+only+when+battery+life+is+very+good+A+little+chunkier+and+sculpted%2C+with+a+noticeable+side+profile+or+thumb-rest&prds=localAnnotatedOfferId:1,catalogid:16369628161344374777,pvo:2,pvt:hg,rds:PC_6027158597472037202%7CPROD_PC_6027158597472037202&gl=gb&udm=28&pvorigin=2",
+        "originalMerchantDestinationUrl": null
+      },
+      {
+        "id": "a541c0ef-9714-4d00-bf91-40bfe1fb50ff",
+        "runId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "title": "Lenovo Go RF Wireless 2400 dpi Optical Right-hand Mouse",
+        "merchant": "Techinn.com",
+        "priceText": "£35.99",
+        "googleShoppingUrl": "https://www.google.com/search?ibp=oshop&q=ergonomic+mouse+under+%C2%A350+Ergonomic+design+Wireless+only+when+battery+life+is+very+good+A+little+chunkier+and+sculpted%2C+with+a+noticeable+side+profile+or+thumb-rest&prds=localAnnotatedOfferId:1,catalogid:6027116256089976440,pvo:2,pvt:hg,rds:PC_6027158597472037202%7CPROD_PC_6027158597472037202&gl=gb&udm=28&pvorigin=2",
+        "originalMerchantDestinationUrl": null
+      },
+      {
+        "id": "a04015d7-34bf-42fb-921d-a8dd81561245",
+        "runId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "title": "Trust Verro Mouse Right-hand RF Wireless Optical 1600",
+        "merchant": "Amazon.co.uk",
+        "priceText": "£26.19",
+        "googleShoppingUrl": "https://www.google.com/search?ibp=oshop&q=ergonomic+mouse+under+%C2%A350+Ergonomic+design+Wireless+only+when+battery+life+is+very+good+A+little+chunkier+and+sculpted%2C+with+a+noticeable+side+profile+or+thumb-rest&prds=localAnnotatedOfferId:1,catalogid:10219636604734152786,pvo:2,pvt:hg,rds:PC_6027158597472037202%7CPROD_PC_6027158597472037202&gl=gb&udm=28&pvorigin=2",
+        "originalMerchantDestinationUrl": null
+      },
+      {
+        "id": "07f144b1-56fa-4b3a-8821-baf9530c2951",
+        "runId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "title": "Logitech Lift Vertical Ergonomic Mouse",
+        "merchant": "Logitech",
+        "priceText": "£59.99",
+        "googleShoppingUrl": "https://www.google.com/search?ibp=oshop&q=ergonomic+mouse+under+%C2%A350+Ergonomic+design+Wireless+only+when+battery+life+is+very+good+A+little+chunkier+and+sculpted%2C+with+a+noticeable+side+profile+or+thumb-rest&prds=localAnnotatedOfferId:1,catalogid:9761428813150444400,pvo:2,pvt:hg,rds:PC_6027158597472037202%7CPROD_PC_6027158597472037202&gl=gb&udm=28&pvorigin=2",
+        "originalMerchantDestinationUrl": null
+      },
+      {
+        "id": "9e753645-ebe6-4304-afd4-9cd33286fffb",
+        "runId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "title": "Anker 2.4G Wireless Vertical Ergonomic Optical Mouse",
+        "merchant": "Amazon.co.uk - Amazon.co.uk-Seller",
+        "priceText": "£17.99",
+        "googleShoppingUrl": "https://www.google.com/search?ibp=oshop&q=I+need+an+ergonomic+mouse+under+%C2%A350&prds=localAnnotatedOfferId:1,catalogid:9110018147573973766,pvo:2,pvt:hg,rds:PC_6027158597472037202%7CPROD_PC_6027158597472037202&gl=gb&udm=28&pvorigin=2",
+        "originalMerchantDestinationUrl": null
+      },
+      {
+        "id": "87cec409-549f-415d-8a8d-ed5461c9c291",
+        "runId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "title": "TECKNET Ergonomic Wired Mouse 6400DPI Vertical 6-Button Silent Mouse Black",
+        "merchant": "Amazon.co.uk - Amazon.co.uk-Seller",
+        "priceText": "£13.99",
+        "googleShoppingUrl": "https://www.google.com/search?ibp=oshop&q=I+need+an+ergonomic+mouse+under+%C2%A350&prds=localAnnotatedOfferId:1,catalogid:2365965456957886720,pvo:2,pvt:hg,rds:PC_6027158597472037202%7CPROD_PC_6027158597472037202&gl=gb&udm=28&pvorigin=2",
+        "originalMerchantDestinationUrl": null
+      },
+      {
+        "id": "27548042-78fc-4d21-a5c1-205449a50680",
+        "runId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "title": "Optical Wireless Mouse Trust Bayo II",
+        "merchant": "Argos",
+        "priceText": "£25.99",
+        "googleShoppingUrl": "https://www.google.com/search?ibp=oshop&q=I+need+an+ergonomic+mouse+under+%C2%A350&prds=localAnnotatedOfferId:1,catalogid:10042334771466261374,pvo:2,pvt:hg,rds:PC_6027158597472037202%7CPROD_PC_6027158597472037202&gl=gb&udm=28&pvorigin=2",
+        "originalMerchantDestinationUrl": null
+      },
+      {
+        "id": "3ba9998c-4106-4b60-a59d-06543fa84af4",
+        "runId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "title": "EU Product Ergonomic Vertical Wireless Mouse 57° – Pink",
+        "merchant": "Amazon.co.uk - Amazon.co.uk-Seller",
+        "priceText": "£11.97",
+        "googleShoppingUrl": "https://www.google.com/search?ibp=oshop&q=I+need+an+ergonomic+mouse+under+%C2%A350&prds=localAnnotatedOfferId:1,catalogid:8654303362335298992,pvo:2,pvt:hg,rds:PC_6027158597472037202%7CPROD_PC_6027158597472037202&gl=gb&udm=28&pvorigin=2",
+        "originalMerchantDestinationUrl": null
+      },
+      {
+        "id": "4e8e6247-93b7-40fd-810e-79fd16a205dc",
+        "runId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "title": "zelotes Vertical Ergonomic Wireless Mouse USB Optical Mouse",
+        "merchant": "Amazon.co.uk - Amazon.co.uk-Seller",
+        "priceText": "£18.04",
+        "googleShoppingUrl": "https://www.google.com/search?ibp=oshop&q=I+need+an+ergonomic+mouse+under+%C2%A350&prds=localAnnotatedOfferId:1,catalogid:1147445199563012679,pvo:2,pvt:hg,rds:PC_6027158597472037202%7CPROD_PC_6027158597472037202&gl=gb&udm=28&pvorigin=2",
+        "originalMerchantDestinationUrl": null
+      },
+      {
+        "id": "264d3ac5-89c8-4849-a37c-2771f88f9366",
+        "runId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "title": "Ergonomic Usb Wireless Mouse 1Pc",
+        "merchant": "B&Q",
+        "priceText": "£9.99",
+        "googleShoppingUrl": "https://www.google.com/search?ibp=oshop&q=I+need+an+ergonomic+mouse+under+%C2%A350&prds=localAnnotatedOfferId:1,catalogid:10444407515564132918,pvo:2,pvt:hg,rds:PC_6027158597472037202%7CPROD_PC_6027158597472037202&gl=gb&udm=28&pvorigin=2",
+        "originalMerchantDestinationUrl": null
+      },
+      {
+        "id": "d8a92df4-6f59-4067-ba23-4fc2b8cc850f",
+        "runId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "title": "Seenda MOU-302 Vertical Ergonomic Mouse with Volume Knob",
+        "merchant": "Amazon.co.uk - Amazon.co.uk-Seller",
+        "priceText": "£40.20",
+        "googleShoppingUrl": "https://www.google.com/search?ibp=oshop&q=I+need+an+ergonomic+mouse+under+%C2%A350&prds=localAnnotatedOfferId:1,catalogid:3370002043816036095,pvo:2,pvt:hg,rds:PC_6027158597472037202%7CPROD_PC_6027158597472037202&gl=gb&udm=28&pvorigin=2",
+        "originalMerchantDestinationUrl": null
+      },
+      {
+        "id": "c2b35e79-9912-4b95-9529-f72b0a7864d9",
+        "runId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "title": "ProtoArc em11 nl Ergonomic Mouse Wireless Vertical Mouse Rechargeable",
+        "merchant": "Amazon.co.uk - Amazon.co.uk-Seller",
+        "priceText": "£29.99",
+        "googleShoppingUrl": "https://www.google.com/search?ibp=oshop&q=I+need+an+ergonomic+mouse+under+%C2%A350&prds=localAnnotatedOfferId:1,catalogid:12311574510006280734,pvo:2,pvt:hg,rds:PC_6027158597472037202%7CPROD_PC_6027158597472037202&gl=gb&udm=28&pvorigin=2",
+        "originalMerchantDestinationUrl": null
+      },
+      {
+        "id": "2cf028b9-66a5-4d80-b328-268926f496a5",
+        "runId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "title": "Anker 2.4G Wireless Vertical Ergonomic Optical Mouse",
+        "merchant": "Amazon.co.uk - Amazon.co.uk-Seller",
+        "priceText": "£17.99",
+        "googleShoppingUrl": "https://www.google.com/search?ibp=oshop&q=ergonomic+mouse+under+%C2%A350+Strong+reviews&prds=localAnnotatedOfferId:1,catalogid:9110018147573973766,pvo:2,pvt:hg,rds:PC_6027158597472037202%7CPROD_PC_6027158597472037202&gl=gb&udm=28&pvorigin=2",
+        "originalMerchantDestinationUrl": null
+      },
+      {
+        "id": "04b7d9a1-2e5c-4335-a7cc-cf163d04c6f4",
+        "runId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "title": "Optical Wireless Mouse Trust Bayo II",
+        "merchant": "Argos",
+        "priceText": "£25.99",
+        "googleShoppingUrl": "https://www.google.com/search?ibp=oshop&q=ergonomic+mouse+under+%C2%A350+Strong+reviews&prds=localAnnotatedOfferId:1,catalogid:10042334771466261374,pvo:2,pvt:hg,rds:PC_6027158597472037202%7CPROD_PC_6027158597472037202&gl=gb&udm=28&pvorigin=2",
+        "originalMerchantDestinationUrl": null
+      },
+      {
+        "id": "db54e530-e8f2-4fa7-ad61-e1817df565e5",
+        "runId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "title": "TECKNET Ergonomic Wired Mouse 6400DPI Vertical 6-Button Silent Mouse Black",
+        "merchant": "Amazon.co.uk - Amazon.co.uk-Seller",
+        "priceText": "£13.99",
+        "googleShoppingUrl": "https://www.google.com/search?ibp=oshop&q=ergonomic+mouse+under+%C2%A350+Strong+reviews&prds=localAnnotatedOfferId:1,catalogid:2365965456957886720,pvo:2,pvt:hg,rds:PC_6027158597472037202%7CPROD_PC_6027158597472037202&gl=gb&udm=28&pvorigin=2",
+        "originalMerchantDestinationUrl": null
+      },
+      {
+        "id": "2edc4e29-cd7f-44aa-b045-1c0234ed43a3",
+        "runId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "title": "ProtoArc em11 nl Ergonomic Mouse Wireless Vertical Mouse Rechargeable",
+        "merchant": "Amazon.co.uk - Amazon.co.uk-Seller",
+        "priceText": "£26.99",
+        "googleShoppingUrl": "https://www.google.com/search?ibp=oshop&q=ergonomic+mouse+under+%C2%A350+Strong+reviews&prds=localAnnotatedOfferId:1,catalogid:4472557352910100300,pvo:2,pvt:hg,rds:PC_6027158597472037202%7CPROD_PC_6027158597472037202&gl=gb&udm=28&pvorigin=2",
+        "originalMerchantDestinationUrl": null
+      },
+      {
+        "id": "fceb1ada-7cf2-45a8-be3b-af260554ccc3",
+        "runId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "title": "Protoarc Ergonomische Muis",
+        "merchant": "CeX",
+        "priceText": "£18.00",
+        "googleShoppingUrl": "https://www.google.com/search?ibp=oshop&q=ergonomic+mouse+under+%C2%A350+Strong+reviews&prds=localAnnotatedOfferId:1,catalogid:18357052776937208104,pvo:2,pvt:hg,rds:PC_6027158597472037202%7CPROD_PC_6027158597472037202&gl=gb&udm=28&pvorigin=2",
+        "originalMerchantDestinationUrl": null
+      },
+      {
+        "id": "990429cc-b14f-4f71-91da-75a14e90b67b",
+        "runId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "title": "EU Product Ergonomic Vertical Wireless Mouse 57° – Pink",
+        "merchant": "Amazon.co.uk - Amazon.co.uk-Seller",
+        "priceText": "£11.97",
+        "googleShoppingUrl": "https://www.google.com/search?ibp=oshop&q=ergonomic+mouse+under+%C2%A350+Strong+reviews&prds=localAnnotatedOfferId:1,catalogid:8654303362335298992,pvo:2,pvt:hg,rds:PC_6027158597472037202%7CPROD_PC_6027158597472037202&gl=gb&udm=28&pvorigin=2",
+        "originalMerchantDestinationUrl": null
+      },
+      {
+        "id": "cee5fa42-5f2f-48a4-bbe1-1f2d3bfc8015",
+        "runId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "title": "Logitech ERGO M575S Wireless Trackball Mouse",
+        "merchant": "Argos",
+        "priceText": "£44.99",
+        "googleShoppingUrl": "https://www.google.com/search?ibp=oshop&q=ergonomic+mouse+under+%C2%A350+Strong+reviews&prds=localAnnotatedOfferId:1,catalogid:17444091972250083455,pvo:2,pvt:hg,rds:PC_6027158597472037202%7CPROD_PC_6027158597472037202&gl=gb&udm=28&pvorigin=2",
+        "originalMerchantDestinationUrl": null
+      },
+      {
+        "id": "2df6afb7-741b-48bf-b20c-9567ff6d8b15",
+        "runId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "title": "Seenda MOU-302 Vertical Ergonomic Mouse with Volume Knob",
+        "merchant": "Amazon.co.uk - Amazon.co.uk-Seller",
+        "priceText": "£40.20",
+        "googleShoppingUrl": "https://www.google.com/search?ibp=oshop&q=ergonomic+mouse+under+%C2%A350+Strong+reviews&prds=localAnnotatedOfferId:1,catalogid:3370002043816036095,pvo:2,pvt:hg,rds:PC_6027158597472037202%7CPROD_PC_6027158597472037202&gl=gb&udm=28&pvorigin=2",
+        "originalMerchantDestinationUrl": null
+      }
+    ],
+    "researchRuns": [
+      {
+        "id": "3c9bbb3f-35ba-49f8-b292-ee7aac1992e3",
+        "searchRunId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "phase": "first_pass",
+        "status": "running",
+        "taskRevision": "1",
+        "selectedCandidateCount": 4,
+        "plannedSearchCount": 4,
+        "startedAt": "2026-08-29T14:26:56.058Z",
+        "finishedAt": null,
+        "receiptElapsedMs": null
+      }
+    ],
+    "attempts": [
+      {
+        "id": "d7bdc23d-31b4-4ec9-9a1e-f176a2300223",
+        "researchRunId": "3c9bbb3f-35ba-49f8-b292-ee7aac1992e3",
+        "candidateRunId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "candidateListingId": "9e753645-ebe6-4304-afd4-9cd33286fffb",
+        "stage": "observation_extraction",
+        "purpose": "combined",
+        "planKey": "observation-extraction-v1",
+        "query": null,
+        "status": "planned",
+        "provider": "openai",
+        "model": "gpt-5.6-terra",
+        "failureCode": null,
+        "receivedResultCount": null,
+        "targetCriterionIds": [
+          "68c95229-1449-417c-97f5-52a84a943091",
+          "9795d942-82cd-449e-a015-b8bd6a50b566",
+          "b3e39004-eff0-4d41-8028-8985a029b08e",
+          "ba94f917-ace3-4f46-b444-208f5df44048",
+          "d866a583-ff99-4720-81c3-e58d61199650",
+          "ff5e9572-cdc6-4920-8617-839912672b72"
+        ],
+        "startedAt": null,
+        "finishedAt": null,
+        "receiptElapsedMs": null
+      },
+      {
+        "id": "3b0580bc-d23f-4883-baec-de62e8c4df26",
+        "researchRunId": "3c9bbb3f-35ba-49f8-b292-ee7aac1992e3",
+        "candidateRunId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "candidateListingId": "9e753645-ebe6-4304-afd4-9cd33286fffb",
+        "stage": "criterion_assessment",
+        "purpose": "current_brief",
+        "planKey": "criterion-assessment-r1",
+        "query": null,
+        "status": "planned",
+        "provider": "openai",
+        "model": "gpt-5.6-terra",
+        "failureCode": null,
+        "receivedResultCount": null,
+        "targetCriterionIds": [
+          "68c95229-1449-417c-97f5-52a84a943091",
+          "9795d942-82cd-449e-a015-b8bd6a50b566",
+          "b3e39004-eff0-4d41-8028-8985a029b08e",
+          "ba94f917-ace3-4f46-b444-208f5df44048",
+          "d866a583-ff99-4720-81c3-e58d61199650",
+          "ff5e9572-cdc6-4920-8617-839912672b72"
+        ],
+        "startedAt": null,
+        "finishedAt": null,
+        "receiptElapsedMs": null
+      },
+      {
+        "id": "0883480b-81ed-4cf0-954b-436142d4e558",
+        "researchRunId": "3c9bbb3f-35ba-49f8-b292-ee7aac1992e3",
+        "candidateRunId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "candidateListingId": "22816396-3b5e-49b6-a458-c8b08ba3d8c7",
+        "stage": "observation_extraction",
+        "purpose": "combined",
+        "planKey": "observation-extraction-v1",
+        "query": null,
+        "status": "planned",
+        "provider": "openai",
+        "model": "gpt-5.6-terra",
+        "failureCode": null,
+        "receivedResultCount": null,
+        "targetCriterionIds": [
+          "68c95229-1449-417c-97f5-52a84a943091",
+          "9795d942-82cd-449e-a015-b8bd6a50b566",
+          "b3e39004-eff0-4d41-8028-8985a029b08e",
+          "ba94f917-ace3-4f46-b444-208f5df44048",
+          "d866a583-ff99-4720-81c3-e58d61199650",
+          "ff5e9572-cdc6-4920-8617-839912672b72"
+        ],
+        "startedAt": null,
+        "finishedAt": null,
+        "receiptElapsedMs": null
+      },
+      {
+        "id": "d6bc6535-ac2f-42df-8930-1d429b746e0f",
+        "researchRunId": "3c9bbb3f-35ba-49f8-b292-ee7aac1992e3",
+        "candidateRunId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "candidateListingId": "22816396-3b5e-49b6-a458-c8b08ba3d8c7",
+        "stage": "criterion_assessment",
+        "purpose": "current_brief",
+        "planKey": "criterion-assessment-r1",
+        "query": null,
+        "status": "planned",
+        "provider": "openai",
+        "model": "gpt-5.6-terra",
+        "failureCode": null,
+        "receivedResultCount": null,
+        "targetCriterionIds": [
+          "68c95229-1449-417c-97f5-52a84a943091",
+          "9795d942-82cd-449e-a015-b8bd6a50b566",
+          "b3e39004-eff0-4d41-8028-8985a029b08e",
+          "ba94f917-ace3-4f46-b444-208f5df44048",
+          "d866a583-ff99-4720-81c3-e58d61199650",
+          "ff5e9572-cdc6-4920-8617-839912672b72"
+        ],
+        "startedAt": null,
+        "finishedAt": null,
+        "receiptElapsedMs": null
+      },
+      {
+        "id": "bb1be6a8-c952-4f10-97b2-271cf1315791",
+        "researchRunId": "3c9bbb3f-35ba-49f8-b292-ee7aac1992e3",
+        "candidateRunId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "candidateListingId": "04b7d9a1-2e5c-4335-a7cc-cf163d04c6f4",
+        "stage": "observation_extraction",
+        "purpose": "combined",
+        "planKey": "observation-extraction-v1",
+        "query": null,
+        "status": "planned",
+        "provider": "openai",
+        "model": "gpt-5.6-terra",
+        "failureCode": null,
+        "receivedResultCount": null,
+        "targetCriterionIds": [
+          "68c95229-1449-417c-97f5-52a84a943091",
+          "9795d942-82cd-449e-a015-b8bd6a50b566",
+          "b3e39004-eff0-4d41-8028-8985a029b08e",
+          "ba94f917-ace3-4f46-b444-208f5df44048",
+          "d866a583-ff99-4720-81c3-e58d61199650",
+          "ff5e9572-cdc6-4920-8617-839912672b72"
+        ],
+        "startedAt": null,
+        "finishedAt": null,
+        "receiptElapsedMs": null
+      },
+      {
+        "id": "620113c9-b303-4073-8d46-1104ae6afa65",
+        "researchRunId": "3c9bbb3f-35ba-49f8-b292-ee7aac1992e3",
+        "candidateRunId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "candidateListingId": "04b7d9a1-2e5c-4335-a7cc-cf163d04c6f4",
+        "stage": "criterion_assessment",
+        "purpose": "current_brief",
+        "planKey": "criterion-assessment-r1",
+        "query": null,
+        "status": "planned",
+        "provider": "openai",
+        "model": "gpt-5.6-terra",
+        "failureCode": null,
+        "receivedResultCount": null,
+        "targetCriterionIds": [
+          "68c95229-1449-417c-97f5-52a84a943091",
+          "9795d942-82cd-449e-a015-b8bd6a50b566",
+          "b3e39004-eff0-4d41-8028-8985a029b08e",
+          "ba94f917-ace3-4f46-b444-208f5df44048",
+          "d866a583-ff99-4720-81c3-e58d61199650",
+          "ff5e9572-cdc6-4920-8617-839912672b72"
+        ],
+        "startedAt": null,
+        "finishedAt": null,
+        "receiptElapsedMs": null
+      },
+      {
+        "id": "becb5bd1-9a5f-4817-848f-21df53302dfa",
+        "researchRunId": "3c9bbb3f-35ba-49f8-b292-ee7aac1992e3",
+        "candidateRunId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "candidateListingId": "87cec409-549f-415d-8a8d-ed5461c9c291",
+        "stage": "observation_extraction",
+        "purpose": "combined",
+        "planKey": "observation-extraction-v1",
+        "query": null,
+        "status": "planned",
+        "provider": "openai",
+        "model": "gpt-5.6-terra",
+        "failureCode": null,
+        "receivedResultCount": null,
+        "targetCriterionIds": [
+          "68c95229-1449-417c-97f5-52a84a943091",
+          "9795d942-82cd-449e-a015-b8bd6a50b566",
+          "b3e39004-eff0-4d41-8028-8985a029b08e",
+          "ba94f917-ace3-4f46-b444-208f5df44048",
+          "d866a583-ff99-4720-81c3-e58d61199650",
+          "ff5e9572-cdc6-4920-8617-839912672b72"
+        ],
+        "startedAt": null,
+        "finishedAt": null,
+        "receiptElapsedMs": null
+      },
+      {
+        "id": "a97f52e3-8a77-4c10-bd9b-552a9e81ab8b",
+        "researchRunId": "3c9bbb3f-35ba-49f8-b292-ee7aac1992e3",
+        "candidateRunId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "candidateListingId": "87cec409-549f-415d-8a8d-ed5461c9c291",
+        "stage": "criterion_assessment",
+        "purpose": "current_brief",
+        "planKey": "criterion-assessment-r1",
+        "query": null,
+        "status": "planned",
+        "provider": "openai",
+        "model": "gpt-5.6-terra",
+        "failureCode": null,
+        "receivedResultCount": null,
+        "targetCriterionIds": [
+          "68c95229-1449-417c-97f5-52a84a943091",
+          "9795d942-82cd-449e-a015-b8bd6a50b566",
+          "b3e39004-eff0-4d41-8028-8985a029b08e",
+          "ba94f917-ace3-4f46-b444-208f5df44048",
+          "d866a583-ff99-4720-81c3-e58d61199650",
+          "ff5e9572-cdc6-4920-8617-839912672b72"
+        ],
+        "startedAt": null,
+        "finishedAt": null,
+        "receiptElapsedMs": null
+      },
+      {
+        "id": "849d34c0-5c76-4dd7-8165-9c1e49d6ecae",
+        "researchRunId": "3c9bbb3f-35ba-49f8-b292-ee7aac1992e3",
+        "candidateRunId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "candidateListingId": "87cec409-549f-415d-8a8d-ed5461c9c291",
+        "stage": "organic_search",
+        "purpose": "first_pass",
+        "planKey": "first-pass:0009f11870326d7f0ed8",
+        "query": "\"TECKNET Ergonomic Wired Mouse 6400DPI Vertical 6-Button Silent Mouse Black\" Brand reputation Price Review quality Ergonomic design Mouse shape and profile review",
+        "status": "succeeded",
+        "provider": "serper",
+        "model": null,
+        "failureCode": null,
+        "receivedResultCount": 0,
+        "targetCriterionIds": [
+          "68c95229-1449-417c-97f5-52a84a943091",
+          "9795d942-82cd-449e-a015-b8bd6a50b566",
+          "ba94f917-ace3-4f46-b444-208f5df44048",
+          "d866a583-ff99-4720-81c3-e58d61199650",
+          "ff5e9572-cdc6-4920-8617-839912672b72"
+        ],
+        "startedAt": "2026-08-29T14:26:56.141Z",
+        "finishedAt": "2026-08-29T14:26:57.230Z",
+        "receiptElapsedMs": 1089
+      },
+      {
+        "id": "d11c1858-8f7f-4b55-9ca8-07533e807ce6",
+        "researchRunId": "3c9bbb3f-35ba-49f8-b292-ee7aac1992e3",
+        "candidateRunId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "candidateListingId": "04b7d9a1-2e5c-4335-a7cc-cf163d04c6f4",
+        "stage": "organic_search",
+        "purpose": "first_pass",
+        "planKey": "first-pass:89fbf22700bfc48eea6a",
+        "query": "\"Optical Wireless Mouse Trust Bayo II\" Brand reputation Price Review quality Ergonomic design Mouse shape and profile review",
+        "status": "succeeded",
+        "provider": "serper",
+        "model": null,
+        "failureCode": null,
+        "receivedResultCount": 0,
+        "targetCriterionIds": [
+          "68c95229-1449-417c-97f5-52a84a943091",
+          "9795d942-82cd-449e-a015-b8bd6a50b566",
+          "ba94f917-ace3-4f46-b444-208f5df44048",
+          "d866a583-ff99-4720-81c3-e58d61199650",
+          "ff5e9572-cdc6-4920-8617-839912672b72"
+        ],
+        "startedAt": "2026-08-29T14:26:56.144Z",
+        "finishedAt": "2026-08-29T14:26:57.379Z",
+        "receiptElapsedMs": 1235
+      },
+      {
+        "id": "3734cdf2-db53-4c04-a71d-a9932a40d390",
+        "researchRunId": "3c9bbb3f-35ba-49f8-b292-ee7aac1992e3",
+        "candidateRunId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "candidateListingId": "9e753645-ebe6-4304-afd4-9cd33286fffb",
+        "stage": "organic_search",
+        "purpose": "first_pass",
+        "planKey": "first-pass:e6e27fd969a50a91c7d3",
+        "query": "\"Anker 2.4G Wireless Vertical Ergonomic Optical Mouse\" Brand reputation Price Review quality Ergonomic design Mouse shape and profile review",
+        "status": "succeeded",
+        "provider": "serper",
+        "model": null,
+        "failureCode": null,
+        "receivedResultCount": 5,
+        "targetCriterionIds": [
+          "68c95229-1449-417c-97f5-52a84a943091",
+          "9795d942-82cd-449e-a015-b8bd6a50b566",
+          "ba94f917-ace3-4f46-b444-208f5df44048",
+          "d866a583-ff99-4720-81c3-e58d61199650",
+          "ff5e9572-cdc6-4920-8617-839912672b72"
+        ],
+        "startedAt": "2026-08-29T14:26:56.145Z",
+        "finishedAt": "2026-08-29T14:26:57.746Z",
+        "receiptElapsedMs": 1601
+      },
+      {
+        "id": "006250e1-a725-4bd5-a8cb-a9ff58bbcf06",
+        "researchRunId": "3c9bbb3f-35ba-49f8-b292-ee7aac1992e3",
+        "candidateRunId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "candidateListingId": "22816396-3b5e-49b6-a458-c8b08ba3d8c7",
+        "stage": "organic_search",
+        "purpose": "first_pass",
+        "planKey": "first-pass:a602358969a5fc5eb76c",
+        "query": "\"ProtoArc em11 nl Ergonomic Mouse Wireless Vertical Mouse Rechargeable\" Brand reputation Price Review quality Ergonomic design Mouse shape and profile review",
+        "status": "succeeded",
+        "provider": "serper",
+        "model": null,
+        "failureCode": null,
+        "receivedResultCount": 3,
+        "targetCriterionIds": [
+          "68c95229-1449-417c-97f5-52a84a943091",
+          "9795d942-82cd-449e-a015-b8bd6a50b566",
+          "ba94f917-ace3-4f46-b444-208f5df44048",
+          "d866a583-ff99-4720-81c3-e58d61199650",
+          "ff5e9572-cdc6-4920-8617-839912672b72"
+        ],
+        "startedAt": "2026-08-29T14:26:57.297Z",
+        "finishedAt": "2026-08-29T14:26:58.082Z",
+        "receiptElapsedMs": 785
+      }
+    ],
+    "pageTargets": [],
+    "fetchedDocuments": [],
+    "evidenceSources": [
+      {
+        "id": "90977af0-53e4-4d14-b4fa-a14143a1a3fc",
+        "researchRunId": "3c9bbb3f-35ba-49f8-b292-ee7aac1992e3",
+        "candidateRunId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "candidateListingId": "9e753645-ebe6-4304-afd4-9cd33286fffb",
+        "acquisitionAttemptId": null,
+        "sourceRole": "listing",
+        "sourceKind": "listing_field",
+        "sourceUrl": "https://www.google.com/search?ibp=oshop&q=I+need+an+ergonomic+mouse+under+%C2%A350&prds=localAnnotatedOfferId:1,catalogid:9110018147573973766,pvo:2,pvt:hg,rds:PC_6027158597472037202%7CPROD_PC_6027158597472037202&gl=gb&udm=28&pvorigin=2",
+        "sourceTitle": "Anker 2.4G Wireless Vertical Ergonomic Optical Mouse"
+      },
+      {
+        "id": "4665e40f-d80c-4bf5-832f-1424caa28b9b",
+        "researchRunId": "3c9bbb3f-35ba-49f8-b292-ee7aac1992e3",
+        "candidateRunId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "candidateListingId": "9e753645-ebe6-4304-afd4-9cd33286fffb",
+        "acquisitionAttemptId": null,
+        "sourceRole": "visual",
+        "sourceKind": "listing_image",
+        "sourceUrl": "https://encrypted-tbn3.gstatic.com/shopping?q=tbn:ANd9GcSjf9gEeJnsXJR9NTyQmemJNpmH34pc3QxTn0llPm8uJGNuWtn11VQLnkf_bXdTbKCWVWMSl36bqb1NUMZzpObZPw8D-Rrh2r3EqGI_t9INyQvYrOyvDSjRzw",
+        "sourceTitle": "Anker 2.4G Wireless Vertical Ergonomic Optical Mouse image"
+      },
+      {
+        "id": "2ec0bf8f-01d4-4c1f-8d11-81640c94ae4d",
+        "researchRunId": "3c9bbb3f-35ba-49f8-b292-ee7aac1992e3",
+        "candidateRunId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "candidateListingId": "22816396-3b5e-49b6-a458-c8b08ba3d8c7",
+        "acquisitionAttemptId": null,
+        "sourceRole": "listing",
+        "sourceKind": "listing_field",
+        "sourceUrl": "https://www.google.com/search?ibp=oshop&q=ergonomic+mouse+under+%C2%A350+Ergonomic+design+Wireless+only+when+battery+life+is+very+good+A+little+chunkier+and+sculpted%2C+with+a+noticeable+side+profile+or+thumb-rest&prds=localAnnotatedOfferId:1,catalogid:4472557352910100300,pvo:2,pvt:hg,rds:PC_6027158597472037202%7CPROD_PC_6027158597472037202&gl=gb&udm=28&pvorigin=2",
+        "sourceTitle": "ProtoArc em11 nl Ergonomic Mouse Wireless Vertical Mouse Rechargeable"
+      },
+      {
+        "id": "a063dd4e-2d2c-4d3f-acd4-3c75f10ead39",
+        "researchRunId": "3c9bbb3f-35ba-49f8-b292-ee7aac1992e3",
+        "candidateRunId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "candidateListingId": "22816396-3b5e-49b6-a458-c8b08ba3d8c7",
+        "acquisitionAttemptId": null,
+        "sourceRole": "visual",
+        "sourceKind": "listing_image",
+        "sourceUrl": "https://encrypted-tbn3.gstatic.com/shopping?q=tbn:ANd9GcTx_N2Df0TPkQ4cpsBzaX6MmmzPUDKR92oDLdsungNMWliIp_LaD4vQNG88l1-zzZlVPiiNvBIPjROlni0iCw2x2cbZAoXAqCxBaWmyrm01vTCZbdgik-_o",
+        "sourceTitle": "ProtoArc em11 nl Ergonomic Mouse Wireless Vertical Mouse Rechargeable image"
+      },
+      {
+        "id": "45ff330b-bf8e-4fc7-9322-9cf2a8fbb2a5",
+        "researchRunId": "3c9bbb3f-35ba-49f8-b292-ee7aac1992e3",
+        "candidateRunId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "candidateListingId": "04b7d9a1-2e5c-4335-a7cc-cf163d04c6f4",
+        "acquisitionAttemptId": null,
+        "sourceRole": "listing",
+        "sourceKind": "listing_field",
+        "sourceUrl": "https://www.google.com/search?ibp=oshop&q=ergonomic+mouse+under+%C2%A350+Strong+reviews&prds=localAnnotatedOfferId:1,catalogid:10042334771466261374,pvo:2,pvt:hg,rds:PC_6027158597472037202%7CPROD_PC_6027158597472037202&gl=gb&udm=28&pvorigin=2",
+        "sourceTitle": "Optical Wireless Mouse Trust Bayo II"
+      },
+      {
+        "id": "4d50bc61-66a5-40d4-ba17-662b0ee718fc",
+        "researchRunId": "3c9bbb3f-35ba-49f8-b292-ee7aac1992e3",
+        "candidateRunId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "candidateListingId": "04b7d9a1-2e5c-4335-a7cc-cf163d04c6f4",
+        "acquisitionAttemptId": null,
+        "sourceRole": "visual",
+        "sourceKind": "listing_image",
+        "sourceUrl": "https://encrypted-tbn3.gstatic.com/shopping?q=tbn:ANd9GcTnbB7Fq6cAFtOtcI6W8Y3IR8eRPzDqz11LsCh1SI51oRsFGglA8Ic7Gm9BxjJE1zun5YJ3phvTbrtiv4krl4PgN1MXEHhPnW-zNiH6TILseRSMCUxkN8lv",
+        "sourceTitle": "Optical Wireless Mouse Trust Bayo II image"
+      },
+      {
+        "id": "a04567a5-bb82-46de-af8e-813de47ae55b",
+        "researchRunId": "3c9bbb3f-35ba-49f8-b292-ee7aac1992e3",
+        "candidateRunId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "candidateListingId": "87cec409-549f-415d-8a8d-ed5461c9c291",
+        "acquisitionAttemptId": null,
+        "sourceRole": "listing",
+        "sourceKind": "listing_field",
+        "sourceUrl": "https://www.google.com/search?ibp=oshop&q=I+need+an+ergonomic+mouse+under+%C2%A350&prds=localAnnotatedOfferId:1,catalogid:2365965456957886720,pvo:2,pvt:hg,rds:PC_6027158597472037202%7CPROD_PC_6027158597472037202&gl=gb&udm=28&pvorigin=2",
+        "sourceTitle": "TECKNET Ergonomic Wired Mouse 6400DPI Vertical 6-Button Silent Mouse Black"
+      },
+      {
+        "id": "6d4ab8cf-a7a1-4f55-85ca-b4cf1fc69f43",
+        "researchRunId": "3c9bbb3f-35ba-49f8-b292-ee7aac1992e3",
+        "candidateRunId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "candidateListingId": "87cec409-549f-415d-8a8d-ed5461c9c291",
+        "acquisitionAttemptId": null,
+        "sourceRole": "visual",
+        "sourceKind": "listing_image",
+        "sourceUrl": "https://encrypted-tbn0.gstatic.com/shopping?q=tbn:ANd9GcSTt1kUeDzZXV9Lay9glT9ZQ5c0aV-8sOCNalKyEKSLI_f8yaaJdyrQWZV8dnPewuYkNnK3Jz5cDAxtKyz1dyU_qXGSYcLgzoyBglbt-aJwGwL2XMZCtzp4Xw",
+        "sourceTitle": "TECKNET Ergonomic Wired Mouse 6400DPI Vertical 6-Button Silent Mouse Black image"
+      },
+      {
+        "id": "f71e4049-c7f3-4cbf-be41-867b98fb3c16",
+        "researchRunId": "3c9bbb3f-35ba-49f8-b292-ee7aac1992e3",
+        "candidateRunId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "candidateListingId": "9e753645-ebe6-4304-afd4-9cd33286fffb",
+        "acquisitionAttemptId": "3734cdf2-db53-4c04-a71d-a9932a40d390",
+        "sourceRole": "other",
+        "sourceKind": "organic_result",
+        "sourceUrl": "https://www.walmart.com/ip/Anker-2-4G-Wireless-Vertical-Ergonomic-Optical-Mouse-800-1200-1600DPI-5-Buttons-Black/41221388",
+        "sourceTitle": "Anker, Wireless Ergonomic Optical Mouse, 2.4G, Black"
+      },
+      {
+        "id": "0f1f7784-54b1-4e9b-a2e9-66c1d49cc2ba",
+        "researchRunId": "3c9bbb3f-35ba-49f8-b292-ee7aac1992e3",
+        "candidateRunId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "candidateListingId": "22816396-3b5e-49b6-a458-c8b08ba3d8c7",
+        "acquisitionAttemptId": "006250e1-a725-4bd5-a8cb-a9ff58bbcf06",
+        "sourceRole": "other",
+        "sourceKind": "organic_result",
+        "sourceUrl": "https://gibraltar.desertcart.com/products/635235200-protoarc-em11-nl-ergonomic-mouse-wireless-vertical-mouse-rechargeable-optical",
+        "sourceTitle": "Protoarc Em11 Nl Wireless Ergonomic Vertical Mouse ..."
+      }
+    ],
+    "observations": [
+      {
+        "id": "70c6e043-c29a-455d-a052-7a3480c85453",
+        "researchRunId": "3c9bbb3f-35ba-49f8-b292-ee7aac1992e3",
+        "candidateRunId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "candidateListingId": "9e753645-ebe6-4304-afd4-9cd33286fffb",
+        "evidenceSourceId": "90977af0-53e4-4d14-b4fa-a14143a1a3fc",
+        "support": "supported",
+        "propertyLabel": "Observed price",
+        "claim": "£17.99 is the observed listing price."
+      },
+      {
+        "id": "62cab157-8c2e-4b0b-ba75-0e1fbae25055",
+        "researchRunId": "3c9bbb3f-35ba-49f8-b292-ee7aac1992e3",
+        "candidateRunId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "candidateListingId": "9e753645-ebe6-4304-afd4-9cd33286fffb",
+        "evidenceSourceId": "90977af0-53e4-4d14-b4fa-a14143a1a3fc",
+        "support": "supported",
+        "propertyLabel": "Wireless connectivity",
+        "claim": "The listing title explicitly says wireless."
+      },
+      {
+        "id": "a3d94783-a9b9-4f24-a814-47999606005c",
+        "researchRunId": "3c9bbb3f-35ba-49f8-b292-ee7aac1992e3",
+        "candidateRunId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "candidateListingId": "22816396-3b5e-49b6-a458-c8b08ba3d8c7",
+        "evidenceSourceId": "2ec0bf8f-01d4-4c1f-8d11-81640c94ae4d",
+        "support": "supported",
+        "propertyLabel": "Observed price",
+        "claim": "£26.99 is the observed listing price."
+      },
+      {
+        "id": "f6425c47-e34e-486e-8661-87f4a506d6da",
+        "researchRunId": "3c9bbb3f-35ba-49f8-b292-ee7aac1992e3",
+        "candidateRunId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "candidateListingId": "22816396-3b5e-49b6-a458-c8b08ba3d8c7",
+        "evidenceSourceId": "2ec0bf8f-01d4-4c1f-8d11-81640c94ae4d",
+        "support": "supported",
+        "propertyLabel": "Wireless connectivity",
+        "claim": "The listing title explicitly says wireless."
+      },
+      {
+        "id": "4b557272-7251-44ec-9614-da4fe88d0fc8",
+        "researchRunId": "3c9bbb3f-35ba-49f8-b292-ee7aac1992e3",
+        "candidateRunId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "candidateListingId": "04b7d9a1-2e5c-4335-a7cc-cf163d04c6f4",
+        "evidenceSourceId": "45ff330b-bf8e-4fc7-9322-9cf2a8fbb2a5",
+        "support": "supported",
+        "propertyLabel": "Observed price",
+        "claim": "£25.99 is the observed listing price."
+      },
+      {
+        "id": "8d0a87df-b219-435b-b3d5-eb1e10a97898",
+        "researchRunId": "3c9bbb3f-35ba-49f8-b292-ee7aac1992e3",
+        "candidateRunId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "candidateListingId": "04b7d9a1-2e5c-4335-a7cc-cf163d04c6f4",
+        "evidenceSourceId": "45ff330b-bf8e-4fc7-9322-9cf2a8fbb2a5",
+        "support": "supported",
+        "propertyLabel": "Wireless connectivity",
+        "claim": "The listing title explicitly says wireless."
+      },
+      {
+        "id": "259950b0-4d60-409a-8077-d20881b36a86",
+        "researchRunId": "3c9bbb3f-35ba-49f8-b292-ee7aac1992e3",
+        "candidateRunId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "candidateListingId": "87cec409-549f-415d-8a8d-ed5461c9c291",
+        "evidenceSourceId": "a04567a5-bb82-46de-af8e-813de47ae55b",
+        "support": "supported",
+        "propertyLabel": "Observed price",
+        "claim": "£13.99 is the observed listing price."
+      },
+      {
+        "id": "88272945-88b5-4bef-9b7b-4986a48d23a3",
+        "researchRunId": "3c9bbb3f-35ba-49f8-b292-ee7aac1992e3",
+        "candidateRunId": "a6edf671-902b-41a3-983b-625a0197fd97",
+        "candidateListingId": "87cec409-549f-415d-8a8d-ed5461c9c291",
+        "evidenceSourceId": "a04567a5-bb82-46de-af8e-813de47ae55b",
+        "support": "supported",
+        "propertyLabel": "Wireless connectivity",
+        "claim": "The listing title explicitly says wired."
+      }
+    ],
+    "assessments": [],
+    "currentAssessments": [],
+    "assessmentObservationBindings": [],
+    "destinationResolutions": [],
+    "savedCandidateListingIds": [],
+    "rejectedCandidateListingIds": [],
+    "internalTimingVisibility": {
+      "planningMs": null,
+      "persistenceWallMs": null,
+      "projectionMs": null,
+      "reason": "The live application boundary does not expose pure planning/persistence/projection intervals. Persisted lifecycle durations and separately measured fresh projection loads are reported without relabelling residual wall time."
+    }
+  },
+  "logicalProviderOperationsAtFailure": {
+    "interpretation": {
+      "logicalCalls": 1,
+      "succeeded": 1,
+      "failed": 0,
+      "summedCallDurationMs": 13645,
+      "observedMaximumConcurrency": 1
+    },
+    "action_selection": {
+      "logicalCalls": 1,
+      "succeeded": 1,
+      "failed": 0,
+      "summedCallDurationMs": 1950,
+      "observedMaximumConcurrency": 1
+    },
+    "shopping": {
+      "logicalCalls": 3,
+      "succeeded": 3,
+      "failed": 0,
+      "summedCallDurationMs": 3739,
+      "observedMaximumConcurrency": 3
+    },
+    "evidence_search": {
+      "logicalCalls": 4,
+      "succeeded": 4,
+      "failed": 0,
+      "summedCallDurationMs": 4711,
+      "observedMaximumConcurrency": 3
+    },
+    "page_fetch": {
+      "logicalCalls": 0,
+      "succeeded": 0,
+      "failed": 0,
+      "summedCallDurationMs": 0,
+      "observedMaximumConcurrency": 0
+    },
+    "product_understanding": {
+      "logicalCalls": 0,
+      "succeeded": 0,
+      "failed": 0,
+      "summedCallDurationMs": 0,
+      "observedMaximumConcurrency": 0
+    },
+    "destination": {
+      "logicalCalls": 0,
+      "succeeded": 0,
+      "failed": 0,
+      "summedCallDurationMs": 0,
+      "observedMaximumConcurrency": 0
+    }
+  },
+  "transportAccounting": {
+    "actualHttpAttempts": null,
+    "providerCost": null,
+    "reason": "Only provider-port operations are instrumented; transport attempts and billing are not exposed."
+  },
+  "tracesAtFailure": [
+    {
+      "caseName": "ergonomic-mouse",
+      "stage": "interpretation",
+      "ordinal": 1,
+      "startedOffsetMs": 34.1,
+      "finishedOffsetMs": 13679.323,
+      "durationMs": 13645,
+      "status": "succeeded",
+      "detail": {
+        "configuredModel": "gpt-5.6-terra",
+        "providerInputSchemaVersion": 1
+      }
+    },
+    {
+      "caseName": "ergonomic-mouse",
+      "stage": "action_selection",
+      "ordinal": 2,
+      "startedOffsetMs": 13786.454,
+      "finishedOffsetMs": 15736.74,
+      "durationMs": 1950,
+      "status": "succeeded",
+      "detail": {
+        "configuredModel": "gpt-5.6-terra",
+        "providerInputSchemaVersion": 1
+      }
+    },
+    {
+      "caseName": "ergonomic-mouse",
+      "stage": "shopping",
+      "ordinal": 5,
+      "startedOffsetMs": 15949.265,
+      "finishedOffsetMs": 16993.289,
+      "durationMs": 1044,
+      "status": "succeeded",
+      "detail": {
+        "queryId": "8d1a49b2-2010-4c2c-91c3-6664b7afc05c",
+        "purpose": "brief_recall",
+        "query": "ergonomic mouse under £50 Ergonomic design Wireless only when battery life is very good A little chunkier and sculpted, with a noticeable side profile or thumb-rest"
+      }
+    },
+    {
+      "caseName": "ergonomic-mouse",
+      "stage": "shopping",
+      "ordinal": 4,
+      "startedOffsetMs": 15928.953,
+      "finishedOffsetMs": 17045.229,
+      "durationMs": 1116,
+      "status": "succeeded",
+      "detail": {
+        "queryId": "145cc848-51d7-4965-aaf0-2320247bcd0d",
+        "purpose": "literal_precision",
+        "query": "I need an ergonomic mouse under £50"
+      }
+    },
+    {
+      "caseName": "ergonomic-mouse",
+      "stage": "shopping",
+      "ordinal": 3,
+      "startedOffsetMs": 15912.231,
+      "finishedOffsetMs": 17491.135,
+      "durationMs": 1579,
+      "status": "succeeded",
+      "detail": {
+        "queryId": "2a72e626-3917-411a-921c-4f71c68c2d26",
+        "purpose": "brief_recall",
+        "query": "ergonomic mouse under £50 Strong reviews"
+      }
+    },
+    {
+      "caseName": "ergonomic-mouse",
+      "stage": "evidence_search",
+      "ordinal": 6,
+      "startedOffsetMs": 17715.007,
+      "finishedOffsetMs": 18803.542,
+      "durationMs": 1089,
+      "status": "succeeded",
+      "detail": {
+        "candidateTitle": "TECKNET Ergonomic Wired Mouse 6400DPI Vertical 6-Button Silent Mouse Black",
+        "query": "\"TECKNET Ergonomic Wired Mouse 6400DPI Vertical 6-Button Silent Mouse Black\" Brand reputation Price Review quality Ergonomic design Mouse shape and profile review"
+      }
+    },
+    {
+      "caseName": "ergonomic-mouse",
+      "stage": "evidence_search",
+      "ordinal": 7,
+      "startedOffsetMs": 17717.085,
+      "finishedOffsetMs": 18952.183,
+      "durationMs": 1235,
+      "status": "succeeded",
+      "detail": {
+        "candidateTitle": "Optical Wireless Mouse Trust Bayo II",
+        "query": "\"Optical Wireless Mouse Trust Bayo II\" Brand reputation Price Review quality Ergonomic design Mouse shape and profile review"
+      }
+    },
+    {
+      "caseName": "ergonomic-mouse",
+      "stage": "evidence_search",
+      "ordinal": 8,
+      "startedOffsetMs": 17718.495,
+      "finishedOffsetMs": 19319.4,
+      "durationMs": 1601,
+      "status": "succeeded",
+      "detail": {
+        "candidateTitle": "Anker 2.4G Wireless Vertical Ergonomic Optical Mouse",
+        "query": "\"Anker 2.4G Wireless Vertical Ergonomic Optical Mouse\" Brand reputation Price Review quality Ergonomic design Mouse shape and profile review"
+      }
+    },
+    {
+      "caseName": "ergonomic-mouse",
+      "stage": "evidence_search",
+      "ordinal": 9,
+      "startedOffsetMs": 18870.209,
+      "finishedOffsetMs": 19655.773,
+      "durationMs": 786,
+      "status": "succeeded",
+      "detail": {
+        "candidateTitle": "ProtoArc em11 nl Ergonomic Mouse Wireless Vertical Mouse Rechargeable",
+        "query": "\"ProtoArc em11 nl Ergonomic Mouse Wireless Vertical Mouse Rechargeable\" Brand reputation Price Review quality Ergonomic design Mouse shape and profile review"
+      }
+    }
+  ],
+  "cleanup": {
+    "disposableDatabaseDestroyed": true,
+    "errorCount": 0
+  },
+  "failure": {
+    "name": "EvidenceAttemptConflictError",
+    "message": "Evidence attempt d7bdc23d-31b4-4ec9-9a1e-f176a2300223 already has different terminal content"
+  },
+  "releaseAccepted": false
+}
