@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { access, mkdir, writeFile } from "node:fs/promises";
+import { access, mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { performance } from "node:perf_hooks";
 import { promisify } from "node:util";
 import postgres from "postgres";
@@ -79,6 +79,18 @@ const failureMarkdown = new URL(
 );
 const attemptMarker = new URL(
   "v0-09-live-founder-proof-attempt.json",
+  outputDirectory,
+);
+const priorAttemptMarker = new URL(
+  "v0-09-live-founder-proof-attempt-prior.json",
+  outputDirectory,
+);
+const priorFailureJson = new URL(
+  "v0-09-live-founder-proof-failure-prior.json",
+  outputDirectory,
+);
+const priorFailureMarkdown = new URL(
+  "v0-09-live-founder-proof-failure-prior.md",
   outputDirectory,
 );
 const releaseModel = "gpt-5.6-terra" as const;
@@ -3674,26 +3686,60 @@ async function exists(url: URL) {
 
 async function claimOneShotAttempt() {
   await mkdir(outputDirectory, { recursive: true });
-  const priorEvidence = [
-    attemptMarker,
-    successJson,
-    successMarkdown,
-    failureJson,
-    failureMarkdown,
-  ];
-  if ((await Promise.all(priorEvidence.map(exists))).some(Boolean)) {
+  if (
+    (await Promise.all([successJson, successMarkdown].map(exists))).some(
+      Boolean,
+    )
+  ) {
     throw new Error(
       "V0-09 live proof has already been attempted or has preserved evidence; refusing to overwrite or consume another release run",
     );
   }
+  if (await exists(attemptMarker)) {
+    let previous: { schemaVersion?: unknown; attemptId?: unknown };
+    try {
+      previous = JSON.parse(await readFile(attemptMarker, "utf8")) as {
+        schemaVersion?: unknown;
+        attemptId?: unknown;
+      };
+    } catch {
+      throw new Error("V0-09 live proof attempt marker is unreadable");
+    }
+    const canConsumeAuthorizedCorrection =
+      previous.schemaVersion === 1 &&
+      (await exists(failureJson)) &&
+      (await exists(failureMarkdown)) &&
+      !(await exists(priorAttemptMarker)) &&
+      !(await exists(priorFailureJson)) &&
+      !(await exists(priorFailureMarkdown));
+    if (!canConsumeAuthorizedCorrection) {
+      throw new Error(
+        "V0-09 live proof has already been attempted or has preserved evidence; refusing to overwrite or consume another release run",
+      );
+    }
+    await rename(attemptMarker, priorAttemptMarker);
+    await rename(failureJson, priorFailureJson);
+    await rename(failureMarkdown, priorFailureMarkdown);
+    if (typeof previous.attemptId !== "string") {
+      throw new Error("V0-09 prior attempt marker has no attempt id");
+    }
+  } else if (
+    (await Promise.all([failureJson, failureMarkdown].map(exists))).some(
+      Boolean,
+    )
+  ) {
+    throw new Error(
+      "V0-09 live proof has preserved failure evidence without its attempt marker",
+    );
+  }
   const marker = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     proofMode: "fresh_four_category_v009_release" as const,
     attemptId: randomUUID(),
     claimedAt: new Date().toISOString(),
     state: "claimed" as const,
     refusalPolicy:
-      "This marker is intentionally durable after success, failure, or interruption. A second live V0-09 release attempt is refused and prior failure evidence is never deleted.",
+      "This marker is intentionally durable after the one authorized post-correction attempt. A further V0-09 release attempt is refused; any prior diagnostic is retired under a separate prior-attempt filename.",
   };
   try {
     await writeFile(attemptMarker, `${json(marker)}\n`, {

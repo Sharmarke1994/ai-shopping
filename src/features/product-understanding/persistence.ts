@@ -405,6 +405,58 @@ function hasExactNonEmptyCriterionTargets(
   );
 }
 
+function hasNonEmptyCriterionSubset(
+  subset: readonly string[],
+  superset: readonly string[],
+): boolean {
+  const subsetSet = new Set(subset);
+  const supersetSet = new Set(superset);
+  return (
+    subsetSet.size > 0 &&
+    [...subsetSet].every((criterionId) => supersetSet.has(criterionId))
+  );
+}
+
+export function validatePagePlanningTargetCoherence(options: {
+  phase: "first_pass" | "deepening" | "reassessment";
+  organicAttempts: readonly Readonly<{
+    targetCriterionIds: readonly string[];
+  }>[];
+  extractionAttempt:
+    Readonly<{ targetCriterionIds: readonly string[] }> | undefined;
+  assessmentAttempt:
+    Readonly<{ targetCriterionIds: readonly string[] }> | undefined;
+}): boolean {
+  const extractionTargets = options.extractionAttempt?.targetCriterionIds ?? [];
+  const assessmentTargets = options.assessmentAttempt?.targetCriterionIds ?? [];
+  if (!hasExactNonEmptyCriterionTargets(extractionTargets, assessmentTargets)) {
+    return false;
+  }
+  if (options.phase === "reassessment") {
+    // Reassessment has no organic discovery stage and must not invent page work.
+    return options.organicAttempts.length === 0;
+  }
+  if (options.phase === "deepening") {
+    return (
+      options.organicAttempts.length > 0 &&
+      hasExactNonEmptyCriterionTargets(
+        extractionTargets,
+        ...options.organicAttempts.map(
+          ({ targetCriterionIds }) => targetCriterionIds,
+        ),
+      )
+    );
+  }
+  // First-pass organic searches may be deliberately prioritized subsets of the
+  // full model scope, but no search may authorize a criterion outside that scope.
+  return (
+    options.organicAttempts.length > 0 &&
+    options.organicAttempts.every(({ targetCriterionIds }) =>
+      hasNonEmptyCriterionSubset(targetCriterionIds, extractionTargets),
+    )
+  );
+}
+
 function validateDeepAttemptTargetCoherence(options: {
   run: EvidenceResearchSnapshot["run"];
   attempts: readonly PersistedEvidenceAttempt[];
@@ -2079,18 +2131,30 @@ export async function planEvidencePageFetches(options: {
     const existingPageAttempts = attempts.filter(
       ({ stage }) => stage === "page_fetch",
     );
+    const phase = z
+      .enum(["first_pass", "deepening", "reassessment"])
+      .parse(run.phase);
     if (
       extractionAttempts.length !== 1 ||
       assessmentAttempts.length !== 1 ||
-      !hasExactNonEmptyCriterionTargets(
-        extractionAttempts[0]?.targetCriterionIds ?? [],
-        assessmentAttempts[0]?.targetCriterionIds ?? [],
-        ...organicAttempts.map(({ targetCriterionIds }) => targetCriterionIds),
-      )
+      !validatePagePlanningTargetCoherence({
+        phase,
+        organicAttempts,
+        extractionAttempt: extractionAttempts[0],
+        assessmentAttempt: assessmentAttempts[0],
+      })
     ) {
       throw new EvidenceAttemptConflictError(
         extractionAttempts[0]?.id ?? candidateListingId,
       );
+    }
+    if (phase === "reassessment") {
+      if (existingPageAttempts.length !== 0 || pageTargetRows.length !== 0) {
+        throw new EvidenceAttemptConflictError(
+          existingPageAttempts[0]?.id ?? candidateListingId,
+        );
+      }
+      return [];
     }
     if (organicAttempts.some(({ status }) => status === "planned")) {
       throw new EvidenceResearchAuthorityError(
@@ -2189,7 +2253,7 @@ export async function planEvidencePageFetches(options: {
     if (selections.length > MAX_PAGE_SOURCES_PER_CANDIDATE) {
       throw new Error("Page source selector exceeded its hard bound");
     }
-    const selected = selections.map((selection) => {
+    const selected = selections.flatMap((selection) => {
       const discoveredSource = organicSources.find(
         (source) =>
           source.providerResultId === selection.providerResultId &&
@@ -2203,26 +2267,45 @@ export async function planEvidencePageFetches(options: {
         );
       }
       if (
-        !hasExactNonEmptyCriterionTargets(
-          selection.targetCriterionIds,
-          selection.targetCriterionIds.filter((criterionId) =>
-            targetIdSet.has(criterionId),
-          ),
+        selection.targetCriterionIds.some(
+          (criterionId) => !targetIdSet.has(criterionId),
         )
       ) {
         throw new EvidenceResearchAuthorityError(
           "Selected page criteria are outside the exact candidate generation",
         );
       }
-      return {
-        selection,
-        discoveredSource,
-        planKey: pageFetchPlanKey({
-          discoveredSourceId: discoveredSource.id,
-          purpose: selection.purpose,
-          targetCriterionIds: selection.targetCriterionIds,
-        }),
+      const discoveryAttempt = organicAttempts.find(
+        ({ id }) => id === discoveredSource.acquisitionAttemptId,
+      );
+      if (discoveryAttempt === undefined) {
+        throw new EvidenceResearchAuthorityError(
+          "Selected page source has no exact organic discovery attempt",
+        );
+      }
+      const scopedTargetCriterionIds = selection.targetCriterionIds.filter(
+        (criterionId) =>
+          discoveryAttempt.targetCriterionIds.includes(criterionId),
+      );
+      // A source may be relevant to the full brief but not to the subset its
+      // discovering query owned. Skip that source rather than broadening its
+      // authority to an unsearched criterion.
+      if (scopedTargetCriterionIds.length === 0) return [];
+      const scopedSelection = {
+        ...selection,
+        targetCriterionIds: scopedTargetCriterionIds,
       };
+      return [
+        {
+          selection: scopedSelection,
+          discoveredSource,
+          planKey: pageFetchPlanKey({
+            discoveredSourceId: discoveredSource.id,
+            purpose: selection.purpose,
+            targetCriterionIds: scopedTargetCriterionIds,
+          }),
+        },
+      ];
     });
 
     const existingByPlanKey = new Map(

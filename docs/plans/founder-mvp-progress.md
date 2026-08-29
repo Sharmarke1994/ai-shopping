@@ -381,19 +381,32 @@ branch recorded above. The durable execution contract is
   the existing calm responsive decision UI.
 - Added a guarded four-category Terra + Serper proof harness and eight-state
   production-server visual workflow. Both independent static audits returned
-  GO. The single authorized live proof was consumed once and failed closed in
+  GO. The single original live proof was consumed once and failed closed in
   the first mouse case before page/model work; its durable marker and sanitized
-  diagnostic are preserved.
+  diagnostic are preserved as historical evidence.
+- Corrected the phase-specific page-planning invariant. First-pass organic
+  attempts may be non-empty prioritized subsets of the full extraction /
+  assessment criteria; deepening still requires exact cross-stage equality;
+  reassessment still creates no organic/page work. Persisted page targets are
+  intersected with the exact discovering organic attempt's criteria, so page
+  authority cannot broaden. Deterministic and PostgreSQL regressions now cover
+  the six-criterion / five-criterion real shape and foreign/deepening failures.
+- The proof harness has a narrowly guarded post-correction continuation path:
+  the old failed marker/artifacts are retired under prior-attempt filenames,
+  exactly one fresh proof may be claimed, and any further attempt is refused.
 
 ## Next validated checkpoints
 
-1. Preserve the exact attempt marker and sanitized diagnostic from the one
-   authorized run; do not rerun or make a speculative correction.
-2. Commit and push the evidence/ledger-only checkpoint, update draft PR #13 and
-   obtain exact-head CI so the diagnostic is independently reviewable.
-3. Stop. Independent review must decide whether the first-pass page-planning
-   target-set mismatch warrants a bounded correction and separately authorize
-   any future live attempt. Do not merge or begin V0-10.
+1. Finish the bounded page-planning correction and run all deterministic,
+   PostgreSQL, security, build, browser, migration/drift and audit gates.
+2. Commit and push the correction plus this ledger update, update draft PR #13,
+   and obtain exact-head CI so the corrected checkpoint is reviewable.
+3. Consume exactly one newly authorized guarded Terra + Serper proof across
+   mouse, chair, vacuum and coffee. Preserve sanitized success or failure
+   evidence; do not retry or weaken any evaluator/invariant.
+4. If and only if that proof passes its full predicate, update the evidence,
+   ledger and PR, obtain exact-head CI, and stop for independent review. Do not
+   merge or begin V0-10.
 
 ## Credentials and blockers
 
@@ -418,14 +431,17 @@ branch recorded above. The durable execution contract is
 ## Latest verification
 
 - `pnpm check`: formatting, lint, generated route types, strict TypeScript,
-  337/337 deterministic unit/component tests and the production build pass on
-  the settled V0-09 tree.
-- Full PostgreSQL suite: 139/139 functional tests pass. The sole local failure is
+  341/341 deterministic unit/component tests and the production build pass on
+  the corrected tree.
+- Focused page-persistence PostgreSQL regression: 12/12 passes, including the
+  first-pass prioritized subset and exact discovering-attempt page scope.
+- Full PostgreSQL suite: 140/141 functional tests pass. The sole local failure is
   the intentional PostgreSQL 17.6 version assertion against Homebrew 17.11; the
   repository pin remains unchanged.
-- `pnpm test:e2e`: 8/8 Chromium tests pass, including automatic first/deep
-  research, progressive cards, two saves, comparison, exact rejection/undo,
-  refinement, refresh, mobile hard-unknown presentation and no overflow.
+- `pnpm test:e2e`: 8/8 Chromium tests pass against a fresh migrated disposable
+  local database, including automatic first/deep research, progressive cards,
+  two saves, comparison, exact rejection/undo, refinement, refresh, mobile
+  hard-unknown presentation and no overflow.
 - `pnpm db:generate` reports 31 tables and no schema drift. The final additive
   `0016_lame_wolfpack.sql` migration runs from empty, revokes PUBLIC/anon/
   authenticated access to all new private tables, and preserves the accepted
@@ -437,7 +453,7 @@ branch recorded above. The durable execution contract is
   comparison, targeted research and reject/undo.
 - Credential-shape scanning found no OpenAI/Serper/Bearer key values in the
   deterministic checkpoint.
-- The single guarded live attempt ran once at
+- The single original guarded live attempt ran once at
   `2026-08-29T14:26:58.216Z` and failed in the ergonomic-mouse first pass with
   `EvidenceAttemptConflictError`. Interpretation 1/1, action selection 1/1,
   Shopping 3/3 and organic evidence search 4/4 logical calls succeeded. No page
@@ -451,11 +467,11 @@ branch recorded above. The durable execution contract is
   The error wording about different terminal content is misleading; no terminal
   replay conflict occurred. No semantic product result was produced and no
   evaluator was weakened.
-- The sanitized failure JSON/Markdown and durable attempt marker are under
-  `docs/evals/v0-09-live-founder-proof-*`. The disposable database was destroyed
-  with zero cleanup errors and no V0-09 disposable database remains. This is
-  diagnostic evidence, not release acceptance; `releaseAccepted` is false and
-  no second run is permitted without independent review and new authorization.
+- The sanitized failure JSON/Markdown and durable attempt marker are under the
+  `docs/evals/v0-09-live-founder-proof-*` names. The bounded continuation path
+  will retire these three old files under `*-prior.*` before the single new
+  authorized proof; the old diagnostic remains recoverable and the new run is
+  still forbidden until every correction gate is green.
 - Exact diagnostic head `4be44ded367efec6a650e29a7b9649f8520c57a1`
   passed GitHub quality, pinned PostgreSQL persistence and browser-smoke in run
   `33257880181`. Draft stacked PR #13 remains mergeable and unmerged. The
@@ -479,8 +495,8 @@ branch recorded above. The durable execution contract is
 5. Do not fetch arbitrary user URLs, crawl links, create ProductIdentity,
    substitute another merchant, add auth/deployment/checkout/affiliate work or
    begin V0-10.
-6. The single V0-09 live proof has already been consumed and failed closed. Do
-   not remove its marker, rerun it, or change production/proof code in this
-   checkpoint. Preserve the diagnostic, keep PR #13 draft/unmerged, obtain
-   exact-head quality/persistence/browser-smoke for the evidence commit, leave
-   the worktree clean and stop for independent review.
+6. The original V0-09 live proof was consumed and failed closed. After the
+   separately authorized bounded page-planning correction and all gates, the
+   harness may consume exactly one post-correction proof; never run a second
+   attempt. Keep PR #13 draft/unmerged, leave the worktree clean and stop for
+   independent review after the proof result and exact-head CI.

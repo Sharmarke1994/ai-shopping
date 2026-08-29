@@ -101,11 +101,17 @@ const searchAction: ContextActionProviderWireV1 = {
 };
 
 function contextModel(): ContextAcquisitionModel {
+  return contextModelFor(interpretation);
+}
+
+function contextModelFor(
+  value: InterpretationProviderWireV1,
+): ContextAcquisitionModel {
   return {
     interpret: vi.fn(() =>
       Promise.resolve({
         status: "completed" as const,
-        value: interpretation,
+        value,
         metadata: acquisitionMetadata,
       }),
     ),
@@ -118,6 +124,35 @@ function contextModel(): ContextAcquisitionModel {
     ),
   };
 }
+
+const sixCriterionInterpretation: InterpretationProviderWireV1 = {
+  providerSchemaVersion: 1,
+  outcome: "change",
+  operations: ["a", "b", "c", "d", "e", "f"].flatMap((letter) => [
+    {
+      op: "create_concept" as const,
+      localRef: `concept_${letter}`,
+      label: `Criterion ${letter}`,
+      definition: `A fixture definition for criterion ${letter}`,
+      valueFamily: "qualitative" as const,
+      canonicalUnit: null,
+    },
+    {
+      op: "add_criterion" as const,
+      concept: { kind: "created" as const, localRef: `concept_${letter}` },
+      target: {
+        strength: "preference" as const,
+        targetSemantics: "qualitative" as const,
+        semanticValue: {
+          schemaVersion: 1 as const,
+          kind: "qualitative_text" as const,
+          text: `Preference ${letter}`,
+        },
+      },
+    },
+  ]),
+  ambiguities: [],
+};
 
 describe("bounded fetched-page persistence", () => {
   let connection: TestDatabaseConnection;
@@ -373,6 +408,151 @@ describe("bounded fetched-page persistence", () => {
         requestedUrl: seeded.plan.requestedUrl,
       }),
     ]);
+  });
+
+  it("allows first-pass prioritized organic targets while keeping page targets scoped", async () => {
+    const dependencies = {
+      db: connection.db,
+      model: contextModelFor(sixCriterionInterpretation),
+      provider: new FakeShoppingProvider(
+        () => new Date("2026-08-29T09:00:00.000Z"),
+      ),
+    } satisfies LiveShoppingDependencies;
+    const sessionId = randomUUID();
+    await startLiveShopping({
+      dependencies,
+      input: {
+        operation: "start",
+        sessionId,
+        turnId: randomUUID(),
+        message: "A product with six independent fixture criteria",
+      },
+    });
+    const [session] = await connection.db
+      .select()
+      .from(founderLiveSessions)
+      .where(eq(founderLiveSessions.id, sessionId));
+    if (session === undefined) throw new Error("Expected shopping session");
+    const [run] = await connection.db
+      .select()
+      .from(searchRuns)
+      .where(eq(searchRuns.taskId, session.taskId));
+    if (run === undefined) throw new Error("Expected shopping search run");
+    const prepared = await prepareEvidenceResearch({
+      db: connection.db,
+      taskId: session.taskId,
+      searchRunId: run.id,
+      evidenceProvider: "fixture",
+      modelProvider: "fixture",
+      model: "fixture-product-understanding",
+      promptVersion: "product-understanding-v1",
+      mode: "first_pass",
+    });
+    const extractionAttempt = prepared.attempts.find(
+      ({ stage }) => stage === "observation_extraction",
+    );
+    const assessmentAttempt = prepared.attempts.find(
+      ({ stage }) => stage === "criterion_assessment",
+    );
+    const organicAttempt = prepared.attempts.find(
+      ({ stage }) => stage === "organic_search",
+    );
+    if (
+      extractionAttempt === undefined ||
+      assessmentAttempt === undefined ||
+      organicAttempt === undefined
+    ) {
+      throw new Error("Expected first-pass candidate attempts");
+    }
+    expect(extractionAttempt.targetCriterionIds).toHaveLength(6);
+    expect(assessmentAttempt.targetCriterionIds).toEqual(
+      extractionAttempt.targetCriterionIds,
+    );
+    expect(organicAttempt.targetCriterionIds).toHaveLength(5);
+    const searchSnapshot = await loadPersistedSearchRun({
+      db: connection.db,
+      taskId: session.taskId,
+      runId: run.id,
+    });
+    const listing = searchSnapshot?.listings.find(
+      ({ id }) => id === organicAttempt.candidateListingId,
+    );
+    if (listing === undefined) throw new Error("Expected research listing");
+    const leaseToken = await claimEvidenceResearch({
+      db: connection.db,
+      taskId: session.taskId,
+      researchRunId: prepared.run.id,
+    });
+    if (leaseToken === null) throw new Error("Expected research lease");
+    await recordEvidenceSearchSuccess({
+      db: connection.db,
+      taskId: session.taskId,
+      researchRunId: prepared.run.id,
+      attemptId: organicAttempt.id,
+      leaseToken,
+      response: evidenceSearchResponseSchema.parse({
+        providerRequestId: "fixture-first-pass-subset",
+        receivedResultCount: 1,
+        results: [
+          {
+            providerResultId: "fixture-first-pass-page",
+            rank: 1,
+            title: listing.title,
+            url: "https://reviews.example.test/first-pass-subset",
+            snippet: "An exact independent review of the named product.",
+            sourceRole: "independent_review",
+          },
+        ],
+      }),
+      startedAt: new Date("2026-08-29T09:00:01.000Z"),
+      finishedAt: new Date("2026-08-29T09:00:02.000Z"),
+    });
+    const plans = await planEvidencePageFetches({
+      db: connection.db,
+      taskId: session.taskId,
+      researchRunId: prepared.run.id,
+      candidateListingId: listing.id,
+      leaseToken,
+      provider: "fixture",
+    });
+    expect(plans.length).toBeGreaterThan(0);
+    const organicAttemptsById = new Map(
+      prepared.attempts
+        .filter(
+          ({ stage, candidateListingId }) =>
+            stage === "organic_search" && candidateListingId === listing.id,
+        )
+        .map((attempt) => [attempt.id, attempt] as const),
+    );
+    expect(organicAttemptsById.size).toBeGreaterThan(0);
+    const omittedCriterionIds = extractionAttempt.targetCriterionIds.filter(
+      (criterionId) => !organicAttempt.targetCriterionIds.includes(criterionId),
+    );
+    expect(omittedCriterionIds).toHaveLength(1);
+    const plansForFirstOrganic = plans.filter(
+      ({ discoveredSource }) =>
+        discoveredSource.acquisitionAttemptId === organicAttempt.id,
+    );
+    expect(plansForFirstOrganic.length).toBeGreaterThan(0);
+    for (const plan of plansForFirstOrganic) {
+      for (const omittedCriterionId of omittedCriterionIds) {
+        expect(plan.attempt.targetCriterionIds).not.toContain(
+          omittedCriterionId,
+        );
+      }
+    }
+    for (const plan of plans) {
+      const discoveryAttempt = organicAttemptsById.get(
+        plan.discoveredSource.acquisitionAttemptId,
+      );
+      if (discoveryAttempt === undefined) {
+        throw new Error("Expected page plan to retain organic lineage");
+      }
+      for (const criterionId of plan.attempt.targetCriterionIds) {
+        expect(discoveryAttempt.targetCriterionIds).toContain(criterionId);
+        expect(extractionAttempt.targetCriterionIds).toContain(criterionId);
+      }
+    }
   });
 
   it("writes one admitted bounded document without HTML and enforces exact retry content", async () => {
