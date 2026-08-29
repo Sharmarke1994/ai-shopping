@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { projectShoppingBrief } from "@/domain/shopping-state/brief";
 import {
@@ -21,12 +21,15 @@ import type {
   ShoppingTransaction,
 } from "@/infrastructure/database/clients";
 import {
+  candidateListings,
   criterionAssessmentObservations,
   criterionAssessments,
   evidenceAcquisitionAttempts,
+  evidenceAttemptTargetCriteria,
   evidenceResearchRuns,
   evidenceSources,
   productObservations,
+  rejectedCandidateListings,
   savedCandidateListings,
   shoppingTasks,
 } from "@/infrastructure/database/schema";
@@ -44,16 +47,23 @@ import {
   type ProductObservationV1,
 } from "./contracts";
 import type { ModelCallMetadata } from "./model-port";
-import type { ProductUnderstandingProviderWireV1 } from "./provider-wire";
+import {
+  productUnderstandingProviderWireV1Schema,
+  type ProductUnderstandingProviderWireV1,
+} from "./provider-wire";
 import type { EvidenceSearchResponse } from "./evidence-search";
 import { isCandidateEvidenceRelevant } from "./evidence-relevance";
 import {
   guardCriterionAssessment,
+  isPurchasePriceCriterion,
+  orderCandidatesByAssessments,
   type ObservationWithSource,
 } from "./assessment-policy";
 import {
   EVIDENCE_POLICY_VERSION,
+  planDecisionGapSearch,
   planEvidenceSearches,
+  selectDeepResearchCandidates,
   selectResearchCandidates,
 } from "./selection";
 
@@ -65,6 +75,8 @@ const attemptStageSchema = z.enum([
 const attemptPurposeSchema = z.enum([
   "specifications",
   "experience",
+  "first_pass",
+  "decision_gap",
   "combined",
   "current_brief",
 ]);
@@ -102,6 +114,7 @@ const persistedAttemptSchema = z.strictObject({
     .nullable(),
   startedAt: z.date().nullable(),
   finishedAt: z.date().nullable(),
+  targetCriterionIds: z.array(criterionIdSchema).max(50),
 });
 
 export type PersistedEvidenceAttempt = z.infer<typeof persistedAttemptSchema>;
@@ -113,6 +126,7 @@ export type EvidenceResearchSnapshot = Readonly<{
     searchRunId: z.infer<typeof searchRunIdSchema>;
     taskRevision: z.infer<typeof taskRevisionSchema>;
     policyVersion: string;
+    phase: "first_pass" | "deepening" | "reassessment";
     status: z.infer<typeof researchStatusSchema>;
     selectedCandidateCount: number;
     plannedSearchCount: number;
@@ -129,6 +143,13 @@ export class EvidenceResearchAuthorityError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "EvidenceResearchAuthorityError";
+  }
+}
+
+export class EvidenceResearchNotNeededError extends Error {
+  constructor() {
+    super("No unresolved decision-critical evidence gap is available");
+    this.name = "EvidenceResearchNotNeededError";
   }
 }
 
@@ -174,10 +195,11 @@ function parsePersisted<T>(options: {
 
 function mapAttemptRow(
   row: typeof evidenceAcquisitionAttempts.$inferSelect,
+  targetCriterionIds: readonly string[],
 ): PersistedEvidenceAttempt {
   const { createdAt, ...value } = row;
   void createdAt;
-  return persistedAttemptSchema.parse(value);
+  return persistedAttemptSchema.parse({ ...value, targetCriterionIds });
 }
 
 function mapEvidenceSourceRow(
@@ -213,44 +235,51 @@ async function loadResearchSnapshotInTransaction(options: {
     .limit(1);
   if (runRow === undefined) return null;
 
-  const [attemptRows, sourceRows, observationRows, assessmentRows, linkRows] =
-    await Promise.all([
-      options.tx
-        .select()
-        .from(evidenceAcquisitionAttempts)
-        .where(
-          and(
-            eq(evidenceAcquisitionAttempts.taskId, options.taskId),
-            eq(
-              evidenceAcquisitionAttempts.researchRunId,
-              options.researchRunId,
-            ),
-          ),
-        )
-        .orderBy(asc(evidenceAcquisitionAttempts.createdAt)),
-      options.tx
-        .select()
-        .from(evidenceSources)
-        .where(eq(evidenceSources.taskId, options.taskId)),
-      options.tx
-        .select()
-        .from(productObservations)
-        .where(eq(productObservations.taskId, options.taskId)),
-      options.tx
-        .select()
-        .from(criterionAssessments)
-        .where(
-          and(
-            eq(criterionAssessments.taskId, options.taskId),
-            eq(criterionAssessments.researchRunId, options.researchRunId),
-          ),
-        )
-        .orderBy(asc(criterionAssessments.createdAt)),
-      options.tx
-        .select()
-        .from(criterionAssessmentObservations)
-        .where(eq(criterionAssessmentObservations.taskId, options.taskId)),
-    ]);
+  const [
+    attemptRows,
+    targetRows,
+    sourceRows,
+    observationRows,
+    assessmentRows,
+    linkRows,
+  ] = await Promise.all([
+    options.tx
+      .select()
+      .from(evidenceAcquisitionAttempts)
+      .where(
+        and(
+          eq(evidenceAcquisitionAttempts.taskId, options.taskId),
+          eq(evidenceAcquisitionAttempts.researchRunId, options.researchRunId),
+        ),
+      )
+      .orderBy(asc(evidenceAcquisitionAttempts.createdAt)),
+    options.tx
+      .select()
+      .from(evidenceAttemptTargetCriteria)
+      .where(eq(evidenceAttemptTargetCriteria.taskId, options.taskId)),
+    options.tx
+      .select()
+      .from(evidenceSources)
+      .where(eq(evidenceSources.taskId, options.taskId)),
+    options.tx
+      .select()
+      .from(productObservations)
+      .where(eq(productObservations.taskId, options.taskId)),
+    options.tx
+      .select()
+      .from(criterionAssessments)
+      .where(
+        and(
+          eq(criterionAssessments.taskId, options.taskId),
+          eq(criterionAssessments.researchRunId, options.researchRunId),
+        ),
+      )
+      .orderBy(asc(criterionAssessments.createdAt)),
+    options.tx
+      .select()
+      .from(criterionAssessmentObservations)
+      .where(eq(criterionAssessmentObservations.taskId, options.taskId)),
+  ]);
 
   const candidateIds = new Set(
     attemptRows.map(({ candidateListingId }) => candidateListingId),
@@ -276,6 +305,9 @@ async function loadResearchSnapshotInTransaction(options: {
       searchRunId: searchRunIdSchema.parse(runRow.searchRunId),
       taskRevision: taskRevisionSchema.parse(runRow.taskRevision),
       policyVersion: z.string().min(1).max(120).parse(runRow.policyVersion),
+      phase: z
+        .enum(["first_pass", "deepening", "reassessment"])
+        .parse(runRow.phase),
       status: researchStatusSchema.parse(runRow.status),
       selectedCandidateCount: z
         .number()
@@ -297,7 +329,13 @@ async function loadResearchSnapshotInTransaction(options: {
     parsePersisted({
       recordType: "EvidenceAcquisitionAttempt",
       recordId: row.id,
-      parse: () => mapAttemptRow(row),
+      parse: () =>
+        mapAttemptRow(
+          row,
+          targetRows
+            .filter(({ attemptId }) => attemptId === row.id)
+            .map(({ criterionId }) => criterionId),
+        ),
     }),
   );
   if (
@@ -498,11 +536,7 @@ async function insertDirectEvidence(options: {
         candidateListingId: options.listing.id,
         evidenceSourceId: listingSourceId,
         conceptId:
-          options.brief.items.find(
-            ({ semanticValue }) =>
-              semanticValue.kind === "money" ||
-              semanticValue.kind === "money_stretch",
-          )?.conceptId ?? null,
+          options.brief.items.find(isPurchasePriceCriterion)?.conceptId ?? null,
         support: "supported",
         observationKind: "structured_field",
         propertyLabel: "Observed price",
@@ -655,11 +689,17 @@ export async function prepareEvidenceResearch(options: {
   modelProvider: "openai" | "fixture";
   model: string;
   promptVersion: string;
+  mode?: "first_pass" | "deepening" | "targeted" | "reassessment";
+  targetCandidateListingId?: unknown;
   savedCandidateListingIds?: readonly unknown[];
   now?: Date;
 }): Promise<EvidenceResearchSnapshot> {
   const taskId = shoppingTaskIdSchema.parse(options.taskId);
   const searchRunId = searchRunIdSchema.parse(options.searchRunId);
+  const targetCandidateListingId =
+    options.targetCandidateListingId === undefined
+      ? undefined
+      : candidateListingIdSchema.parse(options.targetCandidateListingId);
   const savedCandidateListingIds = [
     ...new Set(
       (options.savedCandidateListingIds ?? []).map((id) =>
@@ -667,18 +707,24 @@ export async function prepareEvidenceResearch(options: {
       ),
     ),
   ].sort();
+  const mode =
+    options.mode ??
+    (savedCandidateListingIds.length > 0 ? "reassessment" : "first_pass");
+  if ((mode === "targeted") !== (targetCandidateListingId !== undefined)) {
+    throw new EvidenceResearchAuthorityError(
+      "Targeted research requires exactly one candidate listing",
+    );
+  }
   if (savedCandidateListingIds.length > 8) {
     throw new EvidenceResearchAuthorityError(
       "At most eight saved exact listings may be reassessed",
     );
   }
-  const policyVersion =
-    savedCandidateListingIds.length === 0
-      ? EVIDENCE_POLICY_VERSION
-      : `${EVIDENCE_POLICY_VERSION}:saved:${createHash("sha256")
-          .update(JSON.stringify(savedCandidateListingIds))
-          .digest("hex")
-          .slice(0, 16)}`;
+  if (mode === "reassessment" && savedCandidateListingIds.length === 0) {
+    throw new EvidenceResearchAuthorityError(
+      "Reassessment requires saved exact listings",
+    );
+  }
   const now = z.date().parse(options.now ?? new Date());
   return options.db.transaction(async (tx) => {
     const [lockedTask] = await tx
@@ -701,6 +747,145 @@ export async function prepareEvidenceResearch(options: {
         "A completed task-local search run is required before research",
       );
     }
+    const [savedRows, rejectedRows] = await Promise.all([
+      tx
+        .select({
+          candidateListingId: savedCandidateListings.candidateListingId,
+        })
+        .from(savedCandidateListings)
+        .where(eq(savedCandidateListings.taskId, taskId)),
+      tx
+        .select({
+          candidateListingId: rejectedCandidateListings.candidateListingId,
+        })
+        .from(rejectedCandidateListings)
+        .where(eq(rejectedCandidateListings.taskId, taskId)),
+    ]);
+    const savedIds = new Set(
+      savedRows.map(({ candidateListingId }) => candidateListingId),
+    );
+    const rejectedIds = new Set(
+      rejectedRows.map(({ candidateListingId }) => candidateListingId),
+    );
+    let selected: {
+      listing: PersistedCandidateListing;
+      foundAcrossQueryCount: number;
+      criterionIds: readonly string[];
+      criterionLabels: readonly string[];
+    }[];
+    if (mode === "reassessment") {
+      selected = savedCandidateListingIds.map((candidateListingId) => {
+        if (!savedIds.has(candidateListingId)) {
+          throw new EvidenceResearchAuthorityError(
+            "Historical reassessment may include only saved exact listings",
+          );
+        }
+        const listing = run.listings.find(
+          ({ id }) => id === candidateListingId,
+        );
+        if (listing === undefined) {
+          throw new EvidenceResearchAuthorityError(
+            "Saved exact listing does not belong to this search run",
+          );
+        }
+        return {
+          listing,
+          foundAcrossQueryCount: 1,
+          criterionIds: brief.items.map(({ criterionId }) => criterionId),
+          criterionLabels: brief.items.map(({ conceptLabel }) => conceptLabel),
+        };
+      });
+    } else if (mode === "deepening" || mode === "targeted") {
+      const support = await loadCurrentDecisionSupportInTransaction({
+        tx,
+        taskId,
+      });
+      const orderedCandidateIds = orderCandidatesByAssessments({
+        brief,
+        candidates: run.listings.filter(({ id }) => !rejectedIds.has(id)),
+        assessments: support.assessments,
+      }).map(({ id }) => id);
+      const completedCriterionIdsByCandidate = new Map<string, Set<string>>();
+      for (const coverage of support.deepResearchCoverage) {
+        if (coverage.runStatus === "running") continue;
+        const criterionIds =
+          completedCriterionIdsByCandidate.get(coverage.candidateListingId) ??
+          new Set<string>();
+        for (const criterionId of coverage.criterionIds) {
+          criterionIds.add(criterionId);
+        }
+        completedCriterionIdsByCandidate.set(
+          coverage.candidateListingId,
+          criterionIds,
+        );
+      }
+      selected = selectDeepResearchCandidates({
+        brief,
+        run,
+        orderedCandidateIds,
+        assessments: support.assessments,
+        savedCandidateListingIds: savedIds,
+        rejectedCandidateListingIds: rejectedIds,
+        completedCriterionIdsByCandidate,
+        ...(targetCandidateListingId === undefined
+          ? {}
+          : { targetCandidateListingId }),
+        limit: mode === "targeted" ? 1 : 2,
+      }).map((candidate) => ({ ...candidate, foundAcrossQueryCount: 1 }));
+    } else {
+      const selectedBase = selectResearchCandidates({ brief, run });
+      selected = selectedBase
+        .filter(({ listing }) => !rejectedIds.has(listing.id))
+        .map((candidate) => ({
+          ...candidate,
+          criterionIds: brief.items.map(({ criterionId }) => criterionId),
+          criterionLabels: brief.items.map(({ conceptLabel }) => conceptLabel),
+        }));
+      for (const listing of run.listings) {
+        if (
+          selected.length >= 4 ||
+          !savedIds.has(listing.id) ||
+          rejectedIds.has(listing.id) ||
+          selected.some(
+            ({ listing: selectedListing }) => selectedListing.id === listing.id,
+          )
+        ) {
+          continue;
+        }
+        selected.push({
+          listing,
+          foundAcrossQueryCount: 1,
+          criterionIds: brief.items.map(({ criterionId }) => criterionId),
+          criterionLabels: brief.items.map(({ conceptLabel }) => conceptLabel),
+        });
+      }
+    }
+    if (selected.length === 0) {
+      if (mode !== "first_pass") throw new EvidenceResearchNotNeededError();
+      throw new EvidenceResearchAuthorityError(
+        "No candidate survived direct hard-constraint triage",
+      );
+    }
+    const policyIdentity =
+      mode === "first_pass"
+        ? "first-pass"
+        : mode === "reassessment"
+          ? `reassess:${createHash("sha256")
+              .update(JSON.stringify(savedCandidateListingIds))
+              .digest("hex")
+              .slice(0, 16)}`
+          : `deep:${createHash("sha256")
+              .update(
+                JSON.stringify(
+                  selected.map(({ listing, criterionIds }) => ({
+                    candidateListingId: listing.id,
+                    criterionIds: [...criterionIds].sort(),
+                  })),
+                ),
+              )
+              .digest("hex")
+              .slice(0, 20)}`;
+    const policyVersion = `${EVIDENCE_POLICY_VERSION}:${policyIdentity}`;
     const [existing] = await tx
       .select({ id: evidenceResearchRuns.id })
       .from(evidenceResearchRuns)
@@ -722,65 +907,29 @@ export async function prepareEvidenceResearch(options: {
       if (snapshot === null) throw new Error("Existing research disappeared");
       return snapshot;
     }
-    const savedRows = await tx
-      .select({ candidateListingId: savedCandidateListings.candidateListingId })
-      .from(savedCandidateListings)
-      .where(eq(savedCandidateListings.taskId, taskId));
-    const savedIds = new Set(
-      savedRows.map(({ candidateListingId }) => candidateListingId),
-    );
-    let selected;
-    if (savedCandidateListingIds.length > 0) {
-      selected = savedCandidateListingIds.map((candidateListingId) => {
-        if (!savedIds.has(candidateListingId)) {
-          throw new EvidenceResearchAuthorityError(
-            "Historical reassessment may include only saved exact listings",
-          );
-        }
-        const listing = run.listings.find(
-          ({ id }) => id === candidateListingId,
-        );
-        if (listing === undefined) {
-          throw new EvidenceResearchAuthorityError(
-            "Saved exact listing does not belong to this search run",
-          );
-        }
-        return { listing, foundAcrossQueryCount: 1 };
-      });
-    } else {
-      const selectedBase = selectResearchCandidates({ brief, run });
-      selected = [...selectedBase];
-      for (const listing of run.listings) {
-        if (
-          selected.length >= 8 ||
-          !savedIds.has(listing.id) ||
-          selected.some(
-            ({ listing: selectedListing }) => selectedListing.id === listing.id,
-          )
-        ) {
-          continue;
-        }
-        selected.push({ listing, foundAcrossQueryCount: 1 });
-      }
-    }
-    if (selected.length === 0) {
-      throw new EvidenceResearchAuthorityError(
-        "No candidate survived direct hard-constraint triage",
-      );
-    }
     const researchRunId = evidenceResearchRunIdSchema.parse(randomUUID());
-    const searches = selected.flatMap((candidate) =>
-      planEvidenceSearches({ brief, candidate }).map((plan) => ({
-        candidate,
-        plan,
-      })),
-    );
+    const searches =
+      mode === "reassessment"
+        ? []
+        : selected.flatMap((candidate) =>
+            (mode === "first_pass"
+              ? planEvidenceSearches({ brief, candidate })
+              : [planDecisionGapSearch({ candidate })]
+            ).map((plan) => ({ candidate, plan })),
+          );
+    const phase =
+      mode === "first_pass"
+        ? ("first_pass" as const)
+        : mode === "reassessment"
+          ? ("reassessment" as const)
+          : ("deepening" as const);
     await tx.insert(evidenceResearchRuns).values({
       id: researchRunId,
       taskId,
       searchRunId,
       taskRevision: brief.revision,
       policyVersion,
+      phase,
       status: "running",
       selectedCandidateCount: selected.length,
       plannedSearchCount: searches.length,
@@ -801,6 +950,7 @@ export async function prepareEvidenceResearch(options: {
         provider: options.evidenceProvider,
         model: null,
         promptVersion: null,
+        targetCriterionIds: plan.criterionIds,
       })),
       ...selected.flatMap(({ listing }) => [
         {
@@ -817,6 +967,7 @@ export async function prepareEvidenceResearch(options: {
           provider: options.modelProvider,
           model: options.model,
           promptVersion: options.promptVersion,
+          targetCriterionIds: brief.items.map(({ criterionId }) => criterionId),
         },
         {
           id: evidenceAcquisitionAttemptIdSchema.parse(randomUUID()),
@@ -832,10 +983,29 @@ export async function prepareEvidenceResearch(options: {
           provider: options.modelProvider,
           model: options.model,
           promptVersion: options.promptVersion,
+          targetCriterionIds: brief.items.map(({ criterionId }) => criterionId),
         },
       ]),
     ];
-    await tx.insert(evidenceAcquisitionAttempts).values(attempts);
+    await tx.insert(evidenceAcquisitionAttempts).values(
+      attempts.map(({ targetCriterionIds, ...attempt }) => {
+        void targetCriterionIds;
+        return attempt;
+      }),
+    );
+    const targetBindings = attempts.flatMap((attempt) =>
+      attempt.targetCriterionIds.map((criterionId) => ({
+        taskId,
+        researchRunId,
+        candidateRunId: searchRunId,
+        candidateListingId: attempt.candidateListingId,
+        attemptId: attempt.id,
+        criterionId: criterionIdSchema.parse(criterionId),
+      })),
+    );
+    if (targetBindings.length > 0) {
+      await tx.insert(evidenceAttemptTargetCriteria).values(targetBindings);
+    }
     for (const { listing } of selected) {
       await insertDirectEvidence({ tx, researchRunId, listing, brief });
     }
@@ -852,11 +1022,65 @@ export async function prepareEvidenceResearch(options: {
 export type CurrentDecisionSupport = Readonly<{
   brief: ReturnType<typeof projectShoppingBrief>;
   researchRuns: readonly EvidenceResearchSnapshot["run"][];
+  deepResearchCoverage: readonly Readonly<{
+    researchRunId: z.infer<typeof evidenceResearchRunIdSchema>;
+    candidateListingId: z.infer<typeof candidateListingIdSchema>;
+    runStatus: z.infer<typeof researchStatusSchema>;
+    status: "planned" | "succeeded" | "failed";
+    criterionIds: readonly z.infer<typeof criterionIdSchema>[];
+  }>[];
   candidates: readonly PersistedCandidateListing[];
   sources: readonly EvidenceSourceV1[];
   observations: readonly ProductObservationV1[];
   assessments: readonly CriterionAssessmentV1[];
 }>;
+
+function currentAssessmentsFromValidatedLineages(
+  assessments: readonly CriterionAssessmentV1[],
+) {
+  const groups = new Map<string, CriterionAssessmentV1[]>();
+  for (const assessment of assessments) {
+    const identity = `${assessment.taskRevision}:${assessment.candidateRunId}:${assessment.candidateListingId}:${assessment.criterionId}`;
+    const group = groups.get(identity) ?? [];
+    group.push(assessment);
+    groups.set(identity, group);
+  }
+  const current: CriterionAssessmentV1[] = [];
+  for (const group of groups.values()) {
+    group.sort(
+      (left, right) =>
+        left.generation - right.generation || left.id.localeCompare(right.id),
+    );
+    for (const [index, assessment] of group.entries()) {
+      const predecessor = group[index - 1];
+      const expectedGeneration = index + 1;
+      const isLatest = index === group.length - 1;
+      const validPredecessor =
+        predecessor === undefined
+          ? assessment.supersedesAssessmentId === null
+          : assessment.supersedesAssessmentId === predecessor.id;
+      const validLifecycle = isLatest
+        ? assessment.supersededAt === null
+        : assessment.supersededAt !== null &&
+          assessment.supersededAt <= group[index + 1]!.createdAt;
+      if (
+        assessment.generation !== expectedGeneration ||
+        !validPredecessor ||
+        !validLifecycle
+      ) {
+        failPersisted(
+          "CriterionAssessment",
+          assessment.id,
+          new Error(
+            "Assessment generation lineage is incomplete or incoherent",
+          ),
+        );
+      }
+    }
+    current.push(group[group.length - 1]!);
+  }
+  return current;
+}
 
 export async function loadCurrentDecisionSupportInTransaction(options: {
   tx: ShoppingTransaction;
@@ -922,25 +1146,49 @@ export async function loadCurrentDecisionSupportInTransaction(options: {
   }
   const sourceMap = new Map<string, EvidenceSourceV1>();
   const observationMap = new Map<string, ProductObservationV1>();
-  const assessmentMap = new Map<string, CriterionAssessmentV1>();
   for (const snapshot of snapshots) {
     for (const source of snapshot.sources) sourceMap.set(source.id, source);
     for (const observation of snapshot.observations) {
       observationMap.set(observation.id, observation);
     }
-    for (const assessment of snapshot.assessments) {
-      if (assessment.taskRevision === brief.revision) {
-        assessmentMap.set(assessment.id, assessment);
-      }
-    }
   }
+  const currentAssessments = currentAssessmentsFromValidatedLineages(
+    snapshots
+      .flatMap(({ assessments }) => assessments)
+      .filter(({ taskRevision }) => taskRevision === brief.revision),
+  );
   return {
     brief,
     researchRuns: snapshots.map(({ run }) => run),
+    deepResearchCoverage: snapshots.flatMap((snapshot) =>
+      snapshot.run.phase === "deepening"
+        ? snapshot.attempts
+            .filter(({ stage }) => stage === "organic_search")
+            .map((attempt) => {
+              const candidateAttempts = snapshot.attempts.filter(
+                ({ candidateListingId }) =>
+                  candidateListingId === attempt.candidateListingId,
+              );
+              return {
+                researchRunId: snapshot.run.id,
+                candidateListingId: attempt.candidateListingId,
+                runStatus: snapshot.run.status,
+                status: candidateAttempts.some(
+                  ({ status }) => status === "failed",
+                )
+                  ? ("failed" as const)
+                  : candidateAttempts.some(({ status }) => status === "planned")
+                    ? ("planned" as const)
+                    : ("succeeded" as const),
+                criterionIds: attempt.targetCriterionIds,
+              };
+            })
+        : [],
+    ),
     candidates: [...candidateMap.values()],
     sources: [...sourceMap.values()],
     observations: [...observationMap.values()],
-    assessments: [...assessmentMap.values()],
+    assessments: currentAssessments,
   };
 }
 
@@ -1114,7 +1362,7 @@ async function loadLockedAttempt(options: {
     .limit(1);
   if (row === undefined)
     throw new EvidenceResearchAuthorityError("Evidence attempt was not found");
-  return mapAttemptRow(row);
+  return mapAttemptRow(row, []);
 }
 
 async function finalizeResearchIfComplete(options: {
@@ -1368,6 +1616,8 @@ async function persistAssessments(options: {
   proposals: ProductUnderstandingProviderWireV1["assessments"];
   proposalObservationRefs: ReadonlyMap<string, ProductObservationV1>;
   metadata: ModelCallMetadata | null;
+  assessedAt: Date;
+  allowSupersede: boolean;
 }) {
   const pairs = observationSourcePairs({
     sources: options.sources,
@@ -1391,6 +1641,9 @@ async function persistAssessments(options: {
             );
             if (pair === undefined)
               throw new EvidenceAttemptConflictError(observation.id);
+            if (pair.observation.conceptId !== item.conceptId) {
+              throw new EvidenceAttemptConflictError(observation.id);
+            }
             return pair;
           });
     const guarded = guardCriterionAssessment({
@@ -1409,7 +1662,11 @@ async function persistAssessments(options: {
     });
     const id = criterionAssessmentIdSchema.parse(randomUUID());
     const [existing] = await options.tx
-      .select({ id: criterionAssessments.id })
+      .select({
+        id: criterionAssessments.id,
+        generation: criterionAssessments.generation,
+        researchRunId: criterionAssessments.researchRunId,
+      })
       .from(criterionAssessments)
       .where(
         and(
@@ -1418,10 +1675,25 @@ async function persistAssessments(options: {
           eq(criterionAssessments.candidateRunId, options.listing.runId),
           eq(criterionAssessments.candidateListingId, options.listing.id),
           eq(criterionAssessments.criterionId, item.criterionId),
+          isNull(criterionAssessments.supersededAt),
         ),
       )
+      .for("update")
       .limit(1);
-    if (existing !== undefined) continue;
+    if (existing?.researchRunId === options.researchRunId) continue;
+    if (existing !== undefined && !options.allowSupersede) continue;
+    if (existing !== undefined) {
+      await options.tx
+        .update(criterionAssessments)
+        .set({ supersededAt: options.assessedAt })
+        .where(
+          and(
+            eq(criterionAssessments.taskId, options.listing.taskId),
+            eq(criterionAssessments.id, existing.id),
+            isNull(criterionAssessments.supersededAt),
+          ),
+        );
+    }
     await options.tx.insert(criterionAssessments).values({
       id,
       taskId: options.listing.taskId,
@@ -1430,6 +1702,8 @@ async function persistAssessments(options: {
       candidateRunId: options.listing.runId,
       candidateListingId: options.listing.id,
       criterionId: criterionIdSchema.parse(item.criterionId),
+      generation: (existing?.generation ?? 0) + 1,
+      supersedesAssessmentId: existing?.id ?? null,
       status: guarded.status,
       relation: guarded.relation,
       explanation: guarded.explanation,
@@ -1489,6 +1763,10 @@ export async function recordCandidateUnderstanding(options: {
     evidenceSourceIdSchema.parse(id),
   );
   const leaseToken = z.uuid().parse(options.leaseToken);
+  const result =
+    options.result === null
+      ? null
+      : productUnderstandingProviderWireV1Schema.parse(options.result);
   return options.db.transaction(async (tx) => {
     const runRow = await loadLockedResearchRow({ tx, taskId, researchRunId });
     assertLease(runRow, leaseToken);
@@ -1548,6 +1826,23 @@ export async function recordCandidateUnderstanding(options: {
         "Research candidate is not in its persisted search run",
       );
     }
+    const [lockedListing] = await tx
+      .select({ id: candidateListings.id })
+      .from(candidateListings)
+      .where(
+        and(
+          eq(candidateListings.taskId, taskId),
+          eq(candidateListings.runId, listing.runId),
+          eq(candidateListings.id, listing.id),
+        ),
+      )
+      .for("update")
+      .limit(1);
+    if (lockedListing === undefined) {
+      throw new EvidenceResearchAuthorityError(
+        "Research candidate disappeared before assessment",
+      );
+    }
     const state = await loadCurrentShoppingState(tx, taskId);
     const brief = projectShoppingBrief(state);
     const sourceRows =
@@ -1574,8 +1869,8 @@ export async function recordCandidateUnderstanding(options: {
       return mapEvidenceSourceRow(row);
     });
     const localObservationRefs = new Map<string, ProductObservationV1>();
-    if (options.result !== null) {
-      for (const proposed of options.result.observations) {
+    if (result !== null) {
+      for (const proposed of result.observations) {
         const source = sources[proposed.sourceOrdinal];
         if (source === undefined) {
           throw new EvidenceAttemptConflictError(proposed.localRef);
@@ -1667,11 +1962,12 @@ export async function recordCandidateUnderstanding(options: {
       brief,
       sources: allSourceRows.map(mapEvidenceSourceRow),
       observations: allObservationRows.map(mapObservationRow),
-      proposals: options.result?.assessments ?? [],
+      proposals: result?.assessments ?? [],
       proposalObservationRefs: localObservationRefs,
       metadata: options.metadata,
+      assessedAt: options.finishedAt,
+      allowSupersede: result !== null,
     });
-    const result = options.result;
     const succeeded = result !== null;
     const failureCode = options.failureCode ?? "model_failed";
     await tx

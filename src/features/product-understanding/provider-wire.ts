@@ -81,6 +81,7 @@ export const productUnderstandingProviderWireV1Schema = z
   })
   .superRefine((value, context) => {
     const refs = new Set<string>();
+    const criterionByRef = new Map<string, number | null>();
     for (const [index, observation] of value.observations.entries()) {
       if (refs.has(observation.localRef)) {
         context.addIssue({
@@ -90,6 +91,7 @@ export const productUnderstandingProviderWireV1Schema = z
         });
       }
       refs.add(observation.localRef);
+      criterionByRef.set(observation.localRef, observation.criterionOrdinal);
     }
     const assessed = new Set<number>();
     for (const [index, assessment] of value.assessments.entries()) {
@@ -107,6 +109,13 @@ export const productUnderstandingProviderWireV1Schema = z
             code: "custom",
             path: ["assessments", index, "observationRefs"],
             message: "Assessments may reference only emitted observations",
+          });
+        } else if (criterionByRef.get(ref) !== assessment.criterionOrdinal) {
+          context.addIssue({
+            code: "custom",
+            path: ["assessments", index, "observationRefs"],
+            message:
+              "Assessments may reference only observations emitted for the same criterion",
           });
         }
       }

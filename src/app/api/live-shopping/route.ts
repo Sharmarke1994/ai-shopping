@@ -3,6 +3,7 @@ import { StaleRetrievalSearchActionError } from "@/features/retrieval-spike/cont
 import { StaleSearchRunAuthorityError } from "@/features/retrieval-spike/retrieval-orchestrator";
 import {
   answerLiveShoppingQuestion,
+  deepenLiveShoppingResearch,
   LiveShoppingQuestionUnavailableError,
   LiveShoppingRetryConflictError,
   LiveShoppingSearchUnavailableError,
@@ -10,9 +11,11 @@ import {
   loadLiveShoppingSession,
   refineLiveShopping,
   researchLiveShopping,
+  researchLiveCandidate,
   resumeLiveShoppingSearch,
   retryLiveShoppingContext,
   setLiveListingSaved,
+  setLiveListingRejected,
   startLiveShopping,
 } from "@/features/live-shopping/application";
 import {
@@ -24,7 +27,11 @@ import {
   createLiveShoppingDatabase,
   createLiveShoppingDependencies,
 } from "@/features/live-shopping/runtime";
-import { SavedListingNotAvailableError } from "@/features/live-shopping/saved-listings";
+import {
+  RejectedListingCannotBeSavedError,
+  SavedListingLimitReachedError,
+  SavedListingNotAvailableError,
+} from "@/features/live-shopping/saved-listings";
 
 export const runtime = "nodejs";
 
@@ -61,6 +68,24 @@ function safeError(error: unknown) {
   if (error instanceof LiveShoppingRetryConflictError) {
     return response(
       { error: { code: "retry_conflict", message: error.message } },
+      409,
+    );
+  }
+  if (error instanceof RejectedListingCannotBeSavedError) {
+    return response(
+      { error: { code: "listing_rejected", message: error.message } },
+      409,
+    );
+  }
+  if (error instanceof SavedListingLimitReachedError) {
+    return response(
+      {
+        error: {
+          code: "saved_listing_limit",
+          message:
+            "Keep up to four products in this comparison. Remove one before saving another.",
+        },
+      },
       409,
     );
   }
@@ -142,6 +167,16 @@ export async function POST(request: Request) {
           }),
         );
       }
+      case "reject_listing":
+      case "undo_reject_listing": {
+        const connection = createLiveShoppingDatabase();
+        return response(
+          await setLiveListingRejected({
+            dependencies: { db: connection.db },
+            input,
+          }),
+        );
+      }
       case "retry_context": {
         const dependencies = await createLiveShoppingDependencies();
         return response(
@@ -163,6 +198,16 @@ export async function POST(request: Request) {
       case "research": {
         const dependencies = await createLiveShoppingDependencies();
         return response(await researchLiveShopping({ dependencies, input }));
+      }
+      case "deepen_research": {
+        const dependencies = await createLiveShoppingDependencies();
+        return response(
+          await deepenLiveShoppingResearch({ dependencies, input }),
+        );
+      }
+      case "research_candidate": {
+        const dependencies = await createLiveShoppingDependencies();
+        return response(await researchLiveCandidate({ dependencies, input }));
       }
     }
   } catch (error) {

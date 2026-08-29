@@ -13,14 +13,16 @@ closed. The independently reviewed V0-05 AI interpretation/context-acquisition
 plan is merged. Its bounded implementation remains a formal draft-PR release
 checkpoint and must not be merged without acceptance. V0-06 is independently
 accepted at `d32fbd7ca46d15dc645dacf20617e9c81ca36ac0` and remains a draft,
-unmerged PR. The isolated V0-07 branch now implements its bounded evidence and
-decision-support checkpoint: selective source acquisition, attributable typed
-product observations, revision-scoped criterion assessments, assessment-driven
-top options, and exact saved-listing comparison. It is awaiting exact-head CI
-and independent review and remains cheap to rebase until V0-05 is accepted.
+unmerged PR. V0-07 is independently accepted at
+`149f93cd43092996e20621e8976003b341a82c6a` in draft stacked PR #11. The
+isolated V0-08 branch is the current checkpoint: deterministic decision
+readiness, hard-unknown-aware ordering, progressive evidence research, exact
+listing reject/undo, and decision-oriented saved comparison. It remains
+unmerged; its bounded independent review is complete, and it must stop for
+founder review after exact-head CI.
 ProductIdentity, fuzzy deduplication, broad crawling, rejection learning, auth,
-deployment and later layers have not started. Do not broaden a task because
-later work is documented.
+deployment and V0-09 have not started. Do not broaden a task because later work
+is documented.
 
 ## Hard invariants
 

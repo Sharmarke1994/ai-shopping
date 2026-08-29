@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import {
   formatBriefItem,
@@ -20,7 +20,10 @@ import {
 import type { ShoppingSearchProvider } from "@/features/retrieval-spike/contracts";
 import type { EvidenceResearchDependencies } from "@/features/product-understanding/research-orchestrator";
 import { executeOrResumeEvidenceResearch } from "@/features/product-understanding/research-orchestrator";
-import { loadCurrentDecisionSupportInTransaction } from "@/features/product-understanding/persistence";
+import {
+  EvidenceResearchNotNeededError,
+  loadCurrentDecisionSupportInTransaction,
+} from "@/features/product-understanding/persistence";
 import { buildDecisionSupport } from "@/features/product-understanding/decision-support";
 import { loadPersistedSearchRunByTrigger } from "@/features/retrieval-spike/persistence/search-runs";
 import {
@@ -46,9 +49,12 @@ import {
 } from "@/infrastructure/database/schema";
 import {
   answerLiveShoppingRequestSchema,
+  deepenLiveShoppingRequestSchema,
   liveSessionIdSchema,
   liveShoppingViewSchema,
+  rejectLiveListingRequestSchema,
   refineLiveShoppingRequestSchema,
+  researchLiveCandidateRequestSchema,
   researchLiveShoppingRequestSchema,
   saveLiveListingRequestSchema,
   startLiveShoppingRequestSchema,
@@ -59,8 +65,14 @@ import { summarizeListingEvidence } from "./listing-evidence";
 import {
   loadSavedCandidateListingsInTransaction,
   saveCandidateListing,
+  SavedListingNotAvailableError,
   unsaveCandidateListing,
 } from "./saved-listings";
+import {
+  loadRejectedCandidateListingsInTransaction,
+  rejectCandidateListing,
+  undoRejectedCandidateListing,
+} from "./rejected-listings";
 
 const sessionRowSchema = z.strictObject({
   id: liveSessionIdSchema,
@@ -586,6 +598,33 @@ export async function setLiveListingSaved(options: {
   });
 }
 
+export async function setLiveListingRejected(options: {
+  dependencies: Pick<LiveShoppingDependencies, "db">;
+  input: unknown;
+}) {
+  const input = rejectLiveListingRequestSchema.parse(options.input);
+  const session = await options.dependencies.db.transaction((tx) =>
+    loadSessionInTransaction({ tx, sessionId: input.sessionId }),
+  );
+  if (input.operation === "reject_listing") {
+    await rejectCandidateListing({
+      db: options.dependencies.db,
+      taskId: session.taskId,
+      candidateListingId: input.candidateListingId,
+    });
+  } else {
+    await undoRejectedCandidateListing({
+      db: options.dependencies.db,
+      taskId: session.taskId,
+      candidateListingId: input.candidateListingId,
+    });
+  }
+  return loadLiveShoppingSession({
+    db: options.dependencies.db,
+    sessionId: session.id,
+  });
+}
+
 export async function retryLiveShoppingContext(options: {
   dependencies: LiveShoppingDependencies;
   sessionId: unknown;
@@ -716,6 +755,7 @@ export async function researchLiveShopping(options: {
     dependencies: researchDependencies,
     taskId: authority.session.taskId,
     searchRunId: currentRun.portfolio.run.id,
+    mode: "first_pass",
   });
   const historicalSaved = new Map<string, string[]>();
   for (const saved of authority.savedRuns) {
@@ -729,8 +769,152 @@ export async function researchLiveShopping(options: {
       dependencies: researchDependencies,
       taskId: authority.session.taskId,
       searchRunId,
+      mode: "reassessment",
       savedCandidateListingIds,
     });
+  }
+  return loadLiveShoppingSession({
+    db: options.dependencies.db,
+    sessionId: authority.session.id,
+  });
+}
+
+export async function deepenLiveShoppingResearch(options: {
+  dependencies: LiveShoppingDependencies;
+  input: unknown;
+}) {
+  const input = deepenLiveShoppingRequestSchema.parse(options.input);
+  if (options.dependencies.research === undefined) {
+    throw new LiveShoppingSearchUnavailableError();
+  }
+  const authority = await options.dependencies.db.transaction(async (tx) => {
+    const session = await loadSessionInTransaction({
+      tx,
+      sessionId: input.sessionId,
+    });
+    if (session.currentContextActionId === null) {
+      throw new LiveShoppingSearchUnavailableError();
+    }
+    const action = await loadContextActionByIdInTransaction({
+      tx,
+      taskId: session.taskId,
+      contextActionId: session.currentContextActionId,
+    });
+    if (action?.action !== "search") {
+      throw new LiveShoppingSearchUnavailableError();
+    }
+    return { session, action };
+  });
+  const currentRun = await loadPersistedSearchRunByTrigger({
+    db: options.dependencies.db,
+    taskId: authority.session.taskId,
+    contextActionId: authority.action.id,
+  });
+  if (currentRun === null || currentRun.status === "running") {
+    throw new LiveShoppingSearchUnavailableError();
+  }
+  const before = await loadLiveShoppingSession({
+    db: options.dependencies.db,
+    sessionId: authority.session.id,
+  });
+  const candidateIds = [
+    ...new Set(
+      (before.decisionSupport?.decisionGaps ?? []).flatMap(
+        ({ candidateListingIds }) => candidateListingIds,
+      ),
+    ),
+  ].slice(0, 2);
+  const targetRows =
+    candidateIds.length === 0
+      ? []
+      : await options.dependencies.db
+          .select({ id: candidateListings.id, runId: candidateListings.runId })
+          .from(candidateListings)
+          .where(
+            and(
+              eq(candidateListings.taskId, authority.session.taskId),
+              inArray(candidateListings.id, candidateIds),
+            ),
+          );
+  const runByCandidateId = new Map(
+    targetRows.map(({ id, runId }) => [id, runId]),
+  );
+  for (const candidateListingId of candidateIds) {
+    const candidateRunId = runByCandidateId.get(candidateListingId);
+    if (candidateRunId === undefined) continue;
+    try {
+      await executeOrResumeEvidenceResearch({
+        dependencies: {
+          db: options.dependencies.db,
+          ...options.dependencies.research,
+        },
+        taskId: authority.session.taskId,
+        searchRunId: candidateRunId,
+        mode: "targeted",
+        targetCandidateListingId: candidateListingId,
+      });
+    } catch (error) {
+      if (!(error instanceof EvidenceResearchNotNeededError)) throw error;
+    }
+  }
+  return loadLiveShoppingSession({
+    db: options.dependencies.db,
+    sessionId: authority.session.id,
+  });
+}
+
+export async function researchLiveCandidate(options: {
+  dependencies: LiveShoppingDependencies;
+  input: unknown;
+}) {
+  const input = researchLiveCandidateRequestSchema.parse(options.input);
+  if (options.dependencies.research === undefined) {
+    throw new LiveShoppingSearchUnavailableError();
+  }
+  const authority = await options.dependencies.db.transaction(async (tx) => {
+    const session = await loadSessionInTransaction({
+      tx,
+      sessionId: input.sessionId,
+    });
+    if (session.currentContextActionId === null) {
+      throw new LiveShoppingSearchUnavailableError();
+    }
+    const action = await loadContextActionByIdInTransaction({
+      tx,
+      taskId: session.taskId,
+      contextActionId: session.currentContextActionId,
+    });
+    if (action?.action !== "search") {
+      throw new LiveShoppingSearchUnavailableError();
+    }
+    const [candidate] = await tx
+      .select({ runId: candidateListings.runId })
+      .from(candidateListings)
+      .where(
+        and(
+          eq(candidateListings.taskId, session.taskId),
+          eq(candidateListings.id, input.candidateListingId),
+        ),
+      )
+      .limit(1);
+    if (candidate === undefined) {
+      throw new SavedListingNotAvailableError(input.candidateListingId);
+    }
+    return { session, runId: candidate.runId };
+  });
+  try {
+    await executeOrResumeEvidenceResearch({
+      dependencies: {
+        db: options.dependencies.db,
+        ...options.dependencies.research,
+      },
+      taskId: authority.session.taskId,
+      searchRunId: authority.runId,
+      mode: "targeted",
+      targetCandidateListingId: input.candidateListingId,
+    });
+  } catch (error) {
+    if (!(error instanceof EvidenceResearchNotNeededError)) throw error;
   }
   return loadLiveShoppingSession({
     db: options.dependencies.db,
@@ -752,6 +936,7 @@ function liveListingDto(options: {
   >["listings"][number];
   brief: ReturnType<typeof projectShoppingBrief>;
   saved: boolean;
+  rejected?: boolean;
   foundAcrossQueries?: number;
 }) {
   const listing = options.listing;
@@ -802,6 +987,7 @@ function liveListingDto(options: {
       additionalUnverifiedCount: evidence.additionalUnverifiedCount,
     },
     saved: options.saved,
+    rejected: options.rejected ?? false,
   };
 }
 
@@ -810,6 +996,7 @@ export function displayListings(
   options: {
     brief: ReturnType<typeof projectShoppingBrief>;
     savedListingIds: ReadonlySet<string>;
+    rejectedListingIds?: ReadonlySet<string>;
   },
 ) {
   const queryOrdinals = new Map(
@@ -837,8 +1024,11 @@ export function displayListings(
         listing,
       }).hasDirectConflict,
   );
+  const rejectedListingIds = options.rejectedListingIds ?? new Set<string>();
   const eligibleForPresentation = orderedListings.filter(
-    (listing) => !directlyConflicting.includes(listing),
+    (listing) =>
+      !directlyConflicting.includes(listing) &&
+      !rejectedListingIds.has(listing.id),
   );
   const grouped = new Map<
     string,
@@ -912,6 +1102,10 @@ export async function loadLiveShoppingSession(options: {
         tx,
         taskId: session.taskId,
       });
+      const rejected = await loadRejectedCandidateListingsInTransaction({
+        tx,
+        taskId: session.taskId,
+      });
       const action =
         session.currentContextActionId === null
           ? null
@@ -950,6 +1144,7 @@ export async function loadLiveShoppingSession(options: {
         subject,
         support,
         saved,
+        rejected,
       };
     },
     { isolationLevel: "repeatable read", accessMode: "read only" },
@@ -965,13 +1160,26 @@ export async function loadLiveShoppingSession(options: {
   const savedListingIds = new Set(
     snapshot.saved.map(({ listing }) => listing.id),
   );
+  const rejectedListingIds = new Set(
+    snapshot.rejected.map(({ listing }) => listing.id),
+  );
+  if ([...savedListingIds].some((id) => rejectedListingIds.has(id))) {
+    throw new Error("A listing cannot be both saved and rejected");
+  }
   const decision = buildDecisionSupport({
     support: snapshot.support,
     savedListingIds,
+    savedListings: snapshot.saved.map(({ listing }) => listing),
+    rejectedListingIds,
   });
   const decisionSupport = {
     researchStatus: decision.researchStatus,
+    deepResearchStatus: decision.deepResearchStatus,
+    researchActivity: decision.researchActivity,
     researchedCandidateCount: decision.researchedCandidateCount,
+    sectionMode: decision.sectionMode,
+    excludedCandidateCount: decision.excludedCandidateCount,
+    decisionGaps: decision.decisionGaps,
     topOptions: decision.topOptions.map((option) => ({
       listing: liveListingDto({
         listing: option.listing,
@@ -979,6 +1187,11 @@ export async function loadLiveShoppingSession(options: {
         saved: savedListingIds.has(option.listing.id),
       }),
       strongestSupported: option.strongestSupported,
+      readiness: option.readiness,
+      researchState: option.researchState,
+      supportedMustHaveCount: option.supportedMustHaveCount,
+      mustHaveCount: option.mustHaveCount,
+      unresolvedMustHaves: option.unresolvedMustHaves,
       whyItFits: option.whyItFits,
       watchouts: option.watchouts,
       unknowns: option.unknowns,
@@ -995,13 +1208,22 @@ export async function loadLiveShoppingSession(options: {
                 saved: true,
               }),
             ),
+            researchStates: decision.comparison.researchStates,
+            purchaseSummaries: decision.comparison.purchaseSummaries,
             rows: decision.comparison.rows,
             judgement: decision.comparison.judgement,
+            decisionGaps: decision.comparison.decisionGaps,
           },
   };
   const common = {
     schemaVersion: 1 as const,
     sessionId,
+    viewEpoch: createHash("sha256")
+      .update(
+        `${snapshot.session.taskId}:${snapshot.brief.revision}:${snapshot.session.currentContextActionId ?? "none"}`,
+      )
+      .digest("hex")
+      .slice(0, 24),
     subject: snapshot.subject.body,
     brief: snapshot.brief.items.map((item) => ({
       label: item.conceptLabel,
@@ -1013,6 +1235,14 @@ export async function loadLiveShoppingSession(options: {
         listing,
         brief: snapshot.brief,
         saved: true,
+      }),
+    ),
+    rejectedListings: snapshot.rejected.map(({ listing }) =>
+      liveListingDto({
+        listing,
+        brief: snapshot.brief,
+        saved: false,
+        rejected: true,
       }),
     ),
     decisionSupport,
@@ -1094,6 +1324,7 @@ export async function loadLiveShoppingSession(options: {
                 savedListingIds: new Set(
                   snapshot.saved.map(({ listing }) => listing.id),
                 ),
+                rejectedListingIds,
               });
               return {
                 status: run.status,

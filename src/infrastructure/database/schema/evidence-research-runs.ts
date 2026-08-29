@@ -21,6 +21,7 @@ export const evidenceResearchRuns = shoppingPrivate.table(
     searchRunId: uuid("search_run_id").notNull(),
     taskRevision: bigint("task_revision", { mode: "bigint" }).notNull(),
     policyVersion: text("policy_version").notNull(),
+    phase: text("phase").notNull().default("first_pass"),
     status: text("status").notNull(),
     selectedCandidateCount: integer("selected_candidate_count").notNull(),
     plannedSearchCount: integer("planned_search_count").notNull(),
@@ -84,6 +85,10 @@ export const evidenceResearchRuns = shoppingPrivate.table(
     check(
       "evidence_research_runs_status_allowed",
       sql`${table.status} in ('running', 'succeeded', 'partial', 'failed')`,
+    ),
+    check(
+      "evidence_research_runs_phase_allowed",
+      sql`${table.phase} in ('first_pass', 'deepening', 'reassessment')`,
     ),
     check(
       "evidence_research_runs_budget_shape",

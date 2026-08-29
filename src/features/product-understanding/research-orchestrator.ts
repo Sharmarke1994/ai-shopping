@@ -85,8 +85,10 @@ async function buildUnderstandingInput(options: {
     )
     .sort(
       (left, right) =>
+        Number(right.researchRunId === options.snapshot.run.id) -
+          Number(left.researchRunId === options.snapshot.run.id) ||
         sourcePriority(left) - sourcePriority(right) ||
-        left.observedAt.getTime() - right.observedAt.getTime() ||
+        right.observedAt.getTime() - left.observedAt.getTime() ||
         left.id.localeCompare(right.id),
     )
     .slice(0, 20);
@@ -122,6 +124,8 @@ export async function executeOrResumeEvidenceResearch(options: {
   dependencies: EvidenceResearchDependencies;
   taskId: unknown;
   searchRunId: unknown;
+  mode?: "first_pass" | "deepening" | "targeted" | "reassessment";
+  targetCandidateListingId?: unknown;
   savedCandidateListingIds?: readonly unknown[];
 }): Promise<EvidenceResearchSnapshot> {
   const prepared = await prepareEvidenceResearch({
@@ -134,6 +138,10 @@ export async function executeOrResumeEvidenceResearch(options: {
     promptVersion:
       options.dependencies.modelIdentity.promptVersion ||
       PRODUCT_UNDERSTANDING_PROMPT_VERSION,
+    ...(options.mode === undefined ? {} : { mode: options.mode }),
+    ...(options.targetCandidateListingId === undefined
+      ? {}
+      : { targetCandidateListingId: options.targetCandidateListingId }),
     ...(options.savedCandidateListingIds === undefined
       ? {}
       : { savedCandidateListingIds: options.savedCandidateListingIds }),

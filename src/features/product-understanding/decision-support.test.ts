@@ -11,6 +11,238 @@ import {
 import { buildDecisionSupport } from "./decision-support";
 
 describe("assessment-driven decision support", () => {
+  it("keeps hard unknowns distinct from conflicts and ahead of soft wins", () => {
+    const taskId = randomUUID();
+    const runId = randomUUID();
+    const hardCriterionId = randomUUID();
+    const preferenceCriterionId = randomUUID();
+    const brief = shoppingBriefV1Schema.parse({
+      schemaVersion: 1,
+      taskId,
+      revision: 3n,
+      market: { country: "GB", language: "en-GB", currency: "GBP" },
+      items: [
+        {
+          criterionId: hardCriterionId,
+          lineageId: randomUUID(),
+          conceptId: randomUUID(),
+          conceptLabel: "Battery life",
+          conceptDefinition: "Battery life must be verified",
+          strength: "hard",
+          targetSemantics: "qualitative",
+          semanticValue: {
+            schemaVersion: 1,
+            kind: "qualitative",
+            mode: "text",
+            text: "very good battery life",
+          },
+        },
+        {
+          criterionId: preferenceCriterionId,
+          lineageId: randomUUID(),
+          conceptId: randomUUID(),
+          conceptLabel: "Colour",
+          conceptDefinition: "A preferred colour",
+          strength: "preference",
+          targetSemantics: "qualitative",
+          semanticValue: {
+            schemaVersion: 1,
+            kind: "qualitative",
+            mode: "text",
+            text: "dark grey",
+          },
+        },
+      ],
+    });
+    const candidate = (title: string) =>
+      persistedCandidateListingSchema.parse({
+        id: randomUUID(),
+        taskId,
+        runId,
+        queryId: randomUUID(),
+        queryExecutionId: randomUUID(),
+        provider: "fixture",
+        providerResultId: randomUUID(),
+        sourceRank: 1,
+        surface: "shopping",
+        title,
+        url: `https://example.test/${encodeURIComponent(title)}`,
+        canonicalUrl: `https://example.test/${encodeURIComponent(title)}`,
+        merchantDestinationUrl: null,
+        merchantDestinationSource: null,
+        merchant: "Example",
+        price: { amountMinor: 4_000, currency: "GBP" },
+        priceText: "£40",
+        imageUrl: null,
+        deliveryText: null,
+        availabilityText: null,
+        reviewEvidence: null,
+        retrievedAt: new Date("2026-01-01T00:00:00Z"),
+      });
+    const verified = candidate("Verified mouse");
+    const generic = candidate("Generic mouse");
+    const assessment = (options: {
+      listingId: string;
+      criterionId: string;
+      status: "meets" | "conflicts" | "uncertain";
+      explanation: string;
+    }) =>
+      criterionAssessmentV1Schema.parse({
+        schemaVersion: 1,
+        id: randomUUID(),
+        researchRunId: randomUUID(),
+        taskId,
+        taskRevision: 3n,
+        candidateRunId: runId,
+        candidateListingId: options.listingId,
+        criterionId: options.criterionId,
+        status: options.status,
+        relation:
+          options.status === "meets"
+            ? "source_support"
+            : options.status === "conflicts"
+              ? "source_conflict"
+              : "insufficient_evidence",
+        explanation: options.explanation,
+        method: "deterministic",
+        model: null,
+        promptVersion: null,
+        observationIds: [],
+        createdAt: new Date("2026-01-01T00:00:01Z"),
+      });
+    const verifiedAssessments = [
+      assessment({
+        listingId: verified.id,
+        criterionId: hardCriterionId,
+        status: "meets",
+        explanation: "Battery life is supported by current evidence.",
+      }),
+      assessment({
+        listingId: verified.id,
+        criterionId: preferenceCriterionId,
+        status: "uncertain",
+        explanation: "Colour has not been verified.",
+      }),
+    ];
+    const genericAssessments = [
+      assessment({
+        listingId: generic.id,
+        criterionId: hardCriterionId,
+        status: "uncertain",
+        explanation: "Battery life remains unknown.",
+      }),
+      assessment({
+        listingId: generic.id,
+        criterionId: preferenceCriterionId,
+        status: "meets",
+        explanation: "The preferred colour is supported.",
+      }),
+    ];
+    const support = {
+      brief,
+      researchRuns: [],
+      deepResearchCoverage: [],
+      candidates: [generic, verified],
+      sources: [],
+      observations: [],
+      assessments: [...genericAssessments, ...verifiedAssessments],
+    };
+    const result = buildDecisionSupport({
+      support,
+      savedListingIds: new Set(),
+    });
+    expect(result.topOptions.map(({ listing }) => listing.id)).toEqual([
+      verified.id,
+      generic.id,
+    ]);
+    expect(result.topOptions[0]).toMatchObject({
+      readiness: "qualified",
+      strongestSupported: true,
+      supportedMustHaveCount: 1,
+      mustHaveCount: 1,
+    });
+    expect(result.topOptions[1]).toMatchObject({
+      readiness: "needs_verification",
+      strongestSupported: false,
+      unresolvedMustHaves: [expect.objectContaining({ label: "Battery life" })],
+    });
+    expect(genericAssessments[0]!.status).toBe("uncertain");
+
+    const compared = buildDecisionSupport({
+      support,
+      savedListingIds: new Set([verified.id, generic.id]),
+    });
+    expect(compared.comparison?.purchaseSummaries).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ candidateListingId: verified.id }),
+        expect.objectContaining({ candidateListingId: generic.id }),
+      ]),
+    );
+    expect(compared.comparison?.researchStates).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          candidateListingId: verified.id,
+          state: "available",
+        }),
+        expect.objectContaining({
+          candidateListingId: generic.id,
+          state: "available",
+        }),
+      ]),
+    );
+    expect(compared.comparison?.decisionGaps).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: "Battery life", strength: "hard" }),
+      ]),
+    );
+    expect(compared.comparison?.judgement).toContain(
+      "Verified mouse has stronger support on Battery life",
+    );
+    expect(compared.comparison?.judgement).toContain(
+      "Generic mouse has stronger support on Colour",
+    );
+
+    const allUnknown = buildDecisionSupport({
+      support: {
+        ...support,
+        candidates: [generic],
+        assessments: genericAssessments,
+      },
+      savedListingIds: new Set(),
+    });
+    expect(allUnknown.sectionMode).toBe("verification_needed");
+    expect(allUnknown.topOptions[0]).toMatchObject({
+      readiness: "needs_verification",
+      strongestSupported: false,
+    });
+    expect(allUnknown.decisionGaps[0]).toMatchObject({
+      label: "Battery life",
+      strength: "hard",
+    });
+    expect(JSON.stringify(allUnknown)).not.toMatch(/\d+(?:\.\d+)?%|\/10/);
+
+    const checkedButStillUnknown = buildDecisionSupport({
+      support: {
+        ...support,
+        candidates: [generic],
+        assessments: genericAssessments,
+        deepResearchCoverage: [
+          {
+            researchRunId: evidenceResearchRunIdSchema.parse(randomUUID()),
+            candidateListingId: generic.id,
+            runStatus: "succeeded",
+            status: "succeeded",
+            criterionIds: [brief.items[0]!.criterionId],
+          },
+        ],
+      },
+      savedListingIds: new Set(),
+    });
+    expect(checkedButStillUnknown.topOptions[0]?.researchState).toBe(
+      "complete",
+    );
+  });
+
   it("surfaces assessment content without manufacturing percentages", () => {
     const candidate = persistedCandidateListingSchema.parse({
       id: "11111111-1111-4111-8111-111111111111",
@@ -89,6 +321,7 @@ describe("assessment-driven decision support", () => {
             searchRunId: searchRunIdSchema.parse(candidate.runId),
             taskRevision: 1n,
             policyVersion: "evidence-selective-v1",
+            phase: "first_pass",
             status: "succeeded",
             selectedCandidateCount: 1,
             plannedSearchCount: 2,
@@ -96,6 +329,7 @@ describe("assessment-driven decision support", () => {
             finishedAt: new Date("2026-01-01T00:00:01Z"),
           },
         ],
+        deepResearchCoverage: [],
         candidates: [candidate],
         sources: [],
         observations: [],
@@ -125,6 +359,7 @@ describe("assessment-driven decision support", () => {
       support: {
         brief,
         researchRuns: [],
+        deepResearchCoverage: [],
         candidates: [candidate, duplicate],
         sources: [],
         observations: [],
@@ -166,6 +401,7 @@ describe("assessment-driven decision support", () => {
         support: {
           brief,
           researchRuns: [],
+          deepResearchCoverage: [],
           candidates: [indirectCandidate, indirectDuplicate],
           sources: [],
           observations: [],
@@ -203,6 +439,7 @@ describe("assessment-driven decision support", () => {
       support: {
         brief: preferenceBrief,
         researchRuns: [],
+        deepResearchCoverage: [],
         candidates: [candidate, cleanRunner, conflictingOption],
         sources: [],
         observations: [],
@@ -346,6 +583,7 @@ describe("assessment-driven decision support", () => {
       support: {
         brief,
         researchRuns: [],
+        deepResearchCoverage: [],
         candidates: [
           aboveCeiling,
           aboveStretch,
@@ -419,6 +657,7 @@ describe("assessment-driven decision support", () => {
       support: {
         brief: ordinaryBrief,
         researchRuns: [],
+        deepResearchCoverage: [],
         candidates: [exactTarget, ordinaryConflict],
         sources: [],
         observations: [],
@@ -543,6 +782,7 @@ describe("assessment-driven decision support", () => {
       support: {
         brief,
         researchRuns: [],
+        deepResearchCoverage: [],
         candidates: [candidate, duplicate, distinctDirect, otherDirect],
         sources: [],
         observations: [],

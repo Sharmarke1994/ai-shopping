@@ -1,6 +1,6 @@
 # Founder MVP progress
 
-**Updated:** 2026-08-28 Europe/London
+**Updated:** 2026-08-29 Europe/London
 **Durable goal:** Deliver a polished founder-usable AI shopping MVP whose live
 understanding, market retrieval, evidence-aware evaluation, refinement, saving,
 and comparison are meaningfully better than beginning with Google.
@@ -10,21 +10,18 @@ and comparison are meaningfully better than beginning with Google.
 - Repository: `Sharmarke1994/ai-shopping`.
 - Founder-MVP execution brief: `docs/plans/founder-usable-mvp.md`.
 - Active isolated worktree:
-  `/Users/alchemist32/Documents/AI Shopping/ai-shopping-v0-07-evidence`.
-- Active branch: `codex/v0-07-evidence-assessment`, stacked on independently
-  accepted V0-06 `d32fbd7ca46d15dc645dacf20617e9c81ca36ac0`.
-- Latest product implementation checkpoint:
-  `f4d0a649b4e44f77ac47c335a8c86bf8987b40fa`, the bounded V0-07
-  money/presentation correction pass in stacked draft PR #11. It preserves the
-  evidence/assessment decision-support boundaries; exact-head CI for this SHA
-  is still required before independent review.
-  V0-06 remains draft PR #10 and is not merged.
-- Original V0-05 checkout and draft PR #9 remain separate, unmodified, unmerged,
-  and formally unaccepted. Its last instructed checkpoint is `9c33018`; the
-  latest Terra release gate completed 14/21 on 24 August 2026. All seven failed
-  runs were provider-only connection/timeout failures and all 14 completed runs
-  passed the protected semantic measures.
-  The 21/21 Terra rule has not been weakened and Luna remains diagnostic only.
+  `/Users/alchemist32/Documents/AI Shopping/ai-shopping-v0-08-founder-loop`.
+- Active branch: `codex/v0-08-founder-decision-loop`, stacked exactly on the
+  independently accepted V0-07 head
+  `149f93cd43092996e20621e8976003b341a82c6a`.
+- V0-07 remains draft stacked PR #11 and is not merged. V0-08 is implemented,
+  founder-dogfooded and locally verified; its final commit, draft stacked PR
+  and exact-head CI are the current delivery checkpoint. Do not merge or begin
+  V0-09.
+- Original V0-05 checkout and draft PR #9 remain separate, unmodified,
+  unmerged and formally unaccepted. The 21/21 Terra rule has not been weakened
+  and Luna remains diagnostic only. V0-08 does not redefine that separate
+  process checkpoint.
 - Nothing on this experimental branch may be merged automatically. Each
   coherent layer is committed and pushed for recoverability while work
   continues toward the founder-usable product.
@@ -83,8 +80,8 @@ Pushed at `a3f6e33dc30954467db9a6f8c4d70cc7711f9c6b`.
 
 ### Layer 3 — subject/trigger authority and resumable retrieval
 
-Implemented in the checkpoint containing this ledger; pending independent
-review and intentionally unmerged.
+Implemented and independently accepted as part of the V0-06 checkpoint at
+`d32fbd7ca46d15dc645dacf20617e9c81ca36ac0`; intentionally unmerged.
 
 - Binds each task once to the exact persisted initial V1 shopper message as its
   immutable `ShoppingSubject`; later criteria and answers never replace it.
@@ -113,8 +110,8 @@ review and intentionally unmerged.
 
 ### Layer 4 — first honest live founder flow
 
-Implemented in the checkpoint containing this ledger; pending founder and
-independent review and intentionally unmerged.
+Independently accepted at
+`370a4ab6be8a99f25d3fb8b6b848a3fcb0589157`; intentionally unmerged.
 
 - Adds a dedicated calm consumer `/live` route while preserving `/` as the V0-02
   fixture regression surface.
@@ -152,7 +149,8 @@ independent review and intentionally unmerged.
 
 ### Layer 5 — recursive refinement, saves and retrieval triage
 
-Implemented in the current unmerged checkpoint.
+Implemented and independently accepted as part of the V0-06 checkpoint at
+`d32fbd7ca46d15dc645dacf20617e9c81ca36ac0`; intentionally unmerged.
 
 - Adds natural same-task refinement through the real V0-05 coordinator. The
   original subject remains immutable while each new shopper turn can patch the
@@ -181,8 +179,9 @@ Implemented in the current unmerged checkpoint.
 ### Layer 6 — verified destinations and honest listing evidence
 
 Implemented at `b112430` and extended with structured retailer rating evidence
-at `aa9e1463c668c7bb576d758316bea84654329e5c`; experimental, unmerged and
-awaiting independent review.
+at `aa9e1463c668c7bb576d758316bea84654329e5c`; independently accepted as part of
+the V0-06 checkpoint at `d32fbd7ca46d15dc645dacf20617e9c81ca36ac0`
+and intentionally unmerged.
 
 - Enriches a bounded number of Google Shopping rows through an exact
   title/merchant organic lookup under the existing provider deadline.
@@ -239,31 +238,75 @@ awaiting independent review.
   `docs/spikes/v0-06-recursive-founder-evidence.md` and
   `artifacts/screenshots/v0-06-recursive/`.
 
-## Current work
+## Completed V0-07 evidence and assessment
 
-V0-06 is accepted at `d32fbd7ca46d15dc645dacf20617e9c81ca36ac0`.
-V0-07 is implemented at `f4d0a649b4e44f77ac47c335a8c86bf8987b40fa` on
-`codex/v0-07-evidence-assessment` in stacked draft PR #11. The current
-correction pass adds deterministic evidence admission,
-target-distance and absolute-ceiling semantics, comparative stretch guards,
-source-aware boolean assessment guards, and conservative exact-offer
-presentation grouping while preserving bounded selective research, typed
-observations, revision-scoped assessments, deterministic ordering, top-option
-support and exact saved-listing comparison. V0-05 PR #9 and V0-06 PR #10
-remain unmodified and unmerged; no later layer has started.
+V0-07 is independently accepted at
+`149f93cd43092996e20621e8976003b341a82c6a` in stacked draft PR #11. It adds
+selective attributable evidence acquisition, typed task/run-scoped product
+observations, revision-scoped criterion assessments, deterministic money and
+boolean guards, assessment-driven product ordering, conservative exact-offer
+presentation grouping, and exact saved-listing comparison. Unknown remains a
+valid result and cannot become a conflict or a suitability claim through
+absence of evidence.
+
+## Current V0-08 founder decision loop
+
+V0-08 is implemented in the active isolated branch. Its one bounded independent
+review is complete and all four material findings are closed. It awaits its
+final commit, stacked draft PR and exact-head CI.
+
+- Decision readiness is derived, qualitative and score-free: qualified, needs
+  verification, trade-off or ineligible.
+- Hard unknowns sort before ordinary preference support without being relabelled
+  as conflicts. Section and badge language stays conservative when no product
+  resolves all must-haves.
+- Factual listings appear before evidence research. The browser can trigger
+  only server-owned idempotent first-pass and deepening actions.
+- First pass researches at most four exact listings with one combined search
+  each. Deepening normally targets two leading/saved candidates and at most two
+  unresolved high-authority criteria per candidate. Completed criterion work
+  is not repeated.
+- Assessment generations are append-only. A successful later generation
+  supersedes the former current projection; a failed deep model call preserves
+  prior evidence and is now projected as failed rather than “complete.”
+- Exact task-local `Not for me` is idempotent, atomically unsaves, survives
+  refresh, supports undo without silent re-save, and never changes shopper
+  truth or task revision.
+- Saved comparison now foregrounds must-haves, actual evidenced differences,
+  important unknowns, observed price/target relationship and retailer exits.
+  It does not manufacture a winner when assessment states are tied. All saved
+  listings remain present even before assessment, and an atomic task-locked cap
+  limits the comparison to four.
+- Criterion assessments may cite only observations scoped to their exact
+  criterion concept. Purchase price uses the persisted offer price; delivery,
+  running and other money concepts require their own scoped evidence. These
+  boundaries are enforced at provider parsing, policy and persistence layers.
+- Research target persistence now matches the authoritative/provider maximum
+  of 50 criteria; a 13-criterion PostgreSQL regression protects the boundary.
+- The first destination-cost diagnostic spent 25 merchant lookups for only one
+  useful top-card direct link. The bounded policy now checks at most the leading
+  distinct merchant per shopping query; the exact-code release proof used 9
+  lookups across 12 shopping queries.
+- Fresh real Terra + Serper evidence covers ergonomic mouse plus refinement,
+  office chair, and cordless vacuum in guarded disposable databases. Sanitized
+  evidence is in `docs/evals/v0-08-live-founder-proof.{json,md}`.
+- Eight production-rendered desktop/mobile screenshots cover automatic,
+  decision, comparison, rejection, refinement, verification and partial
+  research states in `docs/screenshots/v0-08/`.
+
+V0-05 PR #9, V0-06 PR #10 and V0-07 PR #11 remain unmodified and unmerged.
+V0-09 has not started.
 
 ## Next validated checkpoints
 
-1. Obtain exact-head quality/persistence/browser CI on the final correction
-   handoff head of stacked draft PR #11, then stop for independent review.
-2. If review finds a material issue, make only a bounded V0-07 correction and
-   rerun the affected plus full gates. Do not weaken unknown/evidence boundaries.
-3. After acceptance only: bare reject/undo, kept task-local to the acted-on
-   listing without preference learning.
-4. Expand source quality or selective page inspection only from measured
-   decision-critical gaps; do not turn V0-07 into a crawler.
-5. Continue unrelated-category founder journeys, resilience, security/privacy,
-   deployment and founder handoff as separately reviewed checkpoints.
+1. Commit and push `codex/v0-08-founder-decision-loop`, open a draft stacked PR
+   against `codex/v0-07-evidence-assessment`, and wait for exact-head quality,
+   pinned PostgreSQL persistence and browser-smoke CI.
+2. Stop for founder review. Do not merge any stacked PR and do not start V0-09.
+3. After V0-08 acceptance, use the measured leave-the-app gaps to choose the
+   next smallest product layer. Direct destination coverage and richer
+   decision-critical sources remain real gaps; do not turn them into a crawler
+   or fabricate personal-fit evidence.
 
 ## Credentials and blockers
 
@@ -280,60 +323,67 @@ remain unmodified and unmerged; no later layer has started.
 - The full local database suite therefore reports one expected version-pin
   assertion failure. Do not weaken the pin to make the local result green.
 - Public deployment/auth and any second paid provider remain unresolved
-  product/security decisions. The bounded Serper organic experiment produced
-  two useful visible direct destinations and structured rating evidence in the
-  latest UK run; it can spend up to nine additional lookups per three-query run
-  and should move post-triage at shortlist scale before broader founder use.
+  product/security decisions. The current bounded Serper policy performs at
+  most one merchant-resolution attempt per shopping query and still leaves most
+  top/saved products on an honest Google Shopping fallback. Moving resolution
+  post-shortlist requires an immutable enrichment boundary and remains a
+  measured product gap, not permission for scraping or a second paid vendor.
 
 ## Latest verification
 
 - `pnpm check`: formatting, lint, generated route types, strict TypeScript,
-  185/185 deterministic unit/component tests, production build — pass.
-- Focused V0-07 PostgreSQL suite: 10/10 pass, including the unrelated-organic
-  result rejection regression and one-snapshot current decision support under
-  a concurrent authoritative revision.
-- Full PostgreSQL suite: 100 functional tests pass; the sole failure is the
-  intentional PostgreSQL 17.6 pin against local Homebrew 17.11.
-- `pnpm test:e2e`: 8/8 Chromium tests pass, including research → two exact
-  saves → comparison → refinement → revision-specific reassessment → refresh,
-  plus mobile ASK → answer → SEARCH → research.
-- `pnpm db:generate`: no schema drift after migration 0014. A guarded empty
-  database applied all 15 migrations, then was dropped.
-- Real Terra + Serper proof: 2 tasks, 3 SearchRuns, 72 raw listings, 4 bounded
-  research runs, 40/40 successful evidence searches, 69 attributable sources,
-  131 observations, 148 assessments, 90 unknown assessments, 2 observations
-  reused across revisions, and 20/20 understanding calls. The mouse refinement
-  contains no repeated exact Anker presentation offer and keeps battery,
-  reputation and personal comfort unknown where evidence is insufficient. The
-  chair best-supported options contain no product above the £350 stretch
-  ceiling; below-target prices retain signed distance and comparative stretch
-  is not satisfied by “good support over long sessions” alone. No B&Q
-  phone-case, GXT926, Bayo+, or e-catalog false-positive evidence source was
-  persisted; rejected organic rows remain only in received counts.
-- Six production-rendered desktop/mobile/partial screenshots passed explicit
-  horizontal-overflow checks. The fixture shell, top options, source disclosure,
-  comparison table and partial-research state were inspected visually.
-- Production dependency audit: no known vulnerabilities.
-- `git diff --check` and changed-value secret scan: pass.
-- The final correction handoff requires a new exact-head GitHub Quality,
-  pinned PostgreSQL 17.6 persistence, and browser-smoke run before review.
+  200/200 deterministic unit/component tests and the production build pass on
+  the final V0-08 working tree.
+- Focused V0-08 PostgreSQL suites: 17/17 pass, including progressive research,
+  append-only assessment generations, failed-deep preservation, exact
+  criterion/evidence scope, 13-criterion targeting, concurrent save caps,
+  reject/undo, cross-task rejection and revision preservation.
+- Full PostgreSQL suite: 107/107 functional tests pass. The sole local failure
+  is the intentional PostgreSQL 17.6 version assertion against Homebrew 17.11.
+- `pnpm test:e2e`: 8/8 Chromium tests pass, including automatic first/deep
+  research, two saves, decision comparison, exact rejection/undo, refinement,
+  refresh, mobile hard-unknown presentation and no horizontal overflow.
+- `pnpm db:generate`: no schema drift after migration 0015. A guarded empty
+  database applied all 16 migrations and was dropped.
+- `pnpm audit --prod` reports no known production dependency vulnerabilities;
+  `git diff --check` and the changed-file secret-pattern scan are clean.
+- Exact-code real Terra + Serper proof: 12 shopping queries, 9 merchant
+  resolution calls, 27 evidence searches and 29 product-understanding calls
+  across mouse (including refinement), chair and vacuum. Mouse plus chair used
+  20 evidence searches versus V0-07's 40 while using 22 understanding calls
+  versus 20. Important unresolved facts remained unknown.
+- Mouse hard unknowns moved 12 → 6 → 6; top/saved direct coverage was 1/4 and
+  0/2. Chair had no explicit hard criteria and correctly preserved target versus
+  conditional-stretch semantics; direct coverage was 0/4 and 0/2. Vacuum hard
+  unknowns moved 12 → 8 → 8 and floor/noise stayed unresolved; direct coverage
+  was 0/4 and 0/2.
+- All three real journeys exercised two saves, atomic reject+unsave, undo without
+  re-save, comparison and reload. The mouse refinement changed current
+  authoritative priorities and allocated new research without rewriting the
+  immutable subject or old assessments.
+- Eight production-rendered desktop/mobile/partial screenshots passed explicit
+  horizontal-overflow checks and were inspected visually after the final
+  decision-gap action correction.
+- Production dependency audit: no known vulnerabilities. Local diff, drift and
+  changed-file secret checks are clean; exact-head CI remains the delivery-tail
+  check after commit and push.
 
 ## Exact resume instructions
 
 1. Work only in
-   `/Users/alchemist32/Documents/AI Shopping/ai-shopping-v0-07-evidence` on
-   `codex/v0-07-evidence-assessment`; confirm the branch, exact head and clean
-   tree first.
-2. Read this file, `docs/plans/v0-07.md` and the concise
-   `docs/evals/v0-07-live-founder-proof.md`; inspect stacked V0-07 draft PR #11
-   and exact-head CI. Do not reopen accepted V0-03/V0-04/V0-06 architecture.
-3. Preserve the original V0-05 checkout and draft PR #9 exactly; do not merge it
-   and do not weaken its Terra gate.
-4. Keep both the V0-06 and stacked V0-07 PRs draft and unmerged. Do not begin
-   reject/undo, ProductIdentity, crawling, auth, deployment or later work while
-   V0-07 review is pending.
-5. If review finds a material issue, make only the bounded V0-07 correction and
-   rerun the affected plus full gates. Never weaken the evaluator, unknown state,
-   evidence authority or V0-04/V0-05 firewall to obtain a pass.
-6. Do not merge automatically, start V0-08, or broaden evidence acquisition.
-   Stop after exact-head CI for independent review.
+   `/Users/alchemist32/Documents/AI Shopping/ai-shopping-v0-08-founder-loop` on
+   `codex/v0-08-founder-decision-loop`; confirm branch, stacked base, exact head
+   and tree state first.
+2. Read this file, `docs/plans/v0-08.md` and the concise
+   `docs/evals/v0-08-live-founder-proof.md`. Do not reopen accepted
+   V0-03/V0-04/V0-06/V0-07 architecture.
+3. Preserve V0-05 PR #9, V0-06 PR #10 and V0-07 PR #11 exactly. Do not merge
+   them and do not weaken V0-05's Terra rule.
+4. If exact-head CI or founder review reports a material issue,
+   make only a bounded V0-08 correction and rerun affected plus full gates.
+   Never weaken unknown, evidence, money, task authority or revision boundaries.
+5. Keep the V0-08 PR draft and stacked on
+   `codex/v0-07-evidence-assessment`. Do not begin V0-09, ProductIdentity,
+   crawling, auth, deployment, checkout or affiliate work.
+6. After exact-head quality/persistence/browser-smoke are green, leave the
+   worktree clean and stop for founder review.

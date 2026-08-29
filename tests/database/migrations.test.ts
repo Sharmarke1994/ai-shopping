@@ -71,7 +71,7 @@ describe("shopping architecture migration shape", () => {
       'select count(*)::integer as count from "drizzle"."migrations"',
     );
     const after = afterRows[0]?.count;
-    expect(before).toBe(15);
+    expect(before).toBe(16);
     expect(after).toBe(before);
   });
 

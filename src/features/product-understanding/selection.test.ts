@@ -6,9 +6,12 @@ import {
 } from "@/features/retrieval-spike/contracts";
 import { persistedSearchRunSchema } from "@/features/retrieval-spike/persistence/contracts";
 import { shoppingBriefV1Schema } from "@/domain/shopping-state/brief";
+import { criterionAssessmentV1Schema } from "./contracts";
 import {
   MAX_RESEARCH_CANDIDATES,
+  planDecisionGapSearch,
   planEvidenceSearches,
+  selectDeepResearchCandidates,
   selectResearchCandidates,
 } from "./selection";
 
@@ -168,13 +171,111 @@ describe("selective evidence research", () => {
     );
   });
 
-  it("produces two criterion-driven and meaningfully different hypotheses", () => {
+  it("uses one broad first-pass search, then targets unresolved decision gaps", () => {
     const { brief, run } = fixture();
     const [candidate] = selectResearchCandidates({ brief, run });
     const planned = planEvidenceSearches({ brief, candidate: candidate! });
-    expect(planned).toHaveLength(2);
-    expect(new Set(planned.map(({ query }) => query)).size).toBe(2);
+    expect(planned).toHaveLength(1);
     expect(planned[0]!.query).toContain("Battery life");
-    expect(planned[1]!.query).toContain("Long-session comfort");
+    expect(planned[0]!.query).toContain("Long-session comfort");
+
+    const knownPriceAssessment = criterionAssessmentV1Schema.parse({
+      schemaVersion: 1,
+      id: randomUUID(),
+      researchRunId: randomUUID(),
+      taskId: candidate!.listing.taskId,
+      taskRevision: brief.revision,
+      candidateRunId: candidate!.listing.runId,
+      candidateListingId: candidate!.listing.id,
+      criterionId: brief.items[0]!.criterionId,
+      status: "uncertain",
+      relation: "target_distance_minor:-1999",
+      explanation:
+        "The observed price is known and below the maximum; this is not a web-research gap.",
+      method: "deterministic",
+      model: null,
+      promptVersion: null,
+      observationIds: [],
+      createdAt: new Date("2026-01-01T00:00:02Z"),
+    });
+    const deep = selectDeepResearchCandidates({
+      brief,
+      run,
+      orderedCandidateIds: [candidate!.listing.id],
+      assessments: [knownPriceAssessment],
+      savedCandidateListingIds: new Set(),
+      limit: 1,
+    });
+    expect(deep).toHaveLength(1);
+    expect(deep[0]!.criterionLabels).toEqual([
+      "Battery life",
+      "Long-session comfort",
+    ]);
+    const deepSearch = planDecisionGapSearch({ candidate: deep[0]! });
+    expect(deepSearch.purpose).toBe("decision_gap");
+    expect(deepSearch.query).toContain("Battery life Long-session comfort");
+
+    const afterBatteryCheck = selectDeepResearchCandidates({
+      brief,
+      run,
+      orderedCandidateIds: [candidate!.listing.id],
+      assessments: [knownPriceAssessment],
+      savedCandidateListingIds: new Set(),
+      completedCriterionIdsByCandidate: new Map([
+        [candidate!.listing.id, new Set([brief.items[1]!.criterionId])],
+      ]),
+      limit: 1,
+    });
+    expect(afterBatteryCheck[0]?.criterionLabels).toEqual([
+      "Long-session comfort",
+    ]);
+    expect(
+      selectDeepResearchCandidates({
+        brief,
+        run,
+        orderedCandidateIds: [candidate!.listing.id],
+        assessments: [knownPriceAssessment],
+        savedCandidateListingIds: new Set(),
+        completedCriterionIdsByCandidate: new Map([
+          [
+            candidate!.listing.id,
+            new Set([brief.items[1]!.criterionId, brief.items[2]!.criterionId]),
+          ],
+        ]),
+        limit: 1,
+      }),
+    ).toEqual([]);
+
+    const refinedBrief = shoppingBriefV1Schema.parse({
+      ...brief,
+      revision: 2n,
+      items: brief.items.map((item) => ({
+        ...item,
+        strength:
+          item.conceptLabel === "Long-session comfort"
+            ? "hard"
+            : item.conceptLabel === "Battery life"
+              ? "preference"
+              : item.strength,
+      })),
+    });
+    const refined = selectDeepResearchCandidates({
+      brief: refinedBrief,
+      run,
+      orderedCandidateIds: [candidate!.listing.id],
+      assessments: [
+        criterionAssessmentV1Schema.parse({
+          ...knownPriceAssessment,
+          id: randomUUID(),
+          taskRevision: 2n,
+        }),
+      ],
+      savedCandidateListingIds: new Set(),
+      limit: 1,
+    });
+    expect(refined[0]?.criterionLabels).toEqual([
+      "Long-session comfort",
+      "Battery life",
+    ]);
   });
 });

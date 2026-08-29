@@ -15,13 +15,31 @@ import type {
 } from "@/infrastructure/database/clients";
 import {
   candidateListings,
+  rejectedCandidateListings,
   savedCandidateListings,
+  shoppingTasks,
 } from "@/infrastructure/database/schema";
+
+export const MAX_SAVED_LISTINGS_PER_TASK = 4;
 
 export class SavedListingNotAvailableError extends Error {
   constructor(readonly candidateListingId: string) {
     super("That product listing is not available in this shopping task");
     this.name = "SavedListingNotAvailableError";
+  }
+}
+
+export class RejectedListingCannotBeSavedError extends Error {
+  constructor(readonly candidateListingId: string) {
+    super("Undo ‘Not for me’ before saving this product");
+    this.name = "RejectedListingCannotBeSavedError";
+  }
+}
+
+export class SavedListingLimitReachedError extends Error {
+  constructor(readonly limit = MAX_SAVED_LISTINGS_PER_TASK) {
+    super(`Keep at most ${limit} products in one purchase comparison`);
+    this.name = "SavedListingLimitReachedError";
   }
 }
 
@@ -35,6 +53,15 @@ export async function saveCandidateListing(options: {
     options.candidateListingId,
   );
   return options.db.transaction(async (tx) => {
+    const [task] = await tx
+      .select({ id: shoppingTasks.id })
+      .from(shoppingTasks)
+      .where(eq(shoppingTasks.id, taskId))
+      .for("update")
+      .limit(1);
+    if (task === undefined) {
+      throw new SavedListingNotAvailableError(candidateListingId);
+    }
     const [candidate] = await tx
       .select({ id: candidateListings.id })
       .from(candidateListings)
@@ -44,9 +71,43 @@ export async function saveCandidateListing(options: {
           eq(candidateListings.id, candidateListingId),
         ),
       )
+      .for("update")
       .limit(1);
     if (candidate === undefined) {
       throw new SavedListingNotAvailableError(candidateListingId);
+    }
+    const [rejected] = await tx
+      .select({ id: rejectedCandidateListings.candidateListingId })
+      .from(rejectedCandidateListings)
+      .where(
+        and(
+          eq(rejectedCandidateListings.taskId, taskId),
+          eq(rejectedCandidateListings.candidateListingId, candidateListingId),
+        ),
+      )
+      .limit(1);
+    if (rejected !== undefined) {
+      throw new RejectedListingCannotBeSavedError(candidateListingId);
+    }
+    const [existing] = await tx
+      .select({ savedAt: savedCandidateListings.savedAt })
+      .from(savedCandidateListings)
+      .where(
+        and(
+          eq(savedCandidateListings.taskId, taskId),
+          eq(savedCandidateListings.candidateListingId, candidateListingId),
+        ),
+      )
+      .limit(1);
+    if (existing !== undefined) {
+      return { created: false, savedAt: existing.savedAt };
+    }
+    const saved = await tx
+      .select({ candidateListingId: savedCandidateListings.candidateListingId })
+      .from(savedCandidateListings)
+      .where(eq(savedCandidateListings.taskId, taskId));
+    if (saved.length >= MAX_SAVED_LISTINGS_PER_TASK) {
+      throw new SavedListingLimitReachedError();
     }
     const [created] = await tx
       .insert(savedCandidateListings)
@@ -60,7 +121,7 @@ export async function saveCandidateListing(options: {
       .returning({ savedAt: savedCandidateListings.savedAt });
     if (created !== undefined)
       return { created: true, savedAt: created.savedAt };
-    const [existing] = await tx
+    const [winner] = await tx
       .select({ savedAt: savedCandidateListings.savedAt })
       .from(savedCandidateListings)
       .where(
@@ -70,10 +131,10 @@ export async function saveCandidateListing(options: {
         ),
       )
       .limit(1);
-    if (existing === undefined) {
+    if (winner === undefined) {
       throw new Error("Saved-listing retry winner was not visible");
     }
-    return { created: false, savedAt: existing.savedAt };
+    return { created: false, savedAt: winner.savedAt };
   });
 }
 

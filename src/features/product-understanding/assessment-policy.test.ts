@@ -79,6 +79,7 @@ function evidence(options: {
   propertyLabel: string;
   claim: string;
   value: unknown;
+  conceptId?: string | null;
   role?:
     | "listing"
     | "retailer"
@@ -121,7 +122,7 @@ function evidence(options: {
     candidateRunId: ids.run,
     candidateListingId: ids.listing,
     evidenceSourceId: ids.source,
-    conceptId: null,
+    conceptId: options.conceptId ?? null,
     support: "supported",
     observationKind:
       options.role === "visual" ? "visual_inference" : "source_assertion",
@@ -361,7 +362,21 @@ describe("criterion assessment guard", () => {
   });
 
   it("accepts comparative stretch evidence when the source states a comparison", () => {
+    const budgetItem = item({
+      label: "Budget",
+      strength: "preference",
+      targetSemantics: "stretch",
+      semanticValue: {
+        schemaVersion: 1,
+        kind: "money_stretch",
+        targetMinor: 5_000,
+        stretchCeilingMinor: 7_000,
+        currency: "GBP",
+        condition: "genuinely better for long sessions",
+      },
+    });
     const comparative = evidence({
+      conceptId: budgetItem.conceptId,
       propertyLabel: "Comparative long-session comfort",
       claim:
         "The independent review says this chair is better for long sessions than the previous model.",
@@ -373,19 +388,7 @@ describe("criterion assessment guard", () => {
       role: "independent_review",
     });
     const assessment = guardCriterionAssessment({
-      item: item({
-        label: "Budget",
-        strength: "preference",
-        targetSemantics: "stretch",
-        semanticValue: {
-          schemaVersion: 1,
-          kind: "money_stretch",
-          targetMinor: 5_000,
-          stretchCeilingMinor: 7_000,
-          currency: "GBP",
-          condition: "genuinely better for long sessions",
-        },
-      }),
+      item: budgetItem,
       listing,
       observations: [comparative],
       proposal: {
@@ -400,6 +403,85 @@ describe("criterion assessment guard", () => {
       relation: "conditional_stretch_supported",
       method: "guarded_model",
     });
+  });
+
+  it("uses the exact listing purchase price without confusing other money facts", () => {
+    const purchasePrice = item({
+      label: "Maximum price",
+      targetSemantics: "exact",
+      semanticValue: {
+        schemaVersion: 1,
+        kind: "money",
+        mode: "ceiling",
+        amountMinor: 5_000,
+        currency: "GBP",
+      },
+    });
+    const deliveryCost = evidence({
+      conceptId: purchasePrice.conceptId,
+      propertyLabel: "Delivery cost",
+      claim: "Delivery costs £5.",
+      value: {
+        schemaVersion: 1,
+        kind: "money",
+        amountMinor: 500,
+        currency: "GBP",
+      },
+    });
+    expect(
+      guardCriterionAssessment({
+        item: purchasePrice,
+        listing,
+        observations: [deliveryCost],
+        proposal: null,
+      }),
+    ).toMatchObject({
+      status: "conflicts",
+      relation: "above_ceiling",
+      explanation: expect.stringContaining("£15"),
+    });
+
+    const shippingBudget = item({
+      label: "Delivery cost",
+      targetSemantics: "exact",
+      semanticValue: {
+        schemaVersion: 1,
+        kind: "money",
+        mode: "ceiling",
+        amountMinor: 1_000,
+        currency: "GBP",
+      },
+    });
+    expect(
+      guardCriterionAssessment({
+        item: shippingBudget,
+        listing,
+        observations: [],
+        proposal: null,
+      }),
+    ).toMatchObject({
+      status: "uncertain",
+      relation: "price_not_observed",
+    });
+    const scopedShipping = evidence({
+      conceptId: shippingBudget.conceptId,
+      propertyLabel: "Delivery cost",
+      claim: "Delivery costs £5.",
+      value: {
+        schemaVersion: 1,
+        kind: "money",
+        amountMinor: 500,
+        currency: "GBP",
+      },
+    });
+    expect(
+      guardCriterionAssessment({
+        item: shippingBudget,
+        listing,
+        observations: [scopedShipping],
+        proposal: null,
+      }),
+    ).toMatchObject({ status: "meets", relation: "within_ceiling" });
   });
 
   it("does not let wireless evidence establish battery", () => {
@@ -433,23 +515,25 @@ describe("criterion assessment guard", () => {
   });
 
   it("does not let visual evidence hard-exclude a candidate", () => {
+    const sculptedProfile = item({
+      label: "Sculpted profile",
+      targetSemantics: "qualitative",
+      semanticValue: {
+        schemaVersion: 1,
+        kind: "qualitative",
+        mode: "text",
+        text: "chunky and sculpted",
+      },
+    });
     const visual = evidence({
+      conceptId: sculptedProfile.conceptId,
       propertyLabel: "Profile",
       claim: "The image appears flat",
       value: { schemaVersion: 1, kind: "text", text: "flat profile" },
       role: "visual",
     });
     const assessment = guardCriterionAssessment({
-      item: item({
-        label: "Sculpted profile",
-        targetSemantics: "qualitative",
-        semanticValue: {
-          schemaVersion: 1,
-          kind: "qualitative",
-          mode: "text",
-          text: "chunky and sculpted",
-        },
-      }),
+      item: sculptedProfile,
       listing,
       observations: [visual],
       proposal: {
@@ -464,12 +548,22 @@ describe("criterion assessment guard", () => {
   });
 
   it("requires admissible, criterion-specific boolean evidence", () => {
+    const wirelessCriterion = item({
+      label: "Wireless connectivity",
+      targetSemantics: "exact",
+      semanticValue: {
+        schemaVersion: 1,
+        kind: "boolean",
+        value: true,
+      },
+    });
     const wireless = (options: {
       value: boolean;
       role?: "listing" | "manufacturer" | "visual" | "other";
       propertyLabel?: string;
     }) =>
       evidence({
+        conceptId: wirelessCriterion.conceptId,
         role: options.role ?? "listing",
         propertyLabel: options.propertyLabel ?? "Wireless connectivity",
         claim: options.value
@@ -477,20 +571,9 @@ describe("criterion assessment guard", () => {
           : "The product is wired only.",
         value: { schemaVersion: 1, kind: "boolean", value: options.value },
       });
-    const wirelessItem = () =>
-      item({
-        label: "Wireless connectivity",
-        targetSemantics: "exact",
-        semanticValue: {
-          schemaVersion: 1,
-          kind: "boolean",
-          value: true,
-        },
-      });
-
     expect(
       guardCriterionAssessment({
-        item: wirelessItem(),
+        item: wirelessCriterion,
         listing,
         observations: [wireless({ value: false })],
         proposal: null,
@@ -498,7 +581,7 @@ describe("criterion assessment guard", () => {
     ).toMatchObject({ status: "conflicts", relation: "direct_contradiction" });
     expect(
       guardCriterionAssessment({
-        item: wirelessItem(),
+        item: wirelessCriterion,
         listing,
         observations: [wireless({ value: false, role: "visual" })],
         proposal: null,
@@ -509,7 +592,7 @@ describe("criterion assessment guard", () => {
     });
     expect(
       guardCriterionAssessment({
-        item: wirelessItem(),
+        item: wirelessCriterion,
         listing,
         observations: [wireless({ value: false, role: "other" })],
         proposal: null,
@@ -519,7 +602,7 @@ describe("criterion assessment guard", () => {
     const positive = wireless({ value: true });
     expect(
       guardCriterionAssessment({
-        item: wirelessItem(),
+        item: wirelessCriterion,
         listing,
         observations: [positive],
         proposal: null,
@@ -527,7 +610,7 @@ describe("criterion assessment guard", () => {
     ).toMatchObject({ status: "meets", relation: "direct_match" });
     expect(
       guardCriterionAssessment({
-        item: wirelessItem(),
+        item: wirelessCriterion,
         listing,
         observations: [
           positive,
@@ -541,7 +624,7 @@ describe("criterion assessment guard", () => {
     });
     expect(
       guardCriterionAssessment({
-        item: wirelessItem(),
+        item: wirelessCriterion,
         listing,
         observations: [positive, wireless({ value: true, role: "other" })],
         proposal: null,
@@ -575,24 +658,96 @@ describe("criterion assessment guard", () => {
     });
   });
 
+  it.each([
+    {
+      kind: "quantity",
+      value: {
+        schemaVersion: 1,
+        kind: "quantity",
+        amount: "40",
+        unit: "hours",
+        qualifier: "exact",
+      },
+    },
+    {
+      kind: "categorical",
+      value: {
+        schemaVersion: 1,
+        kind: "categorical",
+        values: ["red"],
+      },
+    },
+    {
+      kind: "text",
+      value: {
+        schemaVersion: 1,
+        kind: "text",
+        text: "unrelated product copy",
+      },
+    },
+  ])(
+    "does not publish hard meets or conflicts from another concept's $kind evidence",
+    ({ value }) => {
+      const hardCriterion = item({
+        label: "Quiet operation",
+        strength: "hard",
+        targetSemantics: "qualitative",
+        semanticValue: {
+          schemaVersion: 1,
+          kind: "qualitative",
+          mode: "text",
+          text: "quiet in a small flat",
+        },
+      });
+      const unrelated = evidence({
+        conceptId: randomUUID(),
+        propertyLabel: "Unrelated fact",
+        claim: "The source reports an unrelated product fact.",
+        value,
+        role: "manufacturer",
+      });
+      for (const status of ["meets", "conflicts"] as const) {
+        expect(
+          guardCriterionAssessment({
+            item: hardCriterion,
+            listing,
+            observations: [unrelated],
+            proposal: {
+              status,
+              relation: "unrelated_claim",
+              explanation: "An unrelated fact was cited.",
+              observations: [unrelated],
+            },
+          }),
+        ).toMatchObject({
+          status: "uncertain",
+          relation: "insufficient_relevant_evidence",
+          observationIds: [],
+        });
+      }
+    },
+  );
+
   it("keeps soft visual mismatches as watchouts without hard exclusion", () => {
+    const sculptedProfile = item({
+      label: "Sculpted profile",
+      strength: "preference",
+      targetSemantics: "exact",
+      semanticValue: {
+        schemaVersion: 1,
+        kind: "boolean",
+        value: true,
+      },
+    });
     const visual = evidence({
+      conceptId: sculptedProfile.conceptId,
       role: "visual",
       propertyLabel: "Visible profile",
       claim: "The image appears flat rather than sculpted.",
       value: { schemaVersion: 1, kind: "boolean", value: false },
     });
     const assessment = guardCriterionAssessment({
-      item: item({
-        label: "Sculpted profile",
-        strength: "preference",
-        targetSemantics: "exact",
-        semanticValue: {
-          schemaVersion: 1,
-          kind: "boolean",
-          value: true,
-        },
-      }),
+      item: sculptedProfile,
       listing,
       observations: [visual],
       proposal: null,
@@ -604,7 +759,19 @@ describe("criterion assessment guard", () => {
   });
 
   it("preserves review rating and volume instead of sorting on stars alone", () => {
+    const customerReviews = item({
+      label: "Customer reviews",
+      strength: "strong_preference",
+      targetSemantics: "qualitative",
+      semanticValue: {
+        schemaVersion: 1,
+        kind: "qualitative",
+        mode: "text",
+        text: "strong customer evidence",
+      },
+    });
     const aggregate = evidence({
+      conceptId: customerReviews.conceptId,
       propertyLabel: "Retailer review aggregate",
       claim: "Amazon reports 4.3/5 from 52,629 reviews.",
       value: {
@@ -617,17 +784,7 @@ describe("criterion assessment guard", () => {
       role: "retailer_review_aggregate",
     });
     const assessment = guardCriterionAssessment({
-      item: item({
-        label: "Customer reviews",
-        strength: "strong_preference",
-        targetSemantics: "qualitative",
-        semanticValue: {
-          schemaVersion: 1,
-          kind: "qualitative",
-          mode: "text",
-          text: "strong customer evidence",
-        },
-      }),
+      item: customerReviews,
       listing,
       observations: [aggregate],
       proposal: {
@@ -642,7 +799,19 @@ describe("criterion assessment guard", () => {
   });
 
   it("keeps long-workday comfort uncertain even with a useful independent report", () => {
+    const longWorkdayComfort = item({
+      label: "Comfort for long workdays",
+      strength: "strong_preference",
+      targetSemantics: "qualitative",
+      semanticValue: {
+        schemaVersion: 1,
+        kind: "qualitative",
+        mode: "text",
+        text: "comfortable for long workdays",
+      },
+    });
     const support = evidence({
+      conceptId: longWorkdayComfort.conceptId,
       propertyLabel: "Palm support",
       claim: "The independent review reports strong palm support.",
       value: {
@@ -653,17 +822,7 @@ describe("criterion assessment guard", () => {
       role: "independent_review",
     });
     const assessment = guardCriterionAssessment({
-      item: item({
-        label: "Comfort for long workdays",
-        strength: "strong_preference",
-        targetSemantics: "qualitative",
-        semanticValue: {
-          schemaVersion: 1,
-          kind: "qualitative",
-          mode: "text",
-          text: "comfortable for long workdays",
-        },
-      }),
+      item: longWorkdayComfort,
       listing,
       observations: [support],
       proposal: {
@@ -783,5 +942,100 @@ describe("criterion assessment guard", () => {
       ],
     });
     expect(ordered.map(({ id }) => id)).toEqual([unresolved.id, conflicted.id]);
+  });
+
+  it("places a resolved must-have before ordinary preference support", () => {
+    const hard = item({
+      label: "Established brand",
+      strength: "hard",
+      targetSemantics: "qualitative",
+      semanticValue: {
+        schemaVersion: 1,
+        kind: "qualitative",
+        mode: "text",
+        text: "good brands only",
+      },
+    });
+    const preference = item({
+      label: "Quiet clicks",
+      strength: "preference",
+      targetSemantics: "qualitative",
+      semanticValue: {
+        schemaVersion: 1,
+        kind: "qualitative",
+        mode: "text",
+        text: "quiet clicks preferred",
+      },
+    });
+    const brief = shoppingBriefV1Schema.parse({
+      schemaVersion: 1,
+      taskId: ids.task,
+      revision: 1n,
+      market: { country: "GB", language: "en-GB", currency: "GBP" },
+      items: [hard, preference],
+    });
+    const generic = persistedCandidateListingSchema.parse({
+      ...listing,
+      id: randomUUID(),
+      providerResultId: "generic",
+      title: "Generic quiet mouse",
+    });
+    const established = persistedCandidateListingSchema.parse({
+      ...listing,
+      id: randomUUID(),
+      providerResultId: "established",
+      title: "Established mouse",
+    });
+    const assessment = (options: {
+      candidateListingId: string;
+      criterionId: string;
+      status: "meets" | "uncertain";
+    }) =>
+      criterionAssessmentV1Schema.parse({
+        schemaVersion: 1,
+        id: randomUUID(),
+        researchRunId: ids.research,
+        taskId: ids.task,
+        taskRevision: 1n,
+        candidateRunId: ids.run,
+        candidateListingId: options.candidateListingId,
+        criterionId: options.criterionId,
+        status: options.status,
+        relation: options.status === "meets" ? "supported" : "unknown",
+        explanation:
+          options.status === "meets" ? "Supported." : "Still unknown.",
+        method: "deterministic",
+        model: null,
+        promptVersion: null,
+        observationIds: [],
+        createdAt: new Date("2026-01-01T00:00:00Z"),
+      });
+    const ordered = orderCandidatesByAssessments({
+      brief,
+      candidates: [generic, established],
+      assessments: [
+        assessment({
+          candidateListingId: generic.id,
+          criterionId: hard.criterionId,
+          status: "uncertain",
+        }),
+        assessment({
+          candidateListingId: generic.id,
+          criterionId: preference.criterionId,
+          status: "meets",
+        }),
+        assessment({
+          candidateListingId: established.id,
+          criterionId: hard.criterionId,
+          status: "meets",
+        }),
+        assessment({
+          candidateListingId: established.id,
+          criterionId: preference.criterionId,
+          status: "uncertain",
+        }),
+      ],
+    });
+    expect(ordered.map(({ id }) => id)).toEqual([established.id, generic.id]);
   });
 });

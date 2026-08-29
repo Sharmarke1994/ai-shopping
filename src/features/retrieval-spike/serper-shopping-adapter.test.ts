@@ -311,7 +311,7 @@ describe("Serper shopping adapter", () => {
     });
   });
 
-  it("bounds organic lookups to three distinct leading merchants", async () => {
+  it("bounds destination enrichment to the leading distinct merchant", async () => {
     const fetchSpy = vi.fn(
       async (input: string | URL | Request, init?: RequestInit) => {
         void init;
@@ -353,22 +353,21 @@ describe("Serper shopping adapter", () => {
       },
     );
     const fetchImpl = fetchSpy as unknown as typeof fetch;
+    const surfaces: string[] = [];
     const provider = new SerperShoppingAdapter({
       apiKey: "test-key",
       fetchImpl,
+      onRequest: (surface) => surfaces.push(surface),
     });
 
     await provider.search(query());
 
-    expect(fetchImpl).toHaveBeenCalledTimes(4);
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
     const organicBodies = fetchSpy.mock.calls
       .slice(1)
       .map(([, init]) => JSON.parse(String(init?.body)).q);
-    expect(organicBodies).toEqual([
-      '"A one" A Shop',
-      '"B one" B Shop',
-      '"C one" C Shop',
-    ]);
+    expect(organicBodies).toEqual(['"A one" A Shop']);
+    expect(surfaces).toEqual(["shopping", "merchant_resolution"]);
   });
 
   it("keeps ambiguous/non-GBP price text but does not manufacture money", () => {

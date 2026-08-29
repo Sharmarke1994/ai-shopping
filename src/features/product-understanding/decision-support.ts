@@ -10,7 +10,16 @@ import type { CurrentDecisionSupport } from "./persistence";
 
 export type DecisionSupportCandidate = Readonly<{
   listing: PersistedCandidateListing;
+  readiness: "qualified" | "needs_verification" | "trade_off" | "ineligible";
+  researchState: "available" | "researching" | "complete" | "failed";
   strongestSupported: boolean;
+  supportedMustHaveCount: number;
+  mustHaveCount: number;
+  unresolvedMustHaves: readonly Readonly<{
+    criterionId: string;
+    label: string;
+    explanation: string;
+  }>[];
   whyItFits: readonly string[];
   watchouts: readonly string[];
   unknowns: readonly string[];
@@ -23,9 +32,18 @@ export type DecisionSupportCandidate = Readonly<{
 
 export type SavedComparison = Readonly<{
   candidates: readonly PersistedCandidateListing[];
+  researchStates: readonly Readonly<{
+    candidateListingId: string;
+    state: DecisionSupportCandidate["researchState"];
+  }>[];
+  purchaseSummaries: readonly Readonly<{
+    candidateListingId: string;
+    priceRelationship: string;
+  }>[];
   rows: readonly Readonly<{
     criterionId: string;
     label: string;
+    strength: BriefItemV1["strength"];
     cells: readonly Readonly<{
       candidateListingId: string;
       status: CriterionAssessmentV1["status"];
@@ -34,6 +52,16 @@ export type SavedComparison = Readonly<{
     }>[];
   }>[];
   judgement: string;
+  decisionGaps: readonly DecisionGap[];
+}>;
+
+export type DecisionGap = Readonly<{
+  criterionId: string;
+  label: string;
+  strength: BriefItemV1["strength"];
+  candidateListingIds: readonly string[];
+  candidateTitles: readonly string[];
+  explanation: string;
 }>;
 
 function assessmentsForCandidate(
@@ -146,13 +174,158 @@ function hasConflict(assessments: readonly CriterionAssessmentV1[]) {
   return assessments.some(({ status }) => status === "conflicts");
 }
 
+function assessmentForCriterion(
+  assessments: readonly CriterionAssessmentV1[],
+  criterionId: string,
+) {
+  return assessments.find(
+    (assessment) => assessment.criterionId === criterionId,
+  );
+}
+
+function unresolvedMustHaves(options: {
+  items: readonly BriefItemV1[];
+  assessments: readonly CriterionAssessmentV1[];
+}) {
+  return options.items
+    .filter(({ strength }) => strength === "hard")
+    .flatMap((item) => {
+      const assessment = assessmentForCriterion(
+        options.assessments,
+        item.criterionId,
+      );
+      if (
+        assessment?.status === "meets" ||
+        assessment?.status === "conflicts"
+      ) {
+        return [];
+      }
+      return [
+        {
+          criterionId: item.criterionId,
+          label: item.conceptLabel,
+          explanation:
+            assessment?.explanation ??
+            "This must-have has not yet been assessed for this product.",
+        },
+      ];
+    });
+}
+
+function readinessForCandidate(options: {
+  items: readonly BriefItemV1[];
+  assessments: readonly CriterionAssessmentV1[];
+}) {
+  if (purchaseExclusion(options.items, options.assessments)) {
+    return "ineligible" as const;
+  }
+  if (unresolvedMustHaves(options).length > 0) {
+    return "needs_verification" as const;
+  }
+  if (
+    options.assessments.some((assessment) => {
+      if (assessment.status !== "conflicts") return false;
+      return (
+        options.items.find(
+          ({ criterionId }) => criterionId === assessment.criterionId,
+        )?.strength !== "hard"
+      );
+    })
+  ) {
+    return "trade_off" as const;
+  }
+  return "qualified" as const;
+}
+
+function unresolvedCriterionIds(options: {
+  items: readonly BriefItemV1[];
+  assessments: readonly CriterionAssessmentV1[];
+}) {
+  return options.items
+    .filter((item) => {
+      const assessment = assessmentForCriterion(
+        options.assessments,
+        item.criterionId,
+      );
+      return (
+        assessment === undefined ||
+        assessment.status === "uncertain" ||
+        assessment.status === "not_applicable"
+      );
+    })
+    .map(({ criterionId }) => criterionId);
+}
+
+function candidateResearchState(options: {
+  candidateListingId: string;
+  items: readonly BriefItemV1[];
+  assessments: readonly CriterionAssessmentV1[];
+  coverage: CurrentDecisionSupport["deepResearchCoverage"];
+}) {
+  const unresolved = new Set(
+    unresolvedCriterionIds({
+      items: options.items,
+      assessments: options.assessments,
+    }),
+  );
+  if (unresolved.size === 0) return "complete" as const;
+  const relevant = options.coverage.filter(
+    ({ candidateListingId }) =>
+      candidateListingId === options.candidateListingId,
+  );
+  if (
+    relevant.some(
+      ({ runStatus, criterionIds }) =>
+        runStatus === "running" &&
+        criterionIds.some((criterionId) => unresolved.has(criterionId)),
+    )
+  ) {
+    return "researching" as const;
+  }
+  const terminalCriterionIds = new Set(
+    relevant
+      .filter(({ runStatus }) => runStatus !== "running")
+      .flatMap(({ criterionIds }) => criterionIds),
+  );
+  if (
+    [...unresolved].some(
+      (criterionId) => !terminalCriterionIds.has(criterionId),
+    )
+  ) {
+    return "available" as const;
+  }
+  return relevant.some(
+    ({ runStatus, status, criterionIds }) =>
+      runStatus !== "running" &&
+      status === "failed" &&
+      criterionIds.some((criterionId) => unresolved.has(criterionId)),
+  )
+    ? ("failed" as const)
+    : ("complete" as const);
+}
+
 function candidateDecision(options: {
   listing: PersistedCandidateListing;
+  items: readonly BriefItemV1[];
   assessments: readonly CriterionAssessmentV1[];
   observationMap: ReadonlyMap<string, ProductObservationV1>;
   sourceMap: ReadonlyMap<string, EvidenceSourceV1>;
   strongestSupported: boolean;
+  researchState: DecisionSupportCandidate["researchState"];
 }): DecisionSupportCandidate {
+  const unresolved = unresolvedMustHaves({
+    items: options.items,
+    assessments: options.assessments,
+  });
+  const mustHaveCount = options.items.filter(
+    ({ strength }) => strength === "hard",
+  ).length;
+  const supportedMustHaveCount = options.items.filter(
+    (item) =>
+      item.strength === "hard" &&
+      assessmentForCriterion(options.assessments, item.criterionId)?.status ===
+        "meets",
+  ).length;
   const whyItFits = conciseUnique(
     options.assessments
       .filter(({ status }) => status === "meets")
@@ -170,7 +343,12 @@ function candidateDecision(options: {
   );
   const unknowns = conciseUnique(
     options.assessments
-      .filter(({ status }) => status === "uncertain")
+      .filter(
+        ({ status, criterionId }) =>
+          status === "uncertain" &&
+          options.items.find((item) => item.criterionId === criterionId)
+            ?.strength !== "hard",
+      )
       .map(({ explanation }) => explanation),
     3,
   );
@@ -186,7 +364,15 @@ function candidateDecision(options: {
   }
   return {
     listing: options.listing,
+    readiness: readinessForCandidate({
+      items: options.items,
+      assessments: options.assessments,
+    }),
+    researchState: options.researchState,
     strongestSupported: options.strongestSupported,
+    supportedMustHaveCount,
+    mustHaveCount,
+    unresolvedMustHaves: unresolved,
     whyItFits,
     watchouts,
     unknowns,
@@ -198,20 +384,75 @@ function candidateDecision(options: {
   };
 }
 
+function decisionGaps(options: {
+  items: readonly BriefItemV1[];
+  candidates: readonly PersistedCandidateListing[];
+  assessments: readonly CriterionAssessmentV1[];
+  limit?: number;
+}) {
+  const strengthOrder: Record<BriefItemV1["strength"], number> = {
+    hard: 0,
+    strong_preference: 1,
+    preference: 2,
+  };
+  return options.items
+    .flatMap((item) => {
+      const unresolvedCandidates = options.candidates.filter((candidate) => {
+        const assessment = options.assessments.find(
+          (entry) =>
+            entry.candidateListingId === candidate.id &&
+            entry.criterionId === item.criterionId,
+        );
+        return (
+          assessment === undefined ||
+          assessment.status === "uncertain" ||
+          assessment.status === "not_applicable"
+        );
+      });
+      if (unresolvedCandidates.length === 0) return [];
+      const names = unresolvedCandidates.map(({ title }) => title);
+      return [
+        {
+          criterionId: item.criterionId,
+          label: item.conceptLabel,
+          strength: item.strength,
+          candidateListingIds: unresolvedCandidates.map(({ id }) => id),
+          candidateTitles: names,
+          explanation:
+            item.strength === "hard"
+              ? `${item.conceptLabel} still needs verification for ${names.length === 1 ? names[0] : `${names.length} contenders`}.`
+              : `${item.conceptLabel} remains unresolved where it could separate the leading options.`,
+        } satisfies DecisionGap,
+      ];
+    })
+    .sort(
+      (left, right) =>
+        strengthOrder[left.strength] - strengthOrder[right.strength] ||
+        right.candidateListingIds.length - left.candidateListingIds.length ||
+        left.label.localeCompare(right.label),
+    )
+    .slice(0, options.limit ?? 3);
+}
+
+function readableList(values: readonly string[]) {
+  const unique = [...new Set(values)];
+  if (unique.length <= 1) return unique[0] ?? "";
+  if (unique.length === 2) return `${unique[0]} and ${unique[1]}`;
+  return `${unique.slice(0, -1).join(", ")}, and ${unique.at(-1)}`;
+}
+
 function buildComparison(options: {
   support: CurrentDecisionSupport;
-  savedListingIds: ReadonlySet<string>;
-  ordered: readonly PersistedCandidateListing[];
+  savedCandidates: readonly PersistedCandidateListing[];
   observationMap: ReadonlyMap<string, ProductObservationV1>;
   sourceMap: ReadonlyMap<string, EvidenceSourceV1>;
 }): SavedComparison | null {
-  const candidates = options.ordered
-    .filter(({ id }) => options.savedListingIds.has(id))
-    .slice(0, 4);
+  const candidates = options.savedCandidates;
   if (candidates.length < 2) return null;
   const rows = options.support.brief.items.map((item) => ({
     criterionId: item.criterionId,
     label: item.conceptLabel,
+    strength: item.strength,
     cells: candidates.map((candidate) => {
       const assessment = options.support.assessments.find(
         (entry) =>
@@ -242,28 +483,161 @@ function buildComparison(options: {
       };
     }),
   }));
+  const moneyItems = options.support.brief.items.filter(({ semanticValue }) =>
+    ["money", "money_stretch"].includes(semanticValue.kind),
+  );
+  const purchaseSummaries = candidates.map((candidate) => {
+    const assessment = moneyItems
+      .map((item) =>
+        options.support.assessments.find(
+          (entry) =>
+            entry.candidateListingId === candidate.id &&
+            entry.criterionId === item.criterionId,
+        ),
+      )
+      .find((entry) => entry !== undefined);
+    return {
+      candidateListingId: candidate.id,
+      priceRelationship:
+        assessment?.explanation ??
+        "Its observed price has not been related to a stated target.",
+    };
+  });
+  const researchStates = candidates.map((candidate) => {
+    const assessments = assessmentsForCandidate(
+      options.support.assessments,
+      candidate.id,
+    );
+    return {
+      candidateListingId: candidate.id,
+      state: candidateResearchState({
+        candidateListingId: candidate.id,
+        items: options.support.brief.items,
+        assessments,
+        coverage: options.support.deepResearchCoverage,
+      }),
+    };
+  });
+  const gaps = decisionGaps({
+    items: options.support.brief.items,
+    candidates,
+    assessments: options.support.assessments,
+  });
   const [strongest] = candidates;
-  const judgement = `${strongest!.title} currently leads the saved comparison on the deterministic ordering, with its strongest differences shown row by row. The evidence does not establish a decisive winner beyond those differences; review the watchouts and unknown rows before choosing.`;
-  return { candidates, rows, judgement };
+  const strongestAssessments = assessmentsForCandidate(
+    options.support.assessments,
+    strongest!.id,
+  );
+  const strongestReadiness = readinessForCandidate({
+    items: options.support.brief.items,
+    assessments: strongestAssessments,
+  });
+  const leaderAdvantages = rows.filter((row) => {
+    const leader = row.cells.find(
+      ({ candidateListingId }) => candidateListingId === strongest!.id,
+    );
+    return (
+      leader?.status === "meets" &&
+      row.cells.some(
+        ({ candidateListingId, status }) =>
+          candidateListingId !== strongest!.id && status !== "meets",
+      )
+    );
+  });
+  const challengerAdvantages = rows.flatMap((row) => {
+    const leader = row.cells.find(
+      ({ candidateListingId }) => candidateListingId === strongest!.id,
+    );
+    if (leader?.status === "meets") return [];
+    const challengers = row.cells
+      .filter(
+        ({ candidateListingId, status }) =>
+          candidateListingId !== strongest!.id && status === "meets",
+      )
+      .map(({ candidateListingId }) =>
+        candidates.find(({ id }) => id === candidateListingId),
+      )
+      .filter((candidate) => candidate !== undefined);
+    return challengers.length === 0
+      ? []
+      : [{ label: row.label, titles: challengers.map(({ title }) => title) }];
+  });
+  const leaderHardGap = gaps.find(
+    ({ strength, candidateListingIds }) =>
+      strength === "hard" && candidateListingIds.includes(strongest!.id),
+  );
+  const leaderReason =
+    leaderAdvantages.length === 0
+      ? `The current evidence does not show a decisive criterion advantage for ${strongest!.title}.`
+      : `${strongest!.title} has stronger support on ${readableList(
+          leaderAdvantages.slice(0, 2).map(({ label }) => label),
+        )}.`;
+  const alternativeReason =
+    challengerAdvantages.length === 0
+      ? ""
+      : ` ${readableList(challengerAdvantages[0]!.titles)} ${
+          challengerAdvantages[0]!.titles.length === 1 ? "has" : "have"
+        } stronger support on ${challengerAdvantages[0]!.label}.`;
+  const judgement =
+    leaderAdvantages.length === 0 && challengerAdvantages.length === 0
+      ? gaps[0] === undefined
+        ? "The current evidence does not meaningfully separate these saved options. Their supported criteria are presently equivalent, so no winner is claimed."
+        : `The current evidence does not meaningfully separate these saved options. ${gaps[0].label} is the most important fact that could change the choice.`
+      : leaderHardGap !== undefined
+        ? `${strongest!.title} is promising, but it is not ready to choose on evidence alone: ${leaderHardGap.label} still needs verification. ${leaderReason}${alternativeReason}`
+        : strongestReadiness === "trade_off"
+          ? `${leaderReason}${alternativeReason} It currently leads overall, but carries an evidenced preference trade-off.`
+          : `${leaderReason}${alternativeReason} It currently has the strongest support against today’s brief; personal fit and explicit unknowns still remain yours to judge.`;
+  return {
+    candidates,
+    researchStates,
+    purchaseSummaries,
+    rows,
+    judgement,
+    decisionGaps: gaps,
+  };
 }
 
 export function buildDecisionSupport(options: {
   support: CurrentDecisionSupport;
   savedListingIds: ReadonlySet<string>;
+  savedListings?: readonly PersistedCandidateListing[];
+  rejectedListingIds?: ReadonlySet<string>;
 }) {
+  const rejectedListingIds = options.rejectedListingIds ?? new Set<string>();
   const assessmentCandidateIds = new Set(
     options.support.assessments.map(
       ({ candidateListingId }) => candidateListingId,
     ),
   );
-  const assessedCandidates = options.support.candidates.filter(({ id }) =>
-    assessmentCandidateIds.has(id),
+  const assessedCandidates = options.support.candidates.filter(
+    ({ id }) => assessmentCandidateIds.has(id) && !rejectedListingIds.has(id),
   );
   const ordered = orderCandidatesByAssessments({
     brief: options.support.brief,
     candidates: assessedCandidates,
     assessments: options.support.assessments,
   });
+  const savedCandidates = (
+    options.savedListings ?? options.support.candidates
+  ).filter(
+    ({ id }) => options.savedListingIds.has(id) && !rejectedListingIds.has(id),
+  );
+  if (savedCandidates.length > 4) {
+    throw new Error("Saved-listing comparison limit invariant was violated");
+  }
+  const assessedSavedCandidates = orderCandidatesByAssessments({
+    brief: options.support.brief,
+    candidates: savedCandidates.filter(({ id }) =>
+      assessmentCandidateIds.has(id),
+    ),
+    assessments: options.support.assessments,
+  });
+  const assessedSavedIds = new Set(assessedSavedCandidates.map(({ id }) => id));
+  const orderedSavedCandidates = [
+    ...assessedSavedCandidates,
+    ...savedCandidates.filter(({ id }) => !assessedSavedIds.has(id)),
+  ];
   const viable = groupExactOffers(ordered).filter(
     (listing) =>
       !purchaseExclusion(
@@ -301,49 +675,132 @@ export function buildDecisionSupport(options: {
   );
   const topOptions = recommendationPool
     .slice(0, recommendationLimit)
-    .map((listing, index) =>
-      candidateDecision({
+    .map((listing) => {
+      const assessments = assessmentsForCandidate(
+        options.support.assessments,
+        listing.id,
+      );
+      return candidateDecision({
         listing,
-        assessments: assessmentsForCandidate(
-          options.support.assessments,
-          listing.id,
-        ),
+        items: options.support.brief.items,
+        assessments,
         observationMap,
         sourceMap,
-        strongestSupported:
-          index === 0 &&
-          assessmentsForCandidate(options.support.assessments, listing.id).some(
-            ({ status }) => status === "meets",
-          ),
-      }),
-    );
-  return {
-    researchStatus:
-      options.support.researchRuns.length === 0
-        ? ("not_started" as const)
-        : options.support.researchRuns.some(
-              ({ status }) => status === "running",
-            )
-          ? ("researching" as const)
-          : options.support.researchRuns.every(
-                ({ status }) => status === "failed",
+        strongestSupported: false,
+        researchState: candidateResearchState({
+          candidateListingId: listing.id,
+          items: options.support.brief.items,
+          assessments,
+          coverage: options.support.deepResearchCoverage,
+        }),
+      });
+    });
+  const hasHardResolvedOption = topOptions.some(
+    ({ readiness }) => readiness === "qualified" || readiness === "trade_off",
+  );
+  const firstTwoHaveDifferentAssessmentStates =
+    topOptions.length < 2 ||
+    options.support.brief.items.some((item) => {
+      const first = assessmentForCriterion(
+        topOptions[0] === undefined
+          ? []
+          : assessmentsForCandidate(
+              options.support.assessments,
+              topOptions[0].listing.id,
+            ),
+        item.criterionId,
+      );
+      const second = assessmentForCriterion(
+        topOptions[1] === undefined
+          ? []
+          : assessmentsForCandidate(
+              options.support.assessments,
+              topOptions[1].listing.id,
+            ),
+        item.criterionId,
+      );
+      return (first?.status ?? "uncertain") !== (second?.status ?? "uncertain");
+    });
+  const finalizedTopOptions = topOptions.map((option, index) => ({
+    ...option,
+    strongestSupported:
+      index === 0 &&
+      hasHardResolvedOption &&
+      firstTwoHaveDifferentAssessmentStates &&
+      option.readiness !== "needs_verification" &&
+      option.whyItFits.length > 0,
+  }));
+  const currentGaps = decisionGaps({
+    items: options.support.brief.items,
+    candidates: finalizedTopOptions.map(({ listing }) => listing).slice(0, 3),
+    assessments: options.support.assessments,
+  });
+  const firstPassRuns = options.support.researchRuns.filter(
+    ({ phase }) => phase === "first_pass" || phase === undefined,
+  );
+  const deepeningRuns = options.support.researchRuns.filter(
+    ({ phase }) => phase === "deepening",
+  );
+  const hasCurrentAssessments = options.support.assessments.length > 0;
+  const researchStatus =
+    firstPassRuns.length === 0
+      ? ("not_started" as const)
+      : firstPassRuns.some(({ status }) => status === "running") &&
+          !hasCurrentAssessments
+        ? ("researching" as const)
+        : !hasCurrentAssessments &&
+            firstPassRuns.every(({ status }) => status === "failed")
+          ? ("failed" as const)
+          : firstPassRuns.some(
+                ({ status }) => status === "partial" || status === "failed",
               )
-            ? ("failed" as const)
-            : options.support.researchRuns.some(
-                  ({ status }) => status === "partial" || status === "failed",
-                )
+            ? ("partial" as const)
+            : ("ready" as const);
+  const deepResearchStatus =
+    currentGaps.length === 0
+      ? ("not_needed" as const)
+      : deepeningRuns.length === 0
+        ? ("available" as const)
+        : deepeningRuns.some(({ status }) => status === "running")
+          ? ("researching" as const)
+          : deepeningRuns.some(({ status }) => status === "succeeded")
+            ? deepeningRuns.some(
+                ({ status }) => status === "partial" || status === "failed",
+              )
               ? ("partial" as const)
-              : ("ready" as const),
+              : ("complete" as const)
+            : ("failed" as const);
+  return {
+    researchStatus,
+    deepResearchStatus,
+    researchActivity: {
+      firstPassEvidenceCalls: firstPassRuns.reduce(
+        (total, run) => total + run.plannedSearchCount,
+        0,
+      ),
+      deepeningEvidenceCalls: deepeningRuns.reduce(
+        (total, run) => total + run.plannedSearchCount,
+        0,
+      ),
+      productUnderstandingCalls: options.support.researchRuns.reduce(
+        (total, run) => total + run.selectedCandidateCount,
+        0,
+      ),
+    },
     researchedCandidateCount: new Set(
       options.support.assessments.map(
         ({ candidateListingId }) => candidateListingId,
       ),
     ).size,
-    topOptions,
+    sectionMode: hasHardResolvedOption
+      ? ("qualified_options" as const)
+      : ("verification_needed" as const),
+    excludedCandidateCount: ordered.length - viable.length,
+    decisionGaps: currentGaps,
+    topOptions: finalizedTopOptions,
     comparison: buildComparison({
       support: options.support,
-      savedListingIds: options.savedListingIds,
-      ordered,
+      savedCandidates: orderedSavedCandidates,
       observationMap,
       sourceMap,
     }),
