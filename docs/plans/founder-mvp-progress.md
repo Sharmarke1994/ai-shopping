@@ -401,15 +401,26 @@ branch recorded above. The durable execution contract is
   mutation or downstream provider work occurred. This is diagnostic evidence,
   not release acceptance; Attempt 3 is authorized only to exercise the still
   untested V0-09 layers, with no production context-acquisition changes.
+- Attempt 3 was the one independently authorized final full Terra + Serper
+  proof, claimed at `2026-08-29T22:29:02.934Z` and failed at the ergonomic-mouse
+  founder-intent semantic gate after V0-09 retrieval/evidence work had begun.
+  Context, action, Shopping, organic evidence and product-understanding calls
+  completed; four page fetches failed and no fetched document or destination
+  receipt was accepted. The proof detected that the conditional wireless/battery
+  request had been represented with `Battery life` as a hard criterion, which
+  reverses/invents the protected founder semantics. This is not a V0-09 source
+  depth defect and no production context, evaluator or V0-04 change is allowed.
+  The enriched sanitized diagnostic is preserved in the primary failure files;
+  the durable marker now refuses Attempt 4.
 
 ## Next validated checkpoints
 
-1. Preserve Attempts 1 and 2, claim exactly one independent-review-authorized
-   Attempt 3, and retain its enriched context proposal diagnostic if it fails.
-2. If Attempt 3 reaches V0-09, preserve its exact success/failure artifact;
-   otherwise classify the inherited context boundary as the blocker. Do not
-   patch production context acquisition or create Attempt 4.
-3. Commit/push only the proof-harness/ledger/evidence delta, obtain exact-head
+1. Preserve the immutable Attempt 1, Attempt 2 and Attempt 3 artifacts and
+   their non-resettable markers. Attempt 3 did not meet release acceptance.
+2. Treat the earliest evidenced blocker as the inherited V0-05 founder-intent
+   semantic interpretation surfaced by the proof predicate; do not patch it
+   inside V0-09 and do not create Attempt 4.
+3. Commit/push only the exact proof evidence and ledger delta, obtain exact-head
    CI, stop for independent review, keep PR #13 draft/unmerged and do not begin
    V0-10.
 
@@ -436,7 +447,7 @@ branch recorded above. The durable execution contract is
 ## Latest verification
 
 - `pnpm check`: formatting, lint, generated route types, strict TypeScript,
-  341/341 deterministic unit/component tests and the production build pass on
+  342/342 deterministic unit/component tests and the production build pass on
   the corrected tree.
 - Focused page-persistence PostgreSQL regression: 12/12 passes, including the
   first-pass prioritized subset and exact discovering-attempt page scope.
@@ -473,11 +484,10 @@ branch recorded above. The durable execution contract is
   replay conflict occurred. No semantic product result was produced and no
   evaluator was weakened.
 - The original sanitized failure and marker are preserved under
-  `docs/evals/v0-09-live-founder-proof-*-prior.*`; the post-correction marker
-  and failure are under the primary `docs/evals/v0-09-live-founder-proof-*`
-  names. The post-correction disposable database was destroyed with zero
-  cleanup errors. The failure is diagnostic only and the one authorized
-  post-correction run is consumed.
+  `docs/evals/v0-09-live-founder-proof-*-prior.*`; Attempt 2 is preserved under
+  `docs/evals/v0-09-live-founder-proof-*-attempt-2.*`; Attempt 3 remains under
+  the primary names. Attempts 2 and 3 destroyed their disposable databases
+  with zero cleanup errors. All failures are diagnostic only.
 - Post-correction proof attempt `d1e01d17-5116-4e56-bc0c-6e8ca6d75e6a` ran at
   `2026-08-29T17:11:44.503Z` and stopped in ergonomic-mouse interpretation.
   The first call was rejected as `invalid_state_patch`; the one safe retry was
@@ -486,10 +496,22 @@ branch recorded above. The durable execution contract is
   Shopping, evidence, page, model or destination calls, an empty revision-0
   brief, and no persisted SearchRun. This is a model-contract/provider result,
   not rate-limit or timeout noise; no speculative correction is authorized.
-- Exact diagnostic head `4be44ded367efec6a650e29a7b9649f8520c57a1`
-  passed GitHub quality, pinned PostgreSQL persistence and browser-smoke in run
-  `33257880181`. Draft stacked PR #13 remains mergeable and unmerged. The
-  following delivery commit changes only this durable CI/progress ledger.
+- Final independent-review-authorized Attempt 3
+  `4ac724de-6576-49a3-b9b5-e419c45829f5` ran at
+  `2026-08-29T22:30:23.817Z` and reached V0-09 before failing the ergonomic-
+  mouse founder-intent semantic gate. It completed 2 interpretation, 2 action,
+  6 Shopping, 11 organic evidence-search and 11 product-understanding logical
+  provider operations; 4 page-fetch attempts failed, no fetched document was
+  admitted, and no destination call began. The protected Battery life
+  condition was represented as a hard criterion rather than the requested
+  conditional wireless preference, so release acceptance is false. The exact
+  sanitized diagnostic is `docs/evals/v0-09-live-founder-proof-failure.json`
+  with its Markdown companion; its marker records both prior attempt IDs and
+  permanently refuses Attempt 4.
+- Exact diagnostic head `259722f` passed GitHub quality, pinned PostgreSQL
+  persistence and browser-smoke in run `33278612605`. Draft stacked PR #13
+  remains mergeable and unmerged. No production context-acquisition code,
+  prompt or schema changed in the proof attempt.
 
 ## Exact resume instructions
 
@@ -509,8 +531,8 @@ branch recorded above. The durable execution contract is
 5. Do not fetch arbitrary user URLs, crawl links, create ProductIdentity,
    substitute another merchant, add auth/deployment/checkout/affiliate work or
    begin V0-10.
-6. The original proof (Attempt 1) and post-correction proof (Attempt 2) remain
-   immutable diagnostics. One final independent-review-authorized Attempt 3 is
-   allowed from this checkpoint; after it, preserve the complete three-attempt
-   ledger, keep PR #13 draft/unmerged, leave the worktree clean and stop for
-   independent review. Do not begin V0-10.
+6. Attempts 1, 2 and 3 are immutable diagnostics. Attempt 3 is the final
+   independent-review-authorized run and did not satisfy release acceptance.
+   Preserve the complete three-attempt ledger, keep PR #13 draft/unmerged,
+   leave the worktree clean and stop for independent review. Do not begin
+   V0-10 or attempt another live proof from this checkpoint.

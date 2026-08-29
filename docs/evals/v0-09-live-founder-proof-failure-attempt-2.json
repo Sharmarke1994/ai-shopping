@@ -1,0 +1,167 @@
+{
+  "schemaVersion": 2,
+  "proofMode": "fresh_four_category_v009_release_failed",
+  "attemptId": "d1e01d17-5116-4e56-bc0c-6e8ca6d75e6a",
+  "generatedAt": "2026-08-29T17:11:44.503Z",
+  "models": {
+    "contextAcquisition": "gpt-5.6-terra",
+    "productUnderstanding": "gpt-5.6-terra"
+  },
+  "failedCase": "ergonomic-mouse",
+  "failedSessionId": "d0783ffb-38d1-4b00-9451-c9b713bcd317",
+  "completedFlows": [],
+  "activeCaseSnapshot": {
+    "taskId": "50eedc3f-7606-4181-bc80-59753176eeff",
+    "currentRevision": "0",
+    "brief": {
+      "schemaVersion": 1,
+      "taskId": "50eedc3f-7606-4181-bc80-59753176eeff",
+      "revision": "0",
+      "market": {
+        "country": "GB",
+        "language": "en-GB",
+        "currency": "GBP"
+      },
+      "items": []
+    },
+    "contextAcquisitionAttempts": [
+      {
+        "id": "556d39e9-bf47-4fae-a6dc-bcf48d603c41",
+        "orchestrationRunId": "8bd39bd0-325a-4ed0-bffd-6cc3f22429bc",
+        "stage": "interpretation",
+        "status": "invalid_patch",
+        "provider": "openai",
+        "model": "gpt-5.6-terra",
+        "durationMs": 18065,
+        "errorCode": "invalid_state_patch",
+        "createdAt": "2026-08-29T17:11:29.567Z"
+      },
+      {
+        "id": "043bdf13-f48f-4f6d-9407-695457a64321",
+        "orchestrationRunId": "8980776b-493a-4b20-a453-d7921de35504",
+        "stage": "interpretation",
+        "status": "malformed",
+        "provider": "openai",
+        "model": "gpt-5.6-terra",
+        "durationMs": 14792,
+        "errorCode": "structured_output_validation_failed",
+        "createdAt": "2026-08-29T17:11:44.398Z"
+      }
+    ],
+    "searchRuns": [],
+    "queries": [],
+    "queryExecutions": [],
+    "listings": [],
+    "researchRuns": [],
+    "attempts": [],
+    "pageTargets": [],
+    "fetchedDocuments": [],
+    "evidenceSources": [],
+    "observations": [],
+    "assessments": [],
+    "currentAssessments": [],
+    "assessmentObservationBindings": [],
+    "destinationResolutions": [],
+    "savedCandidateListingIds": [],
+    "rejectedCandidateListingIds": [],
+    "internalTimingVisibility": {
+      "planningMs": null,
+      "persistenceWallMs": null,
+      "projectionMs": null,
+      "reason": "The live application boundary does not expose pure planning/persistence/projection intervals. Persisted lifecycle durations and separately measured fresh projection loads are reported without relabelling residual wall time."
+    }
+  },
+  "logicalProviderOperationsAtFailure": {
+    "interpretation": {
+      "logicalCalls": 2,
+      "succeeded": 2,
+      "failed": 0,
+      "summedCallDurationMs": 32871,
+      "observedMaximumConcurrency": 1
+    },
+    "action_selection": {
+      "logicalCalls": 0,
+      "succeeded": 0,
+      "failed": 0,
+      "summedCallDurationMs": 0,
+      "observedMaximumConcurrency": 0
+    },
+    "shopping": {
+      "logicalCalls": 0,
+      "succeeded": 0,
+      "failed": 0,
+      "summedCallDurationMs": 0,
+      "observedMaximumConcurrency": 0
+    },
+    "evidence_search": {
+      "logicalCalls": 0,
+      "succeeded": 0,
+      "failed": 0,
+      "summedCallDurationMs": 0,
+      "observedMaximumConcurrency": 0
+    },
+    "page_fetch": {
+      "logicalCalls": 0,
+      "succeeded": 0,
+      "failed": 0,
+      "summedCallDurationMs": 0,
+      "observedMaximumConcurrency": 0
+    },
+    "product_understanding": {
+      "logicalCalls": 0,
+      "succeeded": 0,
+      "failed": 0,
+      "summedCallDurationMs": 0,
+      "observedMaximumConcurrency": 0
+    },
+    "destination": {
+      "logicalCalls": 0,
+      "succeeded": 0,
+      "failed": 0,
+      "summedCallDurationMs": 0,
+      "observedMaximumConcurrency": 0
+    }
+  },
+  "transportAccounting": {
+    "actualHttpAttempts": null,
+    "providerCost": null,
+    "reason": "Only provider-port operations are instrumented; transport attempts and billing are not exposed."
+  },
+  "tracesAtFailure": [
+    {
+      "caseName": "ergonomic-mouse",
+      "stage": "interpretation",
+      "ordinal": 1,
+      "startedOffsetMs": 34.469,
+      "finishedOffsetMs": 18106.604,
+      "durationMs": 18072,
+      "status": "succeeded",
+      "detail": {
+        "configuredModel": "gpt-5.6-terra",
+        "providerInputSchemaVersion": 1
+      }
+    },
+    {
+      "caseName": "ergonomic-mouse",
+      "stage": "interpretation",
+      "ordinal": 2,
+      "startedOffsetMs": 18167.473,
+      "finishedOffsetMs": 32966.416,
+      "durationMs": 14799,
+      "status": "succeeded",
+      "detail": {
+        "configuredModel": "gpt-5.6-terra",
+        "providerInputSchemaVersion": 1
+      }
+    }
+  ],
+  "cleanup": {
+    "disposableDatabaseDestroyed": true,
+    "errorCount": 0
+  },
+  "failure": {
+    "name": "Error",
+    "message": "V0-09 proof failed: ergonomic-mouse interpretation failed after one safe retry"
+  },
+  "releaseAccepted": false
+}

@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 2,
+  "proofMode": "fresh_four_category_v009_release",
+  "attemptId": "d1e01d17-5116-4e56-bc0c-6e8ca6d75e6a",
+  "claimedAt": "2026-08-29T17:11:11.433Z",
+  "state": "claimed",
+  "refusalPolicy": "This marker is intentionally durable after the one authorized post-correction attempt. A further V0-09 release attempt is refused; any prior diagnostic is retired under a separate prior-attempt filename."
+}
