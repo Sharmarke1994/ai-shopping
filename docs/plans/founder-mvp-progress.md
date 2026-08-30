@@ -52,6 +52,15 @@ and comparison are meaningfully better than beginning with Google.
   `codex/context-acquisition-semantic-hardening`, based exactly on frozen V0-09
   head `934067e7d3796a4a68ba3b00387a16632a563f15`. PR #13 and its proof marker
   remain untouched.
+- The one authorized Phase-A context-hardening Terra run completed all six
+  protected cases with zero provider/structured-output failures but failed one
+  semantic assertion: contextual backpack lighter produced `Weight` with a
+  preference relation `less` anchored to `current alternatives`, not the
+  explicit lighter direction. This is an interpretation-stage semantic failure;
+  no Phase-B recovery work was started and no second run is authorized without
+  independent review. Exact evidence is in
+  `docs/evals/v0-05-context-hardening-diagnostic.{json,md}`; the prior 19/19
+  artifact is archived as `*-prior-19-19.*`.
 
 ## Completed foundation
 
@@ -452,10 +461,11 @@ This bounded blocker-remediation branch is isolated from V0-09 at frozen head
   backpack lighter was incorrectly treated as unresolved and produced no Weight
   preference; and the headphones golden case made wireless a preference rather
   than a hard include. No invalid patches or provider structured-output
-  failures occurred. The exact JSON/Markdown pair is preserved at
-  `docs/evals/v0-05-context-hardening-diagnostic.{json,md}`; no further fix or
-  rerun is authorized without independent review. V0-05's 21/21 formal gate
-  remains open.
+  failures occurred. Its exact JSON/Markdown pair is preserved at
+  `docs/evals/v0-05-context-hardening-diagnostic-prior-19-19.{json,md}`. The
+  subsequent six-case Phase-A run is the current primary artifact and failed
+  only the contextual-lighter semantic assertion described above. V0-05's
+  21/21 formal gate remains open.
 
 ## Next validated checkpoints
 
@@ -464,9 +474,11 @@ This bounded blocker-remediation branch is isolated from V0-09 at frozen head
 2. Treat the earliest evidenced blocker as the inherited V0-05 founder-intent
    semantic interpretation surfaced by the proof predicate; do not patch it
    inside V0-09 and do not create Attempt 4.
-3. Commit/push this context-hardening checkpoint as a new draft PR stacked on
-   `codex/v0-09-source-depth-purchase-path`, obtain exact-head CI, stop for
-   independent review, keep PR #13 draft/unmerged and do not begin V0-10.
+3. Preserve the exact six-case Phase-A failure artifact and classify its single
+   failure as contextual-lighter interpretation semantics. Do not make another
+   live run or enter Phase B before independent review. Keep the
+   context-hardening branch reviewable as a draft stacked PR; PR #13/V0-09 and
+   the original V0-05 checkout remain untouched, and do not begin V0-10.
 
 ## Credentials and blockers
 

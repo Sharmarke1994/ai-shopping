@@ -455,9 +455,21 @@ const cases: readonly DiagnosticCase[] = [
       "I need wireless over-ear headphones around £150 where glasses comfort and noise cancellation matter.",
     check: (context) => {
       const failures: string[] = [];
-      failures.push(
-        ...requireCategorical(context, /^wireless$/i, "include", "hard"),
+      const wirelessHard = context.fullItems.some(
+        (item) =>
+          item.strength === "hard" &&
+          ((item.semanticValue.kind === "categorical" &&
+            item.semanticValue.operator === "include" &&
+            item.semanticValue.values.some((value) =>
+              /^wireless$/i.test(value),
+            )) ||
+            (item.semanticValue.kind === "boolean" &&
+              item.semanticValue.value === true)),
       );
+      if (!wirelessHard)
+        failures.push(
+          "wireless product mode was not preserved as a hard requirement",
+        );
       if (!hasItem(context, /over-ear/i))
         failures.push("over-ear form factor missing");
       if (!hasItem(context, /comfort|glasses/i))
@@ -598,6 +610,30 @@ const cases: readonly DiagnosticCase[] = [
     },
   },
 ];
+
+const phaseACaseNames = [
+  "conditional-wireless-battery",
+  "explicit-hard-battery",
+  "contextless-lighter",
+  "contextual-soft-lighter",
+  "headphones-golden",
+  "cap-golden",
+] as const;
+const diagnosticCaseSet =
+  process.env.CONTEXT_HARDENING_CASE_SET === "phase-a" ? "phase-a" : "full";
+const selectedCases =
+  diagnosticCaseSet === "phase-a"
+    ? cases.filter((inputCase) =>
+        phaseACaseNames.includes(
+          inputCase.name as (typeof phaseACaseNames)[number],
+        ),
+      )
+    : cases;
+if (
+  diagnosticCaseSet === "phase-a" &&
+  selectedCases.length !== phaseACaseNames.length
+)
+  throw new Error("Phase-A diagnostic case portfolio is incomplete");
 
 type CaseResult = Readonly<{
   name: string;
@@ -1140,7 +1176,7 @@ try {
       return baseModel.selectAction(input);
     },
   };
-  for (const [index, inputCase] of cases.entries()) {
+  for (const [index, inputCase] of selectedCases.entries()) {
     const result = inputCase.twoTurn
       ? await runTwoTurnCase(database.connection, model, inputCase, index)
       : await runCase(database.connection, model, inputCase, index);
@@ -1154,7 +1190,8 @@ try {
   );
   const artifact = {
     schemaVersion: 1,
-    diagnostic: "v0-05-context-hardening",
+    diagnostic: `v0-05-context-hardening-${diagnosticCaseSet}`,
+    caseSet: diagnosticCaseSet,
     releaseAccepted: false,
     model: "gpt-5.6-terra",
     reasoningEffort: "low",
@@ -1167,7 +1204,7 @@ try {
   await writeFile(
     markdownOutput,
     [
-      "# V0-05 context-hardening diagnostic",
+      `# V0-05 context-hardening diagnostic (${diagnosticCaseSet})`,
       "",
       "This is one bounded Terra diagnostic batch, not V0-05 release acceptance.",
       "",
@@ -1204,7 +1241,8 @@ try {
     JSON.stringify(
       {
         schemaVersion: 1,
-        diagnostic: "v0-05-context-hardening",
+        diagnostic: `v0-05-context-hardening-${diagnosticCaseSet}`,
+        caseSet: diagnosticCaseSet,
         releaseAccepted: false,
         startedAt,
         finishedAt: new Date().toISOString(),

@@ -91,7 +91,25 @@ and produced no Weight preference. The headphones golden case preserved
 wireless as a preference rather than the required hard include. No invalid
 patches or provider structured-output failures occurred. This remains
 diagnostic evidence only, not V0-05 21/21 acceptance. The exact result is
-preserved in `docs/evals/v0-05-context-hardening-diagnostic.json` and `.md`.
+preserved in
+`docs/evals/v0-05-context-hardening-diagnostic-prior-19-19.{json,md}` (with its
+attempt marker).
+
+The one newly authorized Phase-A Terra run then exercised exactly six protected
+cases: conditional wireless/battery, explicit hard battery, contextless
+lighter, contextual soft lighter, the headphones golden case, and the cap
+golden case. All six completed with no provider or structured-output failures,
+but the gate failed because the contextual backpack request produced a
+`Weight` preference whose qualitative anchor was `current alternatives` rather
+than preserving the explicit lighter direction. The other five cases passed,
+including the contextless ASK/no-criterion rule and hard wireless headphones
+form/mode semantics. This is an interpretation-stage semantic failure (not an
+action, persistence, provider, or evaluator failure). The exact failed result
+is preserved in
+`docs/evals/v0-05-context-hardening-diagnostic.{json,md}` (and its attempt
+marker); the prior 19/19 result remains archived under the `prior-19-19`
+names. Phase B recovery work is not authorized from this failed gate, and the
+formal V0-05 21/21 release gate remains open.
 
 ## V0-09 follow-up signals (not fixed here)
 

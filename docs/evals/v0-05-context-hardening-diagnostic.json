@@ -1,156 +1,77 @@
 {
   "schemaVersion": 1,
-  "diagnostic": "v0-05-context-hardening",
+  "diagnostic": "v0-05-context-hardening-phase-a",
+  "caseSet": "phase-a",
   "releaseAccepted": false,
   "model": "gpt-5.6-terra",
   "reasoningEffort": "low",
-  "startedAt": "2026-08-30T11:33:04.668Z",
-  "finishedAt": "2026-08-30T11:35:08.022Z",
+  "startedAt": "2026-08-30T11:55:31.953Z",
+  "finishedAt": "2026-08-30T11:56:11.713Z",
   "counts": {
-    "logicalInterpretationCalls": 20,
-    "logicalActionCalls": 20,
-    "completed": 19,
+    "logicalInterpretationCalls": 6,
+    "logicalActionCalls": 6,
+    "completed": 6,
     "failed": 0,
-    "caseCount": 19,
-    "violationCount": 3
+    "caseCount": 6,
+    "violationCount": 1
   },
   "results": [
     {
       "name": "conditional-wireless-battery",
       "status": "completed",
-      "action": "search",
-      "revision": "1",
-      "items": [
-        {
-          "criterionId": "70c0059c-9667-47fc-a4db-34911d4e2024",
-          "conceptId": "c4f52a27-321d-4098-ae4a-59f786432a94",
-          "lifecycle": "active",
-          "authority": "unknown",
-          "label": "Wireless connectivity",
-          "definition": "Whether the product operates wirelessly.",
-          "strength": "preference",
-          "targetSemantics": "qualitative",
-          "semanticKind": "qualitative",
-          "summary": "Prefer wireless connectivity, but only if battery life is very good.",
-          "semanticValue": {
-            "schemaVersion": 1,
-            "kind": "qualitative",
-            "mode": "text",
-            "text": "Prefer wireless connectivity, but only if battery life is very good."
-          }
-        }
-      ],
-      "fullItems": [
-        {
-          "criterionId": "70c0059c-9667-47fc-a4db-34911d4e2024",
-          "conceptId": "c4f52a27-321d-4098-ae4a-59f786432a94",
-          "lifecycle": "active",
-          "authority": "user_explicit",
-          "label": "Wireless connectivity",
-          "definition": "Whether the product operates wirelessly.",
-          "strength": "preference",
-          "targetSemantics": "qualitative",
-          "semanticKind": "qualitative",
-          "summary": "Prefer wireless connectivity, but only if battery life is very good.",
-          "semanticValue": {
-            "schemaVersion": 1,
-            "kind": "qualitative",
-            "mode": "text",
-            "text": "Prefer wireless connectivity, but only if battery life is very good."
-          }
-        }
-      ],
-      "concepts": [
-        {
-          "id": "c4f52a27-321d-4098-ae4a-59f786432a94",
-          "label": "Wireless connectivity",
-          "definition": "Whether the product operates wirelessly.",
-          "valueFamily": "qualitative"
-        }
-      ],
-      "question": null,
-      "actionRationale": "The preference for wireless products with very good battery life is actionable as a qualitative criterion.",
-      "ambiguities": [],
-      "attempts": [
-        {
-          "stage": "context_action",
-          "attemptOrdinal": 1,
-          "status": "completed",
-          "providerRequestId": "resp_075b484fff38a70a016a9414f88f2c87d195042bbfd7fb0675",
-          "promptVersion": "v0-05-context-action-5",
-          "providerSchemaVersion": 2,
-          "errorCode": null,
-          "ambiguities": []
-        },
-        {
-          "stage": "interpretation",
-          "attemptOrdinal": 1,
-          "status": "completed",
-          "providerRequestId": "resp_097882f45fb033be016a9414f26ad887d1a8a462e9941c0b75",
-          "promptVersion": "v0-05-interpretation-7",
-          "providerSchemaVersion": 2,
-          "errorCode": null,
-          "ambiguities": []
-        }
-      ],
-      "violations": []
-    },
-    {
-      "name": "conditional-monitor-fit",
-      "status": "completed",
       "action": "ask",
       "revision": "1",
       "items": [
         {
-          "criterionId": "52c15e62-ebc7-4380-9c6a-52a9e2221815",
-          "conceptId": "4250e3ed-40a6-4d71-895a-9b8aa938c77a",
+          "criterionId": "5d9329a8-a069-404f-b142-ab5aa17329d3",
+          "conceptId": "92b0dfb4-63a5-48e2-b689-f6c0fc6eb518",
           "lifecycle": "active",
           "authority": "unknown",
-          "label": "Monitor size subject to desk fit",
-          "definition": "The preferred monitor size, conditional on the monitor fitting on the shopper's desk.",
+          "label": "Wireless with battery life",
+          "definition": "Whether the product is wireless and has very good battery life, reflecting the shopper's conditional preference for wireless only when battery life is very good.",
           "strength": "preference",
           "targetSemantics": "qualitative",
           "semanticKind": "qualitative",
-          "summary": "Prefer a larger monitor, but only if it still fits on the desk.",
+          "summary": "Prefer wireless only if battery life is very good",
           "semanticValue": {
             "schemaVersion": 1,
             "kind": "qualitative",
             "mode": "text",
-            "text": "Prefer a larger monitor, but only if it still fits on the desk."
+            "text": "Prefer wireless only if battery life is very good"
           }
         }
       ],
       "fullItems": [
         {
-          "criterionId": "52c15e62-ebc7-4380-9c6a-52a9e2221815",
-          "conceptId": "4250e3ed-40a6-4d71-895a-9b8aa938c77a",
+          "criterionId": "5d9329a8-a069-404f-b142-ab5aa17329d3",
+          "conceptId": "92b0dfb4-63a5-48e2-b689-f6c0fc6eb518",
           "lifecycle": "active",
           "authority": "user_explicit",
-          "label": "Monitor size subject to desk fit",
-          "definition": "The preferred monitor size, conditional on the monitor fitting on the shopper's desk.",
+          "label": "Wireless with battery life",
+          "definition": "Whether the product is wireless and has very good battery life, reflecting the shopper's conditional preference for wireless only when battery life is very good.",
           "strength": "preference",
           "targetSemantics": "qualitative",
           "semanticKind": "qualitative",
-          "summary": "Prefer a larger monitor, but only if it still fits on the desk.",
+          "summary": "Prefer wireless only if battery life is very good",
           "semanticValue": {
             "schemaVersion": 1,
             "kind": "qualitative",
             "mode": "text",
-            "text": "Prefer a larger monitor, but only if it still fits on the desk."
+            "text": "Prefer wireless only if battery life is very good"
           }
         }
       ],
       "concepts": [
         {
-          "id": "4250e3ed-40a6-4d71-895a-9b8aa938c77a",
-          "label": "Monitor size subject to desk fit",
-          "definition": "The preferred monitor size, conditional on the monitor fitting on the shopper's desk.",
+          "id": "92b0dfb4-63a5-48e2-b689-f6c0fc6eb518",
+          "label": "Wireless with battery life",
+          "definition": "Whether the product is wireless and has very good battery life, reflecting the shopper's conditional preference for wireless only when battery life is very good.",
           "valueFamily": "qualitative"
         }
       ],
       "question": {
-        "prompt": "What are the maximum width and depth available on your desk for the monitor (including its stand)?",
-        "whyNow": "Desk dimensions are needed to determine which larger monitors will physically fit.",
+        "prompt": "What kind of product are you shopping for?",
+        "whyNow": "Wireless and battery-life preferences alone do not identify a product category to search.",
         "options": []
       },
       "actionRationale": null,
@@ -160,8 +81,8 @@
           "stage": "context_action",
           "attemptOrdinal": 1,
           "status": "completed",
-          "providerRequestId": "resp_00f29cbf95e2d2d0016a9415016aa487d18bcc7e0b536ab9a7",
-          "promptVersion": "v0-05-context-action-5",
+          "providerRequestId": "resp_00bcde65b50ab556016a941a3a3a4c87d1932ef0fa0b0673ab",
+          "promptVersion": "v0-05-context-action-6",
           "providerSchemaVersion": 2,
           "errorCode": null,
           "ambiguities": []
@@ -170,88 +91,8 @@
           "stage": "interpretation",
           "attemptOrdinal": 1,
           "status": "completed",
-          "providerRequestId": "resp_02e8198816a0a916016a9414fa55a887d1bba74ed72a4d1835",
-          "promptVersion": "v0-05-interpretation-7",
-          "providerSchemaVersion": 2,
-          "errorCode": null,
-          "ambiguities": []
-        }
-      ],
-      "violations": []
-    },
-    {
-      "name": "conditional-delivery-cost",
-      "status": "completed",
-      "action": "search",
-      "revision": "1",
-      "items": [
-        {
-          "criterionId": "ceec2353-33b5-44e9-adc9-661a8185c6ae",
-          "conceptId": "48d54de4-f04c-48a1-aa94-5536d311451c",
-          "lifecycle": "active",
-          "authority": "unknown",
-          "label": "Delivery speed",
-          "definition": "How quickly the product can be delivered.",
-          "strength": "preference",
-          "targetSemantics": "qualitative",
-          "semanticKind": "qualitative",
-          "summary": "Faster delivery, but only if it isn't much more expensive.",
-          "semanticValue": {
-            "schemaVersion": 1,
-            "kind": "qualitative",
-            "mode": "text",
-            "text": "Faster delivery, but only if it isn't much more expensive."
-          }
-        }
-      ],
-      "fullItems": [
-        {
-          "criterionId": "ceec2353-33b5-44e9-adc9-661a8185c6ae",
-          "conceptId": "48d54de4-f04c-48a1-aa94-5536d311451c",
-          "lifecycle": "active",
-          "authority": "user_explicit",
-          "label": "Delivery speed",
-          "definition": "How quickly the product can be delivered.",
-          "strength": "preference",
-          "targetSemantics": "qualitative",
-          "semanticKind": "qualitative",
-          "summary": "Faster delivery, but only if it isn't much more expensive.",
-          "semanticValue": {
-            "schemaVersion": 1,
-            "kind": "qualitative",
-            "mode": "text",
-            "text": "Faster delivery, but only if it isn't much more expensive."
-          }
-        }
-      ],
-      "concepts": [
-        {
-          "id": "48d54de4-f04c-48a1-aa94-5536d311451c",
-          "label": "Delivery speed",
-          "definition": "How quickly the product can be delivered.",
-          "valueFamily": "qualitative"
-        }
-      ],
-      "question": null,
-      "actionRationale": "The delivery-speed preference is actionable as a qualitative trade-off: favour faster delivery where the price increase is not substantial.",
-      "ambiguities": [],
-      "attempts": [
-        {
-          "stage": "context_action",
-          "attemptOrdinal": 1,
-          "status": "completed",
-          "providerRequestId": "resp_0359d61b1ec2918e016a94150711c887d18d987354ff6b1201",
-          "promptVersion": "v0-05-context-action-5",
-          "providerSchemaVersion": 2,
-          "errorCode": null,
-          "ambiguities": []
-        },
-        {
-          "stage": "interpretation",
-          "attemptOrdinal": 1,
-          "status": "completed",
-          "providerRequestId": "resp_09ac861c69e2f919016a941503c36887d180c2638838d6291a",
-          "promptVersion": "v0-05-interpretation-7",
+          "providerRequestId": "resp_04eff3bcaa7f02ef016a941a34edb887d1861ed8d5ff79dce2",
+          "promptVersion": "v0-05-interpretation-8",
           "providerSchemaVersion": 2,
           "errorCode": null,
           "ambiguities": []
@@ -262,16 +103,16 @@
     {
       "name": "explicit-hard-battery",
       "status": "completed",
-      "action": "search",
+      "action": "ask",
       "revision": "1",
       "items": [
         {
-          "criterionId": "ab7abc84-1804-4df7-89ee-749d5b3e6228",
-          "conceptId": "c1d77c01-2174-4d09-bf23-0668f06e0253",
+          "criterionId": "44017726-13e3-4325-acc2-e119eb06942e",
+          "conceptId": "503e3867-67c3-4bd0-a32c-e98f6eff70cc",
           "lifecycle": "active",
           "authority": "unknown",
           "label": "Wireless",
-          "definition": "Whether the product operates wirelessly.",
+          "definition": "Whether the product operates without a wired connection.",
           "strength": "preference",
           "targetSemantics": "categorical",
           "semanticKind": "categorical",
@@ -286,12 +127,12 @@
           }
         },
         {
-          "criterionId": "28295eab-0e7b-4c38-9808-c4f1a9fbd0ef",
-          "conceptId": "fe5901b8-964b-4063-8750-1fb0f084e4b0",
+          "criterionId": "8cc58038-a687-46db-80a7-7c7427c334c9",
+          "conceptId": "efade20e-0e67-402b-a2c3-b7549b195fc0",
           "lifecycle": "active",
           "authority": "unknown",
           "label": "Battery life",
-          "definition": "The duration the product can operate on a single charge.",
+          "definition": "How long the product operates before needing to be recharged.",
           "strength": "hard",
           "targetSemantics": "qualitative",
           "semanticKind": "qualitative",
@@ -307,31 +148,12 @@
       ],
       "fullItems": [
         {
-          "criterionId": "28295eab-0e7b-4c38-9808-c4f1a9fbd0ef",
-          "conceptId": "fe5901b8-964b-4063-8750-1fb0f084e4b0",
-          "lifecycle": "active",
-          "authority": "user_explicit",
-          "label": "Battery life",
-          "definition": "The duration the product can operate on a single charge.",
-          "strength": "hard",
-          "targetSemantics": "qualitative",
-          "semanticKind": "qualitative",
-          "summary": "40 minutes",
-          "semanticValue": {
-            "schemaVersion": 1,
-            "kind": "qualitative",
-            "mode": "ordinal",
-            "relation": "at_least",
-            "anchor": "40 minutes"
-          }
-        },
-        {
-          "criterionId": "ab7abc84-1804-4df7-89ee-749d5b3e6228",
-          "conceptId": "c1d77c01-2174-4d09-bf23-0668f06e0253",
+          "criterionId": "44017726-13e3-4325-acc2-e119eb06942e",
+          "conceptId": "503e3867-67c3-4bd0-a32c-e98f6eff70cc",
           "lifecycle": "active",
           "authority": "user_explicit",
           "label": "Wireless",
-          "definition": "Whether the product operates wirelessly.",
+          "definition": "Whether the product operates without a wired connection.",
           "strength": "preference",
           "targetSemantics": "categorical",
           "semanticKind": "categorical",
@@ -344,195 +166,44 @@
               "wireless"
             ]
           }
+        },
+        {
+          "criterionId": "8cc58038-a687-46db-80a7-7c7427c334c9",
+          "conceptId": "efade20e-0e67-402b-a2c3-b7549b195fc0",
+          "lifecycle": "active",
+          "authority": "user_explicit",
+          "label": "Battery life",
+          "definition": "How long the product operates before needing to be recharged.",
+          "strength": "hard",
+          "targetSemantics": "qualitative",
+          "semanticKind": "qualitative",
+          "summary": "40 minutes",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "ordinal",
+            "relation": "at_least",
+            "anchor": "40 minutes"
+          }
         }
       ],
       "concepts": [
         {
-          "id": "c1d77c01-2174-4d09-bf23-0668f06e0253",
+          "id": "503e3867-67c3-4bd0-a32c-e98f6eff70cc",
           "label": "Wireless",
-          "definition": "Whether the product operates wirelessly.",
+          "definition": "Whether the product operates without a wired connection.",
           "valueFamily": "categorical"
         },
         {
-          "id": "fe5901b8-964b-4063-8750-1fb0f084e4b0",
+          "id": "efade20e-0e67-402b-a2c3-b7549b195fc0",
           "label": "Battery life",
-          "definition": "The duration the product can operate on a single charge.",
+          "definition": "How long the product operates before needing to be recharged.",
           "valueFamily": "qualitative"
         }
       ],
-      "question": null,
-      "actionRationale": "The minimum battery-life requirement and wireless preference are actionable for product search.",
-      "ambiguities": [],
-      "attempts": [
-        {
-          "stage": "context_action",
-          "attemptOrdinal": 1,
-          "status": "completed",
-          "providerRequestId": "resp_07b5d10ecd88f671016a94150db18887d1990d20f502b4f198",
-          "promptVersion": "v0-05-context-action-5",
-          "providerSchemaVersion": 2,
-          "errorCode": null,
-          "ambiguities": []
-        },
-        {
-          "stage": "interpretation",
-          "attemptOrdinal": 1,
-          "status": "completed",
-          "providerRequestId": "resp_055c6cf60cbaf97f016a94150944f887d18d6cd41c46869ba1",
-          "promptVersion": "v0-05-interpretation-7",
-          "providerSchemaVersion": 2,
-          "errorCode": null,
-          "ambiguities": []
-        }
-      ],
-      "violations": []
-    },
-    {
-      "name": "explicit-hard-width",
-      "status": "completed",
-      "action": "search",
-      "revision": "1",
-      "items": [
-        {
-          "criterionId": "bfa6305f-d84c-45a7-b038-518603130f9f",
-          "conceptId": "fd1bd2ef-7a5e-49e3-8c08-0a723a85b88e",
-          "lifecycle": "active",
-          "authority": "unknown",
-          "label": "Width",
-          "definition": "The product's overall width.",
-          "strength": "hard",
-          "targetSemantics": "range",
-          "semanticKind": "measurement_range",
-          "summary": "{\"upper\":{\"amount\":\"25\",\"inclusive\":true},\"unit\":\"cm\"}",
-          "semanticValue": {
-            "schemaVersion": 1,
-            "kind": "measurement_range",
-            "upper": {
-              "amount": "25",
-              "inclusive": true
-            },
-            "unit": "cm"
-          }
-        }
-      ],
-      "fullItems": [
-        {
-          "criterionId": "bfa6305f-d84c-45a7-b038-518603130f9f",
-          "conceptId": "fd1bd2ef-7a5e-49e3-8c08-0a723a85b88e",
-          "lifecycle": "active",
-          "authority": "user_explicit",
-          "label": "Width",
-          "definition": "The product's overall width.",
-          "strength": "hard",
-          "targetSemantics": "range",
-          "semanticKind": "measurement_range",
-          "summary": "{\"upper\":{\"amount\":\"25\",\"inclusive\":true},\"unit\":\"cm\"}",
-          "semanticValue": {
-            "schemaVersion": 1,
-            "kind": "measurement_range",
-            "upper": {
-              "amount": "25",
-              "inclusive": true
-            },
-            "unit": "cm"
-          }
-        }
-      ],
-      "concepts": [
-        {
-          "id": "fd1bd2ef-7a5e-49e3-8c08-0a723a85b88e",
-          "label": "Width",
-          "definition": "The product's overall width.",
-          "valueFamily": "measurement"
-        }
-      ],
-      "question": null,
-      "actionRationale": "The explicit hard maximum width of 25 cm is actionable for product retrieval.",
-      "ambiguities": [],
-      "attempts": [
-        {
-          "stage": "context_action",
-          "attemptOrdinal": 1,
-          "status": "completed",
-          "providerRequestId": "resp_0546eff26905205e016a941512b12087d1836d693d6c474db3",
-          "promptVersion": "v0-05-context-action-5",
-          "providerSchemaVersion": 2,
-          "errorCode": null,
-          "ambiguities": []
-        },
-        {
-          "stage": "interpretation",
-          "attemptOrdinal": 1,
-          "status": "completed",
-          "providerRequestId": "resp_0de6128782e77be4016a94150f680c87d19ce1d8cbd84a0652",
-          "promptVersion": "v0-05-interpretation-7",
-          "providerSchemaVersion": 2,
-          "errorCode": null,
-          "ambiguities": []
-        }
-      ],
-      "violations": []
-    },
-    {
-      "name": "hard-exclusion",
-      "status": "completed",
-      "action": "ask",
-      "revision": "1",
-      "items": [
-        {
-          "criterionId": "a33354a2-fc60-4a2b-b880-e957481efa17",
-          "conceptId": "ac6d5597-a819-4388-b6f8-daac89217d42",
-          "lifecycle": "active",
-          "authority": "unknown",
-          "label": "Brand",
-          "definition": "The product brand or manufacturer.",
-          "strength": "hard",
-          "targetSemantics": "categorical",
-          "semanticKind": "categorical",
-          "summary": "Amazon Basics",
-          "semanticValue": {
-            "schemaVersion": 1,
-            "kind": "categorical",
-            "operator": "exclude",
-            "values": [
-              "Amazon Basics"
-            ]
-          }
-        }
-      ],
-      "fullItems": [
-        {
-          "criterionId": "a33354a2-fc60-4a2b-b880-e957481efa17",
-          "conceptId": "ac6d5597-a819-4388-b6f8-daac89217d42",
-          "lifecycle": "active",
-          "authority": "user_explicit",
-          "label": "Brand",
-          "definition": "The product brand or manufacturer.",
-          "strength": "hard",
-          "targetSemantics": "categorical",
-          "semanticKind": "categorical",
-          "summary": "Amazon Basics",
-          "semanticValue": {
-            "schemaVersion": 1,
-            "kind": "categorical",
-            "operator": "exclude",
-            "values": [
-              "Amazon Basics"
-            ]
-          }
-        }
-      ],
-      "concepts": [
-        {
-          "id": "ac6d5597-a819-4388-b6f8-daac89217d42",
-          "label": "Brand",
-          "definition": "The product brand or manufacturer.",
-          "valueFamily": "categorical"
-        }
-      ],
       "question": {
-        "prompt": "What product are you looking for?",
-        "whyNow": "I only have your brand exclusion, not the item to search for.",
+        "prompt": "What type of product are you shopping for?",
+        "whyNow": "Battery-life and wireless requirements apply to many product categories, so the product type is needed to find relevant options.",
         "options": []
       },
       "actionRationale": null,
@@ -542,8 +213,8 @@
           "stage": "context_action",
           "attemptOrdinal": 1,
           "status": "completed",
-          "providerRequestId": "resp_0fc8f950d9f07489016a9415173e3887d1b92d6fa55bfe8b5f",
-          "promptVersion": "v0-05-context-action-5",
+          "providerRequestId": "resp_06140f09a11dfb41016a941a41653c87d1a1d777701a333e2d",
+          "promptVersion": "v0-05-context-action-6",
           "providerSchemaVersion": 2,
           "errorCode": null,
           "ambiguities": []
@@ -552,96 +223,8 @@
           "stage": "interpretation",
           "attemptOrdinal": 1,
           "status": "completed",
-          "providerRequestId": "resp_020837c767b7a276016a94151440fc87d181f35d79d29799ae",
-          "promptVersion": "v0-05-interpretation-7",
-          "providerSchemaVersion": 2,
-          "errorCode": null,
-          "ambiguities": []
-        }
-      ],
-      "violations": []
-    },
-    {
-      "name": "hard-only-black",
-      "status": "completed",
-      "action": "ask",
-      "revision": "1",
-      "items": [
-        {
-          "criterionId": "fe954209-639b-478f-9494-d871e196d2c7",
-          "conceptId": "9d2f327e-ec01-4d7e-a5cc-d33f9028b329",
-          "lifecycle": "active",
-          "authority": "unknown",
-          "label": "Color",
-          "definition": "The product's colour or finish.",
-          "strength": "hard",
-          "targetSemantics": "categorical",
-          "semanticKind": "categorical",
-          "summary": "black",
-          "semanticValue": {
-            "schemaVersion": 1,
-            "kind": "categorical",
-            "operator": "include",
-            "values": [
-              "black"
-            ]
-          }
-        }
-      ],
-      "fullItems": [
-        {
-          "criterionId": "fe954209-639b-478f-9494-d871e196d2c7",
-          "conceptId": "9d2f327e-ec01-4d7e-a5cc-d33f9028b329",
-          "lifecycle": "active",
-          "authority": "user_explicit",
-          "label": "Color",
-          "definition": "The product's colour or finish.",
-          "strength": "hard",
-          "targetSemantics": "categorical",
-          "semanticKind": "categorical",
-          "summary": "black",
-          "semanticValue": {
-            "schemaVersion": 1,
-            "kind": "categorical",
-            "operator": "include",
-            "values": [
-              "black"
-            ]
-          }
-        }
-      ],
-      "concepts": [
-        {
-          "id": "9d2f327e-ec01-4d7e-a5cc-d33f9028b329",
-          "label": "Color",
-          "definition": "The product's colour or finish.",
-          "valueFamily": "categorical"
-        }
-      ],
-      "question": {
-        "prompt": "What product are you looking for in black?",
-        "whyNow": "Only the colour requirement is specified, so the product category is needed to search meaningfully.",
-        "options": []
-      },
-      "actionRationale": null,
-      "ambiguities": [],
-      "attempts": [
-        {
-          "stage": "context_action",
-          "attemptOrdinal": 1,
-          "status": "completed",
-          "providerRequestId": "resp_09d6b0d512f25084016a94151c7c5487d19ecc089157cc3430",
-          "promptVersion": "v0-05-context-action-5",
-          "providerSchemaVersion": 2,
-          "errorCode": null,
-          "ambiguities": []
-        },
-        {
-          "stage": "interpretation",
-          "attemptOrdinal": 1,
-          "status": "completed",
-          "providerRequestId": "resp_02b6b3675bbed6d8016a941519722c87d1a4fecc9831769f6c",
-          "promptVersion": "v0-05-interpretation-7",
+          "providerRequestId": "resp_018401ce89b1a34d016a941a3c7e6c87d18bdded7a61f5e07d",
+          "promptVersion": "v0-05-interpretation-8",
           "providerSchemaVersion": 2,
           "errorCode": null,
           "ambiguities": []
@@ -652,109 +235,27 @@
     {
       "name": "contextless-lighter",
       "status": "completed",
-      "action": "search",
-      "revision": "0",
-      "items": [],
-      "fullItems": [],
-      "concepts": [],
-      "question": null,
-      "actionRationale": "The request gives an actionable qualitative preference for lighter options.",
-      "ambiguities": [
-        "“Something lighter” does not identify what property should be lighter without product/category or comparison context."
-      ],
-      "attempts": [
-        {
-          "stage": "context_action",
-          "attemptOrdinal": 1,
-          "status": "completed",
-          "providerRequestId": "resp_0d59f762d39f0c90016a9415211ca487d1a92553a5c02eb491",
-          "promptVersion": "v0-05-context-action-5",
-          "providerSchemaVersion": 2,
-          "errorCode": null,
-          "ambiguities": []
-        },
-        {
-          "stage": "interpretation",
-          "attemptOrdinal": 1,
-          "status": "completed",
-          "providerRequestId": "resp_0ee03076d05962e8016a94151e8c7087d1ae98b3cb46c6c8ac",
-          "promptVersion": "v0-05-interpretation-7",
-          "providerSchemaVersion": 2,
-          "errorCode": null,
-          "ambiguities": [
-            "“Something lighter” does not identify what property should be lighter without product/category or comparison context."
-          ]
-        }
-      ],
-      "violations": [
-        "contextless lighter did not ask for missing subject context"
-      ]
-    },
-    {
-      "name": "contextual-soft-lighter",
-      "status": "completed",
-      "action": "search",
-      "revision": "0",
-      "items": [],
-      "fullItems": [],
-      "concepts": [],
-      "question": null,
-      "actionRationale": "A lightweight preference is sufficient to start searching for backpacks.",
-      "ambiguities": [
-        "“Something lighter” does not identify which property should be lighter, and there is no comparison context to resolve it."
-      ],
-      "attempts": [
-        {
-          "stage": "context_action",
-          "attemptOrdinal": 1,
-          "status": "completed",
-          "providerRequestId": "resp_0666ed7b36c55433016a941526783c87d1ba1b7f78b03c090b",
-          "promptVersion": "v0-05-context-action-5",
-          "providerSchemaVersion": 2,
-          "errorCode": null,
-          "ambiguities": []
-        },
-        {
-          "stage": "interpretation",
-          "attemptOrdinal": 1,
-          "status": "completed",
-          "providerRequestId": "resp_000b3d6306468f7c016a94152333d087d1af9e5c9d7df8a5a6",
-          "promptVersion": "v0-05-interpretation-7",
-          "providerSchemaVersion": 2,
-          "errorCode": null,
-          "ambiguities": [
-            "“Something lighter” does not identify which property should be lighter, and there is no comparison context to resolve it."
-          ]
-        }
-      ],
-      "violations": [
-        "contextual lighter preference/direction was not preserved"
-      ]
-    },
-    {
-      "name": "contextless-comfort",
-      "status": "completed",
       "action": "ask",
       "revision": "0",
       "items": [],
       "fullItems": [],
       "concepts": [],
       "question": {
-        "prompt": "What are you shopping for, and what would “comfortable” mean for you in this case?",
-        "whyNow": "The product category and comfort needs are needed to find relevant options.",
+        "prompt": "What product or type of item would you like something lighter than?",
+        "whyNow": "A product category or comparison reference is needed to search for relevant lighter options.",
         "options": []
       },
       "actionRationale": null,
       "ambiguities": [
-        "“Comfort matters a lot” does not specify a product property or direction that can be represented as a decision criterion."
+        "“Something lighter” does not identify what product or property should be lighter without product or comparison context."
       ],
       "attempts": [
         {
           "stage": "context_action",
           "attemptOrdinal": 1,
           "status": "completed",
-          "providerRequestId": "resp_0cb239d4d8cc4882016a94152aa0c487d1a5b5e5c3c0dc61d8",
-          "promptVersion": "v0-05-context-action-5",
+          "providerRequestId": "resp_07507e605e91ec4a016a941a472f1087d196d606f84e00e8e9",
+          "promptVersion": "v0-05-context-action-6",
           "providerSchemaVersion": 2,
           "errorCode": null,
           "ambiguities": []
@@ -763,80 +264,82 @@
           "stage": "interpretation",
           "attemptOrdinal": 1,
           "status": "completed",
-          "providerRequestId": "resp_0c9499d8bf55e710016a9415280f6887d1b7c05a825a84a312",
-          "promptVersion": "v0-05-interpretation-7",
+          "providerRequestId": "resp_0523e0b94ea42a90016a941a43b8a087d19a764911b99a981f",
+          "promptVersion": "v0-05-interpretation-8",
           "providerSchemaVersion": 2,
           "errorCode": null,
           "ambiguities": [
-            "“Comfort matters a lot” does not specify a product property or direction that can be represented as a decision criterion."
+            "“Something lighter” does not identify what product or property should be lighter without product or comparison context."
           ]
         }
       ],
       "violations": []
     },
     {
-      "name": "contextual-strong-comfort",
+      "name": "contextual-soft-lighter",
       "status": "completed",
       "action": "search",
       "revision": "1",
       "items": [
         {
-          "criterionId": "b07b54c0-5148-45c4-b070-6f423cea017d",
-          "conceptId": "cfdc4d78-7550-49b5-b971-6bfb90e994ca",
+          "criterionId": "29e04a81-88a2-4ddd-89ac-fedc51e8c26c",
+          "conceptId": "d144e040-28bd-4350-8f4e-d4c10258d35b",
           "lifecycle": "active",
           "authority": "unknown",
-          "label": "Comfort",
-          "definition": "Overall comfort of the office chair during use.",
-          "strength": "strong_preference",
+          "label": "Weight",
+          "definition": "Physical weight of the backpack.",
+          "strength": "preference",
           "targetSemantics": "qualitative",
           "semanticKind": "qualitative",
-          "summary": "high comfort",
+          "summary": "current alternatives",
           "semanticValue": {
             "schemaVersion": 1,
             "kind": "qualitative",
-            "mode": "text",
-            "text": "high comfort"
+            "mode": "ordinal",
+            "relation": "less",
+            "anchor": "current alternatives"
           }
         }
       ],
       "fullItems": [
         {
-          "criterionId": "b07b54c0-5148-45c4-b070-6f423cea017d",
-          "conceptId": "cfdc4d78-7550-49b5-b971-6bfb90e994ca",
+          "criterionId": "29e04a81-88a2-4ddd-89ac-fedc51e8c26c",
+          "conceptId": "d144e040-28bd-4350-8f4e-d4c10258d35b",
           "lifecycle": "active",
           "authority": "user_explicit",
-          "label": "Comfort",
-          "definition": "Overall comfort of the office chair during use.",
-          "strength": "strong_preference",
+          "label": "Weight",
+          "definition": "Physical weight of the backpack.",
+          "strength": "preference",
           "targetSemantics": "qualitative",
           "semanticKind": "qualitative",
-          "summary": "high comfort",
+          "summary": "current alternatives",
           "semanticValue": {
             "schemaVersion": 1,
             "kind": "qualitative",
-            "mode": "text",
-            "text": "high comfort"
+            "mode": "ordinal",
+            "relation": "less",
+            "anchor": "current alternatives"
           }
         }
       ],
       "concepts": [
         {
-          "id": "cfdc4d78-7550-49b5-b971-6bfb90e994ca",
-          "label": "Comfort",
-          "definition": "Overall comfort of the office chair during use.",
+          "id": "d144e040-28bd-4350-8f4e-d4c10258d35b",
+          "label": "Weight",
+          "definition": "Physical weight of the backpack.",
           "valueFamily": "qualitative"
         }
       ],
       "question": null,
-      "actionRationale": "The request is actionable: search for office chairs prioritising high comfort.",
+      "actionRationale": "The request identifies a backpack category with a usable preference for lighter options, so search can proceed.",
       "ambiguities": [],
       "attempts": [
         {
           "stage": "context_action",
           "attemptOrdinal": 1,
           "status": "completed",
-          "providerRequestId": "resp_033c499aa7e85983016a9415305b9487d18352a237451769fb",
-          "promptVersion": "v0-05-context-action-5",
+          "providerRequestId": "resp_000a84b092cab118016a941a4c315887d1878933a44dc36da9",
+          "promptVersion": "v0-05-context-action-6",
           "providerSchemaVersion": 2,
           "errorCode": null,
           "ambiguities": []
@@ -845,14 +348,16 @@
           "stage": "interpretation",
           "attemptOrdinal": 1,
           "status": "completed",
-          "providerRequestId": "resp_0db5ce5a708713f6016a94152ca82487d1bf95a97417cf66c2",
-          "promptVersion": "v0-05-interpretation-7",
+          "providerRequestId": "resp_0983c1f156a68f64016a941a49089c87d1a7b154de2d0d8bc1",
+          "promptVersion": "v0-05-interpretation-8",
           "providerSchemaVersion": 2,
           "errorCode": null,
           "ambiguities": []
         }
       ],
-      "violations": []
+      "violations": [
+        "contextual lighter preference/direction was not preserved"
+      ]
     },
     {
       "name": "cap-golden",
@@ -861,104 +366,106 @@
       "revision": "1",
       "items": [
         {
-          "criterionId": "0f02180a-760a-482b-befc-e587fa81ab8e",
-          "conceptId": "23ca6d0a-3006-4855-8d89-544896a801a2",
+          "criterionId": "c74ac542-875a-49cc-8ec6-fa081d976e87",
+          "conceptId": "d4607cc4-5e4b-4d8a-a0f1-380c2a99e45d",
           "lifecycle": "active",
           "authority": "unknown",
           "label": "Breathability",
-          "definition": "How well the cap allows air and moisture to pass through.",
+          "definition": "Ability of the cap material and construction to allow airflow.",
           "strength": "preference",
           "targetSemantics": "qualitative",
           "semanticKind": "qualitative",
-          "summary": "breathable cap",
+          "summary": "breathable",
           "semanticValue": {
             "schemaVersion": 1,
             "kind": "qualitative",
             "mode": "text",
-            "text": "breathable cap"
+            "text": "breathable"
           }
         },
         {
-          "criterionId": "e244c4f4-14bc-4804-b609-5d844f46be9b",
-          "conceptId": "afbe1b79-ab88-4587-abe0-69105107dfca",
+          "criterionId": "62c666b0-97e0-4f3b-87e6-8c05a3be3fac",
+          "conceptId": "f95819d8-8bfe-428f-a1dd-cee0afd5b45d",
           "lifecycle": "active",
           "authority": "unknown",
-          "label": "Lightness",
-          "definition": "How light the cap feels or weighs.",
+          "label": "Weight",
+          "definition": "Physical weight of the cap.",
           "strength": "preference",
           "targetSemantics": "qualitative",
           "semanticKind": "qualitative",
-          "summary": "light cap",
+          "summary": "light",
           "semanticValue": {
             "schemaVersion": 1,
             "kind": "qualitative",
-            "mode": "text",
-            "text": "light cap"
+            "mode": "ordinal",
+            "relation": "less",
+            "anchor": "light"
           }
         }
       ],
       "fullItems": [
         {
-          "criterionId": "0f02180a-760a-482b-befc-e587fa81ab8e",
-          "conceptId": "23ca6d0a-3006-4855-8d89-544896a801a2",
+          "criterionId": "62c666b0-97e0-4f3b-87e6-8c05a3be3fac",
+          "conceptId": "f95819d8-8bfe-428f-a1dd-cee0afd5b45d",
           "lifecycle": "active",
           "authority": "user_explicit",
-          "label": "Breathability",
-          "definition": "How well the cap allows air and moisture to pass through.",
+          "label": "Weight",
+          "definition": "Physical weight of the cap.",
           "strength": "preference",
           "targetSemantics": "qualitative",
           "semanticKind": "qualitative",
-          "summary": "breathable cap",
+          "summary": "light",
           "semanticValue": {
             "schemaVersion": 1,
             "kind": "qualitative",
-            "mode": "text",
-            "text": "breathable cap"
+            "mode": "ordinal",
+            "relation": "less",
+            "anchor": "light"
           }
         },
         {
-          "criterionId": "e244c4f4-14bc-4804-b609-5d844f46be9b",
-          "conceptId": "afbe1b79-ab88-4587-abe0-69105107dfca",
+          "criterionId": "c74ac542-875a-49cc-8ec6-fa081d976e87",
+          "conceptId": "d4607cc4-5e4b-4d8a-a0f1-380c2a99e45d",
           "lifecycle": "active",
           "authority": "user_explicit",
-          "label": "Lightness",
-          "definition": "How light the cap feels or weighs.",
+          "label": "Breathability",
+          "definition": "Ability of the cap material and construction to allow airflow.",
           "strength": "preference",
           "targetSemantics": "qualitative",
           "semanticKind": "qualitative",
-          "summary": "light cap",
+          "summary": "breathable",
           "semanticValue": {
             "schemaVersion": 1,
             "kind": "qualitative",
             "mode": "text",
-            "text": "light cap"
+            "text": "breathable"
           }
         }
       ],
       "concepts": [
         {
-          "id": "23ca6d0a-3006-4855-8d89-544896a801a2",
+          "id": "d4607cc4-5e4b-4d8a-a0f1-380c2a99e45d",
           "label": "Breathability",
-          "definition": "How well the cap allows air and moisture to pass through.",
+          "definition": "Ability of the cap material and construction to allow airflow.",
           "valueFamily": "qualitative"
         },
         {
-          "id": "afbe1b79-ab88-4587-abe0-69105107dfca",
-          "label": "Lightness",
-          "definition": "How light the cap feels or weighs.",
+          "id": "f95819d8-8bfe-428f-a1dd-cee0afd5b45d",
+          "label": "Weight",
+          "definition": "Physical weight of the cap.",
           "valueFamily": "qualitative"
         }
       ],
       "question": null,
-      "actionRationale": "The request is actionable: search for lightweight, breathable running caps suitable for hot weather in the UK market.",
+      "actionRationale": "The product category and key preferences are clear: a lightweight, breathable running cap for hot weather.",
       "ambiguities": [],
       "attempts": [
         {
           "stage": "context_action",
           "attemptOrdinal": 1,
           "status": "completed",
-          "providerRequestId": "resp_032c84bc3e7e1bc1016a9415367fc487d19766e06208c4c2f9",
-          "promptVersion": "v0-05-context-action-5",
+          "providerRequestId": "resp_0fcfae887ae847e5016a941a5300c087d1b37e25301b5be61d",
+          "promptVersion": "v0-05-context-action-6",
           "providerSchemaVersion": 2,
           "errorCode": null,
           "ambiguities": []
@@ -967,274 +474,8 @@
           "stage": "interpretation",
           "attemptOrdinal": 1,
           "status": "completed",
-          "providerRequestId": "resp_01cd11f8d42d6a06016a9415320b6887d1859b503db29295c2",
-          "promptVersion": "v0-05-interpretation-7",
-          "providerSchemaVersion": 2,
-          "errorCode": null,
-          "ambiguities": []
-        }
-      ],
-      "violations": []
-    },
-    {
-      "name": "shelving-golden",
-      "status": "completed",
-      "action": "search",
-      "revision": "1",
-      "items": [
-        {
-          "criterionId": "894a91e8-dc72-4213-abbe-d7eaf78a6e91",
-          "conceptId": "0af5c434-390e-48c0-b519-038471e617a3",
-          "lifecycle": "active",
-          "authority": "unknown",
-          "label": "Price",
-          "definition": "The product price.",
-          "strength": "preference",
-          "targetSemantics": "around",
-          "semanticKind": "money",
-          "summary": "3000 GBP",
-          "semanticValue": {
-            "schemaVersion": 1,
-            "kind": "money",
-            "mode": "target",
-            "amountMinor": 3000,
-            "currency": "GBP"
-          }
-        },
-        {
-          "criterionId": "0f610f67-58b0-49fc-b98b-da076bbcbd1e",
-          "conceptId": "7a48cb84-9e44-4790-b7e7-720b14633be3",
-          "lifecycle": "active",
-          "authority": "unknown",
-          "label": "Depth",
-          "definition": "The overall front-to-back depth of the shelving unit.",
-          "strength": "hard",
-          "targetSemantics": "range",
-          "semanticKind": "measurement_range",
-          "summary": "{\"upper\":{\"amount\":\"30\",\"inclusive\":true},\"unit\":\"cm\"}",
-          "semanticValue": {
-            "schemaVersion": 1,
-            "kind": "measurement_range",
-            "upper": {
-              "amount": "30",
-              "inclusive": true
-            },
-            "unit": "cm"
-          }
-        },
-        {
-          "criterionId": "e04d82bb-e2b6-4724-b7b9-68e4c34c460e",
-          "conceptId": "b8aeb57e-48a7-4357-b6fb-824d1642219d",
-          "lifecycle": "active",
-          "authority": "unknown",
-          "label": "Colour",
-          "definition": "The product's colour or finish colour.",
-          "strength": "hard",
-          "targetSemantics": "categorical",
-          "semanticKind": "categorical",
-          "summary": "white",
-          "semanticValue": {
-            "schemaVersion": 1,
-            "kind": "categorical",
-            "operator": "exclude",
-            "values": [
-              "white"
-            ]
-          }
-        },
-        {
-          "criterionId": "a35145ad-7a58-461b-b74b-017a53f55df6",
-          "conceptId": "d7344b0e-ff54-4845-ad70-54e77aeb292f",
-          "lifecycle": "active",
-          "authority": "unknown",
-          "label": "Visual lightness",
-          "definition": "How visually light or unobtrusive the shelving unit appears.",
-          "strength": "preference",
-          "targetSemantics": "qualitative",
-          "semanticKind": "qualitative",
-          "summary": "Visually light appearance",
-          "semanticValue": {
-            "schemaVersion": 1,
-            "kind": "qualitative",
-            "mode": "text",
-            "text": "Visually light appearance"
-          }
-        },
-        {
-          "criterionId": "1f96fe51-64aa-44ff-8784-e038b1fdc6d1",
-          "conceptId": "e9a0c88b-36d8-46e9-8d16-e26244f46f0c",
-          "lifecycle": "active",
-          "authority": "unknown",
-          "label": "Width",
-          "definition": "The overall width of the shelving unit.",
-          "strength": "hard",
-          "targetSemantics": "range",
-          "semanticKind": "measurement_range",
-          "summary": "{\"upper\":{\"amount\":\"60\",\"inclusive\":true},\"unit\":\"cm\"}",
-          "semanticValue": {
-            "schemaVersion": 1,
-            "kind": "measurement_range",
-            "upper": {
-              "amount": "60",
-              "inclusive": true
-            },
-            "unit": "cm"
-          }
-        }
-      ],
-      "fullItems": [
-        {
-          "criterionId": "0f610f67-58b0-49fc-b98b-da076bbcbd1e",
-          "conceptId": "7a48cb84-9e44-4790-b7e7-720b14633be3",
-          "lifecycle": "active",
-          "authority": "user_explicit",
-          "label": "Depth",
-          "definition": "The overall front-to-back depth of the shelving unit.",
-          "strength": "hard",
-          "targetSemantics": "range",
-          "semanticKind": "measurement_range",
-          "summary": "{\"upper\":{\"amount\":\"30\",\"inclusive\":true},\"unit\":\"cm\"}",
-          "semanticValue": {
-            "schemaVersion": 1,
-            "kind": "measurement_range",
-            "upper": {
-              "amount": "30",
-              "inclusive": true
-            },
-            "unit": "cm"
-          }
-        },
-        {
-          "criterionId": "1f96fe51-64aa-44ff-8784-e038b1fdc6d1",
-          "conceptId": "e9a0c88b-36d8-46e9-8d16-e26244f46f0c",
-          "lifecycle": "active",
-          "authority": "user_explicit",
-          "label": "Width",
-          "definition": "The overall width of the shelving unit.",
-          "strength": "hard",
-          "targetSemantics": "range",
-          "semanticKind": "measurement_range",
-          "summary": "{\"upper\":{\"amount\":\"60\",\"inclusive\":true},\"unit\":\"cm\"}",
-          "semanticValue": {
-            "schemaVersion": 1,
-            "kind": "measurement_range",
-            "upper": {
-              "amount": "60",
-              "inclusive": true
-            },
-            "unit": "cm"
-          }
-        },
-        {
-          "criterionId": "894a91e8-dc72-4213-abbe-d7eaf78a6e91",
-          "conceptId": "0af5c434-390e-48c0-b519-038471e617a3",
-          "lifecycle": "active",
-          "authority": "user_explicit",
-          "label": "Price",
-          "definition": "The product price.",
-          "strength": "preference",
-          "targetSemantics": "around",
-          "semanticKind": "money",
-          "summary": "3000 GBP",
-          "semanticValue": {
-            "schemaVersion": 1,
-            "kind": "money",
-            "mode": "target",
-            "amountMinor": 3000,
-            "currency": "GBP"
-          }
-        },
-        {
-          "criterionId": "a35145ad-7a58-461b-b74b-017a53f55df6",
-          "conceptId": "d7344b0e-ff54-4845-ad70-54e77aeb292f",
-          "lifecycle": "active",
-          "authority": "user_explicit",
-          "label": "Visual lightness",
-          "definition": "How visually light or unobtrusive the shelving unit appears.",
-          "strength": "preference",
-          "targetSemantics": "qualitative",
-          "semanticKind": "qualitative",
-          "summary": "Visually light appearance",
-          "semanticValue": {
-            "schemaVersion": 1,
-            "kind": "qualitative",
-            "mode": "text",
-            "text": "Visually light appearance"
-          }
-        },
-        {
-          "criterionId": "e04d82bb-e2b6-4724-b7b9-68e4c34c460e",
-          "conceptId": "b8aeb57e-48a7-4357-b6fb-824d1642219d",
-          "lifecycle": "active",
-          "authority": "user_explicit",
-          "label": "Colour",
-          "definition": "The product's colour or finish colour.",
-          "strength": "hard",
-          "targetSemantics": "categorical",
-          "semanticKind": "categorical",
-          "summary": "white",
-          "semanticValue": {
-            "schemaVersion": 1,
-            "kind": "categorical",
-            "operator": "exclude",
-            "values": [
-              "white"
-            ]
-          }
-        }
-      ],
-      "concepts": [
-        {
-          "id": "0af5c434-390e-48c0-b519-038471e617a3",
-          "label": "Price",
-          "definition": "The product price.",
-          "valueFamily": "money"
-        },
-        {
-          "id": "7a48cb84-9e44-4790-b7e7-720b14633be3",
-          "label": "Depth",
-          "definition": "The overall front-to-back depth of the shelving unit.",
-          "valueFamily": "measurement"
-        },
-        {
-          "id": "b8aeb57e-48a7-4357-b6fb-824d1642219d",
-          "label": "Colour",
-          "definition": "The product's colour or finish colour.",
-          "valueFamily": "categorical"
-        },
-        {
-          "id": "d7344b0e-ff54-4845-ad70-54e77aeb292f",
-          "label": "Visual lightness",
-          "definition": "How visually light or unobtrusive the shelving unit appears.",
-          "valueFamily": "qualitative"
-        },
-        {
-          "id": "e9a0c88b-36d8-46e9-8d16-e26244f46f0c",
-          "label": "Width",
-          "definition": "The overall width of the shelving unit.",
-          "valueFamily": "measurement"
-        }
-      ],
-      "question": null,
-      "actionRationale": "The request has actionable hard limits for width, depth, and non-white colour, plus clear price and visual-style preferences.",
-      "ambiguities": [],
-      "attempts": [
-        {
-          "stage": "context_action",
-          "attemptOrdinal": 1,
-          "status": "completed",
-          "providerRequestId": "resp_0bcf93ccacfd95bc016a94153ee25887d18dd43dfc6c8651a1",
-          "promptVersion": "v0-05-context-action-5",
-          "providerSchemaVersion": 2,
-          "errorCode": null,
-          "ambiguities": []
-        },
-        {
-          "stage": "interpretation",
-          "attemptOrdinal": 1,
-          "status": "completed",
-          "providerRequestId": "resp_0a05d350b3840123016a94153848dc87d18dd5f9286d80346b",
-          "promptVersion": "v0-05-interpretation-7",
+          "providerRequestId": "resp_005858ff4e7c7615016a941a4e2bcc87d1a065f38ff7bedbbc",
+          "promptVersion": "v0-05-interpretation-8",
           "providerSchemaVersion": 2,
           "errorCode": null,
           "ambiguities": []
@@ -1249,69 +490,13 @@
       "revision": "1",
       "items": [
         {
-          "criterionId": "1a533bdb-b6b1-40ab-bdb0-ad2011ade894",
-          "conceptId": "15b259b7-be04-412b-8a2d-c35ac2ec1287",
+          "criterionId": "4ff91a46-cc55-4a98-a985-25bca15447db",
+          "conceptId": "231d5141-7469-4dab-affc-c6401055929f",
           "lifecycle": "active",
           "authority": "unknown",
-          "label": "Headphone form factor",
-          "definition": "The physical wearing style of the headphones.",
-          "strength": "preference",
-          "targetSemantics": "categorical",
-          "semanticKind": "categorical",
-          "summary": "over-ear",
-          "semanticValue": {
-            "schemaVersion": 1,
-            "kind": "categorical",
-            "operator": "prefer",
-            "values": [
-              "over-ear"
-            ]
-          }
-        },
-        {
-          "criterionId": "4025ed0c-f907-4a6e-847b-1169f83fab27",
-          "conceptId": "2b7724e6-d53f-4f91-8bc6-2c4b7cf5fc97",
-          "lifecycle": "active",
-          "authority": "unknown",
-          "label": "Noise cancellation",
-          "definition": "The headphones' noise cancellation capability.",
-          "strength": "preference",
-          "targetSemantics": "qualitative",
-          "semanticKind": "qualitative",
-          "summary": "Noise cancellation matters.",
-          "semanticValue": {
-            "schemaVersion": 1,
-            "kind": "qualitative",
-            "mode": "text",
-            "text": "Noise cancellation matters."
-          }
-        },
-        {
-          "criterionId": "6ac9c79f-f3a1-4efb-b821-8c4a3dc1b112",
-          "conceptId": "333dee18-789f-46ce-829b-a4e381c23c4d",
-          "lifecycle": "active",
-          "authority": "unknown",
-          "label": "Comfort with glasses",
-          "definition": "Comfort when worn with glasses.",
-          "strength": "preference",
-          "targetSemantics": "qualitative",
-          "semanticKind": "qualitative",
-          "summary": "Glasses comfort matters.",
-          "semanticValue": {
-            "schemaVersion": 1,
-            "kind": "qualitative",
-            "mode": "text",
-            "text": "Glasses comfort matters."
-          }
-        },
-        {
-          "criterionId": "eaa6b2cd-10b6-42a0-8677-119985c0cb75",
-          "conceptId": "a38754cd-d741-42a4-a192-3819ea38322d",
-          "lifecycle": "active",
-          "authority": "unknown",
-          "label": "Wireless connectivity",
-          "definition": "Whether the headphones support wireless connectivity.",
-          "strength": "preference",
+          "label": "Wireless",
+          "definition": "Whether the headphones operate wirelessly.",
+          "strength": "hard",
           "targetSemantics": "exact",
           "semanticKind": "boolean",
           "summary": "true",
@@ -1322,8 +507,26 @@
           }
         },
         {
-          "criterionId": "4984621f-ecf4-4c0f-a377-7d16fc8d496b",
-          "conceptId": "b7b41810-ca36-48e0-83f4-e56129bc66c8",
+          "criterionId": "dc9a6da0-6d86-4b9a-856a-38c83406ac11",
+          "conceptId": "810cbeea-ea75-4b08-ba91-7be2031da859",
+          "lifecycle": "active",
+          "authority": "unknown",
+          "label": "Noise cancellation",
+          "definition": "The headphones' ability to reduce external noise.",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticKind": "qualitative",
+          "summary": "noise cancellation matters",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "noise cancellation matters"
+          }
+        },
+        {
+          "criterionId": "a25bad0f-3adf-412f-bc9b-07d5cc45689a",
+          "conceptId": "bfd85c55-9273-4cfa-a234-703eb6babef2",
           "lifecycle": "active",
           "authority": "unknown",
           "label": "Price",
@@ -1338,51 +541,106 @@
             "mode": "target",
             "amountMinor": 15000,
             "currency": "GBP"
+          }
+        },
+        {
+          "criterionId": "7e71854a-eabb-4733-a1bc-408eda7ce537",
+          "conceptId": "cfe7b059-fd82-40f5-9e20-214ea7b7577b",
+          "lifecycle": "active",
+          "authority": "unknown",
+          "label": "Headphone form factor",
+          "definition": "The physical wearing style of the headphones.",
+          "strength": "hard",
+          "targetSemantics": "categorical",
+          "semanticKind": "categorical",
+          "summary": "over-ear",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "categorical",
+            "operator": "include",
+            "values": [
+              "over-ear"
+            ]
+          }
+        },
+        {
+          "criterionId": "5f34d5fe-3adc-458e-a0b3-a50004080180",
+          "conceptId": "dd24bc9b-4a47-403a-aa88-5ad51f36cf60",
+          "lifecycle": "active",
+          "authority": "unknown",
+          "label": "Glasses comfort",
+          "definition": "Comfort of the headphones when worn with glasses.",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticKind": "qualitative",
+          "summary": "glasses comfort matters",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "glasses comfort matters"
           }
         }
       ],
       "fullItems": [
         {
-          "criterionId": "1a533bdb-b6b1-40ab-bdb0-ad2011ade894",
-          "conceptId": "15b259b7-be04-412b-8a2d-c35ac2ec1287",
+          "criterionId": "4ff91a46-cc55-4a98-a985-25bca15447db",
+          "conceptId": "231d5141-7469-4dab-affc-c6401055929f",
+          "lifecycle": "active",
+          "authority": "user_explicit",
+          "label": "Wireless",
+          "definition": "Whether the headphones operate wirelessly.",
+          "strength": "hard",
+          "targetSemantics": "exact",
+          "semanticKind": "boolean",
+          "summary": "true",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "boolean",
+            "value": true
+          }
+        },
+        {
+          "criterionId": "5f34d5fe-3adc-458e-a0b3-a50004080180",
+          "conceptId": "dd24bc9b-4a47-403a-aa88-5ad51f36cf60",
+          "lifecycle": "active",
+          "authority": "user_explicit",
+          "label": "Glasses comfort",
+          "definition": "Comfort of the headphones when worn with glasses.",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticKind": "qualitative",
+          "summary": "glasses comfort matters",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "glasses comfort matters"
+          }
+        },
+        {
+          "criterionId": "7e71854a-eabb-4733-a1bc-408eda7ce537",
+          "conceptId": "cfe7b059-fd82-40f5-9e20-214ea7b7577b",
           "lifecycle": "active",
           "authority": "user_explicit",
           "label": "Headphone form factor",
           "definition": "The physical wearing style of the headphones.",
-          "strength": "preference",
+          "strength": "hard",
           "targetSemantics": "categorical",
           "semanticKind": "categorical",
           "summary": "over-ear",
           "semanticValue": {
             "schemaVersion": 1,
             "kind": "categorical",
-            "operator": "prefer",
+            "operator": "include",
             "values": [
               "over-ear"
             ]
           }
         },
         {
-          "criterionId": "4025ed0c-f907-4a6e-847b-1169f83fab27",
-          "conceptId": "2b7724e6-d53f-4f91-8bc6-2c4b7cf5fc97",
-          "lifecycle": "active",
-          "authority": "user_explicit",
-          "label": "Noise cancellation",
-          "definition": "The headphones' noise cancellation capability.",
-          "strength": "preference",
-          "targetSemantics": "qualitative",
-          "semanticKind": "qualitative",
-          "summary": "Noise cancellation matters.",
-          "semanticValue": {
-            "schemaVersion": 1,
-            "kind": "qualitative",
-            "mode": "text",
-            "text": "Noise cancellation matters."
-          }
-        },
-        {
-          "criterionId": "4984621f-ecf4-4c0f-a377-7d16fc8d496b",
-          "conceptId": "b7b41810-ca36-48e0-83f4-e56129bc66c8",
+          "criterionId": "a25bad0f-3adf-412f-bc9b-07d5cc45689a",
+          "conceptId": "bfd85c55-9273-4cfa-a234-703eb6babef2",
           "lifecycle": "active",
           "authority": "user_explicit",
           "label": "Price",
@@ -1400,369 +658,74 @@
           }
         },
         {
-          "criterionId": "6ac9c79f-f3a1-4efb-b821-8c4a3dc1b112",
-          "conceptId": "333dee18-789f-46ce-829b-a4e381c23c4d",
+          "criterionId": "dc9a6da0-6d86-4b9a-856a-38c83406ac11",
+          "conceptId": "810cbeea-ea75-4b08-ba91-7be2031da859",
           "lifecycle": "active",
           "authority": "user_explicit",
-          "label": "Comfort with glasses",
-          "definition": "Comfort when worn with glasses.",
+          "label": "Noise cancellation",
+          "definition": "The headphones' ability to reduce external noise.",
           "strength": "preference",
           "targetSemantics": "qualitative",
           "semanticKind": "qualitative",
-          "summary": "Glasses comfort matters.",
+          "summary": "noise cancellation matters",
           "semanticValue": {
             "schemaVersion": 1,
             "kind": "qualitative",
             "mode": "text",
-            "text": "Glasses comfort matters."
-          }
-        },
-        {
-          "criterionId": "eaa6b2cd-10b6-42a0-8677-119985c0cb75",
-          "conceptId": "a38754cd-d741-42a4-a192-3819ea38322d",
-          "lifecycle": "active",
-          "authority": "user_explicit",
-          "label": "Wireless connectivity",
-          "definition": "Whether the headphones support wireless connectivity.",
-          "strength": "preference",
-          "targetSemantics": "exact",
-          "semanticKind": "boolean",
-          "summary": "true",
-          "semanticValue": {
-            "schemaVersion": 1,
-            "kind": "boolean",
-            "value": true
+            "text": "noise cancellation matters"
           }
         }
       ],
       "concepts": [
         {
-          "id": "15b259b7-be04-412b-8a2d-c35ac2ec1287",
+          "id": "231d5141-7469-4dab-affc-c6401055929f",
+          "label": "Wireless",
+          "definition": "Whether the headphones operate wirelessly.",
+          "valueFamily": "boolean"
+        },
+        {
+          "id": "810cbeea-ea75-4b08-ba91-7be2031da859",
+          "label": "Noise cancellation",
+          "definition": "The headphones' ability to reduce external noise.",
+          "valueFamily": "qualitative"
+        },
+        {
+          "id": "bfd85c55-9273-4cfa-a234-703eb6babef2",
+          "label": "Price",
+          "definition": "The purchase price of the headphones.",
+          "valueFamily": "money"
+        },
+        {
+          "id": "cfe7b059-fd82-40f5-9e20-214ea7b7577b",
           "label": "Headphone form factor",
           "definition": "The physical wearing style of the headphones.",
           "valueFamily": "categorical"
         },
         {
-          "id": "2b7724e6-d53f-4f91-8bc6-2c4b7cf5fc97",
-          "label": "Noise cancellation",
-          "definition": "The headphones' noise cancellation capability.",
-          "valueFamily": "qualitative"
-        },
-        {
-          "id": "333dee18-789f-46ce-829b-a4e381c23c4d",
-          "label": "Comfort with glasses",
-          "definition": "Comfort when worn with glasses.",
-          "valueFamily": "qualitative"
-        },
-        {
-          "id": "a38754cd-d741-42a4-a192-3819ea38322d",
-          "label": "Wireless connectivity",
-          "definition": "Whether the headphones support wireless connectivity.",
-          "valueFamily": "boolean"
-        },
-        {
-          "id": "b7b41810-ca36-48e0-83f4-e56129bc66c8",
-          "label": "Price",
-          "definition": "The purchase price of the headphones.",
-          "valueFamily": "money"
-        }
-      ],
-      "question": {
-        "prompt": "Which should take priority if there’s a trade-off: stronger noise cancellation or better comfort with glasses?",
-        "whyNow": "Both are explicitly important and their priority could materially change the best recommendations.",
-        "options": [
-          "Stronger noise cancellation",
-          "Better comfort with glasses"
-        ]
-      },
-      "actionRationale": null,
-      "ambiguities": [],
-      "attempts": [
-        {
-          "stage": "context_action",
-          "attemptOrdinal": 1,
-          "status": "completed",
-          "providerRequestId": "resp_0243e745c55ce96b016a9415461c7487d1aaadcefc77025f7c",
-          "promptVersion": "v0-05-context-action-5",
-          "providerSchemaVersion": 2,
-          "errorCode": null,
-          "ambiguities": []
-        },
-        {
-          "stage": "interpretation",
-          "attemptOrdinal": 1,
-          "status": "completed",
-          "providerRequestId": "resp_0488421ea526f7b7016a941540aa8087d1afa85b62f5f76926",
-          "promptVersion": "v0-05-interpretation-7",
-          "providerSchemaVersion": 2,
-          "errorCode": null,
-          "ambiguities": []
-        }
-      ],
-      "violations": [
-        "categorical include /^wireless$/i at hard was not preserved"
-      ]
-    },
-    {
-      "name": "conditional-money-stretch",
-      "status": "completed",
-      "action": "search",
-      "revision": "1",
-      "items": [
-        {
-          "criterionId": "819ec6cb-e5e0-41da-8eed-67403f83baae",
-          "conceptId": "89c0607a-6579-4056-9fea-64d2b28dbb68",
-          "lifecycle": "active",
-          "authority": "unknown",
-          "label": "Price",
-          "definition": "Purchase price of the shelving unit.",
-          "strength": "preference",
-          "targetSemantics": "stretch",
-          "semanticKind": "money_stretch",
-          "summary": "3000 -> 4500 GBP",
-          "semanticValue": {
-            "schemaVersion": 1,
-            "kind": "money_stretch",
-            "targetMinor": 3000,
-            "stretchCeilingMinor": 4500,
-            "currency": "GBP",
-            "condition": "if it looks visually light"
-          }
-        }
-      ],
-      "fullItems": [
-        {
-          "criterionId": "819ec6cb-e5e0-41da-8eed-67403f83baae",
-          "conceptId": "89c0607a-6579-4056-9fea-64d2b28dbb68",
-          "lifecycle": "active",
-          "authority": "user_explicit",
-          "label": "Price",
-          "definition": "Purchase price of the shelving unit.",
-          "strength": "preference",
-          "targetSemantics": "stretch",
-          "semanticKind": "money_stretch",
-          "summary": "3000 -> 4500 GBP",
-          "semanticValue": {
-            "schemaVersion": 1,
-            "kind": "money_stretch",
-            "targetMinor": 3000,
-            "stretchCeilingMinor": 4500,
-            "currency": "GBP",
-            "condition": "if it looks visually light"
-          }
-        }
-      ],
-      "concepts": [
-        {
-          "id": "89c0607a-6579-4056-9fea-64d2b28dbb68",
-          "label": "Price",
-          "definition": "Purchase price of the shelving unit.",
-          "valueFamily": "money"
-        }
-      ],
-      "question": null,
-      "actionRationale": "The budget and conditional visual preference are actionable for product retrieval.",
-      "ambiguities": [],
-      "attempts": [
-        {
-          "stage": "context_action",
-          "attemptOrdinal": 1,
-          "status": "completed",
-          "providerRequestId": "resp_07e6848290631562016a94154c120087d1ac6db63e4169ebf9",
-          "promptVersion": "v0-05-context-action-5",
-          "providerSchemaVersion": 2,
-          "errorCode": null,
-          "ambiguities": []
-        },
-        {
-          "stage": "interpretation",
-          "attemptOrdinal": 1,
-          "status": "completed",
-          "providerRequestId": "resp_0edeab61dd08af11016a94154854c487d1ad6b5ce61d0d8a75",
-          "promptVersion": "v0-05-interpretation-7",
-          "providerSchemaVersion": 2,
-          "errorCode": null,
-          "ambiguities": []
-        }
-      ],
-      "violations": []
-    },
-    {
-      "name": "comfort-vs-anc-question",
-      "status": "completed",
-      "action": "ask",
-      "revision": "1",
-      "items": [
-        {
-          "criterionId": "149048bb-0c1f-43c1-9036-2597f26dc91e",
-          "conceptId": "4fdc346e-bbc6-4692-afa8-3a86fadf6294",
-          "lifecycle": "active",
-          "authority": "unknown",
-          "label": "Comfort",
-          "definition": "Overall comfort when using the product.",
-          "strength": "preference",
-          "targetSemantics": "qualitative",
-          "semanticKind": "qualitative",
-          "summary": "Comfort is important.",
-          "semanticValue": {
-            "schemaVersion": 1,
-            "kind": "qualitative",
-            "mode": "text",
-            "text": "Comfort is important."
-          }
-        },
-        {
-          "criterionId": "de13adfb-e301-4d90-b882-2803ff431e11",
-          "conceptId": "651eac9a-f75c-42c4-bdaa-9e68348103af",
-          "lifecycle": "active",
-          "authority": "unknown",
-          "label": "Noise cancellation",
-          "definition": "The product's ability to reduce external noise.",
-          "strength": "preference",
-          "targetSemantics": "qualitative",
-          "semanticKind": "qualitative",
-          "summary": "Strong noise cancellation for train travel.",
-          "semanticValue": {
-            "schemaVersion": 1,
-            "kind": "qualitative",
-            "mode": "text",
-            "text": "Strong noise cancellation for train travel."
-          }
-        }
-      ],
-      "fullItems": [
-        {
-          "criterionId": "149048bb-0c1f-43c1-9036-2597f26dc91e",
-          "conceptId": "4fdc346e-bbc6-4692-afa8-3a86fadf6294",
-          "lifecycle": "active",
-          "authority": "user_explicit",
-          "label": "Comfort",
-          "definition": "Overall comfort when using the product.",
-          "strength": "preference",
-          "targetSemantics": "qualitative",
-          "semanticKind": "qualitative",
-          "summary": "Comfort is important.",
-          "semanticValue": {
-            "schemaVersion": 1,
-            "kind": "qualitative",
-            "mode": "text",
-            "text": "Comfort is important."
-          }
-        },
-        {
-          "criterionId": "de13adfb-e301-4d90-b882-2803ff431e11",
-          "conceptId": "651eac9a-f75c-42c4-bdaa-9e68348103af",
-          "lifecycle": "active",
-          "authority": "user_explicit",
-          "label": "Noise cancellation",
-          "definition": "The product's ability to reduce external noise.",
-          "strength": "preference",
-          "targetSemantics": "qualitative",
-          "semanticKind": "qualitative",
-          "summary": "Strong noise cancellation for train travel.",
-          "semanticValue": {
-            "schemaVersion": 1,
-            "kind": "qualitative",
-            "mode": "text",
-            "text": "Strong noise cancellation for train travel."
-          }
-        }
-      ],
-      "concepts": [
-        {
-          "id": "4fdc346e-bbc6-4692-afa8-3a86fadf6294",
-          "label": "Comfort",
-          "definition": "Overall comfort when using the product.",
-          "valueFamily": "qualitative"
-        },
-        {
-          "id": "651eac9a-f75c-42c4-bdaa-9e68348103af",
-          "label": "Noise cancellation",
-          "definition": "The product's ability to reduce external noise.",
+          "id": "dd24bc9b-4a47-403a-aa88-5ad51f36cf60",
+          "label": "Glasses comfort",
+          "definition": "Comfort of the headphones when worn with glasses.",
           "valueFamily": "qualitative"
         }
       ],
       "question": {
-        "prompt": "Which should take priority for your train-travel headphones: comfort or noise cancellation?",
-        "whyNow": "You’ve said both matter but are unsure which should lead; that priority could materially change the recommendation.",
+        "prompt": "Which should take priority if there’s a trade-off: glasses comfort or stronger noise cancellation?",
+        "whyNow": "Both preferences are important, and their priority could materially change the best recommendations.",
         "options": [
-          "Comfort",
+          "Glasses comfort",
           "Noise cancellation",
           "Balance them equally"
         ]
       },
       "actionRationale": null,
-      "ambiguities": [
-        "The shopper does not know whether comfort or noise cancellation should be weighted more heavily; both are recorded as equal preferences."
-      ],
-      "attempts": [
-        {
-          "stage": "context_action",
-          "attemptOrdinal": 1,
-          "status": "completed",
-          "providerRequestId": "resp_053c1db51cbff392016a941552076087d18561dc337372b9d5",
-          "promptVersion": "v0-05-context-action-5",
-          "providerSchemaVersion": 2,
-          "errorCode": null,
-          "ambiguities": []
-        },
-        {
-          "stage": "interpretation",
-          "attemptOrdinal": 1,
-          "status": "completed",
-          "providerRequestId": "resp_0b5795a969bcfbd7016a94154ded2887d1a93d9117f5f1a48e",
-          "promptVersion": "v0-05-interpretation-7",
-          "providerSchemaVersion": 2,
-          "errorCode": null,
-          "ambiguities": [
-            "The shopper does not know whether comfort or noise cancellation should be weighted more heavily; both are recorded as equal preferences."
-          ]
-        }
-      ],
-      "violations": []
-    },
-    {
-      "name": "explicit-indifference",
-      "status": "completed",
-      "action": "search",
-      "revision": "2",
-      "items": [],
-      "fullItems": [
-        {
-          "criterionId": "b3db8abc-7b31-4f98-b81f-93225fc77733",
-          "conceptId": "1918af73-63b3-4694-a1b0-4140b7e1e934",
-          "lifecycle": "active",
-          "authority": "user_explicit",
-          "label": "Maximum width",
-          "definition": "Maximum product width",
-          "strength": "none",
-          "targetSemantics": "indifferent",
-          "semanticKind": "indifferent",
-          "summary": "indifferent",
-          "semanticValue": {
-            "schemaVersion": 1,
-            "kind": "indifferent"
-          }
-        }
-      ],
-      "concepts": [
-        {
-          "id": "1918af73-63b3-4694-a1b0-4140b7e1e934",
-          "label": "Maximum width",
-          "definition": "Maximum product width",
-          "valueFamily": "measurement"
-        }
-      ],
-      "question": null,
-      "actionRationale": "The only active criterion is that width is irrelevant, so no further clarification is needed before searching.",
       "ambiguities": [],
       "attempts": [
         {
           "stage": "context_action",
           "attemptOrdinal": 1,
           "status": "completed",
-          "providerRequestId": "resp_03eb5c0b73945fa2016a941557172087d198021f801c3f3468",
-          "promptVersion": "v0-05-context-action-5",
+          "providerRequestId": "resp_071b94683c3a49f4016a941a59e52487d19dd05e362c21707c",
+          "promptVersion": "v0-05-context-action-6",
           "providerSchemaVersion": 2,
           "errorCode": null,
           "ambiguities": []
@@ -1771,278 +734,8 @@
           "stage": "interpretation",
           "attemptOrdinal": 1,
           "status": "completed",
-          "providerRequestId": "resp_01c088e1f0a2aefb016a9415541d2087d1b15536f3a5dd2542",
-          "promptVersion": "v0-05-interpretation-7",
-          "providerSchemaVersion": 2,
-          "errorCode": null,
-          "ambiguities": []
-        }
-      ],
-      "violations": []
-    },
-    {
-      "name": "change-of-mind-relaxation",
-      "status": "completed",
-      "action": "search",
-      "revision": "2",
-      "items": [
-        {
-          "criterionId": "5c23a0e8-3bf6-4c37-b800-83d7f4d4b62e",
-          "conceptId": "91e11fb8-f4ca-4355-bac6-75abeb722df6",
-          "lifecycle": "active",
-          "authority": "unknown",
-          "label": "Maximum width",
-          "definition": "Maximum product width",
-          "strength": "hard",
-          "targetSemantics": "range",
-          "semanticKind": "measurement_range",
-          "summary": "{\"upper\":{\"amount\":\"80\",\"inclusive\":true},\"unit\":\"cm\"}",
-          "semanticValue": {
-            "schemaVersion": 1,
-            "kind": "measurement_range",
-            "upper": {
-              "amount": "80",
-              "inclusive": true
-            },
-            "unit": "cm"
-          }
-        }
-      ],
-      "fullItems": [
-        {
-          "criterionId": "5c23a0e8-3bf6-4c37-b800-83d7f4d4b62e",
-          "conceptId": "91e11fb8-f4ca-4355-bac6-75abeb722df6",
-          "lifecycle": "active",
-          "authority": "user_explicit",
-          "label": "Maximum width",
-          "definition": "Maximum product width",
-          "strength": "hard",
-          "targetSemantics": "range",
-          "semanticKind": "measurement_range",
-          "summary": "{\"upper\":{\"amount\":\"80\",\"inclusive\":true},\"unit\":\"cm\"}",
-          "semanticValue": {
-            "schemaVersion": 1,
-            "kind": "measurement_range",
-            "upper": {
-              "amount": "80",
-              "inclusive": true
-            },
-            "unit": "cm"
-          }
-        }
-      ],
-      "concepts": [
-        {
-          "id": "91e11fb8-f4ca-4355-bac6-75abeb722df6",
-          "label": "Maximum width",
-          "definition": "Maximum product width",
-          "valueFamily": "measurement"
-        }
-      ],
-      "question": null,
-      "actionRationale": "The explicit maximum width of 80 cm is actionable for product retrieval.",
-      "ambiguities": [],
-      "attempts": [
-        {
-          "stage": "context_action",
-          "attemptOrdinal": 1,
-          "status": "completed",
-          "providerRequestId": "resp_06260becd9cfa6a8016a94155c45b487d1aca8043c302e3ff3",
-          "promptVersion": "v0-05-context-action-5",
-          "providerSchemaVersion": 2,
-          "errorCode": null,
-          "ambiguities": []
-        },
-        {
-          "stage": "interpretation",
-          "attemptOrdinal": 1,
-          "status": "completed",
-          "providerRequestId": "resp_0ac8495c4a5c0907016a941558f08087d1b4ee3ae3012c64fd",
-          "promptVersion": "v0-05-interpretation-7",
-          "providerSchemaVersion": 2,
-          "errorCode": null,
-          "ambiguities": []
-        }
-      ],
-      "violations": []
-    },
-    {
-      "name": "two-turn-conditional-refinement",
-      "status": "completed",
-      "action": "search",
-      "revision": "2",
-      "items": [
-        {
-          "criterionId": "9c5abf1f-a753-4b20-995b-f47bd09f31f1",
-          "conceptId": "22f5f781-5f91-4397-a283-d095c829f959",
-          "lifecycle": "active",
-          "authority": "unknown",
-          "label": "Reviews",
-          "definition": "Product review quality or importance.",
-          "strength": "preference",
-          "targetSemantics": "qualitative",
-          "semanticKind": "qualitative",
-          "summary": "reviews matter less",
-          "semanticValue": {
-            "schemaVersion": 1,
-            "kind": "qualitative",
-            "mode": "text",
-            "text": "reviews matter less"
-          }
-        },
-        {
-          "criterionId": "6d3c7b14-de06-44cb-8595-e3c69cc91157",
-          "conceptId": "6a23cff2-f17f-483d-9c2b-6894b52ca0b2",
-          "lifecycle": "active",
-          "authority": "unknown",
-          "label": "Wireless with battery life",
-          "definition": "Preference for wireless products only when battery life is very good.",
-          "strength": "preference",
-          "targetSemantics": "qualitative",
-          "semanticKind": "qualitative",
-          "summary": "wireless with very good battery life",
-          "semanticValue": {
-            "schemaVersion": 1,
-            "kind": "qualitative",
-            "mode": "text",
-            "text": "wireless with very good battery life"
-          }
-        },
-        {
-          "criterionId": "461ac6a6-ffbe-4ccd-97d8-beb3a513d2d2",
-          "conceptId": "ae63453e-a219-4a2b-8953-3f38b354e3fe",
-          "lifecycle": "active",
-          "authority": "unknown",
-          "label": "Comfort for long workdays",
-          "definition": "Product comfort during long workdays.",
-          "strength": "strong_preference",
-          "targetSemantics": "qualitative",
-          "semanticKind": "qualitative",
-          "summary": "comfort for long workdays matters most",
-          "semanticValue": {
-            "schemaVersion": 1,
-            "kind": "qualitative",
-            "mode": "text",
-            "text": "comfort for long workdays matters most"
-          }
-        }
-      ],
-      "fullItems": [
-        {
-          "criterionId": "6d3c7b14-de06-44cb-8595-e3c69cc91157",
-          "conceptId": "6a23cff2-f17f-483d-9c2b-6894b52ca0b2",
-          "lifecycle": "active",
-          "authority": "user_explicit",
-          "label": "Wireless with battery life",
-          "definition": "Preference for wireless products only when battery life is very good.",
-          "strength": "preference",
-          "targetSemantics": "qualitative",
-          "semanticKind": "qualitative",
-          "summary": "wireless with very good battery life",
-          "semanticValue": {
-            "schemaVersion": 1,
-            "kind": "qualitative",
-            "mode": "text",
-            "text": "wireless with very good battery life"
-          }
-        },
-        {
-          "criterionId": "461ac6a6-ffbe-4ccd-97d8-beb3a513d2d2",
-          "conceptId": "ae63453e-a219-4a2b-8953-3f38b354e3fe",
-          "lifecycle": "active",
-          "authority": "user_explicit",
-          "label": "Comfort for long workdays",
-          "definition": "Product comfort during long workdays.",
-          "strength": "strong_preference",
-          "targetSemantics": "qualitative",
-          "semanticKind": "qualitative",
-          "summary": "comfort for long workdays matters most",
-          "semanticValue": {
-            "schemaVersion": 1,
-            "kind": "qualitative",
-            "mode": "text",
-            "text": "comfort for long workdays matters most"
-          }
-        },
-        {
-          "criterionId": "9c5abf1f-a753-4b20-995b-f47bd09f31f1",
-          "conceptId": "22f5f781-5f91-4397-a283-d095c829f959",
-          "lifecycle": "active",
-          "authority": "user_explicit",
-          "label": "Reviews",
-          "definition": "Product review quality or importance.",
-          "strength": "preference",
-          "targetSemantics": "qualitative",
-          "semanticKind": "qualitative",
-          "summary": "reviews matter less",
-          "semanticValue": {
-            "schemaVersion": 1,
-            "kind": "qualitative",
-            "mode": "text",
-            "text": "reviews matter less"
-          }
-        }
-      ],
-      "concepts": [
-        {
-          "id": "22f5f781-5f91-4397-a283-d095c829f959",
-          "label": "Reviews",
-          "definition": "Product review quality or importance.",
-          "valueFamily": "qualitative"
-        },
-        {
-          "id": "6a23cff2-f17f-483d-9c2b-6894b52ca0b2",
-          "label": "Wireless with battery life",
-          "definition": "Preference for wireless products only when battery life is very good.",
-          "valueFamily": "qualitative"
-        },
-        {
-          "id": "ae63453e-a219-4a2b-8953-3f38b354e3fe",
-          "label": "Comfort for long workdays",
-          "definition": "Product comfort during long workdays.",
-          "valueFamily": "qualitative"
-        }
-      ],
-      "question": null,
-      "actionRationale": "Comfort for long workdays is the clear leading preference; wireless products with very good battery life are also preferred, while reviews carry less weight.",
-      "ambiguities": [],
-      "attempts": [
-        {
-          "stage": "context_action",
-          "attemptOrdinal": 1,
-          "status": "completed",
-          "providerRequestId": "resp_06f1d67c572e2b1a016a941563d5cc87d197576fcf300a904c",
-          "promptVersion": "v0-05-context-action-5",
-          "providerSchemaVersion": 2,
-          "errorCode": null,
-          "ambiguities": []
-        },
-        {
-          "stage": "interpretation",
-          "attemptOrdinal": 1,
-          "status": "completed",
-          "providerRequestId": "resp_0734a9998249ab99016a94155e137887d184350edb021de511",
-          "promptVersion": "v0-05-interpretation-7",
-          "providerSchemaVersion": 2,
-          "errorCode": null,
-          "ambiguities": []
-        },
-        {
-          "stage": "context_action",
-          "attemptOrdinal": 1,
-          "status": "completed",
-          "providerRequestId": "resp_026b6e8384ba3a61016a94156aaa3c87d1a3f472a92ef616db",
-          "promptVersion": "v0-05-context-action-5",
-          "providerSchemaVersion": 2,
-          "errorCode": null,
-          "ambiguities": []
-        },
-        {
-          "stage": "interpretation",
-          "attemptOrdinal": 1,
-          "status": "completed",
-          "providerRequestId": "resp_0b63d6db64ff5806016a941565efec87d192c10bc53236fbf3",
-          "promptVersion": "v0-05-interpretation-7",
+          "providerRequestId": "resp_0aa9abd5ce5825f0016a941a54df9c87d1b2c622dbaa410659",
+          "promptVersion": "v0-05-interpretation-8",
           "providerSchemaVersion": 2,
           "errorCode": null,
           "ambiguities": []
