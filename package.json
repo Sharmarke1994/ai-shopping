@@ -22,6 +22,7 @@
     "proof:v0-07:live": "tsx scripts/run-v0-07-founder-proof.ts",
     "proof:v0-08:live": "tsx scripts/run-v0-08-founder-proof.ts",
     "proof:v0-09:live": "tsx scripts/run-v0-09-founder-proof.ts",
+    "proof:v0-09:recovery-rc1:live": "tsx scripts/run-v0-09-recovery-rc1-founder-proof.ts",
     "eval:v0-05:live": "tsx scripts/run-v0-05-live-eval.ts",
     "diagnostic:v0-05:context-hardening": "tsx scripts/run-v0-05-context-hardening-diagnostic.ts",
     "screenshots:v0-02": "node scripts/capture-v0-02-screenshots.mjs",
