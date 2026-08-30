@@ -3,7 +3,11 @@ import { parse, type DefaultTreeAdapterTypes } from "parse5";
 import { z } from "zod";
 
 export const PAGE_EXTRACTION_VERSION = "bounded-product-page-v1" as const;
-export const MAX_PAGE_HTML_BYTES = 1_500_000;
+// This is the temporary raw-input ceiling shared with the page transport
+// budget. The extracted document is governed independently by the much
+// smaller MAX_PAGE_RETAINED_DOCUMENT_BYTES below.
+export const MAX_PAGE_TRANSPORT_BYTES = 2_500_000;
+export const MAX_PAGE_HTML_BYTES = MAX_PAGE_TRANSPORT_BYTES;
 export const MAX_PAGE_DOM_NODES = 20_000;
 export const MAX_PAGE_DOM_DEPTH = 64;
 export const MAX_PAGE_JSON_LD_BLOCKS = 12;
@@ -11,7 +15,10 @@ export const MAX_PAGE_JSON_LD_BYTES = 256_000;
 export const MAX_PAGE_VISIBLE_TEXT_BYTES = 24_000;
 // Leave enough headroom for PostgreSQL JSONB's normalized textual form while
 // keeping the durable extracted document below the 40 KB database guard.
-export const MAX_PAGE_DOCUMENT_BYTES = 36_000;
+export const MAX_PAGE_RETAINED_DOCUMENT_BYTES = 36_000;
+// Backwards-compatible name for callers/tests while the two-budget contract
+// is made explicit above.
+export const MAX_PAGE_DOCUMENT_BYTES = MAX_PAGE_RETAINED_DOCUMENT_BYTES;
 
 const MAX_JSON_LD_BLOCK_BYTES = 64_000;
 const MAX_JSON_LD_DEPTH = 16;

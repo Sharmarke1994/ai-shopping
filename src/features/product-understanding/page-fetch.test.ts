@@ -305,6 +305,17 @@ describe("bounded page response policy", () => {
     ).rejects.toMatchObject({ code: "response_too_large" });
   });
 
+  it("accepts a measured modern page above the historical 1.5 MB transport budget", async () => {
+    const body = `<html><head><title>Modern product</title></head><body><h1>Modern product</h1><script>${"x".repeat(1_600_000)}</script></body></html>`;
+    const result = await fetchBoundedPage({
+      url: "https://example.com/product",
+      resolver: publicResolver,
+      requester: async () => response({ body }),
+    });
+    expect(result.encodedBytes).toBe(Buffer.byteLength(body));
+    expect(result.text).toBe(body);
+  });
+
   it("enforces one total deadline across resolver and requester work", async () => {
     await expect(
       fetchBoundedPage({
