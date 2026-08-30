@@ -19,12 +19,12 @@ import {
   INTERPRETATION_PROMPT_VERSION,
 } from "./prompts";
 import {
-  CONTEXT_ACTION_PROVIDER_SCHEMA_VERSION,
-  INTERPRETATION_PROVIDER_SCHEMA_VERSION,
-  contextActionProviderWireV1Schema,
-  interpretationProviderWireV1Schema,
-  type ContextActionProviderWireV1,
-  type InterpretationProviderWireV1,
+  CONTEXT_ACTION_PROVIDER_SCHEMA_VERSION_V2,
+  INTERPRETATION_PROVIDER_SCHEMA_VERSION_V2,
+  contextActionProviderWireV2Schema,
+  interpretationProviderWireV2Schema,
+  type ContextActionProviderWireV2,
+  type InterpretationProviderWireV2,
 } from "./provider-wire";
 import type { ProviderInputEnvelopeV1 } from "./provider-input";
 
@@ -88,9 +88,9 @@ export function createOpenAIContextAcquisitionModel(options?: {
         input,
         instructions: INTERPRETATION_INSTRUCTIONS,
         promptVersion: INTERPRETATION_PROMPT_VERSION,
-        providerSchemaVersion: INTERPRETATION_PROVIDER_SCHEMA_VERSION,
-        schemaName: "shopping_interpretation_v1",
-        schema: interpretationProviderWireV1Schema,
+        providerSchemaVersion: INTERPRETATION_PROVIDER_SCHEMA_VERSION_V2,
+        schemaName: "shopping_interpretation_v2",
+        schema: interpretationProviderWireV2Schema,
       }),
     selectAction: (input) =>
       callStructuredOutput({
@@ -99,9 +99,9 @@ export function createOpenAIContextAcquisitionModel(options?: {
         input,
         instructions: CONTEXT_ACTION_INSTRUCTIONS,
         promptVersion: CONTEXT_ACTION_PROMPT_VERSION,
-        providerSchemaVersion: CONTEXT_ACTION_PROVIDER_SCHEMA_VERSION,
-        schemaName: "shopping_context_action_v1",
-        schema: contextActionProviderWireV1Schema,
+        providerSchemaVersion: CONTEXT_ACTION_PROVIDER_SCHEMA_VERSION_V2,
+        schemaName: "shopping_context_action_v2",
+        schema: contextActionProviderWireV2Schema,
       }),
   };
 }
@@ -336,5 +336,5 @@ export function parseOpenAIResponse<T>(options: {
   }
 }
 
-export type OpenAIInterpretationWire = InterpretationProviderWireV1;
-export type OpenAIContextActionWire = ContextActionProviderWireV1;
+export type OpenAIInterpretationWire = InterpretationProviderWireV2;
+export type OpenAIContextActionWire = ContextActionProviderWireV2;

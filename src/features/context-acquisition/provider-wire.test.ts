@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   contextActionProviderWireV1Schema,
+  contextActionProviderWireV2Schema,
   interpretationProviderWireV1Schema,
+  interpretationProviderWireV2Schema,
   lowerContextActionProviderWireV1,
+  lowerContextActionProviderWire,
   lowerInterpretationProviderWireV1,
+  lowerInterpretationProviderWire,
 } from "./provider-wire";
 
 const conceptId = "00000000-0000-4000-8000-000000000001";
@@ -394,6 +398,79 @@ describe("interpretation provider wire V1", () => {
         confidence: 0.9,
       }),
     ).toThrow();
+  });
+});
+
+describe("provider wire V2 branch coherence", () => {
+  it("structurally correlates interpretation outcome and operation cardinality", () => {
+    expect(() =>
+      interpretationProviderWireV2Schema.parse({
+        providerSchemaVersion: 2,
+        interpretation: { outcome: "change", operations: [] },
+        ambiguities: [],
+      }),
+    ).toThrow();
+    expect(() =>
+      interpretationProviderWireV2Schema.parse({
+        providerSchemaVersion: 2,
+        interpretation: {
+          outcome: "no_change",
+          operations: [{ op: "remove", targetCriterionId: criterionId }],
+        },
+        ambiguities: [],
+      }),
+    ).toThrow();
+    const lowered = lowerInterpretationProviderWire({
+      providerSchemaVersion: 2,
+      interpretation: { outcome: "no_change", operations: [] },
+      ambiguities: [],
+    });
+    expect(lowered.patch).toEqual({ schemaVersion: 1, outcome: "no_change" });
+  });
+
+  it("structurally correlates context action branches", () => {
+    const rationale = { summary: "Search is actionable" };
+    expect(() =>
+      contextActionProviderWireV2Schema.parse({
+        providerSchemaVersion: 2,
+        decision: { action: "ask", question: null, rationale: null },
+      }),
+    ).toThrow();
+    expect(() =>
+      contextActionProviderWireV2Schema.parse({
+        providerSchemaVersion: 2,
+        decision: { action: "search", question: null, rationale: null },
+      }),
+    ).toThrow();
+    expect(
+      lowerContextActionProviderWire({
+        providerSchemaVersion: 2,
+        decision: { action: "search", question: null, rationale },
+      }),
+    ).toEqual({
+      schemaVersion: 1,
+      action: "search",
+      rationale,
+    });
+  });
+
+  it("continues to lower historical V1 payloads", () => {
+    expect(
+      lowerInterpretationProviderWire({
+        providerSchemaVersion: 1,
+        outcome: "no_change",
+        operations: [],
+        ambiguities: [],
+      }),
+    ).toMatchObject({ patch: { outcome: "no_change" } });
+    expect(
+      lowerContextActionProviderWire({
+        providerSchemaVersion: 1,
+        action: "search",
+        question: null,
+        rationale: { summary: "Historical" },
+      }),
+    ).toMatchObject({ action: "search" });
   });
 });
 

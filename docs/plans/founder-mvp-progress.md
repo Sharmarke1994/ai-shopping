@@ -436,11 +436,21 @@ This bounded blocker-remediation branch is isolated from V0-09 at frozen head
   green. No deterministic English authority parser was added because the
   repository cannot safely infer arbitrary grammar scope without a brittle,
   category-specific NLP approximation.
-- One bounded Terra low-reasoning diagnostic (11 cases, 11 interpretation and
-  11 action calls) completed with zero provider/structured-output failures and
-  zero protected semantic violations. Artifacts are in
-  `docs/evals/v0-05-context-hardening-diagnostic.{json,md}` and are diagnostic
-  only; V0-05's separate 21/21 formal release gate remains open.
+- The prior bounded Terra low-reasoning diagnostic reported 11/11 under its
+  then-current oracle, but independent review found a cap light/heavy reversal
+  and unverified conditional-loss cases. It is preserved as historical evidence
+  under `docs/evals/v0-05-context-hardening-diagnostic-prior.*` (including its
+  attempt marker) and is not acceptance evidence. This branch's corrected
+  evaluator/provider diagnostic is separate; V0-05's formal 21/21 gate remains
+  open.
+- The single authorized corrected Terra context diagnostic used the V2 nested
+  provider branches and richer sanitized oracle. It completed 16/17 cases and
+  recorded four violations: one invalid patch, two cases preserved through
+  ambiguity or hidden indifference but flagged by the current oracle, and one
+  unsupported-minute requirement surfaced as an ambiguity. The exact
+  JSON/Markdown pair is preserved at
+  `docs/evals/v0-05-context-hardening-diagnostic.{json,md}`; no second run or
+  speculative fix was made. V0-05's 21/21 formal gate remains open.
 
 ## Next validated checkpoints
 

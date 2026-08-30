@@ -68,15 +68,25 @@ unrelated review/comfort refinement, and proves battery remains a preference,
 wireless remains directionally unchanged, review alone is relaxed, and comfort
 alone is strengthened.
 
-One bounded Terra low-reasoning context diagnostic was run on 2026-08-30 using
-the production context adapter and a disposable database. It completed 11/11
-cases with 11 logical interpretation calls and 11 logical action calls, zero
-provider failures, zero structured-output failures and zero protected semantic
-violations. The cases covered the conditional, explicit-hard, cap, shelving,
-headphones, indifference/change-of-mind, money-stretch and unresolved
-comfort-vs-ANC question paths. The sanitized artifacts are
-`docs/evals/v0-05-context-hardening-diagnostic.json` and `.md`; they explicitly
-remain diagnostic evidence, not the 21/21 release gate.
+The prior bounded Terra low-reasoning context diagnostic was run on 2026-08-30
+using the production context adapter and a disposable database. Its then-current
+oracle reported 11/11, but independent review found that the cap direction was
+reversed and that conditional criteria could disappear without detection. The
+preserved artifacts are `docs/evals/v0-05-context-hardening-diagnostic-prior.json`
+and `.md` (plus the prior attempt marker). They are historical diagnostic
+evidence only, not acceptance evidence and not the 21/21 release gate. A new
+bounded diagnostic is authorized only after this evaluator/provider correction.
+
+The one authorized corrected Terra diagnostic then ran once on 2026-08-30 with
+the V2 provider wire and richer sanitized oracle. It completed 16/17 cases and
+recorded four violations: an explicit 40-minute battery requirement was
+surfaced as a domain-unsupported ambiguity (the oracle currently reports that
+as a violation), `ordinary-soft-lighter` failed closed on an invalid patch,
+`strong-soft-comfort` was preserved as a category-ambiguous ASK, and explicit
+indifference correctly hid the seeded width criterion (the visible-only check
+reported that as a violation). This remains diagnostic evidence only, not
+V0-05 21/21 acceptance. The exact result is preserved in
+`docs/evals/v0-05-context-hardening-diagnostic.json` and `.md`.
 
 ## V0-09 follow-up signals (not fixed here)
 

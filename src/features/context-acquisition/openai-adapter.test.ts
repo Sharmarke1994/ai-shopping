@@ -7,8 +7,9 @@ import {
   parseOpenAIResponse,
 } from "./openai-adapter";
 import {
-  contextActionProviderWireV1Schema,
+  contextActionProviderWireV2Schema,
   interpretationProviderWireV1Schema,
+  interpretationProviderWireV2Schema,
 } from "./provider-wire";
 
 const metadata: ModelCallMetadata = {
@@ -45,9 +46,8 @@ function completedNoChangeResponse() {
           annotations: [],
           logprobs: [],
           text: JSON.stringify({
-            providerSchemaVersion: 1,
-            outcome: "no_change",
-            operations: [],
+            providerSchemaVersion: 2,
+            interpretation: { outcome: "no_change", operations: [] },
             ambiguities: [],
           }),
         },
@@ -72,8 +72,8 @@ function createTestModel(
 describe("OpenAI context-acquisition adapter", () => {
   it("generates an object-root strict Structured Outputs schema", () => {
     const schema = zodTextFormat(
-      interpretationProviderWireV1Schema,
-      "shopping_interpretation_v1",
+      interpretationProviderWireV2Schema,
+      "shopping_interpretation_v2",
     ).schema as Record<string, unknown>;
 
     expect(schema.type).toBe("object");
@@ -81,57 +81,66 @@ describe("OpenAI context-acquisition adapter", () => {
     expect(schema.additionalProperties).toBe(false);
     expect(schema.required).toEqual([
       "providerSchemaVersion",
-      "outcome",
-      "operations",
+      "interpretation",
       "ambiguities",
     ]);
   });
 
   it("exposes the branch constraints in the provider-visible JSON schema", () => {
     const interpretationSchema = zodTextFormat(
-      interpretationProviderWireV1Schema,
-      "shopping_interpretation_v1",
+      interpretationProviderWireV2Schema,
+      "shopping_interpretation_v2",
     ).schema as {
       properties: {
-        operations: {
-          anyOf: Array<{ type?: string; minItems?: number; maxItems?: number }>;
+        interpretation: {
+          anyOf: Array<{ type?: string; properties?: Record<string, unknown> }>;
         };
       };
     };
-    expect(interpretationSchema.properties.operations.anyOf).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ type: "array", minItems: 1, maxItems: 32 }),
-        expect.objectContaining({ type: "array", maxItems: 0 }),
-      ]),
-    );
-
-    const actionSchema = zodTextFormat(
-      contextActionProviderWireV1Schema,
-      "shopping_context_action_v1",
-    ).schema as {
-      properties: {
-        question: {
-          anyOf: Array<{
-            anyOf?: Array<{
-              properties?: {
-                options?: { minItems?: number; maxItems?: number };
-              };
-            }>;
-          }>;
-        };
-      };
-    };
-    const questionBranches = actionSchema.properties.question.anyOf[0]?.anyOf;
-    expect(questionBranches).toEqual(
+    const interpretationBranches =
+      interpretationSchema.properties.interpretation.anyOf;
+    expect(interpretationBranches).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           properties: expect.objectContaining({
-            options: expect.objectContaining({ maxItems: 0 }),
+            outcome: expect.objectContaining({ const: "change" }),
+            operations: expect.objectContaining({ minItems: 1, maxItems: 32 }),
           }),
         }),
         expect.objectContaining({
           properties: expect.objectContaining({
-            options: expect.objectContaining({ minItems: 2, maxItems: 4 }),
+            outcome: expect.objectContaining({ const: "no_change" }),
+            operations: expect.objectContaining({ maxItems: 0 }),
+          }),
+        }),
+      ]),
+    );
+
+    const actionSchema = zodTextFormat(
+      contextActionProviderWireV2Schema,
+      "shopping_context_action_v2",
+    ).schema as {
+      properties: {
+        decision: {
+          anyOf: Array<{
+            properties?: Record<string, unknown>;
+          }>;
+        };
+      };
+    };
+    const actionBranches = actionSchema.properties.decision.anyOf;
+    const askBranch = actionBranches.find((branch) =>
+      JSON.stringify(branch).includes('"ask"'),
+    );
+    expect(askBranch).toBeDefined();
+    expect(JSON.stringify(askBranch)).toContain('"maxItems":0');
+    expect(JSON.stringify(askBranch)).toContain('"minItems":2');
+    expect(actionBranches).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          properties: expect.objectContaining({
+            question: expect.objectContaining({ type: "null" }),
+            rationale: expect.anything(),
           }),
         }),
       ]),
@@ -153,16 +162,15 @@ describe("OpenAI context-acquisition adapter", () => {
               annotations: [],
               logprobs: [],
               text: JSON.stringify({
-                providerSchemaVersion: 1,
-                outcome: "no_change",
-                operations: [],
+                providerSchemaVersion: 2,
+                interpretation: { outcome: "no_change", operations: [] },
                 ambiguities: [],
               }),
             },
           ],
         },
       ]),
-      schema: interpretationProviderWireV1Schema,
+      schema: interpretationProviderWireV2Schema,
       fallbackMetadata: metadata,
     });
 

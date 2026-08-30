@@ -18,6 +18,8 @@ export const INTERPRETATION_PROVIDER_SCHEMA_VERSION = 1 as const;
 export const INTERPRETATION_PROPOSAL_SCHEMA_VERSION = 1 as const;
 export const CONTEXT_ACTION_PROVIDER_SCHEMA_VERSION = 1 as const;
 export const CONTEXT_ACTION_PROPOSAL_SCHEMA_VERSION = 1 as const;
+export const INTERPRETATION_PROVIDER_SCHEMA_VERSION_V2 = 2 as const;
+export const CONTEXT_ACTION_PROVIDER_SCHEMA_VERSION_V2 = 2 as const;
 
 const providerBoundedTextSchema = z
   .string()
@@ -306,6 +308,35 @@ export type InterpretationProviderWireV1 = z.infer<
   typeof interpretationProviderWireV1Schema
 >;
 
+/*
+ * V1 remains the historical persisted wire.  V2 moves the outcome/action
+ * discriminators inside the root object so Structured Outputs can enforce
+ * cardinality and branch coherence before application parsing.
+ */
+const interpretationProviderBranchV2Schema = z.discriminatedUnion("outcome", [
+  z.strictObject({
+    outcome: z.literal("change"),
+    operations: z.array(providerPatchOperationWireV1Schema).min(1).max(32),
+  }),
+  z.strictObject({
+    outcome: z.literal("no_change"),
+    operations: z.array(providerPatchOperationWireV1Schema).max(0),
+  }),
+]);
+
+export const interpretationProviderWireV2Schema = z.strictObject({
+  providerSchemaVersion: z.literal(INTERPRETATION_PROVIDER_SCHEMA_VERSION_V2),
+  interpretation: interpretationProviderBranchV2Schema,
+  ambiguities: z.array(providerAmbiguityWireV1Schema).max(4),
+});
+
+export type InterpretationProviderWireV2 = z.infer<
+  typeof interpretationProviderWireV2Schema
+>;
+
+export type InterpretationProviderWire =
+  InterpretationProviderWireV1 | InterpretationProviderWireV2;
+
 export const interpretationAmbiguityV1Schema = providerAmbiguityWireV1Schema;
 export type InterpretationAmbiguityV1 = z.infer<
   typeof interpretationAmbiguityV1Schema
@@ -388,6 +419,36 @@ export type ContextActionProviderWireV1 = z.infer<
   typeof contextActionProviderWireV1Schema
 >;
 
+const contextActionProviderBranchV2Schema = z.discriminatedUnion("action", [
+  z.strictObject({
+    action: z.literal("ask"),
+    question: providerQuestionWireV1Schema,
+    rationale: z.null(),
+  }),
+  z.strictObject({
+    action: z.literal("search"),
+    question: z.null(),
+    rationale: providerActionRationaleWireV1Schema,
+  }),
+  z.strictObject({
+    action: z.literal("show_refine"),
+    question: z.null(),
+    rationale: providerActionRationaleWireV1Schema,
+  }),
+]);
+
+export const contextActionProviderWireV2Schema = z.strictObject({
+  providerSchemaVersion: z.literal(CONTEXT_ACTION_PROVIDER_SCHEMA_VERSION_V2),
+  decision: contextActionProviderBranchV2Schema,
+});
+
+export type ContextActionProviderWireV2 = z.infer<
+  typeof contextActionProviderWireV2Schema
+>;
+
+export type ContextActionProviderWire =
+  ContextActionProviderWireV1 | ContextActionProviderWireV2;
+
 export const questionProposalV1Schema = providerQuestionWireV1Schema;
 export type QuestionProposalV1 = z.infer<typeof questionProposalV1Schema>;
 
@@ -457,6 +518,68 @@ export function lowerContextActionProviderWireV1(
         schemaVersion: CONTEXT_ACTION_PROPOSAL_SCHEMA_VERSION,
         action: wire.action,
         rationale: wire.rationale,
+      });
+  }
+}
+
+export function lowerInterpretationProviderWire(
+  input: unknown,
+): InterpretationProposalV1 {
+  const version = z
+    .object({ providerSchemaVersion: z.number() })
+    .parse(input).providerSchemaVersion;
+  return version === INTERPRETATION_PROVIDER_SCHEMA_VERSION_V2
+    ? lowerInterpretationProviderWireV2(input)
+    : lowerInterpretationProviderWireV1(input);
+}
+
+export function lowerContextActionProviderWire(
+  input: unknown,
+): ContextActionProposalV1 {
+  const version = z
+    .object({ providerSchemaVersion: z.number() })
+    .parse(input).providerSchemaVersion;
+  return version === CONTEXT_ACTION_PROVIDER_SCHEMA_VERSION_V2
+    ? lowerContextActionProviderWireV2(input)
+    : lowerContextActionProviderWireV1(input);
+}
+
+function lowerInterpretationProviderWireV2(
+  input: unknown,
+): InterpretationProposalV1 {
+  const wire = interpretationProviderWireV2Schema.parse(input);
+  const patch: StatePatchProposalV1 =
+    wire.interpretation.outcome === "no_change"
+      ? { schemaVersion: 1, outcome: "no_change" }
+      : {
+          schemaVersion: 1,
+          outcome: "change",
+          operations: wire.interpretation.operations.map(lowerPatchOperation),
+        };
+  return interpretationProposalV1Schema.parse({
+    schemaVersion: INTERPRETATION_PROPOSAL_SCHEMA_VERSION,
+    patch,
+    ambiguities: wire.ambiguities,
+  });
+}
+
+function lowerContextActionProviderWireV2(
+  input: unknown,
+): ContextActionProposalV1 {
+  const wire = contextActionProviderWireV2Schema.parse(input);
+  switch (wire.decision.action) {
+    case "ask":
+      return contextActionProposalV1Schema.parse({
+        schemaVersion: CONTEXT_ACTION_PROPOSAL_SCHEMA_VERSION,
+        action: "ask",
+        question: wire.decision.question,
+      });
+    case "search":
+    case "show_refine":
+      return contextActionProposalV1Schema.parse({
+        schemaVersion: CONTEXT_ACTION_PROPOSAL_SCHEMA_VERSION,
+        action: wire.decision.action,
+        rationale: wire.decision.rationale,
       });
   }
 }

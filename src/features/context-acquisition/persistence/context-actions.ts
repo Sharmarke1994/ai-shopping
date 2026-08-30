@@ -21,6 +21,7 @@ import {
 } from "../../../infrastructure/database/schema";
 import {
   CONTEXT_ACTION_PROVIDER_SCHEMA_VERSION,
+  CONTEXT_ACTION_PROVIDER_SCHEMA_VERSION_V2,
   contextActionProposalV1Schema,
 } from "../provider-wire";
 import { loadValidatedStateApplicationBySourceInputInTransaction } from "../../shopping-state/persistence/state-transitions";
@@ -52,7 +53,10 @@ const persistedContextActionBase = {
   provider: configText,
   model: z.string().min(1).max(160),
   promptVersion: configText,
-  providerSchemaVersion: z.literal(CONTEXT_ACTION_PROVIDER_SCHEMA_VERSION),
+  providerSchemaVersion: z.union([
+    z.literal(CONTEXT_ACTION_PROVIDER_SCHEMA_VERSION),
+    z.literal(CONTEXT_ACTION_PROVIDER_SCHEMA_VERSION_V2),
+  ]),
   createdAt: z.date(),
 };
 
@@ -304,7 +308,10 @@ const persistenceConfigSchema = z.strictObject({
   provider: configText,
   model: z.string().min(1).max(160),
   promptVersion: configText,
-  providerSchemaVersion: z.literal(CONTEXT_ACTION_PROVIDER_SCHEMA_VERSION),
+  providerSchemaVersion: z.union([
+    z.literal(CONTEXT_ACTION_PROVIDER_SCHEMA_VERSION),
+    z.literal(CONTEXT_ACTION_PROVIDER_SCHEMA_VERSION_V2),
+  ]),
 });
 
 export async function persistContextAction(options: {
