@@ -45,6 +45,61 @@ function replaceTarget(
 }
 
 describe("interpretation provider wire V1", () => {
+  it.each([
+    [
+      "conditional wireless preference",
+      "preference",
+      "wireless only when battery life is very good",
+    ],
+    ["conditional monitor fit", "preference", "larger monitor if it fits"],
+    [
+      "conditional delivery cost",
+      "preference",
+      "faster delivery if it is not much more expensive",
+    ],
+    ["explicit hard battery", "hard", "at least 40 minutes"],
+    ["explicit hard dimension", "hard", "no more than 25 cm wide"],
+    ["hard exclusion", "hard", "not Amazon Basics"],
+    ["hard categorical only", "hard", "only black"],
+    ["ordinary soft language", "preference", "lighter"],
+    ["strong soft language", "strong_preference", "comfort matters a lot"],
+  ])(
+    "preserves provider authority for %s while lowering qualitative text",
+    (_, strength, text) => {
+      const lowered = lowerInterpretationProviderWireV1(
+        changeWire([
+          {
+            op: "add_criterion",
+            concept: { kind: "existing", conceptId },
+            target: {
+              strength,
+              targetSemantics: "qualitative",
+              semanticValue: {
+                schemaVersion: 1,
+                kind: "qualitative_text",
+                text,
+              },
+            },
+          },
+        ]),
+      );
+
+      expect(lowered.patch).toMatchObject({
+        outcome: "change",
+        operations: [
+          {
+            op: "add_criterion",
+            target: {
+              strength,
+              targetSemantics: "qualitative",
+              semanticValue: { mode: "text", text },
+            },
+          },
+        ],
+      });
+    },
+  );
+
   it("lowers every supported patch operation without changing selectors or values", () => {
     const operations = [
       {

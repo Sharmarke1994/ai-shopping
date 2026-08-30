@@ -1,0 +1,89 @@
+# V0-05 context-acquisition hardening
+
+This is a bounded blocker-remediation branch from frozen V0-09 head
+`934067e7d3796a4a68ba3b00387a16632a563f15`. It does not change V0-09, create
+Attempt 4, or claim V0-05 release acceptance.
+
+## Attempt 3 reconstruction
+
+The preserved Attempt 3 artifact proves that the final authoritative revision
+contained `Battery life` as a `hard` qualitative criterion and that the initial
+wireless/battery request had already produced the relevant criteria before the
+later refinement about reviews and long-workday comfort. The refinement did
+not itself mention battery and did not supply a battery tightening operation;
+the final state therefore retained the earlier error rather than proving that
+the refinement hardened it. The final artifact also shows `Connectivity` as a
+preference and the battery value as “very good battery life”.
+
+The exact provider wire for the interpretation that introduced Battery life is
+not recoverable. The diagnostic projection recorded provider request IDs and
+`present: true`, but looked for a lowered `patch` field while the coordinator
+persists the provider wire in `modelResult.value`; the disposable database was
+then destroyed. Consequently the exact provider-assigned strength, target
+semantics and value shape cannot be stated from the artifact. The lowerer was
+unchanged and now has deterministic tests proving that provider strength and
+all supported value branches pass through without authority mutation. The
+persisted final state is evidence of the application result, not evidence that
+lowering changed it.
+
+Attempt 2 proves two interpretation provider-port calls: the first failed as
+`invalid_state_patch` and the safe retry failed as
+`structured_output_validation_failed`. It preserves request IDs and stage
+metadata but no malformed provider payload or partial validated wire. Exact
+malformed fields are therefore unknowable and are not guessed here.
+
+## Corrections
+
+The interpretation prompt is now version `v0-05-interpretation-5` and states a
+category-independent authority rule: a subordinate condition attached to soft
+preference language inherits at most the parent preference authority; “only if
+X” is not “only X”; only an independently stated requirement can establish a
+hard condition. The contrast examples cover fit and delivery cost as well as
+wireless/battery.
+
+The provider-visible OpenAI schema previously exposed several important rules
+only through Zod `superRefine`: operation count by outcome, semantic-value
+family compatibility, canonical measurement concepts, non-empty measurement
+ranges and ASK/non-ASK branch coherence. The provider schema now exposes
+small nested structural unions for operation cardinality, target/value-family
+compatibility, measurement range bounds, canonical-unit creation and question
+option cardinality. The root remains a strict object because OpenAI's helper
+rejects a root union; application-side validation remains the firewall for
+cross-field and relational rules such as range ordering and unique options.
+
+No deterministic English authority guard was added. The server does not have a
+reliable grammar/provenance parser for arbitrary shopper language, and a
+homemade `only-if` parser could soften real hard requirements or misread scope.
+Prompt hardening, structural output constraints, lowering invariants and
+protected semantic evaluation are the narrow, category-independent controls.
+
+## Deterministic and live evidence
+
+The provider/lowering suite covers the nine authority cases in the checkpoint:
+soft wireless/battery, monitor fit and delivery cost conditionals, explicit hard
+battery and width bounds, hard exclusion and categorical-only language,
+ordinary soft language, and strong-but-soft comfort language. A PostgreSQL
+coordinator regression applies the conditional wireless/battery state, then an
+unrelated review/comfort refinement, and proves battery remains a preference,
+wireless remains directionally unchanged, review alone is relaxed, and comfort
+alone is strengthened.
+
+One bounded Terra low-reasoning context diagnostic was run on 2026-08-30 using
+the production context adapter and a disposable database. It completed 11/11
+cases with 11 logical interpretation calls and 11 logical action calls, zero
+provider failures, zero structured-output failures and zero protected semantic
+violations. The cases covered the conditional, explicit-hard, cap, shelving,
+headphones, indifference/change-of-mind, money-stretch and unresolved
+comfort-vs-ANC question paths. The sanitized artifacts are
+`docs/evals/v0-05-context-hardening-diagnostic.json` and `.md`; they explicitly
+remain diagnostic evidence, not the 21/21 release gate.
+
+## V0-09 follow-up signals (not fixed here)
+
+Attempt 3 also recorded four page-fetch failures, `response_too_large` on the
+Tom's Guide Anker review, Anker product page and Amazon retailer page, no
+admitted fetched document, broad first-pass product-understanding
+`invalid_model_output` rows, and no destination-resolution call. Retrieval
+concurrency was materially faster than the older path. These remain V0-09
+follow-up prioritization signals and are intentionally untouched on this
+branch.

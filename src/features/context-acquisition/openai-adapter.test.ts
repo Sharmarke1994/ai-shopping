@@ -6,7 +6,10 @@ import {
   createOpenAIContextAcquisitionModel,
   parseOpenAIResponse,
 } from "./openai-adapter";
-import { interpretationProviderWireV1Schema } from "./provider-wire";
+import {
+  contextActionProviderWireV1Schema,
+  interpretationProviderWireV1Schema,
+} from "./provider-wire";
 
 const metadata: ModelCallMetadata = {
   provider: "openai",
@@ -82,6 +85,57 @@ describe("OpenAI context-acquisition adapter", () => {
       "operations",
       "ambiguities",
     ]);
+  });
+
+  it("exposes the branch constraints in the provider-visible JSON schema", () => {
+    const interpretationSchema = zodTextFormat(
+      interpretationProviderWireV1Schema,
+      "shopping_interpretation_v1",
+    ).schema as {
+      properties: {
+        operations: {
+          anyOf: Array<{ type?: string; minItems?: number; maxItems?: number }>;
+        };
+      };
+    };
+    expect(interpretationSchema.properties.operations.anyOf).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ type: "array", minItems: 1, maxItems: 32 }),
+        expect.objectContaining({ type: "array", maxItems: 0 }),
+      ]),
+    );
+
+    const actionSchema = zodTextFormat(
+      contextActionProviderWireV1Schema,
+      "shopping_context_action_v1",
+    ).schema as {
+      properties: {
+        question: {
+          anyOf: Array<{
+            anyOf?: Array<{
+              properties?: {
+                options?: { minItems?: number; maxItems?: number };
+              };
+            }>;
+          }>;
+        };
+      };
+    };
+    const questionBranches = actionSchema.properties.question.anyOf[0]?.anyOf;
+    expect(questionBranches).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          properties: expect.objectContaining({
+            options: expect.objectContaining({ maxItems: 0 }),
+          }),
+        }),
+        expect.objectContaining({
+          properties: expect.objectContaining({
+            options: expect.objectContaining({ minItems: 2, maxItems: 4 }),
+          }),
+        }),
+      ]),
+    );
   });
 
   it("ignores reasoning items and accepts exactly one assistant payload", () => {

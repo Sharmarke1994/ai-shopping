@@ -1,0 +1,279 @@
+{
+  "schemaVersion": 1,
+  "diagnostic": "v0-05-context-hardening",
+  "releaseAccepted": false,
+  "model": "gpt-5.6-terra",
+  "reasoningEffort": "low",
+  "startedAt": "2026-08-30T02:40:13.860Z",
+  "finishedAt": "2026-08-30T02:41:24.540Z",
+  "counts": {
+    "logicalInterpretationCalls": 11,
+    "logicalActionCalls": 11,
+    "completed": 11,
+    "failed": 0,
+    "caseCount": 11,
+    "violationCount": 0
+  },
+  "results": [
+    {
+      "name": "conditional-wireless-battery",
+      "status": "completed",
+      "action": "ask",
+      "revision": "1",
+      "items": [
+        {
+          "label": "Battery life",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticKind": "qualitative",
+          "summary": "very good battery life, as a condition for preferring wireless"
+        },
+        {
+          "label": "Wireless connectivity",
+          "strength": "preference",
+          "targetSemantics": "exact",
+          "semanticKind": "boolean",
+          "summary": "true"
+        }
+      ],
+      "violations": []
+    },
+    {
+      "name": "conditional-monitor-fit",
+      "status": "completed",
+      "action": "ask",
+      "revision": "1",
+      "items": [
+        {
+          "label": "Monitor size",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticKind": "qualitative",
+          "summary": "larger"
+        }
+      ],
+      "violations": []
+    },
+    {
+      "name": "conditional-delivery-cost",
+      "status": "completed",
+      "action": "search",
+      "revision": "1",
+      "items": [
+        {
+          "label": "Delivery speed",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticKind": "qualitative",
+          "summary": "faster delivery"
+        }
+      ],
+      "violations": []
+    },
+    {
+      "name": "explicit-hard-battery",
+      "status": "completed",
+      "action": "search",
+      "revision": "1",
+      "items": [
+        {
+          "label": "Wireless",
+          "strength": "preference",
+          "targetSemantics": "exact",
+          "semanticKind": "boolean",
+          "summary": "true"
+        },
+        {
+          "label": "Battery life",
+          "strength": "hard",
+          "targetSemantics": "qualitative",
+          "semanticKind": "qualitative",
+          "summary": "40 minutes"
+        }
+      ],
+      "violations": []
+    },
+    {
+      "name": "explicit-hard-width",
+      "status": "completed",
+      "action": "search",
+      "revision": "1",
+      "items": [
+        {
+          "label": "Width",
+          "strength": "hard",
+          "targetSemantics": "range",
+          "semanticKind": "measurement_range",
+          "summary": "{\"upper\":{\"amount\":\"25\",\"inclusive\":true},\"unit\":\"cm\"}"
+        }
+      ],
+      "violations": []
+    },
+    {
+      "name": "hard-exclusion",
+      "status": "completed",
+      "action": "ask",
+      "revision": "1",
+      "items": [
+        {
+          "label": "Brand",
+          "strength": "hard",
+          "targetSemantics": "categorical",
+          "semanticKind": "categorical",
+          "summary": "Amazon Basics"
+        }
+      ],
+      "violations": []
+    },
+    {
+      "name": "cap-golden",
+      "status": "completed",
+      "action": "search",
+      "revision": "1",
+      "items": [
+        {
+          "label": "Breathability",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticKind": "qualitative",
+          "summary": "breathable"
+        },
+        {
+          "label": "Weight",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticKind": "qualitative",
+          "summary": "heavy"
+        }
+      ],
+      "violations": []
+    },
+    {
+      "name": "shelving-golden",
+      "status": "completed",
+      "action": "search",
+      "revision": "1",
+      "items": [
+        {
+          "label": "Depth",
+          "strength": "hard",
+          "targetSemantics": "range",
+          "semanticKind": "measurement_range",
+          "summary": "{\"upper\":{\"amount\":\"30\",\"inclusive\":true},\"unit\":\"cm\"}"
+        },
+        {
+          "label": "Colour",
+          "strength": "hard",
+          "targetSemantics": "categorical",
+          "semanticKind": "categorical",
+          "summary": "white"
+        },
+        {
+          "label": "Price",
+          "strength": "preference",
+          "targetSemantics": "around",
+          "semanticKind": "money",
+          "summary": "3000 GBP"
+        },
+        {
+          "label": "Visual lightness",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticKind": "qualitative",
+          "summary": "visually light"
+        },
+        {
+          "label": "Width",
+          "strength": "hard",
+          "targetSemantics": "range",
+          "semanticKind": "measurement_range",
+          "summary": "{\"upper\":{\"amount\":\"60\",\"inclusive\":true},\"unit\":\"cm\"}"
+        }
+      ],
+      "violations": []
+    },
+    {
+      "name": "headphones-golden",
+      "status": "completed",
+      "action": "ask",
+      "revision": "1",
+      "items": [
+        {
+          "label": "Comfort with glasses",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticKind": "qualitative",
+          "summary": "Comfort while wearing glasses is important."
+        },
+        {
+          "label": "Over-ear design",
+          "strength": "hard",
+          "targetSemantics": "categorical",
+          "semanticKind": "categorical",
+          "summary": "over-ear"
+        },
+        {
+          "label": "Wireless connectivity",
+          "strength": "hard",
+          "targetSemantics": "categorical",
+          "semanticKind": "categorical",
+          "summary": "wireless"
+        },
+        {
+          "label": "Price",
+          "strength": "preference",
+          "targetSemantics": "around",
+          "semanticKind": "money",
+          "summary": "15000 GBP"
+        },
+        {
+          "label": "Noise cancellation",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticKind": "qualitative",
+          "summary": "Noise cancellation is important."
+        }
+      ],
+      "violations": []
+    },
+    {
+      "name": "conditional-money-stretch",
+      "status": "completed",
+      "action": "search",
+      "revision": "1",
+      "items": [
+        {
+          "label": "Price",
+          "strength": "preference",
+          "targetSemantics": "stretch",
+          "semanticKind": "money_stretch",
+          "summary": "3000 -> 4500 GBP"
+        }
+      ],
+      "violations": []
+    },
+    {
+      "name": "comfort-vs-anc-question",
+      "status": "completed",
+      "action": "ask",
+      "revision": "1",
+      "items": [
+        {
+          "label": "Comfort",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticKind": "qualitative",
+          "summary": "comfortable"
+        },
+        {
+          "label": "Noise cancellation",
+          "strength": "strong_preference",
+          "targetSemantics": "qualitative",
+          "semanticKind": "qualitative",
+          "summary": "strong noise cancellation"
+        }
+      ],
+      "violations": []
+    }
+  ]
+}

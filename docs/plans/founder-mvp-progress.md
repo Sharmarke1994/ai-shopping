@@ -1,6 +1,6 @@
 # Founder MVP progress
 
-**Updated:** 2026-08-29 Europe/London
+**Updated:** 2026-08-30 Europe/London
 **Durable goal:** Deliver a polished founder-usable AI shopping MVP whose live
 understanding, market retrieval, evidence-aware evaluation, refinement, saving,
 and comparison are meaningfully better than beginning with Google.
@@ -47,6 +47,11 @@ and comparison are meaningfully better than beginning with Google.
 - Nothing on this experimental branch may be merged automatically. Each
   coherent layer is committed and pushed for recoverability while work
   continues toward the founder-usable product.
+- Current bounded blocker-remediation worktree:
+  `/Users/alchemist32/Documents/AI Shopping/ai-shopping-context-hardening` on
+  `codex/context-acquisition-semantic-hardening`, based exactly on frozen V0-09
+  head `934067e7d3796a4a68ba3b00387a16632a563f15`. PR #13 and its proof marker
+  remain untouched.
 
 ## Completed foundation
 
@@ -413,6 +418,30 @@ branch recorded above. The durable execution contract is
   The enriched sanitized diagnostic is preserved in the primary failure files;
   the durable marker now refuses Attempt 4.
 
+## Current context-acquisition hardening checkpoint
+
+This bounded blocker-remediation branch is isolated from V0-09 at frozen head
+`934067e7d3796a4a68ba3b00387a16632a563f15`:
+
+- Worktree: `/Users/alchemist32/Documents/AI Shopping/ai-shopping-context-hardening`.
+- Branch: `codex/context-acquisition-semantic-hardening`.
+- V0-09 PR #13 remains draft, unmerged and untouched. Attempt 4 remains
+  permanently refused; V0-10 has not started.
+- The inherited V0-05 interpretation prompt now explicitly preserves the
+  authority of a soft parent preference across subordinate conditions. The
+  provider-visible interpretation/action schemas now expose branch
+  cardinality and semantic-family constraints structurally while retaining
+  the V0-04 validation firewall.
+- Deterministic provider/lowering and PostgreSQL refinement regressions are
+  green. No deterministic English authority parser was added because the
+  repository cannot safely infer arbitrary grammar scope without a brittle,
+  category-specific NLP approximation.
+- One bounded Terra low-reasoning diagnostic (11 cases, 11 interpretation and
+  11 action calls) completed with zero provider/structured-output failures and
+  zero protected semantic violations. Artifacts are in
+  `docs/evals/v0-05-context-hardening-diagnostic.{json,md}` and are diagnostic
+  only; V0-05's separate 21/21 formal release gate remains open.
+
 ## Next validated checkpoints
 
 1. Preserve the immutable Attempt 1, Attempt 2 and Attempt 3 artifacts and
@@ -420,9 +449,9 @@ branch recorded above. The durable execution contract is
 2. Treat the earliest evidenced blocker as the inherited V0-05 founder-intent
    semantic interpretation surfaced by the proof predicate; do not patch it
    inside V0-09 and do not create Attempt 4.
-3. Commit/push only the exact proof evidence and ledger delta, obtain exact-head
-   CI, stop for independent review, keep PR #13 draft/unmerged and do not begin
-   V0-10.
+3. Commit/push this context-hardening checkpoint as a new draft PR stacked on
+   `codex/v0-09-source-depth-purchase-path`, obtain exact-head CI, stop for
+   independent review, keep PR #13 draft/unmerged and do not begin V0-10.
 
 ## Credentials and blockers
 

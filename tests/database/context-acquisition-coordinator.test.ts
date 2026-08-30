@@ -489,4 +489,229 @@ describe("context-acquisition coordinator", () => {
       },
     );
   });
+
+  it("keeps a conditional preference soft through an unrelated refinement", async () => {
+    const task = await createShoppingTask(connection.db);
+    const initial = await recordTaskInput({
+      db: connection.db,
+      taskId: task.id,
+      clientActionId: "conditional-wireless-initial",
+      request: {
+        inputSchemaVersion: 1,
+        expectedRevision: 0n,
+        kind: "message",
+        body: "I'd prefer wireless, but only if the battery life is very good.",
+      },
+    });
+    const initialWire: InterpretationProviderWireV1 = {
+      providerSchemaVersion: 1,
+      outcome: "change",
+      operations: [
+        {
+          op: "create_concept",
+          localRef: "connectivity",
+          label: "Connectivity",
+          definition:
+            "Whether the product supports the preferred connection mode",
+          valueFamily: "categorical",
+          canonicalUnit: null,
+        },
+        {
+          op: "create_concept",
+          localRef: "battery_life",
+          label: "Battery life",
+          definition: "How long the product lasts between charges",
+          valueFamily: "qualitative",
+          canonicalUnit: null,
+        },
+        {
+          op: "create_concept",
+          localRef: "reviews",
+          label: "Reviews",
+          definition: "The importance of review quality",
+          valueFamily: "qualitative",
+          canonicalUnit: null,
+        },
+        {
+          op: "add_criterion",
+          concept: { kind: "created", localRef: "connectivity" },
+          target: {
+            strength: "preference",
+            targetSemantics: "categorical",
+            semanticValue: {
+              schemaVersion: 1,
+              kind: "categorical",
+              operator: "prefer",
+              values: ["wireless"],
+            },
+          },
+        },
+        {
+          op: "add_criterion",
+          concept: { kind: "created", localRef: "battery_life" },
+          target: {
+            strength: "preference",
+            targetSemantics: "qualitative",
+            semanticValue: {
+              schemaVersion: 1,
+              kind: "qualitative_text",
+              text: "very good battery life",
+            },
+          },
+        },
+        {
+          op: "add_criterion",
+          concept: { kind: "created", localRef: "reviews" },
+          target: {
+            strength: "strong_preference",
+            targetSemantics: "qualitative",
+            semanticValue: {
+              schemaVersion: 1,
+              kind: "qualitative_text",
+              text: "reviews matter a lot",
+            },
+          },
+        },
+      ],
+      ambiguities: [],
+    };
+    const model: ContextAcquisitionModel = {
+      interpret: vi.fn(() => completed(initialWire)),
+      selectAction: vi.fn(() => completed(search)),
+    };
+    const first = await acquireShoppingContext({
+      db: connection.db,
+      model,
+      taskId: task.id,
+      sourceInputId: initial.input.id,
+    });
+    expect(first.status).toBe("completed");
+
+    const stateAfterInitial = await loadCurrentShoppingState(
+      connection.db,
+      task.id,
+    );
+    const conceptLabel = (conceptId: string) =>
+      stateAfterInitial.concepts.find((concept) => concept.id === conceptId)
+        ?.label;
+    const battery = stateAfterInitial.activeCriteria.find(
+      ({ criterion }) => conceptLabel(criterion.conceptId) === "Battery life",
+    )?.criterion;
+    const wireless = stateAfterInitial.activeCriteria.find(
+      ({ criterion }) => conceptLabel(criterion.conceptId) === "Connectivity",
+    )?.criterion;
+    const reviews = stateAfterInitial.activeCriteria.find(
+      ({ criterion }) => conceptLabel(criterion.conceptId) === "Reviews",
+    )?.criterion;
+    if (
+      battery === undefined ||
+      wireless === undefined ||
+      reviews === undefined
+    ) {
+      throw new Error("Expected conditional criteria");
+    }
+
+    const refinement = await recordTaskInput({
+      db: connection.db,
+      taskId: task.id,
+      clientActionId: "conditional-wireless-refinement",
+      request: {
+        inputSchemaVersion: 1,
+        expectedRevision: 1n,
+        kind: "message",
+        body: "Reviews matter less now. Comfort for long workdays matters most.",
+      },
+    });
+    const refinementWire: InterpretationProviderWireV1 = {
+      providerSchemaVersion: 1,
+      outcome: "change",
+      operations: [
+        {
+          op: "replace_target",
+          targetCriterionId: reviews.id,
+          result: {
+            strength: "preference",
+            targetSemantics: "qualitative",
+            semanticValue: {
+              schemaVersion: 1,
+              kind: "qualitative_text",
+              text: "reviews matter less now",
+            },
+          },
+        },
+        {
+          op: "create_concept",
+          localRef: "comfort",
+          label: "Comfort",
+          definition: "Comfort for long workdays",
+          valueFamily: "qualitative",
+          canonicalUnit: null,
+        },
+        {
+          op: "add_criterion",
+          concept: { kind: "created", localRef: "comfort" },
+          target: {
+            strength: "strong_preference",
+            targetSemantics: "qualitative",
+            semanticValue: {
+              schemaVersion: 1,
+              kind: "qualitative_text",
+              text: "comfort for long workdays matters most",
+            },
+          },
+        },
+      ],
+      ambiguities: [],
+    };
+    const refinementModel: ContextAcquisitionModel = {
+      interpret: vi.fn(() => completed(refinementWire)),
+      selectAction: vi.fn(() => completed(search)),
+    };
+    const changed = await acquireShoppingContext({
+      db: connection.db,
+      model: refinementModel,
+      taskId: task.id,
+      sourceInputId: refinement.input.id,
+    });
+    expect(changed.status).toBe("completed");
+
+    const finalState = await loadCurrentShoppingState(connection.db, task.id);
+    const finalBattery = finalState.activeCriteria.find(
+      ({ criterion }) => criterion.id === battery.id,
+    )?.criterion;
+    const finalWireless = finalState.activeCriteria.find(
+      ({ criterion }) => criterion.id === wireless.id,
+    )?.criterion;
+    const finalReviews = finalState.activeCriteria.find(
+      ({ criterion }) =>
+        finalState.concepts.find(
+          (concept) => concept.id === criterion.conceptId,
+        )?.label === "Reviews",
+    )?.criterion;
+    expect(finalBattery).toMatchObject({
+      strength: "preference",
+      targetSemantics: "qualitative",
+      semanticValue: {
+        kind: "qualitative",
+        mode: "text",
+        text: "very good battery life",
+      },
+    });
+    expect(finalWireless).toMatchObject({
+      strength: "preference",
+      semanticValue: { kind: "categorical", values: ["wireless"] },
+    });
+    expect(finalReviews).toMatchObject({
+      strength: "preference",
+      semanticValue: { mode: "text", text: "reviews matter less now" },
+    });
+    expect(
+      finalState.activeCriteria.some(
+        ({ criterion }) =>
+          finalState.concepts.find(
+            (concept) => concept.id === criterion.conceptId,
+          )?.label === "Comfort" && criterion.strength === "strong_preference",
+      ),
+    ).toBe(true);
+  });
 });
