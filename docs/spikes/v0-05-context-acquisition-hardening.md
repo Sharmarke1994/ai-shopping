@@ -111,6 +111,19 @@ marker); the prior 19/19 result remains archived under the `prior-19-19`
 names. Phase B recovery work is not authorized from this failed gate, and the
 formal V0-05 21/21 release gate remains open.
 
+The final Phase-A Terra gate ran once after the comparison-anchor correction,
+using exactly the six protected cases above. It completed 6/6 with zero
+provider failures, zero structured-output failures, zero invalid patches, and
+zero semantic violations. The contextual backpack request now persists the
+faithful qualitative text `lighter` without an invented comparison reference;
+the contextless case remains ASK with no criterion, while the cap, headphones,
+conditional battery, and hard 40-minute cases retain their protected
+semantics. Context hardening is accepted for product continuation, but this
+does not claim formal V0-05 21/21 release acceptance. The exact successful
+artifact is the primary
+`docs/evals/v0-05-context-hardening-diagnostic.{json,md}` pair (and attempt
+marker); the failed six-case artifact is archived as `*-prior-6-5.*`.
+
 ## V0-09 follow-up signals (not fixed here)
 
 Attempt 3 also recorded four page-fetch failures, `response_too_large` on the

@@ -61,6 +61,13 @@ and comparison are meaningfully better than beginning with Google.
   independent review. Exact evidence is in
   `docs/evals/v0-05-context-hardening-diagnostic.{json,md}`; the prior 19/19
   artifact is archived as `*-prior-19-19.*`.
+- A single final Phase-A Terra gate then completed 6/6 protected cases with
+  zero provider failures, structured-output failures, invalid patches, or
+  semantic violations after the comparison-anchor correction. Context
+  hardening is now accepted for product continuation; formal V0-05 21/21
+  acceptance remains open. The successful primary artifact is
+  `docs/evals/v0-05-context-hardening-diagnostic.{json,md}` and the immediately
+  prior failed batch is archived as `*-prior-6-5.*`.
 
 ## Completed foundation
 
@@ -463,9 +470,12 @@ This bounded blocker-remediation branch is isolated from V0-09 at frozen head
   than a hard include. No invalid patches or provider structured-output
   failures occurred. Its exact JSON/Markdown pair is preserved at
   `docs/evals/v0-05-context-hardening-diagnostic-prior-19-19.{json,md}`. The
-  subsequent six-case Phase-A run is the current primary artifact and failed
-  only the contextual-lighter semantic assertion described above. V0-05's
-  21/21 formal gate remains open.
+  subsequent six-case Phase-A run is archived as `*-prior-6-5.*` and failed
+  only the contextual-lighter semantic assertion described above. The final
+  six-case Phase-A run passed 6/6 cleanly after the comparison-anchor
+  correction; its primary artifact is
+  `docs/evals/v0-05-context-hardening-diagnostic.{json,md}`. V0-05's 21/21
+  formal gate remains open.
 
 ## Next validated checkpoints
 
@@ -474,11 +484,10 @@ This bounded blocker-remediation branch is isolated from V0-09 at frozen head
 2. Treat the earliest evidenced blocker as the inherited V0-05 founder-intent
    semantic interpretation surfaced by the proof predicate; do not patch it
    inside V0-09 and do not create Attempt 4.
-3. Preserve the exact six-case Phase-A failure artifact and classify its single
-   failure as contextual-lighter interpretation semantics. Do not make another
-   live run or enter Phase B before independent review. Keep the
-   context-hardening branch reviewable as a draft stacked PR; PR #13/V0-09 and
-   the original V0-05 checkout remain untouched, and do not begin V0-10.
+3. Context hardening is accepted for product continuation after the one clean
+   six-case Phase-A Terra gate. Keep PR #14 draft/unmerged and obtain exact-head
+   CI, then continue only in a fresh recovery worktree/branch. PR #13/V0-09 and
+   the original V0-05 checkout remain untouched; do not begin V0-10.
 
 ## Credentials and blockers
 
