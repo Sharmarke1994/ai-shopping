@@ -577,27 +577,37 @@ This bounded blocker-remediation branch is isolated from V0-09 at frozen head
   persistence and browser-smoke in run `33278612605`. Draft stacked PR #13
   remains mergeable and unmerged. No production context-acquisition code,
   prompt or schema changed in the proof attempt.
+- Context hardening Phase A was accepted separately on
+  `a17d37d80a710bb05b8c79d996596f2492c2424c` after one final Terra six-case
+  gate: 6/6 completed, with zero provider failures, structured-output
+  failures, invalid patches or semantic violations. PR #14 remains draft and
+  unmerged.
+- Recovery RC1 is isolated in
+  `/Users/alchemist32/Documents/AI Shopping/ai-shopping-v0-09-recovery` on
+  `codex/v0-09-recovery-rc`. The bounded modern-page correction committed as
+  `e742fe0` uses a 2.5 MB transport cap and a separate 36 KB retained-document
+  cap; 66/66 page fetch/extraction tests, full deterministic checks and 8/8
+  fixture E2E tests pass with the migrated test database.
+- The single Recovery RC1 Terra + Serper proof was claimed once as attempt
+  `04a46e0d-561d-4f7b-979a-60b664160ba6` on 2026-08-30 and failed in the
+  ergonomic-mouse first case before any assessment or purchase path. The
+  earliest responsible layer is the persisted fetched-page metadata schema,
+  which still caps `encodedBytes` and `decodedBytes` at the historical
+  1,500,000 bytes even though the bounded transport path now admits measured
+  modern pages up to 2,500,000 bytes. The exact sanitized failure and durable
+  one-shot marker are preserved as
+  `docs/evals/v0-09-recovery-rc1-founder-proof-failure.{json,md}` and
+  `docs/evals/v0-09-recovery-rc1-founder-proof-attempt.json`. No patch or
+  second proof is authorized from this checkpoint.
 
 ## Exact resume instructions
 
-1. Work only in
-   `/Users/alchemist32/Documents/AI Shopping/ai-shopping-v0-09-source-depth` on
-   `codex/v0-09-source-depth-purchase-path`; confirm it descends exactly from
-   accepted V0-08 head `cfd809740ae64be307798eb7870feaf56227d9dc`
-   and inspect the tree first.
-2. Read this file and `docs/plans/v0-09.md`. Read only the V0-08 seams required
-   by the current implementation layer; do not reopen accepted V0-03/V0-04 or
-   earlier retrieval/evidence architecture.
-3. Preserve V0-05 PR #9, V0-06 PR #10 and V0-07 PR #11 exactly. Do not merge
-   them and do not weaken V0-05's Terra rule.
-4. Do not rerun V0-08 evidence. Build V0-09 in the ordered layers recorded in
-   its plan. Never weaken unknown, exact offer identity, evidence provenance,
-   money, task authority, revisions, leases or focused target scope.
-5. Do not fetch arbitrary user URLs, crawl links, create ProductIdentity,
-   substitute another merchant, add auth/deployment/checkout/affiliate work or
-   begin V0-10.
-6. Attempts 1, 2 and 3 are immutable diagnostics. Attempt 3 is the final
-   independent-review-authorized run and did not satisfy release acceptance.
-   Preserve the complete three-attempt ledger, keep PR #13 draft/unmerged,
-   leave the worktree clean and stop for independent review. Do not begin
-   V0-10 or attempt another live proof from this checkpoint.
+1. Recovery RC1 is currently blocked by its single preserved proof failure.
+   Do not rerun it, consume another marker, or start V0-10. Any future repair
+   must begin in
+   `/Users/alchemist32/Documents/AI Shopping/ai-shopping-v0-09-recovery` on
+   `codex/v0-09-recovery-rc`, inspect the exact failure artifact, and obtain a
+   new bounded instruction before changing the persisted page metadata cap.
+2. Preserve V0-05 PR #9, V0-06 PR #10, V0-07 PR #11, PR #13 and PR #14 as
+   draft/unmerged historical checkpoints. Do not weaken V0-05's Terra rule,
+   rerun V0-08 evidence, or begin V0-10.
