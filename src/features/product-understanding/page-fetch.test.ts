@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { MAX_PAGE_TRANSPORT_BYTES } from "./page-budgets";
 import {
   buildPinnedRequestOptions,
   fetchBoundedPage,
@@ -412,6 +413,26 @@ describe("bounded page response policy", () => {
             }),
           ).rejects.toMatchObject({ code: "response_too_large" });
         }
+      },
+    );
+  });
+
+  it("fails closed while streaming one byte beyond the production transport budget", async () => {
+    await withPinnedHttpServer(
+      (_request, response) => {
+        response.writeHead(200, { "content-type": "text/html" });
+        response.write(Buffer.alloc(MAX_PAGE_TRANSPORT_BYTES, 120));
+        response.end("x");
+      },
+      async ({ url }) => {
+        await expect(
+          requestWithPinnedAddress({
+            url,
+            address: { address: "127.0.0.1", family: 4 },
+            timeoutMs: 2_000,
+            maxBytes: MAX_PAGE_TRANSPORT_BYTES,
+          }),
+        ).rejects.toMatchObject({ code: "response_too_large" });
       },
     );
   });

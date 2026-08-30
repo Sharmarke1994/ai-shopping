@@ -337,13 +337,16 @@ describe("OpenAI product-understanding adapter", () => {
       }),
     ).resolves.toMatchObject({
       status: "malformed",
-      errorCode: "structured_output_validation_failed",
+      errorCode:
+        "product_understanding_assessment_observation_ref_criterion_mismatch",
     });
   });
 
   it.each([
     {
       label: "null focused observation ordinal",
+      expectedErrorCode:
+        "product_understanding_observation_criterion_ordinal_out_of_scope",
       value: {
         providerSchemaVersion: 1,
         observations: [
@@ -376,6 +379,8 @@ describe("OpenAI product-understanding adapter", () => {
     },
     {
       label: "out-of-range focused assessment ordinal",
+      expectedErrorCode:
+        "product_understanding_assessment_criterion_ordinal_out_of_scope",
       value: {
         providerSchemaVersion: 1,
         observations: [],
@@ -390,7 +395,7 @@ describe("OpenAI product-understanding adapter", () => {
         ],
       },
     },
-  ])("fails closed on $label", async ({ value }) => {
+  ])("fails closed on $label", async ({ value, expectedErrorCode }) => {
     const client = {
       responses: {
         create: () => Promise.resolve(completedResponse(value)),
@@ -406,7 +411,7 @@ describe("OpenAI product-understanding adapter", () => {
       model.understand(input, { requireCriterionBinding: true }),
     ).resolves.toMatchObject({
       status: "malformed",
-      errorCode: "structured_output_validation_failed",
+      errorCode: expectedErrorCode,
     });
   });
 

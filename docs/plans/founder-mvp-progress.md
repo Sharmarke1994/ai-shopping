@@ -10,10 +10,11 @@ and comparison are meaningfully better than beginning with Google.
 - Repository: `Sharmarke1994/ai-shopping`.
 - Founder-MVP execution brief: `docs/plans/founder-usable-mvp.md`.
 - Active isolated worktree:
-  `/Users/alchemist32/Documents/AI Shopping/ai-shopping-v0-09-source-depth`.
-- Active branch: `codex/v0-09-source-depth-purchase-path`, starting exactly at
-  the independently accepted V0-08 head
-  `cfd809740ae64be307798eb7870feaf56227d9dc`.
+  `/Users/alchemist32/Documents/AI Shopping/ai-shopping-v0-09-recovery`.
+- Active branch: `codex/v0-09-recovery-rc`, descending from preserved Recovery
+  RC1 failure head `f02560132639e2095356e1ce54afbc87fbded068`, accepted context head
+  `a17d37d80a710bb05b8c79d996596f2492c2424c` and frozen V0-09 head
+  `934067e7d3796a4a68ba3b00387a16632a563f15`.
 - Independently reviewed V0-08 pre-correction head:
   `c28c891885462eb2990f0b098f3817e744afdec0` in draft stacked PR #12.
 - The final bounded six-issue correction and hardened one-shot proof harness
@@ -598,16 +599,64 @@ This bounded blocker-remediation branch is isolated from V0-09 at frozen head
   one-shot marker are preserved as
   `docs/evals/v0-09-recovery-rc1-founder-proof-failure.{json,md}` and
   `docs/evals/v0-09-recovery-rc1-founder-proof-attempt.json`. No patch or
-  second proof is authorized from this checkpoint.
+  second RC1 proof is authorized from this checkpoint.
+- Recovery RC2 is the active bounded checkpoint. It replaces the stale 1.5 MB
+  persisted fetched-page metadata ceiling with one shared 2.5 MB transient
+  transport/persistence contract while retaining a separate 36 KB extracted
+  document bound. Additive migration `0017_shallow_jetstream.sql` changes only
+  the fetched-document content CHECK.
+- The RC2 page soak successfully exercised a 2,329,807-byte Tom's Guide page
+  through production fetch, extraction, exact admission, PostgreSQL
+  persistence, replay and bounded model input; the retained document was
+  12,815 bytes. Two additional historical pages also crossed 1.5 MB: the
+  Anker page was admitted as manufacturer evidence and the Amazon page failed
+  closed as a wrong model/variant. The disposable database was destroyed and
+  raw HTML was not retained.
+- Historical broad-call failures plus one non-repeatable fixture-only Terra
+  diagnostic evidenced an eight-criterion
+  `assessment_observation_ref_criterion_mismatch`. RC2 now partitions only
+  first-pass product understanding into deterministic one- or two-criterion
+  calls with hashed paired receipts, strict bindings, atomic batch
+  persistence, honest partial failure and unfinished-only resume. Deepening
+  and reassessment semantics remain unchanged. Historical reads revalidate the
+  exact partition against the authoritative brief at the run revision.
+- Sanitized product-understanding failure taxonomy is diagnostic-only and
+  contains no provider payload, source text or raw error. The founder proof
+  requires failed model receipt pairs and taxonomy diagnostics to match
+  exactly. The explicit schema-maximum cost ceiling is 25 calls per candidate,
+  100 across four candidates; no criteria are silently truncated.
+- The single bounded destination diagnostic resolved one same-merchant offer
+  and rejected two no-result offers without cross-retailer substitution or DB
+  mutation. The global eBay `.com` destination is recorded as an honest
+  UK-market limitation for release inspection.
+- RC2 deterministic evidence currently includes 376/376 unit/component tests,
+  157/157 functional PostgreSQL tests, the real page soak and the destination
+  diagnostic. The sole full-DB red result is the intentional local environment
+  check: Homebrew PostgreSQL 17.11 does not impersonate the repository/CI pin
+  at 17.6. `pnpm check`, production build, 8/8 browser tests, migration replay,
+  no-drift generation, production dependency audit and eight production-render
+  screenshot/overflow checks are green. Pre-proof commit/push and the single
+  RC2 founder proof remain current work. No RC2 founder-proof marker has been
+  consumed.
 
 ## Exact resume instructions
 
-1. Recovery RC1 is currently blocked by its single preserved proof failure.
-   Do not rerun it, consume another marker, or start V0-10. Any future repair
-   must begin in
+1. Resume only in
    `/Users/alchemist32/Documents/AI Shopping/ai-shopping-v0-09-recovery` on
-   `codex/v0-09-recovery-rc`, inspect the exact failure artifact, and obtain a
-   new bounded instruction before changing the persisted page metadata cap.
-2. Preserve V0-05 PR #9, V0-06 PR #10, V0-07 PR #11, PR #13 and PR #14 as
+   `codex/v0-09-recovery-rc`. Preserve RC1 and V0-09 Attempts 1–3 exactly; never
+   rerun any of them or rewrite their markers/artifacts.
+2. Finish the full deterministic/PostgreSQL/migration/security/build/E2E/
+   production-render gate. Correct only evidenced RC2 defects. Commit and push
+   the complete pre-proof checkpoint, and verify the worktree is clean.
+3. If and only if every pre-proof gate is green and no RC2 attempt marker
+   exists, run exactly one guarded
+   `V0_09_RECOVERY_RC2_LIVE_RELEASE_ACK=fresh-four-category-one-shot pnpm proof:v0-09:recovery-rc2:live`
+   with Keychain credentials and the guarded test database path. The harness
+   binds its own repository root, exact clean head, all three authority
+   ancestors and immutable historical artifact blobs before claiming.
+4. Success or failure must be preserved, committed and pushed. Never rerun the
+   RC2 proof. Keep the stacked PR draft/unmerged and stop for independent
+   review; do not begin V0-10.
+5. Preserve V0-05 PR #9, V0-06 PR #10, V0-07 PR #11, PR #13 and PR #14 as
    draft/unmerged historical checkpoints. Do not weaken V0-05's Terra rule,
    rerun V0-08 evidence, or begin V0-10.

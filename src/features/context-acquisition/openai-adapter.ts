@@ -265,6 +265,7 @@ export function parseOpenAIResponse<T>(options: {
   response: ResponseLike;
   schema: ZodType<T>;
   fallbackMetadata: ModelCallMetadata;
+  validationErrorCode?: (error: unknown) => string;
 }): ModelCallResult<T> {
   const metadata: ModelCallMetadata = {
     ...options.fallbackMetadata,
@@ -327,10 +328,12 @@ export function parseOpenAIResponse<T>(options: {
       value: options.schema.parse(JSON.parse(item.text)),
       metadata,
     };
-  } catch {
+  } catch (error) {
     return {
       status: "malformed",
-      errorCode: "structured_output_validation_failed",
+      errorCode:
+        options.validationErrorCode?.(error) ??
+        "structured_output_validation_failed",
       metadata,
     };
   }

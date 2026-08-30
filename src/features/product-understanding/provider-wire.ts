@@ -93,6 +93,7 @@ function validateProviderWireRelations(
         code: "custom",
         path: ["observations", index, "localRef"],
         message: "Observation references must be unique",
+        params: { rule: "observation_local_ref_duplicate" },
       });
     }
     refs.add(observation.localRef);
@@ -105,6 +106,10 @@ function validateProviderWireRelations(
         code: "custom",
         path: ["assessments", index, "criterionOrdinal"],
         message: "Each criterion may be assessed only once",
+        params: {
+          rule: "assessment_criterion_duplicate",
+          criterionOrdinal: assessment.criterionOrdinal,
+        },
       });
     }
     assessed.add(assessment.criterionOrdinal);
@@ -114,6 +119,7 @@ function validateProviderWireRelations(
           code: "custom",
           path: ["assessments", index, "observationRefs"],
           message: "Assessments may reference only emitted observations",
+          params: { rule: "assessment_observation_ref_missing" },
         });
       } else if (criterionByRef.get(ref) !== assessment.criterionOrdinal) {
         context.addIssue({
@@ -121,6 +127,7 @@ function validateProviderWireRelations(
           path: ["assessments", index, "observationRefs"],
           message:
             "Assessments may reference only observations emitted for the same criterion",
+          params: { rule: "assessment_observation_ref_criterion_mismatch" },
         });
       }
     }
@@ -148,38 +155,51 @@ export function productUnderstandingProviderStructuredOutputSchema(options: {
   input: z.infer<typeof productUnderstandingInputV1Schema>;
   requireCriterionBinding: boolean;
 }) {
-  if (!options.requireCriterionBinding) {
-    return productUnderstandingProviderWireV1Schema;
-  }
-
   const criterionOrdinals = options.input.criteria.map(
     ({ ordinal }) => ordinal,
   );
-  if (criterionOrdinals.length === 0) {
+  if (options.requireCriterionBinding && criterionOrdinals.length === 0) {
     throw new Error("Focused product understanding requires a criterion");
   }
   if (new Set(criterionOrdinals).size !== criterionOrdinals.length) {
     throw new Error("Focused product-understanding ordinals must be unique");
   }
-  const criterionOrdinalSchema = z.literal(
-    criterionOrdinals as [number, ...number[]],
+  const sourceOrdinals = options.input.sources.map(({ ordinal }) => ordinal);
+  if (new Set(sourceOrdinals).size !== sourceOrdinals.length) {
+    throw new Error("Product-understanding source ordinals must be unique");
+  }
+  const sourceOrdinalSchema = z.literal(
+    sourceOrdinals as [number, ...number[]],
   );
-  const focusedObservationSchema = proposedObservationSchema.extend({
-    criterionOrdinal: criterionOrdinalSchema,
+  const criterionOrdinalSchema =
+    criterionOrdinals.length === 0
+      ? null
+      : z.literal(criterionOrdinals as [number, ...number[]]);
+  const boundObservationSchema = proposedObservationSchema.extend({
+    sourceOrdinal: sourceOrdinalSchema,
+    criterionOrdinal: options.requireCriterionBinding
+      ? criterionOrdinalSchema!
+      : criterionOrdinalSchema === null
+        ? z.null()
+        : z.union([z.null(), criterionOrdinalSchema]),
   });
-  const focusedAssessmentSchema = proposedAssessmentSchema.extend({
-    criterionOrdinal: criterionOrdinalSchema,
-  });
+  const boundAssessmentSchema =
+    criterionOrdinalSchema === null
+      ? null
+      : proposedAssessmentSchema.extend({
+          criterionOrdinal: criterionOrdinalSchema,
+        });
 
   return z
     .strictObject({
       providerSchemaVersion: z.literal(
         PRODUCT_UNDERSTANDING_PROVIDER_SCHEMA_VERSION,
       ),
-      observations: z.array(focusedObservationSchema).max(50),
-      assessments: z
-        .array(focusedAssessmentSchema)
-        .length(criterionOrdinals.length),
+      observations: z.array(boundObservationSchema).max(50),
+      assessments:
+        boundAssessmentSchema === null
+          ? z.tuple([])
+          : z.array(boundAssessmentSchema).length(criterionOrdinals.length),
     })
     .superRefine(validateProviderWireRelations);
 }
@@ -196,9 +216,44 @@ export function productUnderstandingProviderWireV1SchemaForInput(options: {
   const criterionOrdinals = new Set(
     options.input.criteria.map(({ ordinal }) => ordinal),
   );
+  const sourceOrdinals = new Set(
+    options.input.sources.map(({ ordinal }) => ordinal),
+  );
+  const sourceKindByOrdinal = new Map(
+    options.input.sources.map(({ ordinal, kind }) => [ordinal, kind]),
+  );
   return productUnderstandingProviderWireV1Schema.superRefine(
     (value, context) => {
       for (const [index, observation] of value.observations.entries()) {
+        if (!sourceOrdinals.has(observation.sourceOrdinal)) {
+          context.addIssue({
+            code: "custom",
+            path: ["observations", index, "sourceOrdinal"],
+            message:
+              "Observation source ordinal is outside the authoritative source subset",
+            params: {
+              rule: "observation_source_ordinal_out_of_scope",
+              sourceOrdinal: observation.sourceOrdinal,
+            },
+          });
+        }
+        const sourceKind = sourceKindByOrdinal.get(observation.sourceOrdinal);
+        if (
+          sourceKind !== undefined &&
+          (observation.derivation === "model_visual") !==
+            (sourceKind === "listing_image")
+        ) {
+          context.addIssue({
+            code: "custom",
+            path: ["observations", index, "derivation"],
+            message:
+              "Observation derivation must match the authoritative evidence source kind",
+            params: {
+              rule: "observation_evidence_binding_invalid",
+              sourceOrdinal: observation.sourceOrdinal,
+            },
+          });
+        }
         if (
           observation.criterionOrdinal === null &&
           options.requireCriterionBinding
@@ -208,6 +263,7 @@ export function productUnderstandingProviderWireV1SchemaForInput(options: {
             path: ["observations", index, "criterionOrdinal"],
             message:
               "Focused observations must bind to a criterion in the authoritative target subset",
+            params: { rule: "focused_observation_criterion_missing" },
           });
         } else if (
           observation.criterionOrdinal !== null &&
@@ -218,6 +274,10 @@ export function productUnderstandingProviderWireV1SchemaForInput(options: {
             path: ["observations", index, "criterionOrdinal"],
             message:
               "Observation criterion ordinal is outside the authoritative target subset",
+            params: {
+              rule: "observation_criterion_ordinal_out_of_scope",
+              criterionOrdinal: observation.criterionOrdinal,
+            },
           });
         }
       }
@@ -228,6 +288,27 @@ export function productUnderstandingProviderWireV1SchemaForInput(options: {
             path: ["assessments", index, "criterionOrdinal"],
             message:
               "Assessment criterion ordinal is outside the authoritative target subset",
+            params: {
+              rule: "assessment_criterion_ordinal_out_of_scope",
+              criterionOrdinal: assessment.criterionOrdinal,
+            },
+          });
+        }
+      }
+      const assessedOrdinals = new Set(
+        value.assessments.map(({ criterionOrdinal }) => criterionOrdinal),
+      );
+      for (const criterionOrdinal of criterionOrdinals) {
+        if (!assessedOrdinals.has(criterionOrdinal)) {
+          context.addIssue({
+            code: "custom",
+            path: ["assessments"],
+            message:
+              "Every authoritative target criterion must have one assessment",
+            params: {
+              rule: "assessment_criterion_missing",
+              criterionOrdinal,
+            },
           });
         }
       }
