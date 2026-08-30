@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "proofMode": "v0_09_recovery_rc2_one_shot",
+  "recoveryCandidate": "RC2",
+  "attemptId": "9d1c6eea-6e66-47f6-95c5-86732b3829fd",
+  "claimedAt": "2026-08-30T21:50:49.730Z",
+  "state": "claimed",
+  "acceptedContextHead": "a17d37d80a710bb05b8c79d996596f2492c2424c",
+  "frozenV009Head": "934067e7d3796a4a68ba3b00387a16632a563f15",
+  "frozenHistoricalArtifacts": [
+    "docs/evals/v0-09-live-founder-proof-attempt-prior.json",
+    "docs/evals/v0-09-live-founder-proof-failure-prior.json",
+    "docs/evals/v0-09-live-founder-proof-failure-prior.md",
+    "docs/evals/v0-09-live-founder-proof-attempt-2.json",
+    "docs/evals/v0-09-live-founder-proof-failure-attempt-2.json",
+    "docs/evals/v0-09-live-founder-proof-failure-attempt-2.md",
+    "docs/evals/v0-09-live-founder-proof-attempt.json",
+    "docs/evals/v0-09-live-founder-proof-failure.json",
+    "docs/evals/v0-09-live-founder-proof-failure.md",
+    "docs/evals/v0-09-recovery-rc1-founder-proof-attempt.json",
+    "docs/evals/v0-09-recovery-rc1-founder-proof-failure.json",
+    "docs/evals/v0-09-recovery-rc1-founder-proof-failure.md"
+  ],
+  "baseRecoveryHead": "f02560132639e2095356e1ce54afbc87fbded068",
+  "recoveryHead": "326b1231031dd292347fa6c3d5af176a4bd85570",
+  "reason": "RC1 exposed persisted page-byte validation using the obsolete 1.5 MB bound after transport policy moved to 2.5 MB.",
+  "authorizationReason": "Independent review authorized one materially changed Recovery RC2 full founder proof after deterministic full-path hardening.",
+  "refusalPolicy": "This marker is intentionally durable. Recovery RC2 allows exactly one full release proof; a second run is refused. Historical V0-09 attempts remain untouched."
+}

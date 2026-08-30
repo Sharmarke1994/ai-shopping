@@ -88,3 +88,41 @@ Only after the deterministic, PostgreSQL, migration, security, browser and
 rendered UI gates are green may the exact four founder journeys run once with
 Terra and Serper. Success or failure evidence is durable. A second RC2 proof is
 refused. The branch remains draft and unmerged, and V0-10 does not begin.
+
+## One-shot release outcome
+
+- Pre-proof head: `326b1231031dd292347fa6c3d5af176a4bd85570`.
+- Draft stacked PR: #15, based on the accepted PR #14 branch.
+- Exact-head CI: GitHub run `33337409664`; quality, pinned-PostgreSQL
+  persistence and browser-smoke passed. Browser-smoke used one configured
+  retry before passing 7/7.
+- RC2 attempt: `9d1c6eea-6e66-47f6-95c5-86732b3829fd`, claimed once at
+  `2026-08-30T21:50:49.730Z`.
+- Release accepted: no. No second RC2 proof is permitted.
+
+The attempt reached the real ergonomic-mouse initial and refinement pipeline:
+2/2 interpretation, 2/2 action-selection, 6/6 Shopping, 11/11 evidence-search,
+2/2 page-fetch and 31/31 product-understanding logical operations succeeded.
+Two exact pages traversed the repaired byte contract and were admitted:
+2,329,807 encoded/decoded bytes retained as a 12,815-byte independent-review
+document, and 1,943,252 bytes retained as a 6,154-byte manufacturer document.
+The disposable database was destroyed with zero cleanup errors. No destination
+operation began because the protected founder-intent gate rejected the case.
+
+The thrown error calls `Ergonomic design` an invented criterion. Read-only
+failure audit found a deterministic evaluator collision instead: the classifier
+tests the combined label and definition, and the definition's phrase
+`ergonomic shape` matches both its approved `ergonomic_subject` regex and its
+approved `sculpted_shape` regex. The evaluator demands exactly one key and uses
+the same invention message for multiple matches. Provider transport,
+structured output, persistence and product-understanding all succeeded. A
+separate semantic-strength question remains unreached: state made the ergonomic
+criterion `hard`, while the current prompt/oracle policy expects preference.
+Independent review must resolve both points; this checkpoint does not patch
+either one and does not rerun the proof.
+
+Durable evidence:
+
+- `docs/evals/v0-09-recovery-rc2-founder-proof-attempt.json`
+- `docs/evals/v0-09-recovery-rc2-founder-proof-failure.json`
+- `docs/evals/v0-09-recovery-rc2-founder-proof-failure.md`

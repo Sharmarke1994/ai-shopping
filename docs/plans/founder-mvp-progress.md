@@ -600,7 +600,8 @@ This bounded blocker-remediation branch is isolated from V0-09 at frozen head
   `docs/evals/v0-09-recovery-rc1-founder-proof-failure.{json,md}` and
   `docs/evals/v0-09-recovery-rc1-founder-proof-attempt.json`. No patch or
   second RC1 proof is authorized from this checkpoint.
-- Recovery RC2 is the active bounded checkpoint. It replaces the stale 1.5 MB
+- Recovery RC2 is the frozen diagnostic checkpoint pending independent review.
+  It replaces the stale 1.5 MB
   persisted fetched-page metadata ceiling with one shared 2.5 MB transient
   transport/persistence contract while retaining a separate 36 KB extracted
   document bound. Additive migration `0017_shallow_jetstream.sql` changes only
@@ -629,15 +630,44 @@ This bounded blocker-remediation branch is isolated from V0-09 at frozen head
   and rejected two no-result offers without cross-retailer substitution or DB
   mutation. The global eBay `.com` destination is recorded as an honest
   UK-market limitation for release inspection.
-- RC2 deterministic evidence currently includes 376/376 unit/component tests,
+- RC2 deterministic evidence includes 376/376 unit/component tests,
   157/157 functional PostgreSQL tests, the real page soak and the destination
   diagnostic. The sole full-DB red result is the intentional local environment
   check: Homebrew PostgreSQL 17.11 does not impersonate the repository/CI pin
   at 17.6. `pnpm check`, production build, 8/8 browser tests, migration replay,
   no-drift generation, production dependency audit and eight production-render
-  screenshot/overflow checks are green. Pre-proof commit/push and the single
-  RC2 founder proof remain current work. No RC2 founder-proof marker has been
-  consumed.
+  screenshot/overflow checks are green. Pre-proof checkpoint
+  `326b1231031dd292347fa6c3d5af176a4bd85570` is pushed on draft PR #15,
+  stacked on PR #14. Exact-head GitHub run `33337409664` passed quality,
+  pinned-PostgreSQL persistence and browser-smoke; browser-smoke used its
+  configured retry once and then passed 7/7.
+- The only Recovery RC2 founder proof was claimed as attempt
+  `9d1c6eea-6e66-47f6-95c5-86732b3829fd` at
+  `2026-08-30T21:50:49.730Z` and failed closed in the ergonomic-mouse case.
+  It completed two interpretation, two action-selection, six Shopping, eleven
+  organic evidence-search, two page-fetch and thirty-one product-understanding
+  logical provider operations without a provider failure. Two exact pages
+  were admitted and persisted: a 2,329,807-byte independent review with a
+  12,815-byte retained document and a 1,943,252-byte manufacturer page with a
+  6,154-byte retained document. The active case contained two successful
+  SearchRuns, five successful research runs, 75 succeeded evidence attempts,
+  62 observations and 57 assessments. Destination work had not begun.
+- The thrown message says the initial brief invented `Ergonomic design`, but
+  the earliest actual failing layer is the release harness's deterministic
+  founder-intent classifier. It builds meaning from the concept label plus
+  definition, so `Ergonomic design` / `...ergonomic shape` matches both the
+  allowed `ergonomic_subject` rule and the allowed `sculpted_shape` rule. The
+  assertion requires exactly one match and misleadingly labels multiple
+  matches as invention. This is not evidence of a provider, persistence or
+  product-understanding failure. A separate, unreached semantic question
+  remains for independent review: the persisted ergonomic criterion is
+  `hard`, while the current prompt/oracle policy expects a preference.
+- The sanitized failure, Markdown summary and durable marker are preserved as
+  `docs/evals/v0-09-recovery-rc2-founder-proof-failure.{json,md}` and
+  `docs/evals/v0-09-recovery-rc2-founder-proof-attempt.json`. Release
+  acceptance is false, completed founder categories are zero, the disposable
+  database was destroyed with zero cleanup errors, and no RC2 success artifact
+  exists. The RC2 marker is permanently consumed; there will be no RC2 retry.
 
 ## Exact resume instructions
 
@@ -645,18 +675,16 @@ This bounded blocker-remediation branch is isolated from V0-09 at frozen head
    `/Users/alchemist32/Documents/AI Shopping/ai-shopping-v0-09-recovery` on
    `codex/v0-09-recovery-rc`. Preserve RC1 and V0-09 Attempts 1–3 exactly; never
    rerun any of them or rewrite their markers/artifacts.
-2. Finish the full deterministic/PostgreSQL/migration/security/build/E2E/
-   production-render gate. Correct only evidenced RC2 defects. Commit and push
-   the complete pre-proof checkpoint, and verify the worktree is clean.
-3. If and only if every pre-proof gate is green and no RC2 attempt marker
-   exists, run exactly one guarded
-   `V0_09_RECOVERY_RC2_LIVE_RELEASE_ACK=fresh-four-category-one-shot pnpm proof:v0-09:recovery-rc2:live`
-   with Keychain credentials and the guarded test database path. The harness
-   binds its own repository root, exact clean head, all three authority
-   ancestors and immutable historical artifact blobs before claiming.
-4. Success or failure must be preserved, committed and pushed. Never rerun the
-   RC2 proof. Keep the stacked PR draft/unmerged and stop for independent
-   review; do not begin V0-10.
-5. Preserve V0-05 PR #9, V0-06 PR #10, V0-07 PR #11, PR #13 and PR #14 as
+2. Do not run `proof:v0-09:recovery-rc2:live` again. Its one-shot marker is
+   consumed. Do not change the evaluator, prompt, schema or state semantics
+   before independent review decides the dual-match classifier defect and the
+   separate ergonomic-strength question.
+3. Preserve and review the exact RC2 failure artifacts, pre-proof head
+   `326b1231031dd292347fa6c3d5af176a4bd85570`, and PR #15. Any future live
+   attempt requires explicit independent authorization and a materially new
+   recovery-candidate namespace; it must never reuse or rewrite RC2 evidence.
+4. Keep the stacked PR draft/unmerged and stop for independent review; do not
+   begin V0-10.
+5. Preserve V0-05 PR #9, V0-06 PR #10, V0-07 PR #11, PR #13, PR #14 and PR #15 as
    draft/unmerged historical checkpoints. Do not weaken V0-05's Terra rule,
    rerun V0-08 evidence, or begin V0-10.
