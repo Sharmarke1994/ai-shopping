@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { conceptValueFamilySchema } from "@/domain/shopping-state/concept-definition";
 import {
   criterionIdSchema,
   conceptDefinitionIdSchema,
@@ -13,15 +12,14 @@ import {
   type StatePatchProposalV1,
   statePatchProposalV1Schema,
 } from "@/domain/shopping-state/state-patch";
-import {
-  criterionStrengthSchema,
-  targetSemanticsSchema,
-} from "@/domain/shopping-state/decision-criterion";
+import { criterionStrengthSchema } from "@/domain/shopping-state/decision-criterion";
 
 export const INTERPRETATION_PROVIDER_SCHEMA_VERSION = 1 as const;
 export const INTERPRETATION_PROPOSAL_SCHEMA_VERSION = 1 as const;
 export const CONTEXT_ACTION_PROVIDER_SCHEMA_VERSION = 1 as const;
 export const CONTEXT_ACTION_PROPOSAL_SCHEMA_VERSION = 1 as const;
+export const INTERPRETATION_PROVIDER_SCHEMA_VERSION_V2 = 2 as const;
+export const CONTEXT_ACTION_PROVIDER_SCHEMA_VERSION_V2 = 2 as const;
 
 const providerBoundedTextSchema = z
   .string()
@@ -71,21 +69,23 @@ const providerMeasurementValueWireV1Schema = z.strictObject({
 });
 
 const providerMeasurementRangeValueWireV1Schema = z
-  .strictObject({
-    schemaVersion: z.literal(1),
-    kind: z.literal("measurement_range"),
-    lower: providerMeasurementBoundWireV1Schema.nullable(),
-    upper: providerMeasurementBoundWireV1Schema.nullable(),
-    unit: measurementUnitSchema,
-  })
+  .union([
+    z.strictObject({
+      schemaVersion: z.literal(1),
+      kind: z.literal("measurement_range"),
+      lower: providerMeasurementBoundWireV1Schema,
+      upper: providerMeasurementBoundWireV1Schema.nullable(),
+      unit: measurementUnitSchema,
+    }),
+    z.strictObject({
+      schemaVersion: z.literal(1),
+      kind: z.literal("measurement_range"),
+      lower: providerMeasurementBoundWireV1Schema.nullable(),
+      upper: providerMeasurementBoundWireV1Schema,
+      unit: measurementUnitSchema,
+    }),
+  ])
   .superRefine((value, context) => {
-    if (value.lower === null && value.upper === null) {
-      context.addIssue({
-        code: "custom",
-        message: "A measurement range needs at least one bound",
-      });
-      return;
-    }
     if (
       value.lower !== null &&
       value.upper !== null &&
@@ -98,10 +98,18 @@ const providerMeasurementRangeValueWireV1Schema = z
     }
   });
 
-const providerMoneyValueWireV1Schema = z.strictObject({
+const providerMoneyTargetValueWireV1Schema = z.strictObject({
   schemaVersion: z.literal(1),
   kind: z.literal("money"),
-  mode: z.enum(["target", "ceiling"]),
+  mode: z.literal("target"),
+  amountMinor: z.number().int().nonnegative().safe(),
+  currency: currencyCodeSchema,
+});
+
+const providerMoneyCeilingValueWireV1Schema = z.strictObject({
+  schemaVersion: z.literal(1),
+  kind: z.literal("money"),
+  mode: z.literal("ceiling"),
   amountMinor: z.number().int().nonnegative().safe(),
   currency: currencyCodeSchema,
 });
@@ -141,36 +149,55 @@ const providerCategoricalValueWireV1Schema = z
     }
   });
 
-const providerSemanticValueWireV1Schema = z.union([
-  providerBooleanValueWireV1Schema,
-  providerQualitativeTextValueWireV1Schema,
-  providerQualitativeOrdinalValueWireV1Schema,
-  providerMeasurementValueWireV1Schema,
-  providerMeasurementRangeValueWireV1Schema,
-  providerMoneyValueWireV1Schema,
-  providerMoneyStretchValueWireV1Schema,
-  providerCategoricalValueWireV1Schema,
-]);
+const providerTargetFields = {
+  strength: criterionStrengthSchema,
+} as const;
 
-const providerTargetWireV1Schema = z
-  .strictObject({
-    strength: criterionStrengthSchema,
-    targetSemantics: targetSemanticsSchema.exclude([
-      "comparative",
-      "indifferent",
+const providerTargetWireV1Schema = z.union([
+  z.strictObject({
+    ...providerTargetFields,
+    targetSemantics: z.literal("exact"),
+    semanticValue: z.union([
+      providerBooleanValueWireV1Schema,
+      providerMeasurementValueWireV1Schema,
+      providerMoneyTargetValueWireV1Schema,
     ]),
-    semanticValue: providerSemanticValueWireV1Schema,
-  })
-  .superRefine((target, context) => {
-    const validTargetSemantics = expectedTargetSemantics(target.semanticValue);
-    if (!validTargetSemantics.has(target.targetSemantics)) {
-      context.addIssue({
-        code: "custom",
-        path: ["targetSemantics"],
-        message: `${target.semanticValue.kind} is incompatible with ${target.targetSemantics}`,
-      });
-    }
-  });
+  }),
+  z.strictObject({
+    ...providerTargetFields,
+    targetSemantics: z.literal("around"),
+    semanticValue: z.union([
+      providerMeasurementValueWireV1Schema,
+      providerMoneyTargetValueWireV1Schema,
+    ]),
+  }),
+  z.strictObject({
+    ...providerTargetFields,
+    targetSemantics: z.literal("range"),
+    semanticValue: z.union([
+      providerMeasurementRangeValueWireV1Schema,
+      providerMoneyCeilingValueWireV1Schema,
+    ]),
+  }),
+  z.strictObject({
+    ...providerTargetFields,
+    targetSemantics: z.literal("stretch"),
+    semanticValue: providerMoneyStretchValueWireV1Schema,
+  }),
+  z.strictObject({
+    ...providerTargetFields,
+    targetSemantics: z.literal("categorical"),
+    semanticValue: providerCategoricalValueWireV1Schema,
+  }),
+  z.strictObject({
+    ...providerTargetFields,
+    targetSemantics: z.literal("qualitative"),
+    semanticValue: z.union([
+      providerQualitativeTextValueWireV1Schema,
+      providerQualitativeOrdinalValueWireV1Schema,
+    ]),
+  }),
+]);
 
 const providerConceptRefWireV1Schema = z.union([
   z.strictObject({
@@ -183,27 +210,25 @@ const providerConceptRefWireV1Schema = z.union([
   }),
 ]);
 
-const providerCreateConceptOperationWireV1Schema = z
-  .strictObject({
-    op: z.literal("create_concept"),
-    localRef: providerLocalRefSchema,
-    label: providerShortTextSchema,
-    definition: providerBoundedTextSchema,
-    valueFamily: conceptValueFamilySchema,
-    canonicalUnit: measurementUnitSchema.nullable(),
-  })
-  .superRefine((operation, context) => {
-    if (
-      (operation.valueFamily === "measurement") !==
-      (operation.canonicalUnit !== null)
-    ) {
-      context.addIssue({
-        code: "custom",
-        path: ["canonicalUnit"],
-        message: "Only measurement concepts require a canonical unit",
-      });
-    }
-  });
+const providerCreateConceptFields = {
+  op: z.literal("create_concept"),
+  localRef: providerLocalRefSchema,
+  label: providerShortTextSchema,
+  definition: providerBoundedTextSchema,
+} as const;
+
+const providerCreateConceptOperationWireV1Schema = z.union([
+  z.strictObject({
+    ...providerCreateConceptFields,
+    valueFamily: z.literal("measurement"),
+    canonicalUnit: measurementUnitSchema,
+  }),
+  z.strictObject({
+    ...providerCreateConceptFields,
+    valueFamily: z.enum(["boolean", "qualitative", "money", "categorical"]),
+    canonicalUnit: z.null(),
+  }),
+]);
 
 const providerPatchOperationWireV1Schema = z.union([
   providerCreateConceptOperationWireV1Schema,
@@ -250,11 +275,16 @@ const providerAmbiguityWireV1Schema = z.strictObject({
   affectedCriterionIds: z.array(criterionIdSchema).max(100),
 });
 
+const providerPatchOperationsWireV1Schema = z.union([
+  z.array(providerPatchOperationWireV1Schema).min(1).max(32),
+  z.array(providerPatchOperationWireV1Schema).max(0),
+]);
+
 export const interpretationProviderWireV1Schema = z
   .strictObject({
     providerSchemaVersion: z.literal(INTERPRETATION_PROVIDER_SCHEMA_VERSION),
     outcome: z.enum(["change", "no_change"]),
-    operations: z.array(providerPatchOperationWireV1Schema).max(32),
+    operations: providerPatchOperationsWireV1Schema,
     ambiguities: z.array(providerAmbiguityWireV1Schema).max(4),
   })
   .superRefine((wire, context) => {
@@ -278,6 +308,35 @@ export type InterpretationProviderWireV1 = z.infer<
   typeof interpretationProviderWireV1Schema
 >;
 
+/*
+ * V1 remains the historical persisted wire.  V2 moves the outcome/action
+ * discriminators inside the root object so Structured Outputs can enforce
+ * cardinality and branch coherence before application parsing.
+ */
+const interpretationProviderBranchV2Schema = z.discriminatedUnion("outcome", [
+  z.strictObject({
+    outcome: z.literal("change"),
+    operations: z.array(providerPatchOperationWireV1Schema).min(1).max(32),
+  }),
+  z.strictObject({
+    outcome: z.literal("no_change"),
+    operations: z.array(providerPatchOperationWireV1Schema).max(0),
+  }),
+]);
+
+export const interpretationProviderWireV2Schema = z.strictObject({
+  providerSchemaVersion: z.literal(INTERPRETATION_PROVIDER_SCHEMA_VERSION_V2),
+  interpretation: interpretationProviderBranchV2Schema,
+  ambiguities: z.array(providerAmbiguityWireV1Schema).max(4),
+});
+
+export type InterpretationProviderWireV2 = z.infer<
+  typeof interpretationProviderWireV2Schema
+>;
+
+export type InterpretationProviderWire =
+  InterpretationProviderWireV1 | InterpretationProviderWireV2;
+
 export const interpretationAmbiguityV1Schema = providerAmbiguityWireV1Schema;
 export type InterpretationAmbiguityV1 = z.infer<
   typeof interpretationAmbiguityV1Schema
@@ -293,36 +352,27 @@ export type InterpretationProposalV1 = z.infer<
   typeof interpretationProposalV1Schema
 >;
 
+const providerQuestionFields = {
+  prompt: providerBoundedTextSchema,
+  expectedImpact: z.enum(["retrieval", "eligibility", "judgement"]),
+  whyNow: providerBoundedTextSchema,
+  canSearchWithoutAnswer: z.boolean(),
+} as const;
+
 const providerQuestionWireV1Schema = z
-  .strictObject({
-    prompt: providerBoundedTextSchema,
-    responseMode: z.enum(["open_text", "single_select"]),
-    options: z.array(providerShortTextSchema).max(4),
-    expectedImpact: z.enum(["retrieval", "eligibility", "judgement"]),
-    whyNow: providerBoundedTextSchema,
-    canSearchWithoutAnswer: z.boolean(),
-  })
+  .union([
+    z.strictObject({
+      ...providerQuestionFields,
+      responseMode: z.literal("open_text"),
+      options: z.array(providerShortTextSchema).max(0),
+    }),
+    z.strictObject({
+      ...providerQuestionFields,
+      responseMode: z.literal("single_select"),
+      options: z.array(providerShortTextSchema).min(2).max(4),
+    }),
+  ])
   .superRefine((question, context) => {
-    if (
-      question.responseMode === "open_text" &&
-      question.options.length !== 0
-    ) {
-      context.addIssue({
-        code: "custom",
-        path: ["options"],
-        message: "Open-text questions require an empty options array",
-      });
-    }
-    if (
-      question.responseMode === "single_select" &&
-      (question.options.length < 2 || question.options.length > 4)
-    ) {
-      context.addIssue({
-        code: "custom",
-        path: ["options"],
-        message: "Single-select questions require two to four options",
-      });
-    }
     const caseFolded = question.options.map((entry) => entry.toLowerCase());
     if (new Set(caseFolded).size !== caseFolded.length) {
       context.addIssue({
@@ -368,6 +418,36 @@ export const contextActionProviderWireV1Schema = z
 export type ContextActionProviderWireV1 = z.infer<
   typeof contextActionProviderWireV1Schema
 >;
+
+const contextActionProviderBranchV2Schema = z.discriminatedUnion("action", [
+  z.strictObject({
+    action: z.literal("ask"),
+    question: providerQuestionWireV1Schema,
+    rationale: z.null(),
+  }),
+  z.strictObject({
+    action: z.literal("search"),
+    question: z.null(),
+    rationale: providerActionRationaleWireV1Schema,
+  }),
+  z.strictObject({
+    action: z.literal("show_refine"),
+    question: z.null(),
+    rationale: providerActionRationaleWireV1Schema,
+  }),
+]);
+
+export const contextActionProviderWireV2Schema = z.strictObject({
+  providerSchemaVersion: z.literal(CONTEXT_ACTION_PROVIDER_SCHEMA_VERSION_V2),
+  decision: contextActionProviderBranchV2Schema,
+});
+
+export type ContextActionProviderWireV2 = z.infer<
+  typeof contextActionProviderWireV2Schema
+>;
+
+export type ContextActionProviderWire =
+  ContextActionProviderWireV1 | ContextActionProviderWireV2;
 
 export const questionProposalV1Schema = providerQuestionWireV1Schema;
 export type QuestionProposalV1 = z.infer<typeof questionProposalV1Schema>;
@@ -442,12 +522,81 @@ export function lowerContextActionProviderWireV1(
   }
 }
 
+export function lowerInterpretationProviderWire(
+  input: unknown,
+): InterpretationProposalV1 {
+  const version = z
+    .object({ providerSchemaVersion: z.number() })
+    .parse(input).providerSchemaVersion;
+  return version === INTERPRETATION_PROVIDER_SCHEMA_VERSION_V2
+    ? lowerInterpretationProviderWireV2(input)
+    : lowerInterpretationProviderWireV1(input);
+}
+
+export function lowerContextActionProviderWire(
+  input: unknown,
+): ContextActionProposalV1 {
+  const version = z
+    .object({ providerSchemaVersion: z.number() })
+    .parse(input).providerSchemaVersion;
+  return version === CONTEXT_ACTION_PROVIDER_SCHEMA_VERSION_V2
+    ? lowerContextActionProviderWireV2(input)
+    : lowerContextActionProviderWireV1(input);
+}
+
+function lowerInterpretationProviderWireV2(
+  input: unknown,
+): InterpretationProposalV1 {
+  const wire = interpretationProviderWireV2Schema.parse(input);
+  const patch: StatePatchProposalV1 =
+    wire.interpretation.outcome === "no_change"
+      ? { schemaVersion: 1, outcome: "no_change" }
+      : {
+          schemaVersion: 1,
+          outcome: "change",
+          operations: wire.interpretation.operations.map(lowerPatchOperation),
+        };
+  return interpretationProposalV1Schema.parse({
+    schemaVersion: INTERPRETATION_PROPOSAL_SCHEMA_VERSION,
+    patch,
+    ambiguities: wire.ambiguities,
+  });
+}
+
+function lowerContextActionProviderWireV2(
+  input: unknown,
+): ContextActionProposalV1 {
+  const wire = contextActionProviderWireV2Schema.parse(input);
+  switch (wire.decision.action) {
+    case "ask":
+      return contextActionProposalV1Schema.parse({
+        schemaVersion: CONTEXT_ACTION_PROPOSAL_SCHEMA_VERSION,
+        action: "ask",
+        question: wire.decision.question,
+      });
+    case "search":
+    case "show_refine":
+      return contextActionProposalV1Schema.parse({
+        schemaVersion: CONTEXT_ACTION_PROPOSAL_SCHEMA_VERSION,
+        action: wire.decision.action,
+        rationale: wire.decision.rationale,
+      });
+  }
+}
+
 type ProviderPatchOperationWireV1 = z.infer<
   typeof providerPatchOperationWireV1Schema
 >;
-type ProviderSemanticValueWireV1 = z.infer<
-  typeof providerSemanticValueWireV1Schema
->;
+type ProviderSemanticValueWireV1 =
+  | z.infer<typeof providerBooleanValueWireV1Schema>
+  | z.infer<typeof providerQualitativeTextValueWireV1Schema>
+  | z.infer<typeof providerQualitativeOrdinalValueWireV1Schema>
+  | z.infer<typeof providerMeasurementValueWireV1Schema>
+  | z.infer<typeof providerMeasurementRangeValueWireV1Schema>
+  | z.infer<typeof providerMoneyTargetValueWireV1Schema>
+  | z.infer<typeof providerMoneyCeilingValueWireV1Schema>
+  | z.infer<typeof providerMoneyStretchValueWireV1Schema>
+  | z.infer<typeof providerCategoricalValueWireV1Schema>;
 
 function lowerPatchOperation(
   operation: ProviderPatchOperationWireV1,
@@ -518,28 +667,6 @@ type StatePatchProposalChangeOperation = Extract<
   StatePatchProposalV1,
   { outcome: "change" }
 >["operations"][number];
-
-function expectedTargetSemantics(value: ProviderSemanticValueWireV1) {
-  switch (value.kind) {
-    case "boolean":
-      return new Set(["exact"]);
-    case "qualitative_text":
-    case "qualitative_ordinal":
-      return new Set(["qualitative"]);
-    case "measurement":
-      return new Set(["exact", "around"]);
-    case "measurement_range":
-      return new Set(["range"]);
-    case "money":
-      return value.mode === "ceiling"
-        ? new Set(["range"])
-        : new Set(["exact", "around"]);
-    case "money_stretch":
-      return new Set(["stretch"]);
-    case "categorical":
-      return new Set(["categorical"]);
-  }
-}
 
 function compareNonNegativeDecimals(left: string, right: string) {
   const [leftInteger = "0", leftFraction = ""] = left.split(".");

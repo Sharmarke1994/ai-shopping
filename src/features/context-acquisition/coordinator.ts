@@ -21,10 +21,10 @@ import type {
   ModelCallResult,
 } from "./model-port";
 import {
-  lowerContextActionProviderWireV1,
-  lowerInterpretationProviderWireV1,
-  type ContextActionProviderWireV1,
-  type InterpretationProviderWireV1,
+  lowerContextActionProviderWire,
+  lowerInterpretationProviderWire,
+  type ContextActionProviderWire,
+  type InterpretationProviderWire,
 } from "./provider-wire";
 import {
   ContextAcquisitionInputTooLargeError,
@@ -199,7 +199,7 @@ async function interpretAndApply(options: {
 
     let proposal;
     try {
-      proposal = lowerInterpretationProviderWireV1(modelResult.value);
+      proposal = lowerInterpretationProviderWire(modelResult.value);
     } catch {
       await recordFailureAttempt({
         ...options,
@@ -373,7 +373,7 @@ async function selectAndPersistAction(options: {
     let proposal;
     try {
       proposal = validateContextActionCapabilities({
-        proposal: lowerContextActionProviderWireV1(modelResult.value),
+        proposal: lowerContextActionProviderWire(modelResult.value),
         capabilities,
       });
     } catch {
@@ -519,8 +519,8 @@ function attemptRecord(options: {
     | "superseded_by_winner";
   errorCode?: string;
   metadata: ModelCallMetadata;
-  interpretationProposal?: InterpretationProviderWireV1;
-  contextActionProposal?: ContextActionProviderWireV1;
+  interpretationProposal?: InterpretationProviderWire;
+  contextActionProposal?: ContextActionProviderWire;
   stateChangeApplicationId?: string;
   contextActionId?: string;
 }) {

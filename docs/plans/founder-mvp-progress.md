@@ -1,6 +1,6 @@
 # Founder MVP progress
 
-**Updated:** 2026-08-29 Europe/London
+**Updated:** 2026-08-30 Europe/London
 **Durable goal:** Deliver a polished founder-usable AI shopping MVP whose live
 understanding, market retrieval, evidence-aware evaluation, refinement, saving,
 and comparison are meaningfully better than beginning with Google.
@@ -47,6 +47,27 @@ and comparison are meaningfully better than beginning with Google.
 - Nothing on this experimental branch may be merged automatically. Each
   coherent layer is committed and pushed for recoverability while work
   continues toward the founder-usable product.
+- Current bounded blocker-remediation worktree:
+  `/Users/alchemist32/Documents/AI Shopping/ai-shopping-context-hardening` on
+  `codex/context-acquisition-semantic-hardening`, based exactly on frozen V0-09
+  head `934067e7d3796a4a68ba3b00387a16632a563f15`. PR #13 and its proof marker
+  remain untouched.
+- The one authorized Phase-A context-hardening Terra run completed all six
+  protected cases with zero provider/structured-output failures but failed one
+  semantic assertion: contextual backpack lighter produced `Weight` with a
+  preference relation `less` anchored to `current alternatives`, not the
+  explicit lighter direction. This is an interpretation-stage semantic failure;
+  no Phase-B recovery work was started and no second run is authorized without
+  independent review. Exact evidence is in
+  `docs/evals/v0-05-context-hardening-diagnostic.{json,md}`; the prior 19/19
+  artifact is archived as `*-prior-19-19.*`.
+- A single final Phase-A Terra gate then completed 6/6 protected cases with
+  zero provider failures, structured-output failures, invalid patches, or
+  semantic violations after the comparison-anchor correction. Context
+  hardening is now accepted for product continuation; formal V0-05 21/21
+  acceptance remains open. The successful primary artifact is
+  `docs/evals/v0-05-context-hardening-diagnostic.{json,md}` and the immediately
+  prior failed batch is archived as `*-prior-6-5.*`.
 
 ## Completed foundation
 
@@ -413,6 +434,49 @@ branch recorded above. The durable execution contract is
   The enriched sanitized diagnostic is preserved in the primary failure files;
   the durable marker now refuses Attempt 4.
 
+## Current context-acquisition hardening checkpoint
+
+This bounded blocker-remediation branch is isolated from V0-09 at frozen head
+`934067e7d3796a4a68ba3b00387a16632a563f15`:
+
+- Worktree: `/Users/alchemist32/Documents/AI Shopping/ai-shopping-context-hardening`.
+- Branch: `codex/context-acquisition-semantic-hardening`.
+- V0-09 PR #13 remains draft, unmerged and untouched. Attempt 4 remains
+  permanently refused; V0-10 has not started.
+- The inherited V0-05 interpretation prompt now explicitly preserves the
+  authority of a soft parent preference across subordinate conditions. The
+  provider-visible interpretation/action schemas now expose branch
+  cardinality and semantic-family constraints structurally while retaining
+  the V0-04 validation firewall.
+- Deterministic provider/lowering and PostgreSQL refinement regressions are
+  green. No deterministic English authority parser was added because the
+  repository cannot safely infer arbitrary grammar scope without a brittle,
+  category-specific NLP approximation.
+- The prior bounded Terra low-reasoning diagnostic reported 11/11 under its
+  then-current oracle, but independent review found a cap light/heavy reversal
+  and unverified conditional-loss cases. It is preserved as historical evidence
+  under `docs/evals/v0-05-context-hardening-diagnostic-prior.*` (including its
+  attempt marker) and is not acceptance evidence. This branch's corrected
+  evaluator/provider diagnostic is separate; V0-05's formal 21/21 gate remains
+  open.
+- The prior corrected Terra diagnostic remains archived as
+  `docs/evals/v0-05-context-hardening-diagnostic-prior-16-17.*` with 16/17
+  completed and four findings. The final convergence diagnostic used the V2
+  nested provider branches and the corrected full-state/brief oracle. It
+  completed 19/19 cases with three semantic violations: contextless lighter
+  preserved a bounded ambiguity but selected SEARCH instead of ASK; contextual
+  backpack lighter was incorrectly treated as unresolved and produced no Weight
+  preference; and the headphones golden case made wireless a preference rather
+  than a hard include. No invalid patches or provider structured-output
+  failures occurred. Its exact JSON/Markdown pair is preserved at
+  `docs/evals/v0-05-context-hardening-diagnostic-prior-19-19.{json,md}`. The
+  subsequent six-case Phase-A run is archived as `*-prior-6-5.*` and failed
+  only the contextual-lighter semantic assertion described above. The final
+  six-case Phase-A run passed 6/6 cleanly after the comparison-anchor
+  correction; its primary artifact is
+  `docs/evals/v0-05-context-hardening-diagnostic.{json,md}`. V0-05's 21/21
+  formal gate remains open.
+
 ## Next validated checkpoints
 
 1. Preserve the immutable Attempt 1, Attempt 2 and Attempt 3 artifacts and
@@ -420,9 +484,10 @@ branch recorded above. The durable execution contract is
 2. Treat the earliest evidenced blocker as the inherited V0-05 founder-intent
    semantic interpretation surfaced by the proof predicate; do not patch it
    inside V0-09 and do not create Attempt 4.
-3. Commit/push only the exact proof evidence and ledger delta, obtain exact-head
-   CI, stop for independent review, keep PR #13 draft/unmerged and do not begin
-   V0-10.
+3. Context hardening is accepted for product continuation after the one clean
+   six-case Phase-A Terra gate. Keep PR #14 draft/unmerged and obtain exact-head
+   CI, then continue only in a fresh recovery worktree/branch. PR #13/V0-09 and
+   the original V0-05 checkout remain untouched; do not begin V0-10.
 
 ## Credentials and blockers
 

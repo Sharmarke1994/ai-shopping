@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   contextActionProviderWireV1Schema,
+  contextActionProviderWireV2Schema,
   interpretationProviderWireV1Schema,
+  interpretationProviderWireV2Schema,
   lowerContextActionProviderWireV1,
+  lowerContextActionProviderWire,
   lowerInterpretationProviderWireV1,
+  lowerInterpretationProviderWire,
 } from "./provider-wire";
 
 const conceptId = "00000000-0000-4000-8000-000000000001";
@@ -45,6 +49,61 @@ function replaceTarget(
 }
 
 describe("interpretation provider wire V1", () => {
+  it.each([
+    [
+      "conditional wireless preference",
+      "preference",
+      "wireless only when battery life is very good",
+    ],
+    ["conditional monitor fit", "preference", "larger monitor if it fits"],
+    [
+      "conditional delivery cost",
+      "preference",
+      "faster delivery if it is not much more expensive",
+    ],
+    ["explicit hard battery", "hard", "at least 40 minutes"],
+    ["explicit hard dimension", "hard", "no more than 25 cm wide"],
+    ["hard exclusion", "hard", "not Amazon Basics"],
+    ["hard categorical only", "hard", "only black"],
+    ["ordinary soft language", "preference", "lighter"],
+    ["strong soft language", "strong_preference", "comfort matters a lot"],
+  ])(
+    "preserves provider authority for %s while lowering qualitative text",
+    (_, strength, text) => {
+      const lowered = lowerInterpretationProviderWireV1(
+        changeWire([
+          {
+            op: "add_criterion",
+            concept: { kind: "existing", conceptId },
+            target: {
+              strength,
+              targetSemantics: "qualitative",
+              semanticValue: {
+                schemaVersion: 1,
+                kind: "qualitative_text",
+                text,
+              },
+            },
+          },
+        ]),
+      );
+
+      expect(lowered.patch).toMatchObject({
+        outcome: "change",
+        operations: [
+          {
+            op: "add_criterion",
+            target: {
+              strength,
+              targetSemantics: "qualitative",
+              semanticValue: { mode: "text", text },
+            },
+          },
+        ],
+      });
+    },
+  );
+
   it("lowers every supported patch operation without changing selectors or values", () => {
     const operations = [
       {
@@ -339,6 +398,79 @@ describe("interpretation provider wire V1", () => {
         confidence: 0.9,
       }),
     ).toThrow();
+  });
+});
+
+describe("provider wire V2 branch coherence", () => {
+  it("structurally correlates interpretation outcome and operation cardinality", () => {
+    expect(() =>
+      interpretationProviderWireV2Schema.parse({
+        providerSchemaVersion: 2,
+        interpretation: { outcome: "change", operations: [] },
+        ambiguities: [],
+      }),
+    ).toThrow();
+    expect(() =>
+      interpretationProviderWireV2Schema.parse({
+        providerSchemaVersion: 2,
+        interpretation: {
+          outcome: "no_change",
+          operations: [{ op: "remove", targetCriterionId: criterionId }],
+        },
+        ambiguities: [],
+      }),
+    ).toThrow();
+    const lowered = lowerInterpretationProviderWire({
+      providerSchemaVersion: 2,
+      interpretation: { outcome: "no_change", operations: [] },
+      ambiguities: [],
+    });
+    expect(lowered.patch).toEqual({ schemaVersion: 1, outcome: "no_change" });
+  });
+
+  it("structurally correlates context action branches", () => {
+    const rationale = { summary: "Search is actionable" };
+    expect(() =>
+      contextActionProviderWireV2Schema.parse({
+        providerSchemaVersion: 2,
+        decision: { action: "ask", question: null, rationale: null },
+      }),
+    ).toThrow();
+    expect(() =>
+      contextActionProviderWireV2Schema.parse({
+        providerSchemaVersion: 2,
+        decision: { action: "search", question: null, rationale: null },
+      }),
+    ).toThrow();
+    expect(
+      lowerContextActionProviderWire({
+        providerSchemaVersion: 2,
+        decision: { action: "search", question: null, rationale },
+      }),
+    ).toEqual({
+      schemaVersion: 1,
+      action: "search",
+      rationale,
+    });
+  });
+
+  it("continues to lower historical V1 payloads", () => {
+    expect(
+      lowerInterpretationProviderWire({
+        providerSchemaVersion: 1,
+        outcome: "no_change",
+        operations: [],
+        ambiguities: [],
+      }),
+    ).toMatchObject({ patch: { outcome: "no_change" } });
+    expect(
+      lowerContextActionProviderWire({
+        providerSchemaVersion: 1,
+        action: "search",
+        question: null,
+        rationale: { summary: "Historical" },
+      }),
+    ).toMatchObject({ action: "search" });
   });
 });
 

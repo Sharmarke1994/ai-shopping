@@ -471,6 +471,94 @@ describe("V0-05 human-labelled golden evaluator", () => {
     );
   });
 
+  it("preserves comparative direction without inventing an anchor", () => {
+    const weight = concept({
+      index: 60,
+      label: "Weight",
+      definition: "Physical product weight",
+      valueFamily: "qualitative",
+    });
+    const lighterText = criterion({
+      index: 60,
+      concept: weight,
+      strength: "preference",
+      targetSemantics: "qualitative",
+      semanticValue: {
+        schemaVersion: 1,
+        kind: "qualitative",
+        mode: "text",
+        text: "lighter",
+      },
+    });
+    expect(
+      evaluate({
+        caseName: "contextual-comparative-lighter",
+        current: state({
+          revision: 1n,
+          concepts: [weight],
+          criteria: [lighterText],
+        }),
+        action: "search",
+      }).failures,
+    ).toEqual([]);
+
+    const anchored = criterion({
+      index: 61,
+      concept: weight,
+      strength: "preference",
+      targetSemantics: "qualitative",
+      semanticValue: {
+        schemaVersion: 1,
+        kind: "qualitative",
+        mode: "ordinal",
+        relation: "less",
+        anchor: "my current backpack",
+      },
+    });
+    expect(
+      evaluate({
+        caseName: "anchored-comparative-lighter",
+        current: state({
+          revision: 1n,
+          concepts: [weight],
+          criteria: [anchored],
+        }),
+        action: "search",
+      }).failures,
+    ).toEqual([]);
+
+    const fabricated = criterion({
+      index: 62,
+      concept: weight,
+      strength: "preference",
+      targetSemantics: "qualitative",
+      semanticValue: {
+        schemaVersion: 1,
+        kind: "qualitative",
+        mode: "ordinal",
+        relation: "less",
+        anchor: "current alternatives",
+      },
+    });
+    expect(
+      evaluate({
+        caseName: "contextual-comparative-lighter",
+        current: state({
+          revision: 1n,
+          concepts: [weight],
+          criteria: [fabricated],
+        }),
+        action: "search",
+      }).failures,
+    ).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining(
+          "qualitative ordinal less:current alternatives",
+        ),
+      ]),
+    );
+  });
+
   it("rejects unexpected authoritative criteria even when the visible limit would pass", () => {
     const current = validCapState();
     const brand = concept({

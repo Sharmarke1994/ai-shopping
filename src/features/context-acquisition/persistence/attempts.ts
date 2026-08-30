@@ -11,7 +11,9 @@ import type { ShoppingDatabaseExecutor } from "@/infrastructure/database/clients
 import { contextAcquisitionAttempts } from "@/infrastructure/database/schema";
 import {
   contextActionProviderWireV1Schema,
+  contextActionProviderWireV2Schema,
   interpretationProviderWireV1Schema,
+  interpretationProviderWireV2Schema,
 } from "../provider-wire";
 
 const attemptStatusSchema = z.enum([
@@ -49,8 +51,18 @@ export const contextAcquisitionAttemptInputSchema = z
     attemptOrdinal: z.number().int().positive(),
     status: attemptStatusSchema,
     metadata: modelMetadataSchema,
-    interpretationProposal: interpretationProviderWireV1Schema.nullable(),
-    contextActionProposal: contextActionProviderWireV1Schema.nullable(),
+    interpretationProposal: z
+      .union([
+        interpretationProviderWireV1Schema,
+        interpretationProviderWireV2Schema,
+      ])
+      .nullable(),
+    contextActionProposal: z
+      .union([
+        contextActionProviderWireV1Schema,
+        contextActionProviderWireV2Schema,
+      ])
+      .nullable(),
     errorCode: z
       .string()
       .regex(/^[a-z0-9_:-]{1,120}$/)

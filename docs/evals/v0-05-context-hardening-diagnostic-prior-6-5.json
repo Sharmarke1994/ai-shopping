@@ -1,0 +1,747 @@
+{
+  "schemaVersion": 1,
+  "diagnostic": "v0-05-context-hardening-phase-a",
+  "caseSet": "phase-a",
+  "releaseAccepted": false,
+  "model": "gpt-5.6-terra",
+  "reasoningEffort": "low",
+  "startedAt": "2026-08-30T11:55:31.953Z",
+  "finishedAt": "2026-08-30T11:56:11.713Z",
+  "counts": {
+    "logicalInterpretationCalls": 6,
+    "logicalActionCalls": 6,
+    "completed": 6,
+    "failed": 0,
+    "caseCount": 6,
+    "violationCount": 1
+  },
+  "results": [
+    {
+      "name": "conditional-wireless-battery",
+      "status": "completed",
+      "action": "ask",
+      "revision": "1",
+      "items": [
+        {
+          "criterionId": "5d9329a8-a069-404f-b142-ab5aa17329d3",
+          "conceptId": "92b0dfb4-63a5-48e2-b689-f6c0fc6eb518",
+          "lifecycle": "active",
+          "authority": "unknown",
+          "label": "Wireless with battery life",
+          "definition": "Whether the product is wireless and has very good battery life, reflecting the shopper's conditional preference for wireless only when battery life is very good.",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticKind": "qualitative",
+          "summary": "Prefer wireless only if battery life is very good",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "Prefer wireless only if battery life is very good"
+          }
+        }
+      ],
+      "fullItems": [
+        {
+          "criterionId": "5d9329a8-a069-404f-b142-ab5aa17329d3",
+          "conceptId": "92b0dfb4-63a5-48e2-b689-f6c0fc6eb518",
+          "lifecycle": "active",
+          "authority": "user_explicit",
+          "label": "Wireless with battery life",
+          "definition": "Whether the product is wireless and has very good battery life, reflecting the shopper's conditional preference for wireless only when battery life is very good.",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticKind": "qualitative",
+          "summary": "Prefer wireless only if battery life is very good",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "Prefer wireless only if battery life is very good"
+          }
+        }
+      ],
+      "concepts": [
+        {
+          "id": "92b0dfb4-63a5-48e2-b689-f6c0fc6eb518",
+          "label": "Wireless with battery life",
+          "definition": "Whether the product is wireless and has very good battery life, reflecting the shopper's conditional preference for wireless only when battery life is very good.",
+          "valueFamily": "qualitative"
+        }
+      ],
+      "question": {
+        "prompt": "What kind of product are you shopping for?",
+        "whyNow": "Wireless and battery-life preferences alone do not identify a product category to search.",
+        "options": []
+      },
+      "actionRationale": null,
+      "ambiguities": [],
+      "attempts": [
+        {
+          "stage": "context_action",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "providerRequestId": "resp_00bcde65b50ab556016a941a3a3a4c87d1932ef0fa0b0673ab",
+          "promptVersion": "v0-05-context-action-6",
+          "providerSchemaVersion": 2,
+          "errorCode": null,
+          "ambiguities": []
+        },
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "providerRequestId": "resp_04eff3bcaa7f02ef016a941a34edb887d1861ed8d5ff79dce2",
+          "promptVersion": "v0-05-interpretation-8",
+          "providerSchemaVersion": 2,
+          "errorCode": null,
+          "ambiguities": []
+        }
+      ],
+      "violations": []
+    },
+    {
+      "name": "explicit-hard-battery",
+      "status": "completed",
+      "action": "ask",
+      "revision": "1",
+      "items": [
+        {
+          "criterionId": "44017726-13e3-4325-acc2-e119eb06942e",
+          "conceptId": "503e3867-67c3-4bd0-a32c-e98f6eff70cc",
+          "lifecycle": "active",
+          "authority": "unknown",
+          "label": "Wireless",
+          "definition": "Whether the product operates without a wired connection.",
+          "strength": "preference",
+          "targetSemantics": "categorical",
+          "semanticKind": "categorical",
+          "summary": "wireless",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "categorical",
+            "operator": "prefer",
+            "values": [
+              "wireless"
+            ]
+          }
+        },
+        {
+          "criterionId": "8cc58038-a687-46db-80a7-7c7427c334c9",
+          "conceptId": "efade20e-0e67-402b-a2c3-b7549b195fc0",
+          "lifecycle": "active",
+          "authority": "unknown",
+          "label": "Battery life",
+          "definition": "How long the product operates before needing to be recharged.",
+          "strength": "hard",
+          "targetSemantics": "qualitative",
+          "semanticKind": "qualitative",
+          "summary": "40 minutes",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "ordinal",
+            "relation": "at_least",
+            "anchor": "40 minutes"
+          }
+        }
+      ],
+      "fullItems": [
+        {
+          "criterionId": "44017726-13e3-4325-acc2-e119eb06942e",
+          "conceptId": "503e3867-67c3-4bd0-a32c-e98f6eff70cc",
+          "lifecycle": "active",
+          "authority": "user_explicit",
+          "label": "Wireless",
+          "definition": "Whether the product operates without a wired connection.",
+          "strength": "preference",
+          "targetSemantics": "categorical",
+          "semanticKind": "categorical",
+          "summary": "wireless",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "categorical",
+            "operator": "prefer",
+            "values": [
+              "wireless"
+            ]
+          }
+        },
+        {
+          "criterionId": "8cc58038-a687-46db-80a7-7c7427c334c9",
+          "conceptId": "efade20e-0e67-402b-a2c3-b7549b195fc0",
+          "lifecycle": "active",
+          "authority": "user_explicit",
+          "label": "Battery life",
+          "definition": "How long the product operates before needing to be recharged.",
+          "strength": "hard",
+          "targetSemantics": "qualitative",
+          "semanticKind": "qualitative",
+          "summary": "40 minutes",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "ordinal",
+            "relation": "at_least",
+            "anchor": "40 minutes"
+          }
+        }
+      ],
+      "concepts": [
+        {
+          "id": "503e3867-67c3-4bd0-a32c-e98f6eff70cc",
+          "label": "Wireless",
+          "definition": "Whether the product operates without a wired connection.",
+          "valueFamily": "categorical"
+        },
+        {
+          "id": "efade20e-0e67-402b-a2c3-b7549b195fc0",
+          "label": "Battery life",
+          "definition": "How long the product operates before needing to be recharged.",
+          "valueFamily": "qualitative"
+        }
+      ],
+      "question": {
+        "prompt": "What type of product are you shopping for?",
+        "whyNow": "Battery-life and wireless requirements apply to many product categories, so the product type is needed to find relevant options.",
+        "options": []
+      },
+      "actionRationale": null,
+      "ambiguities": [],
+      "attempts": [
+        {
+          "stage": "context_action",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "providerRequestId": "resp_06140f09a11dfb41016a941a41653c87d1a1d777701a333e2d",
+          "promptVersion": "v0-05-context-action-6",
+          "providerSchemaVersion": 2,
+          "errorCode": null,
+          "ambiguities": []
+        },
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "providerRequestId": "resp_018401ce89b1a34d016a941a3c7e6c87d18bdded7a61f5e07d",
+          "promptVersion": "v0-05-interpretation-8",
+          "providerSchemaVersion": 2,
+          "errorCode": null,
+          "ambiguities": []
+        }
+      ],
+      "violations": []
+    },
+    {
+      "name": "contextless-lighter",
+      "status": "completed",
+      "action": "ask",
+      "revision": "0",
+      "items": [],
+      "fullItems": [],
+      "concepts": [],
+      "question": {
+        "prompt": "What product or type of item would you like something lighter than?",
+        "whyNow": "A product category or comparison reference is needed to search for relevant lighter options.",
+        "options": []
+      },
+      "actionRationale": null,
+      "ambiguities": [
+        "“Something lighter” does not identify what product or property should be lighter without product or comparison context."
+      ],
+      "attempts": [
+        {
+          "stage": "context_action",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "providerRequestId": "resp_07507e605e91ec4a016a941a472f1087d196d606f84e00e8e9",
+          "promptVersion": "v0-05-context-action-6",
+          "providerSchemaVersion": 2,
+          "errorCode": null,
+          "ambiguities": []
+        },
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "providerRequestId": "resp_0523e0b94ea42a90016a941a43b8a087d19a764911b99a981f",
+          "promptVersion": "v0-05-interpretation-8",
+          "providerSchemaVersion": 2,
+          "errorCode": null,
+          "ambiguities": [
+            "“Something lighter” does not identify what product or property should be lighter without product or comparison context."
+          ]
+        }
+      ],
+      "violations": []
+    },
+    {
+      "name": "contextual-soft-lighter",
+      "status": "completed",
+      "action": "search",
+      "revision": "1",
+      "items": [
+        {
+          "criterionId": "29e04a81-88a2-4ddd-89ac-fedc51e8c26c",
+          "conceptId": "d144e040-28bd-4350-8f4e-d4c10258d35b",
+          "lifecycle": "active",
+          "authority": "unknown",
+          "label": "Weight",
+          "definition": "Physical weight of the backpack.",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticKind": "qualitative",
+          "summary": "current alternatives",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "ordinal",
+            "relation": "less",
+            "anchor": "current alternatives"
+          }
+        }
+      ],
+      "fullItems": [
+        {
+          "criterionId": "29e04a81-88a2-4ddd-89ac-fedc51e8c26c",
+          "conceptId": "d144e040-28bd-4350-8f4e-d4c10258d35b",
+          "lifecycle": "active",
+          "authority": "user_explicit",
+          "label": "Weight",
+          "definition": "Physical weight of the backpack.",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticKind": "qualitative",
+          "summary": "current alternatives",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "ordinal",
+            "relation": "less",
+            "anchor": "current alternatives"
+          }
+        }
+      ],
+      "concepts": [
+        {
+          "id": "d144e040-28bd-4350-8f4e-d4c10258d35b",
+          "label": "Weight",
+          "definition": "Physical weight of the backpack.",
+          "valueFamily": "qualitative"
+        }
+      ],
+      "question": null,
+      "actionRationale": "The request identifies a backpack category with a usable preference for lighter options, so search can proceed.",
+      "ambiguities": [],
+      "attempts": [
+        {
+          "stage": "context_action",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "providerRequestId": "resp_000a84b092cab118016a941a4c315887d1878933a44dc36da9",
+          "promptVersion": "v0-05-context-action-6",
+          "providerSchemaVersion": 2,
+          "errorCode": null,
+          "ambiguities": []
+        },
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "providerRequestId": "resp_0983c1f156a68f64016a941a49089c87d1a7b154de2d0d8bc1",
+          "promptVersion": "v0-05-interpretation-8",
+          "providerSchemaVersion": 2,
+          "errorCode": null,
+          "ambiguities": []
+        }
+      ],
+      "violations": [
+        "contextual lighter preference/direction was not preserved"
+      ]
+    },
+    {
+      "name": "cap-golden",
+      "status": "completed",
+      "action": "search",
+      "revision": "1",
+      "items": [
+        {
+          "criterionId": "c74ac542-875a-49cc-8ec6-fa081d976e87",
+          "conceptId": "d4607cc4-5e4b-4d8a-a0f1-380c2a99e45d",
+          "lifecycle": "active",
+          "authority": "unknown",
+          "label": "Breathability",
+          "definition": "Ability of the cap material and construction to allow airflow.",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticKind": "qualitative",
+          "summary": "breathable",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "breathable"
+          }
+        },
+        {
+          "criterionId": "62c666b0-97e0-4f3b-87e6-8c05a3be3fac",
+          "conceptId": "f95819d8-8bfe-428f-a1dd-cee0afd5b45d",
+          "lifecycle": "active",
+          "authority": "unknown",
+          "label": "Weight",
+          "definition": "Physical weight of the cap.",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticKind": "qualitative",
+          "summary": "light",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "ordinal",
+            "relation": "less",
+            "anchor": "light"
+          }
+        }
+      ],
+      "fullItems": [
+        {
+          "criterionId": "62c666b0-97e0-4f3b-87e6-8c05a3be3fac",
+          "conceptId": "f95819d8-8bfe-428f-a1dd-cee0afd5b45d",
+          "lifecycle": "active",
+          "authority": "user_explicit",
+          "label": "Weight",
+          "definition": "Physical weight of the cap.",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticKind": "qualitative",
+          "summary": "light",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "ordinal",
+            "relation": "less",
+            "anchor": "light"
+          }
+        },
+        {
+          "criterionId": "c74ac542-875a-49cc-8ec6-fa081d976e87",
+          "conceptId": "d4607cc4-5e4b-4d8a-a0f1-380c2a99e45d",
+          "lifecycle": "active",
+          "authority": "user_explicit",
+          "label": "Breathability",
+          "definition": "Ability of the cap material and construction to allow airflow.",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticKind": "qualitative",
+          "summary": "breathable",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "breathable"
+          }
+        }
+      ],
+      "concepts": [
+        {
+          "id": "d4607cc4-5e4b-4d8a-a0f1-380c2a99e45d",
+          "label": "Breathability",
+          "definition": "Ability of the cap material and construction to allow airflow.",
+          "valueFamily": "qualitative"
+        },
+        {
+          "id": "f95819d8-8bfe-428f-a1dd-cee0afd5b45d",
+          "label": "Weight",
+          "definition": "Physical weight of the cap.",
+          "valueFamily": "qualitative"
+        }
+      ],
+      "question": null,
+      "actionRationale": "The product category and key preferences are clear: a lightweight, breathable running cap for hot weather.",
+      "ambiguities": [],
+      "attempts": [
+        {
+          "stage": "context_action",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "providerRequestId": "resp_0fcfae887ae847e5016a941a5300c087d1b37e25301b5be61d",
+          "promptVersion": "v0-05-context-action-6",
+          "providerSchemaVersion": 2,
+          "errorCode": null,
+          "ambiguities": []
+        },
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "providerRequestId": "resp_005858ff4e7c7615016a941a4e2bcc87d1a065f38ff7bedbbc",
+          "promptVersion": "v0-05-interpretation-8",
+          "providerSchemaVersion": 2,
+          "errorCode": null,
+          "ambiguities": []
+        }
+      ],
+      "violations": []
+    },
+    {
+      "name": "headphones-golden",
+      "status": "completed",
+      "action": "ask",
+      "revision": "1",
+      "items": [
+        {
+          "criterionId": "4ff91a46-cc55-4a98-a985-25bca15447db",
+          "conceptId": "231d5141-7469-4dab-affc-c6401055929f",
+          "lifecycle": "active",
+          "authority": "unknown",
+          "label": "Wireless",
+          "definition": "Whether the headphones operate wirelessly.",
+          "strength": "hard",
+          "targetSemantics": "exact",
+          "semanticKind": "boolean",
+          "summary": "true",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "boolean",
+            "value": true
+          }
+        },
+        {
+          "criterionId": "dc9a6da0-6d86-4b9a-856a-38c83406ac11",
+          "conceptId": "810cbeea-ea75-4b08-ba91-7be2031da859",
+          "lifecycle": "active",
+          "authority": "unknown",
+          "label": "Noise cancellation",
+          "definition": "The headphones' ability to reduce external noise.",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticKind": "qualitative",
+          "summary": "noise cancellation matters",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "noise cancellation matters"
+          }
+        },
+        {
+          "criterionId": "a25bad0f-3adf-412f-bc9b-07d5cc45689a",
+          "conceptId": "bfd85c55-9273-4cfa-a234-703eb6babef2",
+          "lifecycle": "active",
+          "authority": "unknown",
+          "label": "Price",
+          "definition": "The purchase price of the headphones.",
+          "strength": "preference",
+          "targetSemantics": "around",
+          "semanticKind": "money",
+          "summary": "15000 GBP",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "money",
+            "mode": "target",
+            "amountMinor": 15000,
+            "currency": "GBP"
+          }
+        },
+        {
+          "criterionId": "7e71854a-eabb-4733-a1bc-408eda7ce537",
+          "conceptId": "cfe7b059-fd82-40f5-9e20-214ea7b7577b",
+          "lifecycle": "active",
+          "authority": "unknown",
+          "label": "Headphone form factor",
+          "definition": "The physical wearing style of the headphones.",
+          "strength": "hard",
+          "targetSemantics": "categorical",
+          "semanticKind": "categorical",
+          "summary": "over-ear",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "categorical",
+            "operator": "include",
+            "values": [
+              "over-ear"
+            ]
+          }
+        },
+        {
+          "criterionId": "5f34d5fe-3adc-458e-a0b3-a50004080180",
+          "conceptId": "dd24bc9b-4a47-403a-aa88-5ad51f36cf60",
+          "lifecycle": "active",
+          "authority": "unknown",
+          "label": "Glasses comfort",
+          "definition": "Comfort of the headphones when worn with glasses.",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticKind": "qualitative",
+          "summary": "glasses comfort matters",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "glasses comfort matters"
+          }
+        }
+      ],
+      "fullItems": [
+        {
+          "criterionId": "4ff91a46-cc55-4a98-a985-25bca15447db",
+          "conceptId": "231d5141-7469-4dab-affc-c6401055929f",
+          "lifecycle": "active",
+          "authority": "user_explicit",
+          "label": "Wireless",
+          "definition": "Whether the headphones operate wirelessly.",
+          "strength": "hard",
+          "targetSemantics": "exact",
+          "semanticKind": "boolean",
+          "summary": "true",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "boolean",
+            "value": true
+          }
+        },
+        {
+          "criterionId": "5f34d5fe-3adc-458e-a0b3-a50004080180",
+          "conceptId": "dd24bc9b-4a47-403a-aa88-5ad51f36cf60",
+          "lifecycle": "active",
+          "authority": "user_explicit",
+          "label": "Glasses comfort",
+          "definition": "Comfort of the headphones when worn with glasses.",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticKind": "qualitative",
+          "summary": "glasses comfort matters",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "glasses comfort matters"
+          }
+        },
+        {
+          "criterionId": "7e71854a-eabb-4733-a1bc-408eda7ce537",
+          "conceptId": "cfe7b059-fd82-40f5-9e20-214ea7b7577b",
+          "lifecycle": "active",
+          "authority": "user_explicit",
+          "label": "Headphone form factor",
+          "definition": "The physical wearing style of the headphones.",
+          "strength": "hard",
+          "targetSemantics": "categorical",
+          "semanticKind": "categorical",
+          "summary": "over-ear",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "categorical",
+            "operator": "include",
+            "values": [
+              "over-ear"
+            ]
+          }
+        },
+        {
+          "criterionId": "a25bad0f-3adf-412f-bc9b-07d5cc45689a",
+          "conceptId": "bfd85c55-9273-4cfa-a234-703eb6babef2",
+          "lifecycle": "active",
+          "authority": "user_explicit",
+          "label": "Price",
+          "definition": "The purchase price of the headphones.",
+          "strength": "preference",
+          "targetSemantics": "around",
+          "semanticKind": "money",
+          "summary": "15000 GBP",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "money",
+            "mode": "target",
+            "amountMinor": 15000,
+            "currency": "GBP"
+          }
+        },
+        {
+          "criterionId": "dc9a6da0-6d86-4b9a-856a-38c83406ac11",
+          "conceptId": "810cbeea-ea75-4b08-ba91-7be2031da859",
+          "lifecycle": "active",
+          "authority": "user_explicit",
+          "label": "Noise cancellation",
+          "definition": "The headphones' ability to reduce external noise.",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticKind": "qualitative",
+          "summary": "noise cancellation matters",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "noise cancellation matters"
+          }
+        }
+      ],
+      "concepts": [
+        {
+          "id": "231d5141-7469-4dab-affc-c6401055929f",
+          "label": "Wireless",
+          "definition": "Whether the headphones operate wirelessly.",
+          "valueFamily": "boolean"
+        },
+        {
+          "id": "810cbeea-ea75-4b08-ba91-7be2031da859",
+          "label": "Noise cancellation",
+          "definition": "The headphones' ability to reduce external noise.",
+          "valueFamily": "qualitative"
+        },
+        {
+          "id": "bfd85c55-9273-4cfa-a234-703eb6babef2",
+          "label": "Price",
+          "definition": "The purchase price of the headphones.",
+          "valueFamily": "money"
+        },
+        {
+          "id": "cfe7b059-fd82-40f5-9e20-214ea7b7577b",
+          "label": "Headphone form factor",
+          "definition": "The physical wearing style of the headphones.",
+          "valueFamily": "categorical"
+        },
+        {
+          "id": "dd24bc9b-4a47-403a-aa88-5ad51f36cf60",
+          "label": "Glasses comfort",
+          "definition": "Comfort of the headphones when worn with glasses.",
+          "valueFamily": "qualitative"
+        }
+      ],
+      "question": {
+        "prompt": "Which should take priority if there’s a trade-off: glasses comfort or stronger noise cancellation?",
+        "whyNow": "Both preferences are important, and their priority could materially change the best recommendations.",
+        "options": [
+          "Glasses comfort",
+          "Noise cancellation",
+          "Balance them equally"
+        ]
+      },
+      "actionRationale": null,
+      "ambiguities": [],
+      "attempts": [
+        {
+          "stage": "context_action",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "providerRequestId": "resp_071b94683c3a49f4016a941a59e52487d19dd05e362c21707c",
+          "promptVersion": "v0-05-context-action-6",
+          "providerSchemaVersion": 2,
+          "errorCode": null,
+          "ambiguities": []
+        },
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "providerRequestId": "resp_0aa9abd5ce5825f0016a941a54df9c87d1b2c622dbaa410659",
+          "promptVersion": "v0-05-interpretation-8",
+          "providerSchemaVersion": 2,
+          "errorCode": null,
+          "ambiguities": []
+        }
+      ],
+      "violations": []
+    }
+  ]
+}

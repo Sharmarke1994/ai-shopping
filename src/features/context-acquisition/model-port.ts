@@ -1,6 +1,6 @@
 import type {
-  ContextActionProviderWireV1,
-  InterpretationProviderWireV1,
+  ContextActionProviderWire,
+  InterpretationProviderWire,
 } from "./provider-wire";
 import type { ProviderInputEnvelopeV1 } from "./provider-input";
 
@@ -35,8 +35,8 @@ export type ModelCallResult<T> =
 export interface ContextAcquisitionModel {
   interpret(
     input: ProviderInputEnvelopeV1,
-  ): Promise<ModelCallResult<InterpretationProviderWireV1>>;
+  ): Promise<ModelCallResult<InterpretationProviderWire>>;
   selectAction(
     input: ProviderInputEnvelopeV1,
-  ): Promise<ModelCallResult<ContextActionProviderWireV1>>;
+  ): Promise<ModelCallResult<ContextActionProviderWire>>;
 }
