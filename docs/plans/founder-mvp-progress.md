@@ -443,14 +443,19 @@ This bounded blocker-remediation branch is isolated from V0-09 at frozen head
   attempt marker) and is not acceptance evidence. This branch's corrected
   evaluator/provider diagnostic is separate; V0-05's formal 21/21 gate remains
   open.
-- The single authorized corrected Terra context diagnostic used the V2 nested
-  provider branches and richer sanitized oracle. It completed 16/17 cases and
-  recorded four violations: one invalid patch, two cases preserved through
-  ambiguity or hidden indifference but flagged by the current oracle, and one
-  unsupported-minute requirement surfaced as an ambiguity. The exact
-  JSON/Markdown pair is preserved at
-  `docs/evals/v0-05-context-hardening-diagnostic.{json,md}`; no second run or
-  speculative fix was made. V0-05's 21/21 formal gate remains open.
+- The prior corrected Terra diagnostic remains archived as
+  `docs/evals/v0-05-context-hardening-diagnostic-prior-16-17.*` with 16/17
+  completed and four findings. The final convergence diagnostic used the V2
+  nested provider branches and the corrected full-state/brief oracle. It
+  completed 19/19 cases with three semantic violations: contextless lighter
+  preserved a bounded ambiguity but selected SEARCH instead of ASK; contextual
+  backpack lighter was incorrectly treated as unresolved and produced no Weight
+  preference; and the headphones golden case made wireless a preference rather
+  than a hard include. No invalid patches or provider structured-output
+  failures occurred. The exact JSON/Markdown pair is preserved at
+  `docs/evals/v0-05-context-hardening-diagnostic.{json,md}`; no further fix or
+  rerun is authorized without independent review. V0-05's 21/21 formal gate
+  remains open.
 
 ## Next validated checkpoints
 

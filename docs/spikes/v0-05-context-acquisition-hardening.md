@@ -77,16 +77,21 @@ and `.md` (plus the prior attempt marker). They are historical diagnostic
 evidence only, not acceptance evidence and not the 21/21 release gate. A new
 bounded diagnostic is authorized only after this evaluator/provider correction.
 
-The one authorized corrected Terra diagnostic then ran once on 2026-08-30 with
-the V2 provider wire and richer sanitized oracle. It completed 16/17 cases and
-recorded four violations: an explicit 40-minute battery requirement was
-surfaced as a domain-unsupported ambiguity (the oracle currently reports that
-as a violation), `ordinary-soft-lighter` failed closed on an invalid patch,
-`strong-soft-comfort` was preserved as a category-ambiguous ASK, and explicit
-indifference correctly hid the seeded width criterion (the visible-only check
-reported that as a violation). This remains diagnostic evidence only, not
-V0-05 21/21 acceptance. The exact result is preserved in
-`docs/evals/v0-05-context-hardening-diagnostic.json` and `.md`.
+The prior corrected Terra diagnostic then ran once on 2026-08-30 with the V2
+provider wire and richer sanitized oracle. It completed 16/17 cases and
+recorded four findings. Those artifacts are preserved as
+`docs/evals/v0-05-context-hardening-diagnostic-prior-16-17.*`; they remain
+historical diagnostic evidence only, not V0-05 acceptance evidence.
+
+The final convergence diagnostic ran once on 2026-08-30 with 19/19 cases
+completed and three semantic violations. Contextless lighter preserved the
+meaning as a bounded ambiguity but incorrectly selected SEARCH instead of ASK.
+Contextual backpack lighter was incorrectly treated as an unresolved reference
+and produced no Weight preference. The headphones golden case preserved
+wireless as a preference rather than the required hard include. No invalid
+patches or provider structured-output failures occurred. This remains
+diagnostic evidence only, not V0-05 21/21 acceptance. The exact result is
+preserved in `docs/evals/v0-05-context-hardening-diagnostic.json` and `.md`.
 
 ## V0-09 follow-up signals (not fixed here)
 

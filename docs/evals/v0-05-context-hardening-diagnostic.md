@@ -3,39 +3,39 @@
 This is one bounded Terra diagnostic batch, not V0-05 release acceptance.
 
 - Model: gpt-5.6-terra (reasoning low)
-- Logical interpretation calls: 18
-- Logical action calls: 17
-- Cases: 17; completed: 16; failed: 1
-- Protected semantic violations: 4
+- Logical interpretation calls: 20
+- Logical action calls: 20
+- Cases: 19; completed: 19; failed: 0
+- Protected semantic violations: 3
 
 ## conditional-wireless-battery
 
 - status: completed
-- action: ask
+- action: search
 - violations: none
-- criteria: Wireless connectivity with battery-life condition [preference]
+- criteria: Wireless connectivity [preference]
 ## conditional-monitor-fit
 
 - status: completed
 - action: ask
 - violations: none
-- criteria: Monitor size with desk fit [preference]
+- criteria: Monitor size subject to desk fit [preference]
 ## conditional-delivery-cost
 
 - status: completed
-- action: ask
+- action: search
 - violations: none
-- criteria: Delivery speed and cost trade-off [preference]
+- criteria: Delivery speed [preference]
 ## explicit-hard-battery
 
 - status: completed
 - action: search
-- violations: explicit hard battery requirement was not preserved
-- criteria: Wireless [preference]
+- violations: none
+- criteria: Wireless [preference], Battery life [hard]
 ## explicit-hard-width
 
 - status: completed
-- action: ask
+- action: search
 - violations: none
 - criteria: Width [hard]
 ## hard-exclusion
@@ -49,54 +49,66 @@ This is one bounded Terra diagnostic batch, not V0-05 release acceptance.
 - status: completed
 - action: ask
 - violations: none
-- criteria: Colour [hard]
-## ordinary-soft-lighter
+- criteria: Color [hard]
+## contextless-lighter
 
-- status: failed
-- action: none
-- violations: ordinary soft lighter preference was not preserved
+- status: completed
+- action: search
+- violations: contextless lighter did not ask for missing subject context
 - criteria: none
-## strong-soft-comfort
+## contextual-soft-lighter
+
+- status: completed
+- action: search
+- violations: contextual lighter preference/direction was not preserved
+- criteria: none
+## contextless-comfort
 
 - status: completed
 - action: ask
-- violations: strong soft comfort language was not preserved as strong_preference
+- violations: none
 - criteria: none
+## contextual-strong-comfort
+
+- status: completed
+- action: search
+- violations: none
+- criteria: Comfort [strong_preference]
 ## cap-golden
 
 - status: completed
 - action: search
 - violations: none
-- criteria: Weight [preference], Breathability [preference]
+- criteria: Breathability [preference], Lightness [preference]
 ## shelving-golden
 
 - status: completed
 - action: search
 - violations: none
-- criteria: Width [hard], Depth [hard], Visual weight [preference], Colour [hard], Slim profile [preference], Price [preference]
+- criteria: Price [preference], Depth [hard], Colour [hard], Visual lightness [preference], Width [hard]
 ## headphones-golden
 
 - status: completed
 - action: ask
-- violations: none
-- criteria: Wireless connectivity [hard], Price [preference], Comfort with glasses [preference], Over-ear design [hard], Noise cancellation [preference]
+- violations: categorical include /^wireless$/i at hard was not preserved
+- criteria: Headphone form factor [preference], Noise cancellation [preference], Comfort with glasses [preference], Wireless connectivity [preference], Price [preference]
 ## conditional-money-stretch
 
 - status: completed
 - action: search
 - violations: none
-- criteria: Budget [preference]
+- criteria: Price [preference]
 ## comfort-vs-anc-question
 
 - status: completed
 - action: ask
 - violations: none
-- criteria: Noise cancellation [preference], Comfort [preference]
+- criteria: Comfort [preference], Noise cancellation [preference]
 ## explicit-indifference
 
 - status: completed
 - action: search
-- violations: explicit indifference did not replace the seeded width criterion
+- violations: none
 - criteria: none
 ## change-of-mind-relaxation
 
@@ -107,8 +119,8 @@ This is one bounded Terra diagnostic batch, not V0-05 release acceptance.
 ## two-turn-conditional-refinement
 
 - status: completed
-- action: ask
+- action: search
 - violations: none
-- criteria: Reviews [preference], Wireless with battery-life condition [preference], Comfort for long workdays [strong_preference]
+- criteria: Reviews [preference], Wireless with battery life [preference], Comfort for long workdays [strong_preference]
 
 Raw provider output and credentials are intentionally not persisted.

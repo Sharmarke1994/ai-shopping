@@ -39,6 +39,10 @@ const attemptOutput = new URL(
 const disposableDatabasePattern = /^ai_shopping_test_[a-f0-9]{32}$/;
 
 type DiagnosticItem = Readonly<{
+  criterionId: string;
+  conceptId: string;
+  lifecycle: string;
+  authority: string;
   label: string;
   definition: string;
   strength: string;
@@ -48,8 +52,30 @@ type DiagnosticItem = Readonly<{
   semanticValue: SemanticValue;
 }>;
 
+type DiagnosticConcept = Readonly<{
+  id: string;
+  label: string;
+  definition: string;
+  valueFamily: string;
+}>;
+
+type DiagnosticAttempt = Readonly<{
+  stage: string;
+  attemptOrdinal: number;
+  status: string;
+  providerRequestId: string | null;
+  promptVersion: string;
+  providerSchemaVersion: number;
+  errorCode: string | null;
+  ambiguities: readonly string[];
+}>;
+
 type DiagnosticContext = Readonly<{
   items: readonly DiagnosticItem[];
+  fullItems: readonly DiagnosticItem[];
+  briefItems: readonly DiagnosticItem[];
+  concepts: readonly DiagnosticConcept[];
+  status: string;
   action: string | null;
   question: Readonly<{
     prompt: string;
@@ -57,6 +83,7 @@ type DiagnosticContext = Readonly<{
     options: readonly string[];
   }> | null;
   ambiguities: readonly string[];
+  attempts: readonly DiagnosticAttempt[];
 }>;
 
 type DiagnosticCase = Readonly<{
@@ -68,7 +95,7 @@ type DiagnosticCase = Readonly<{
 }>;
 
 function normalized(context: DiagnosticContext) {
-  return context.items
+  return context.briefItems
     .map((item) => `${item.label} ${item.definition} ${item.summary}`)
     .join(" ")
     .toLowerCase();
@@ -82,8 +109,47 @@ function hasItem(context: DiagnosticContext, pattern: RegExp) {
 
 function hasMeaning(context: DiagnosticContext, pattern: RegExp) {
   return pattern.test(
-    `${normalized(context)} ${context.ambiguities.join(" ")} ${context.question?.prompt ?? ""} ${context.question?.whyNow ?? ""}`,
+    `${normalized(context)} ${context.fullItems.map((item) => `${item.label} ${item.definition} ${item.summary}`).join(" ")} ${context.ambiguities.join(" ")} ${context.question?.prompt ?? ""} ${context.question?.whyNow ?? ""}`,
   );
+}
+
+function hasFullItem(context: DiagnosticContext, pattern: RegExp) {
+  return context.fullItems.some((item) =>
+    pattern.test(`${item.label} ${item.definition} ${item.summary}`),
+  );
+}
+
+function attemptInvariantFailures(context: DiagnosticContext) {
+  const failures: string[] = [];
+  if (context.attempts.some((attempt) => attempt.status === "invalid_patch"))
+    failures.push("invalid_patch was emitted instead of a graceful outcome");
+  if (
+    context.attempts.some(
+      (attempt) =>
+        attempt.status === "malformed" &&
+        (attempt.errorCode === "provider_lowering_failed" ||
+          attempt.errorCode === "provider_schema_validation_failed"),
+    )
+  )
+    failures.push("provider structured-output validation failed");
+  return failures;
+}
+
+function actionCoherenceFailures(context: DiagnosticContext) {
+  const unresolvedHardAmbiguity = context.ambiguities.some((summary) =>
+    /\bmust\b|\brequired\b|\bat least\b|\bat most\b|\bmaximum\b|\bno more than\b|hard requirement/i.test(
+      summary,
+    ),
+  );
+  if (
+    unresolvedHardAmbiguity &&
+    context.action === "search" &&
+    !context.fullItems.some((item) => item.strength === "hard")
+  )
+    return [
+      "SEARCH was selected while an unresolved hard requirement was absent from authoritative state",
+    ];
+  return [];
 }
 
 function requireSoftCondition(
@@ -151,41 +217,49 @@ const cases: readonly DiagnosticCase[] = [
     name: "explicit-hard-battery",
     request: "Battery life must be at least 40 minutes. I'd prefer wireless.",
     check: (context) => {
-      const battery = context.items.filter((item) =>
+      const battery = context.fullItems.filter((item) =>
         /battery/i.test(`${item.label} ${item.definition}`),
       );
       const failures: string[] = [];
-      if (!battery.some((item) => item.strength === "hard"))
-        failures.push("explicit hard battery requirement was not preserved");
+      const ordinalBattery = battery.some(
+        (item) =>
+          item.strength === "hard" &&
+          item.targetSemantics === "qualitative" &&
+          item.semanticValue.kind === "qualitative" &&
+          item.semanticValue.mode === "ordinal" &&
+          item.semanticValue.relation === "at_least" &&
+          /40\s*minutes?/i.test(item.semanticValue.anchor ?? ""),
+      );
+      if (!ordinalBattery) {
+        if (context.action === "search")
+          failures.push(
+            "search was selected while the explicit hard time requirement was absent",
+          );
+        if (!hasMeaning(context, /battery|40|minute/i))
+          failures.push(
+            "hard time condition was neither represented nor surfaced as ambiguity/ASK",
+          );
+      }
       if (
         battery.some(
           (item) =>
-            item.semanticKind === "qualitative" &&
-            /40|minute/i.test(item.summary),
-        )
-      )
-        failures.push("40 minutes degraded to generic qualitative text");
-      if (
-        battery.some(
-          (item) =>
-            item.semanticKind === "measurement" ||
-            item.semanticKind === "measurement_range",
+            item.strength === "hard" &&
+            (item.semanticKind === "measurement" ||
+              item.semanticKind === "measurement_range"),
         )
       )
         failures.push(
           "time quantity used a length/mass unit unsupported by this domain",
         );
       if (
-        !battery.some(
+        battery.some(
           (item) =>
-            item.semanticKind === "measurement" ||
-            item.semanticKind === "measurement_range",
-        ) &&
-        !hasMeaning(context, /battery|40|minute/i)
+            item.semanticValue.kind === "qualitative" &&
+            item.semanticValue.mode === "text" &&
+            /40|minute/i.test(item.summary),
+        )
       )
-        failures.push(
-          "unsupported time condition was neither represented nor surfaced as ambiguity/ASK",
-        );
+        failures.push("40 minutes degraded to generic qualitative text");
       return failures;
     },
   },
@@ -217,32 +291,107 @@ const cases: readonly DiagnosticCase[] = [
       requireCategorical(context, /^black$/i, "include", "hard"),
   },
   {
-    name: "ordinary-soft-lighter",
+    name: "contextless-lighter",
     request: "I'd prefer something lighter.",
-    check: (context) =>
-      context.items.some(
-        (item) =>
-          item.strength === "preference" &&
-          /light|weight/i.test(
-            `${item.label} ${item.definition} ${item.summary}`,
-          ),
-      )
-        ? []
-        : ["ordinary soft lighter preference was not preserved"],
+    check: (context) => {
+      const failures: string[] = [];
+      if (hasFullItem(context, /light|weight/i))
+        failures.push("contextless lighter invented a criterion");
+      if (!hasMeaning(context, /light|lighter|weight/i))
+        failures.push("contextless lighter meaning was not preserved");
+      if (context.action !== "ask")
+        failures.push(
+          "contextless lighter did not ask for missing subject context",
+        );
+      return failures;
+    },
   },
   {
-    name: "strong-soft-comfort",
-    request: "Comfort matters a lot.",
-    check: (context) =>
-      context.items.some(
+    name: "contextual-soft-lighter",
+    request: "I need a backpack and I'd prefer something lighter.",
+    check: (context) => {
+      const failures: string[] = [];
+      const lightPreference = context.fullItems.some(
         (item) =>
-          item.strength === "strong_preference" &&
-          /comfort/i.test(`${item.label} ${item.definition} ${item.summary}`),
+          item.strength === "preference" &&
+          /light|weight/i.test(`${item.label} ${item.definition}`) &&
+          item.semanticValue.kind === "qualitative" &&
+          ((item.semanticValue.mode === "ordinal" &&
+            item.semanticValue.relation === "less" &&
+            /weight|heavy|light/i.test(item.semanticValue.anchor ?? "")) ||
+            (item.semanticValue.mode === "text" &&
+              /light|lighter/i.test(item.semanticValue.text ?? ""))),
+      );
+      if (!lightPreference)
+        failures.push(
+          "contextual lighter preference/direction was not preserved",
+        );
+      if (context.fullItems.some((item) => /backpack/i.test(item.label)))
+        failures.push("backpack usage context became an invented criterion");
+      if (context.fullItems.some((item) => /heavy/i.test(item.summary)))
+        failures.push("lighter direction was reversed to heavy");
+      if (
+        context.fullItems.some(
+          (item) =>
+            item.strength === "hard" &&
+            /light|weight/i.test(`${item.label} ${item.definition}`),
+        )
       )
-        ? []
-        : [
-            "strong soft comfort language was not preserved as strong_preference",
-          ],
+        failures.push("ordinary lighter preference became hard");
+      return failures;
+    },
+  },
+  {
+    name: "contextless-comfort",
+    request: "Comfort matters a lot.",
+    check: (context) => {
+      const failures: string[] = [];
+      if (hasFullItem(context, /comfort/i))
+        failures.push("contextless comfort invented a criterion");
+      if (!hasMeaning(context, /comfort/i))
+        failures.push("contextless comfort meaning was contradicted or lost");
+      if (context.action !== "ask")
+        failures.push(
+          "contextless comfort did not ask for missing subject context",
+        );
+      if (
+        context.fullItems.some(
+          (item) =>
+            item.strength === "hard" &&
+            /comfort/i.test(`${item.label} ${item.definition}`),
+        )
+      )
+        failures.push("contextless comfort became a hard requirement");
+      return failures;
+    },
+  },
+  {
+    name: "contextual-strong-comfort",
+    request: "I need an office chair. Comfort matters a lot.",
+    check: (context) => {
+      const comfort = context.fullItems.filter((item) =>
+        /comfort/i.test(`${item.label} ${item.definition}`),
+      );
+      const failures: string[] = [];
+      if (
+        !comfort.some(
+          (item) =>
+            item.strength === "strong_preference" &&
+            item.targetSemantics === "qualitative" &&
+            item.semanticValue.kind === "qualitative" &&
+            /comfort|comfortable/i.test(item.summary) &&
+            !/uncomfortable|poor/i.test(item.summary),
+        )
+      )
+        failures.push(
+          "contextual comfort was not preserved as strong_preference",
+        );
+      if (comfort.some((item) => item.strength === "hard"))
+        failures.push("comfort importance became a hard requirement");
+      if (context.fullItems.some((item) => /office chair/i.test(item.label)))
+        failures.push("office-chair subject became an invented criterion");
+      return failures;
+    },
   },
   {
     name: "cap-golden",
@@ -375,14 +524,38 @@ const cases: readonly DiagnosticCase[] = [
     name: "explicit-indifference",
     seed: "maximum_width_60",
     request: "Actually the width does not matter to me anymore.",
-    check: (context) =>
-      context.items.some(
-        (item) =>
-          /width|wide/i.test(`${item.label} ${item.definition}`) &&
-          item.semanticKind === "indifferent",
+    check: (context) => {
+      const failures: string[] = [];
+      const fullWidth = context.fullItems.filter((item) =>
+        /width|wide/i.test(`${item.label} ${item.definition}`),
+      );
+      if (!fullWidth.some((item) => item.semanticKind === "indifferent"))
+        failures.push(
+          "authoritative full state did not mark the seeded width concept indifferent",
+        );
+      if (
+        fullWidth.some(
+          (item) =>
+            item.semanticKind !== "indifferent" && item.strength !== "none",
+        )
       )
-        ? []
-        : ["explicit indifference did not replace the seeded width criterion"],
+        failures.push(
+          "the prior active width criterion remained effective after indifference",
+        );
+      if (context.briefItems.some((item) => /width|wide/i.test(item.label)))
+        failures.push(
+          "visible ShoppingBrief exposed an indifferent width item",
+        );
+      if (
+        context.fullItems.some(
+          (item) =>
+            item.semanticKind === "indifferent" &&
+            item.authority !== "user_explicit",
+        )
+      )
+        failures.push("indifference provenance was not user-explicit");
+      return failures;
+    },
   },
   {
     name: "change-of-mind-relaxation",
@@ -432,18 +605,12 @@ type CaseResult = Readonly<{
   action: string | null;
   revision: string | null;
   items: readonly DiagnosticItem[];
+  fullItems: readonly DiagnosticItem[];
+  concepts: readonly DiagnosticConcept[];
   question: DiagnosticContext["question"];
   actionRationale: string | null;
   ambiguities: readonly string[];
-  attempts: readonly Readonly<{
-    stage: string;
-    attemptOrdinal: number;
-    status: string;
-    providerRequestId: string | null;
-    promptVersion: string;
-    providerSchemaVersion: number;
-    errorCode: string | null;
-  }>[];
+  attempts: readonly DiagnosticAttempt[];
   violations: readonly string[];
 }>;
 
@@ -518,17 +685,47 @@ function summarizeItems(
   state: Awaited<ReturnType<typeof loadCurrentShoppingState>>,
 ) {
   const brief = projectShoppingBrief(state);
-  return brief.items.map((item) => ({
-    label: item.conceptLabel,
-    definition:
-      state.concepts.find((concept) => concept.id === item.conceptId)
-        ?.definition ?? "",
-    strength: item.strength,
-    targetSemantics: item.targetSemantics,
-    semanticKind: item.semanticValue.kind,
-    summary: summarizeValue(item.semanticValue),
-    semanticValue: item.semanticValue,
-  }));
+  return brief.items.map((item) => {
+    const concept = state.concepts.find((entry) => entry.id === item.conceptId);
+    return {
+      criterionId: item.criterionId,
+      conceptId: item.conceptId,
+      lifecycle: "active",
+      authority: "unknown",
+      label: item.conceptLabel,
+      definition: concept?.definition ?? item.conceptDefinition,
+      strength: item.strength,
+      targetSemantics: item.targetSemantics,
+      semanticKind: item.semanticValue.kind,
+      summary: summarizeValue(item.semanticValue),
+      semanticValue: item.semanticValue,
+    } satisfies DiagnosticItem;
+  });
+}
+
+function summarizeFullItems(
+  state: Awaited<ReturnType<typeof loadCurrentShoppingState>>,
+) {
+  const concepts = new Map(
+    state.concepts.map((concept) => [concept.id, concept]),
+  );
+  return state.activeCriteria.map(({ criterion }) => {
+    const concept = concepts.get(criterion.conceptId);
+    if (concept === undefined) throw new Error("Criterion concept missing");
+    return {
+      criterionId: criterion.id,
+      conceptId: criterion.conceptId,
+      lifecycle: criterion.lifecycle,
+      authority: criterion.authority,
+      label: concept.label,
+      definition: concept.definition,
+      strength: criterion.strength ?? "none",
+      targetSemantics: criterion.targetSemantics,
+      semanticKind: criterion.semanticValue.kind,
+      summary: summarizeValue(criterion.semanticValue),
+      semanticValue: criterion.semanticValue,
+    } satisfies DiagnosticItem;
+  });
 }
 
 function summarizeValue(value: { kind: string; [key: string]: unknown }) {
@@ -682,7 +879,8 @@ async function runCase(
     sourceInputId: input.input.id,
   });
   const state = await loadCurrentShoppingState(connection.db, task.id);
-  const items = summarizeItems(state);
+  const briefItems = summarizeItems(state);
+  const fullItems = summarizeFullItems(state);
   const action = result.status === "completed" ? result.action.action : null;
   const question =
     result.status === "completed" && result.action.action === "ask"
@@ -698,7 +896,28 @@ async function runCase(
       : null;
   const attempts = await loadSanitizedAttempts(task.id, input.input.id);
   const ambiguities = attempts.flatMap((attempt) => attempt.ambiguities);
-  const violations = inputCase.check({ items, action, question, ambiguities });
+  const context = {
+    items: briefItems,
+    briefItems,
+    fullItems,
+    concepts: state.concepts.map((concept) => ({
+      id: concept.id,
+      label: concept.label,
+      definition: concept.definition,
+      valueFamily: concept.valueFamily,
+    })),
+    status: result.status,
+    action,
+    question,
+    ambiguities,
+    attempts,
+  } satisfies DiagnosticContext;
+  const concepts = context.concepts;
+  const violations = [
+    ...inputCase.check(context),
+    ...attemptInvariantFailures(context),
+    ...actionCoherenceFailures(context),
+  ];
   return {
     name: inputCase.name,
     status: result.status,
@@ -707,7 +926,9 @@ async function runCase(
       result.status === "completed"
         ? state.task.currentRevision.toString()
         : null,
-    items,
+    items: briefItems,
+    fullItems,
+    concepts,
     question,
     actionRationale,
     ambiguities,
@@ -741,7 +962,8 @@ async function runTwoTurnCase(
     sourceInputId: firstInput.input.id,
   });
   const firstState = await loadCurrentShoppingState(connection.db, task.id);
-  const firstItems = summarizeItems(firstState);
+  const firstBriefItems = summarizeItems(firstState);
+  const firstFullItems = summarizeFullItems(firstState);
   const firstAction =
     firstResult.status === "completed" ? firstResult.action.action : null;
   const firstQuestion =
@@ -759,10 +981,20 @@ async function runTwoTurnCase(
     firstInput.input.id,
   );
   const firstContext = {
-    items: firstItems,
+    items: firstBriefItems,
+    briefItems: firstBriefItems,
+    fullItems: firstFullItems,
+    concepts: firstState.concepts.map((concept) => ({
+      id: concept.id,
+      label: concept.label,
+      definition: concept.definition,
+      valueFamily: concept.valueFamily,
+    })),
+    status: firstResult.status,
     action: firstAction,
     question: firstQuestion,
     ambiguities: firstAttempts.flatMap((attempt) => attempt.ambiguities),
+    attempts: firstAttempts,
   } satisfies DiagnosticContext;
   const firstViolations = requireSoftCondition(
     firstContext,
@@ -770,7 +1002,7 @@ async function runTwoTurnCase(
     /battery/i,
   );
   if (
-    !firstItems.some((item) =>
+    !firstBriefItems.some((item) =>
       /review/i.test(`${item.label} ${item.definition}`),
     )
   )
@@ -794,7 +1026,8 @@ async function runTwoTurnCase(
     sourceInputId: secondInput.input.id,
   });
   const state = await loadCurrentShoppingState(connection.db, task.id);
-  const items = summarizeItems(state);
+  const briefItems = summarizeItems(state);
+  const fullItems = summarizeFullItems(state);
   const action =
     secondResult.status === "completed" ? secondResult.action.action : null;
   const question =
@@ -812,9 +1045,33 @@ async function runTwoTurnCase(
     ...(await loadSanitizedAttempts(task.id, secondInput.input.id)),
   ];
   const ambiguities = attempts.flatMap((attempt) => attempt.ambiguities);
+  const context = {
+    items: briefItems,
+    briefItems,
+    fullItems,
+    concepts: state.concepts.map((concept) => ({
+      id: concept.id,
+      label: concept.label,
+      definition: concept.definition,
+      valueFamily: concept.valueFamily,
+    })),
+    status:
+      firstResult.status === "completed" && secondResult.status === "completed"
+        ? "completed"
+        : "failed",
+    action,
+    question,
+    ambiguities,
+    attempts,
+  } satisfies DiagnosticContext;
+  const concepts = context.concepts;
   const violations = [
     ...firstViolations,
-    ...inputCase.check({ items, action, question, ambiguities }),
+    ...inputCase.check(context),
+    ...attemptInvariantFailures(firstContext),
+    ...attemptInvariantFailures(context),
+    ...actionCoherenceFailures(firstContext),
+    ...actionCoherenceFailures(context),
   ];
   return {
     name: inputCase.name,
@@ -827,7 +1084,9 @@ async function runTwoTurnCase(
       secondResult.status === "completed"
         ? state.task.currentRevision.toString()
         : null,
-    items,
+    items: briefItems,
+    fullItems,
+    concepts,
     question,
     actionRationale:
       secondResult.status === "completed" &&
