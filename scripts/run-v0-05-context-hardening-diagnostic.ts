@@ -326,6 +326,17 @@ const cases: readonly DiagnosticCase[] = [
         failures.push(
           "contextual lighter preference/direction was not preserved",
         );
+      if (
+        context.fullItems.some(
+          (item) =>
+            item.semanticValue.kind === "qualitative" &&
+            item.semanticValue.mode === "ordinal" &&
+            /current alternatives|current backpack|average backpacks|reference/i.test(
+              item.semanticValue.anchor ?? "",
+            ),
+        )
+      )
+        failures.push("comparative lighter preference invented a reference");
       if (context.fullItems.some((item) => /backpack/i.test(item.label)))
         failures.push("backpack usage context became an invented criterion");
       if (context.fullItems.some((item) => /heavy/i.test(item.summary)))

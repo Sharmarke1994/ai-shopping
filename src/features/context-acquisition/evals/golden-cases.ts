@@ -149,6 +149,72 @@ export const V0_05_GOLDEN_CASES: readonly V005GoldenCase[] = [
     ],
   },
   {
+    name: "contextual-comparative-lighter",
+    input: "I need a backpack and I'd prefer something lighter.",
+    seed: "none",
+    acceptableActions: ["search"],
+    expectedCriteria: [
+      {
+        key: "physical-weight",
+        conceptMeaning: ["weight", "physical weight", "mass"],
+        conceptSource: "new",
+        strength: "preference",
+        targetSemantics: "qualitative",
+        semanticValue: {
+          kind: "qualitative",
+          textMeaning: ["lighter", "lightweight", "low weight", "light"],
+          ordinalAlternatives: [
+            {
+              relations: ["less", "at_most"],
+              anchorMeaning: ["weight", "mass", "heavy", "heaviness"],
+            },
+          ],
+        },
+        visibleInBrief: true,
+      },
+    ],
+    forbiddenConceptTerms: [
+      "current alternatives",
+      "current backpack",
+      "average backpacks",
+      "threshold",
+    ],
+  },
+  {
+    name: "anchored-comparative-lighter",
+    input: "I need a backpack lighter than my current backpack.",
+    seed: "none",
+    acceptableActions: ["search"],
+    expectedCriteria: [
+      {
+        key: "physical-weight",
+        conceptMeaning: ["weight", "physical weight", "mass"],
+        conceptSource: "new",
+        strength: "preference",
+        targetSemantics: "qualitative",
+        semanticValue: {
+          kind: "qualitative",
+          textMeaning: ["lighter", "lightweight", "low weight", "light"],
+          ordinalAlternatives: [
+            {
+              relations: ["less", "at_most"],
+              anchorMeaning: [
+                "current backpack",
+                "my current backpack",
+                "weight",
+                "mass",
+                "heavy",
+                "heaviness",
+              ],
+            },
+          ],
+        },
+        visibleInBrief: true,
+      },
+    ],
+    forbiddenConceptTerms: ["threshold", "average backpacks"],
+  },
+  {
     name: "bounded-shelving",
     input:
       "I need shelving under 80 cm wide that feels visually light, around £150, but I can stretch to £220 if it is especially beautiful.",
