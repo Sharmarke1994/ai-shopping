@@ -686,6 +686,17 @@ This bounded blocker-remediation branch is isolated from V0-09 at frozen head
   exactly once after the clean committed checkpoint and deterministic gates are
   green. Acceptance remains the strict four-category Terra + Serper predicate.
 
+- The single RC3 proof was then claimed as attempt
+  `8619d766-d79e-44a6-8a67-39a6c4ac1749` and failed closed at the initial
+  `ergonomic-mouse` oracle check. The exact sanitized failure artifacts and
+  marker are preserved under `docs/evals/v0-09-recovery-rc3-founder-proof-*`;
+  the disposable database was destroyed with zero cleanup errors. All completed
+  Terra provider operations succeeded. The earliest responsible layer is the
+  deterministic oracle's brand-facet cardinality check: it counted the single
+  qualitative “good brands only; exclude bad brands” item as an additional
+  exclusion alongside the explicit Amazon Basics exclusion, even though the
+  persisted brief preserved both truths. No RC3 retry was made.
+
 ## Exact resume instructions
 
 1. Resume only in
