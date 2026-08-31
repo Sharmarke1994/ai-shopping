@@ -669,6 +669,23 @@ This bounded blocker-remediation branch is isolated from V0-09 at frozen head
   database was destroyed with zero cleanup errors, and no RC2 success artifact
   exists. The RC2 marker is permanently consumed; there will be no RC2 retry.
 
+## Recovery RC3 in progress
+
+- RC3 is a separately namespaced, one-shot recovery candidate based on the
+  accepted RC2 evidence head `e4ad5b340a21ace15c6bb58dba6d981cc1055d6d`.
+  RC2's marker and failure artifacts remain immutable historical evidence.
+- The bounded correction separates lexical overlap from semantic founder-intent
+  authorization and narrows interpretation policy so ordinary ergonomic design
+  is a preference while explicit “must/only/requires” remains hard.
+- One non-release Terra context precheck completed 4/4 protected cases with zero
+  violations (`gpt-5.6-terra`): cap, headphones, ordinary ergonomic mouse and
+  explicit-hard ergonomic mouse. Artifacts are preserved under the
+  `v0-09-recovery-rc3-context-precheck` namespace.
+- The full RC3 proof has not run. It has its own durable marker, artifacts,
+  disposable database pattern and acknowledgement variable; it may be run
+  exactly once after the clean committed checkpoint and deterministic gates are
+  green. Acceptance remains the strict four-category Terra + Serper predicate.
+
 ## Exact resume instructions
 
 1. Resume only in
@@ -676,15 +693,15 @@ This bounded blocker-remediation branch is isolated from V0-09 at frozen head
    `codex/v0-09-recovery-rc`. Preserve RC1 and V0-09 Attempts 1–3 exactly; never
    rerun any of them or rewrite their markers/artifacts.
 2. Do not run `proof:v0-09:recovery-rc2:live` again. Its one-shot marker is
-   consumed. Do not change the evaluator, prompt, schema or state semantics
-   before independent review decides the dual-match classifier defect and the
-   separate ergonomic-strength question.
-3. Preserve and review the exact RC2 failure artifacts, pre-proof head
-   `326b1231031dd292347fa6c3d5af176a4bd85570`, and PR #15. Any future live
-   attempt requires explicit independent authorization and a materially new
-   recovery-candidate namespace; it must never reuse or rewrite RC2 evidence.
-4. Keep the stacked PR draft/unmerged and stop for independent review; do not
-   begin V0-10.
+   consumed. The RC3 deterministic oracle and semantic prompt correction are
+   bounded and separately tested; do not broaden them or weaken the release
+   predicate.
+3. Preserve the exact RC2 failure artifacts and marker, the RC2 evidence head
+   `e4ad5b340a21ace15c6bb58dba6d981cc1055d6d`, and PR #15. The RC3 full proof
+   requires its own clean committed head, acknowledgement and one-shot marker;
+   it must never reuse or rewrite RC2 evidence.
+4. Keep the stacked PR draft/unmerged and stop for independent review after the
+   single RC3 proof; do not begin V0-10.
 5. Preserve V0-05 PR #9, V0-06 PR #10, V0-07 PR #11, PR #13, PR #14 and PR #15 as
    draft/unmerged historical checkpoints. Do not weaken V0-05's Terra rule,
    rerun V0-08 evidence, or begin V0-10.

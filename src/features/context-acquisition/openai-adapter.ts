@@ -16,6 +16,7 @@ import {
   CONTEXT_ACTION_INSTRUCTIONS,
   CONTEXT_ACTION_PROMPT_VERSION,
   INTERPRETATION_INSTRUCTIONS,
+  INTERPRETATION_SEMANTIC_POLICY_SUFFIX,
   INTERPRETATION_PROMPT_VERSION,
 } from "./prompts";
 import {
@@ -86,7 +87,7 @@ export function createOpenAIContextAcquisitionModel(options?: {
         client,
         config,
         input,
-        instructions: INTERPRETATION_INSTRUCTIONS,
+        instructions: `${INTERPRETATION_INSTRUCTIONS}\n\n${INTERPRETATION_SEMANTIC_POLICY_SUFFIX}`,
         promptVersion: INTERPRETATION_PROMPT_VERSION,
         providerSchemaVersion: INTERPRETATION_PROVIDER_SCHEMA_VERSION_V2,
         schemaName: "shopping_interpretation_v2",

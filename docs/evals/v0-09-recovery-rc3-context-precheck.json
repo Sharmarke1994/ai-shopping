@@ -1,0 +1,813 @@
+{
+  "schemaVersion": 1,
+  "diagnostic": "v0-05-context-hardening-rc3",
+  "caseSet": "rc3",
+  "releaseAccepted": false,
+  "model": "gpt-5.6-terra",
+  "reasoningEffort": "low",
+  "startedAt": "2026-08-31T22:01:08.537Z",
+  "finishedAt": "2026-08-31T22:01:45.146Z",
+  "counts": {
+    "logicalInterpretationCalls": 4,
+    "logicalActionCalls": 4,
+    "completed": 4,
+    "failed": 0,
+    "caseCount": 4,
+    "violationCount": 0
+  },
+  "results": [
+    {
+      "name": "cap-golden",
+      "status": "completed",
+      "action": "search",
+      "revision": "1",
+      "items": [
+        {
+          "criterionId": "b39cad4d-d310-4d78-bac9-8917b9bebded",
+          "conceptId": "1df8a6fa-d25e-4567-a77a-9fad727639df",
+          "lifecycle": "active",
+          "authority": "unknown",
+          "label": "Physical weight",
+          "definition": "The mass or perceived physical lightness of the cap.",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticKind": "qualitative",
+          "summary": "lower physical weight",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "lower physical weight"
+          }
+        },
+        {
+          "criterionId": "51c50ccc-73e6-45d5-bf0a-26de9595a167",
+          "conceptId": "266a439a-37a2-4dbb-8d12-6a23fe95b508",
+          "lifecycle": "active",
+          "authority": "unknown",
+          "label": "Breathability",
+          "definition": "How well the cap allows air and moisture to pass through.",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticKind": "qualitative",
+          "summary": "breathable",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "breathable"
+          }
+        }
+      ],
+      "fullItems": [
+        {
+          "criterionId": "51c50ccc-73e6-45d5-bf0a-26de9595a167",
+          "conceptId": "266a439a-37a2-4dbb-8d12-6a23fe95b508",
+          "lifecycle": "active",
+          "authority": "user_explicit",
+          "label": "Breathability",
+          "definition": "How well the cap allows air and moisture to pass through.",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticKind": "qualitative",
+          "summary": "breathable",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "breathable"
+          }
+        },
+        {
+          "criterionId": "b39cad4d-d310-4d78-bac9-8917b9bebded",
+          "conceptId": "1df8a6fa-d25e-4567-a77a-9fad727639df",
+          "lifecycle": "active",
+          "authority": "user_explicit",
+          "label": "Physical weight",
+          "definition": "The mass or perceived physical lightness of the cap.",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticKind": "qualitative",
+          "summary": "lower physical weight",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "lower physical weight"
+          }
+        }
+      ],
+      "concepts": [
+        {
+          "id": "1df8a6fa-d25e-4567-a77a-9fad727639df",
+          "label": "Physical weight",
+          "definition": "The mass or perceived physical lightness of the cap.",
+          "valueFamily": "qualitative"
+        },
+        {
+          "id": "266a439a-37a2-4dbb-8d12-6a23fe95b508",
+          "label": "Breathability",
+          "definition": "How well the cap allows air and moisture to pass through.",
+          "valueFamily": "qualitative"
+        }
+      ],
+      "question": null,
+      "actionRationale": "The request specifies an actionable product category (running cap) and clear preferences for low weight and breathability in hot weather.",
+      "ambiguities": [],
+      "attempts": [
+        {
+          "stage": "context_action",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "providerRequestId": "resp_0a73c71924a946a1016a95f9ad0ff487d2bbb6c05f2560a17e",
+          "promptVersion": "v0-05-context-action-6",
+          "providerSchemaVersion": 2,
+          "errorCode": null,
+          "ambiguities": []
+        },
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "providerRequestId": "resp_0c8d21e16f142e60016a95f9a7970487d2bced88c6f0e6a96f",
+          "promptVersion": "v0-05-interpretation-10",
+          "providerSchemaVersion": 2,
+          "errorCode": null,
+          "ambiguities": []
+        }
+      ],
+      "violations": []
+    },
+    {
+      "name": "headphones-golden",
+      "status": "completed",
+      "action": "ask",
+      "revision": "1",
+      "items": [
+        {
+          "criterionId": "fa2b4039-c4ce-4af7-9394-80a7c9348fac",
+          "conceptId": "1c179750-4472-42e2-a755-f07a2e08da71",
+          "lifecycle": "active",
+          "authority": "unknown",
+          "label": "Noise cancellation",
+          "definition": "The headphones' ability to reduce external noise.",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticKind": "qualitative",
+          "summary": "Noise cancellation",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "Noise cancellation"
+          }
+        },
+        {
+          "criterionId": "a2716966-9851-4020-afcd-c3a8b3fad223",
+          "conceptId": "3cc8c4fa-1f8f-44c2-8966-9c37c3f44f76",
+          "lifecycle": "active",
+          "authority": "unknown",
+          "label": "Price",
+          "definition": "The purchase price of the headphones.",
+          "strength": "preference",
+          "targetSemantics": "around",
+          "semanticKind": "money",
+          "summary": "15000 GBP",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "money",
+            "mode": "target",
+            "amountMinor": 15000,
+            "currency": "GBP"
+          }
+        },
+        {
+          "criterionId": "0d19031b-7467-40e7-a531-82af3d9daae8",
+          "conceptId": "a88abb33-9393-4928-91d8-614345c89a03",
+          "lifecycle": "active",
+          "authority": "unknown",
+          "label": "Over-ear design",
+          "definition": "Whether the headphones use an over-ear form factor.",
+          "strength": "hard",
+          "targetSemantics": "exact",
+          "semanticKind": "boolean",
+          "summary": "true",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "boolean",
+            "value": true
+          }
+        },
+        {
+          "criterionId": "ebc2225d-1890-42cf-9ef7-72f66557e24e",
+          "conceptId": "cc06abea-d850-42ee-8fa9-894e053ce22b",
+          "lifecycle": "active",
+          "authority": "unknown",
+          "label": "Comfort with glasses",
+          "definition": "How comfortable the headphones are when worn with glasses.",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticKind": "qualitative",
+          "summary": "Comfortable when worn with glasses",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "Comfortable when worn with glasses"
+          }
+        },
+        {
+          "criterionId": "45a4f38a-b3a2-49ee-a5d9-8c1176f87293",
+          "conceptId": "cf4700ec-297f-483a-8464-ce0a940f43c7",
+          "lifecycle": "active",
+          "authority": "unknown",
+          "label": "Wireless connectivity",
+          "definition": "Whether the headphones connect wirelessly.",
+          "strength": "hard",
+          "targetSemantics": "exact",
+          "semanticKind": "boolean",
+          "summary": "true",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "boolean",
+            "value": true
+          }
+        }
+      ],
+      "fullItems": [
+        {
+          "criterionId": "0d19031b-7467-40e7-a531-82af3d9daae8",
+          "conceptId": "a88abb33-9393-4928-91d8-614345c89a03",
+          "lifecycle": "active",
+          "authority": "user_explicit",
+          "label": "Over-ear design",
+          "definition": "Whether the headphones use an over-ear form factor.",
+          "strength": "hard",
+          "targetSemantics": "exact",
+          "semanticKind": "boolean",
+          "summary": "true",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "boolean",
+            "value": true
+          }
+        },
+        {
+          "criterionId": "45a4f38a-b3a2-49ee-a5d9-8c1176f87293",
+          "conceptId": "cf4700ec-297f-483a-8464-ce0a940f43c7",
+          "lifecycle": "active",
+          "authority": "user_explicit",
+          "label": "Wireless connectivity",
+          "definition": "Whether the headphones connect wirelessly.",
+          "strength": "hard",
+          "targetSemantics": "exact",
+          "semanticKind": "boolean",
+          "summary": "true",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "boolean",
+            "value": true
+          }
+        },
+        {
+          "criterionId": "a2716966-9851-4020-afcd-c3a8b3fad223",
+          "conceptId": "3cc8c4fa-1f8f-44c2-8966-9c37c3f44f76",
+          "lifecycle": "active",
+          "authority": "user_explicit",
+          "label": "Price",
+          "definition": "The purchase price of the headphones.",
+          "strength": "preference",
+          "targetSemantics": "around",
+          "semanticKind": "money",
+          "summary": "15000 GBP",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "money",
+            "mode": "target",
+            "amountMinor": 15000,
+            "currency": "GBP"
+          }
+        },
+        {
+          "criterionId": "ebc2225d-1890-42cf-9ef7-72f66557e24e",
+          "conceptId": "cc06abea-d850-42ee-8fa9-894e053ce22b",
+          "lifecycle": "active",
+          "authority": "user_explicit",
+          "label": "Comfort with glasses",
+          "definition": "How comfortable the headphones are when worn with glasses.",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticKind": "qualitative",
+          "summary": "Comfortable when worn with glasses",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "Comfortable when worn with glasses"
+          }
+        },
+        {
+          "criterionId": "fa2b4039-c4ce-4af7-9394-80a7c9348fac",
+          "conceptId": "1c179750-4472-42e2-a755-f07a2e08da71",
+          "lifecycle": "active",
+          "authority": "user_explicit",
+          "label": "Noise cancellation",
+          "definition": "The headphones' ability to reduce external noise.",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticKind": "qualitative",
+          "summary": "Noise cancellation",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "Noise cancellation"
+          }
+        }
+      ],
+      "concepts": [
+        {
+          "id": "1c179750-4472-42e2-a755-f07a2e08da71",
+          "label": "Noise cancellation",
+          "definition": "The headphones' ability to reduce external noise.",
+          "valueFamily": "qualitative"
+        },
+        {
+          "id": "3cc8c4fa-1f8f-44c2-8966-9c37c3f44f76",
+          "label": "Price",
+          "definition": "The purchase price of the headphones.",
+          "valueFamily": "money"
+        },
+        {
+          "id": "a88abb33-9393-4928-91d8-614345c89a03",
+          "label": "Over-ear design",
+          "definition": "Whether the headphones use an over-ear form factor.",
+          "valueFamily": "boolean"
+        },
+        {
+          "id": "cc06abea-d850-42ee-8fa9-894e053ce22b",
+          "label": "Comfort with glasses",
+          "definition": "How comfortable the headphones are when worn with glasses.",
+          "valueFamily": "qualitative"
+        },
+        {
+          "id": "cf4700ec-297f-483a-8464-ce0a940f43c7",
+          "label": "Wireless connectivity",
+          "definition": "Whether the headphones connect wirelessly.",
+          "valueFamily": "boolean"
+        }
+      ],
+      "question": {
+        "prompt": "Which should take priority: the strongest noise cancellation or the best comfort with glasses?",
+        "whyNow": "These are both explicit priorities, and the best recommendation near £150 may differ depending on which matters more.",
+        "options": [
+          "Strongest noise cancellation",
+          "Best comfort with glasses"
+        ]
+      },
+      "actionRationale": null,
+      "ambiguities": [],
+      "attempts": [
+        {
+          "stage": "context_action",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "providerRequestId": "resp_0e1a30df27329539016a95f9b59c9087d2938023f6ee013987",
+          "promptVersion": "v0-05-context-action-6",
+          "providerSchemaVersion": 2,
+          "errorCode": null,
+          "ambiguities": []
+        },
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "providerRequestId": "resp_08b2d9f1dd838d0e016a95f9af692c87d2a60d46cc17c682f1",
+          "promptVersion": "v0-05-interpretation-10",
+          "providerSchemaVersion": 2,
+          "errorCode": null,
+          "ambiguities": []
+        }
+      ],
+      "violations": []
+    },
+    {
+      "name": "rc3-ergonomic-mouse",
+      "status": "completed",
+      "action": "search",
+      "revision": "1",
+      "items": [
+        {
+          "criterionId": "25d9f421-5d5f-4519-9ecd-2b18e49a6840",
+          "conceptId": "06e82c15-bbaf-412a-86bc-e70b54b6bba1",
+          "lifecycle": "active",
+          "authority": "unknown",
+          "label": "Wireless connectivity and battery life",
+          "definition": "Wireless operation, conditional on very good battery life.",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticKind": "qualitative",
+          "summary": "wireless, but only if battery life is very good",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "wireless, but only if battery life is very good"
+          }
+        },
+        {
+          "criterionId": "bd7cc86c-b116-4e7c-9c8a-43676cd605ea",
+          "conceptId": "2c168d07-03c6-42f3-b58e-3824855e6f2a",
+          "lifecycle": "active",
+          "authority": "unknown",
+          "label": "Brand quality",
+          "definition": "The shopper's assessment of whether a brand is good or bad.",
+          "strength": "hard",
+          "targetSemantics": "qualitative",
+          "semanticKind": "qualitative",
+          "summary": "good brands only; no bad brands",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "good brands only; no bad brands"
+          }
+        },
+        {
+          "criterionId": "824c9c4d-91be-489a-b466-25ebfb94d12d",
+          "conceptId": "4413e9fc-28a0-4ee5-9299-ebfe2c92e94f",
+          "lifecycle": "active",
+          "authority": "unknown",
+          "label": "Reviews",
+          "definition": "Customer review quality and feedback.",
+          "strength": "strong_preference",
+          "targetSemantics": "qualitative",
+          "semanticKind": "qualitative",
+          "summary": "good reviews",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "good reviews"
+          }
+        },
+        {
+          "criterionId": "f249f982-1e0a-4d01-847d-624f4851eba8",
+          "conceptId": "50785c33-a485-4d1c-837a-62f47e93d8a1",
+          "lifecycle": "active",
+          "authority": "unknown",
+          "label": "Mouse shape and profile",
+          "definition": "The mouse's physical shape, bulk, sculpting, and side or thumb-rest profile.",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticKind": "qualitative",
+          "summary": "a little chunkier and sculpted, with a noticeable side profile or thumb-rest shape rather than flat and minimal",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "a little chunkier and sculpted, with a noticeable side profile or thumb-rest shape rather than flat and minimal"
+          }
+        },
+        {
+          "criterionId": "d1eed3c4-47c0-4dd1-b819-977021b326e6",
+          "conceptId": "6cfc3330-57c6-476c-9a10-92f2599f6169",
+          "lifecycle": "active",
+          "authority": "unknown",
+          "label": "Brand",
+          "definition": "The product brand.",
+          "strength": "hard",
+          "targetSemantics": "categorical",
+          "semanticKind": "categorical",
+          "summary": "Amazon Basics",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "categorical",
+            "operator": "exclude",
+            "values": [
+              "Amazon Basics"
+            ]
+          }
+        },
+        {
+          "criterionId": "46c17cc6-7096-4de0-8501-8223ef6fd3b9",
+          "conceptId": "d426c147-7ebc-4135-966e-e0d90d541c18",
+          "lifecycle": "active",
+          "authority": "unknown",
+          "label": "Price",
+          "definition": "The product price.",
+          "strength": "hard",
+          "targetSemantics": "range",
+          "semanticKind": "money",
+          "summary": "5000 GBP",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "money",
+            "mode": "ceiling",
+            "amountMinor": 5000,
+            "currency": "GBP"
+          }
+        },
+        {
+          "criterionId": "f6444a18-18ed-4e2e-81dd-0601486b5b26",
+          "conceptId": "d8b42e4b-2afc-4147-ac5f-450f9367462e",
+          "lifecycle": "active",
+          "authority": "unknown",
+          "label": "Ergonomic design",
+          "definition": "The mouse's ergonomic comfort-oriented design.",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticKind": "qualitative",
+          "summary": "ergonomic",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "ergonomic"
+          }
+        }
+      ],
+      "fullItems": [
+        {
+          "criterionId": "25d9f421-5d5f-4519-9ecd-2b18e49a6840",
+          "conceptId": "06e82c15-bbaf-412a-86bc-e70b54b6bba1",
+          "lifecycle": "active",
+          "authority": "user_explicit",
+          "label": "Wireless connectivity and battery life",
+          "definition": "Wireless operation, conditional on very good battery life.",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticKind": "qualitative",
+          "summary": "wireless, but only if battery life is very good",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "wireless, but only if battery life is very good"
+          }
+        },
+        {
+          "criterionId": "46c17cc6-7096-4de0-8501-8223ef6fd3b9",
+          "conceptId": "d426c147-7ebc-4135-966e-e0d90d541c18",
+          "lifecycle": "active",
+          "authority": "user_explicit",
+          "label": "Price",
+          "definition": "The product price.",
+          "strength": "hard",
+          "targetSemantics": "range",
+          "semanticKind": "money",
+          "summary": "5000 GBP",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "money",
+            "mode": "ceiling",
+            "amountMinor": 5000,
+            "currency": "GBP"
+          }
+        },
+        {
+          "criterionId": "824c9c4d-91be-489a-b466-25ebfb94d12d",
+          "conceptId": "4413e9fc-28a0-4ee5-9299-ebfe2c92e94f",
+          "lifecycle": "active",
+          "authority": "user_explicit",
+          "label": "Reviews",
+          "definition": "Customer review quality and feedback.",
+          "strength": "strong_preference",
+          "targetSemantics": "qualitative",
+          "semanticKind": "qualitative",
+          "summary": "good reviews",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "good reviews"
+          }
+        },
+        {
+          "criterionId": "bd7cc86c-b116-4e7c-9c8a-43676cd605ea",
+          "conceptId": "2c168d07-03c6-42f3-b58e-3824855e6f2a",
+          "lifecycle": "active",
+          "authority": "user_explicit",
+          "label": "Brand quality",
+          "definition": "The shopper's assessment of whether a brand is good or bad.",
+          "strength": "hard",
+          "targetSemantics": "qualitative",
+          "semanticKind": "qualitative",
+          "summary": "good brands only; no bad brands",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "good brands only; no bad brands"
+          }
+        },
+        {
+          "criterionId": "d1eed3c4-47c0-4dd1-b819-977021b326e6",
+          "conceptId": "6cfc3330-57c6-476c-9a10-92f2599f6169",
+          "lifecycle": "active",
+          "authority": "user_explicit",
+          "label": "Brand",
+          "definition": "The product brand.",
+          "strength": "hard",
+          "targetSemantics": "categorical",
+          "semanticKind": "categorical",
+          "summary": "Amazon Basics",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "categorical",
+            "operator": "exclude",
+            "values": [
+              "Amazon Basics"
+            ]
+          }
+        },
+        {
+          "criterionId": "f249f982-1e0a-4d01-847d-624f4851eba8",
+          "conceptId": "50785c33-a485-4d1c-837a-62f47e93d8a1",
+          "lifecycle": "active",
+          "authority": "user_explicit",
+          "label": "Mouse shape and profile",
+          "definition": "The mouse's physical shape, bulk, sculpting, and side or thumb-rest profile.",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticKind": "qualitative",
+          "summary": "a little chunkier and sculpted, with a noticeable side profile or thumb-rest shape rather than flat and minimal",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "a little chunkier and sculpted, with a noticeable side profile or thumb-rest shape rather than flat and minimal"
+          }
+        },
+        {
+          "criterionId": "f6444a18-18ed-4e2e-81dd-0601486b5b26",
+          "conceptId": "d8b42e4b-2afc-4147-ac5f-450f9367462e",
+          "lifecycle": "active",
+          "authority": "user_explicit",
+          "label": "Ergonomic design",
+          "definition": "The mouse's ergonomic comfort-oriented design.",
+          "strength": "preference",
+          "targetSemantics": "qualitative",
+          "semanticKind": "qualitative",
+          "summary": "ergonomic",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "ergonomic"
+          }
+        }
+      ],
+      "concepts": [
+        {
+          "id": "06e82c15-bbaf-412a-86bc-e70b54b6bba1",
+          "label": "Wireless connectivity and battery life",
+          "definition": "Wireless operation, conditional on very good battery life.",
+          "valueFamily": "qualitative"
+        },
+        {
+          "id": "2c168d07-03c6-42f3-b58e-3824855e6f2a",
+          "label": "Brand quality",
+          "definition": "The shopper's assessment of whether a brand is good or bad.",
+          "valueFamily": "qualitative"
+        },
+        {
+          "id": "4413e9fc-28a0-4ee5-9299-ebfe2c92e94f",
+          "label": "Reviews",
+          "definition": "Customer review quality and feedback.",
+          "valueFamily": "qualitative"
+        },
+        {
+          "id": "50785c33-a485-4d1c-837a-62f47e93d8a1",
+          "label": "Mouse shape and profile",
+          "definition": "The mouse's physical shape, bulk, sculpting, and side or thumb-rest profile.",
+          "valueFamily": "qualitative"
+        },
+        {
+          "id": "6cfc3330-57c6-476c-9a10-92f2599f6169",
+          "label": "Brand",
+          "definition": "The product brand.",
+          "valueFamily": "categorical"
+        },
+        {
+          "id": "d426c147-7ebc-4135-966e-e0d90d541c18",
+          "label": "Price",
+          "definition": "The product price.",
+          "valueFamily": "money"
+        },
+        {
+          "id": "d8b42e4b-2afc-4147-ac5f-450f9367462e",
+          "label": "Ergonomic design",
+          "definition": "The mouse's ergonomic comfort-oriented design.",
+          "valueFamily": "qualitative"
+        }
+      ],
+      "question": null,
+      "actionRationale": "The request is actionable: ergonomic, sculpted/chunky mice under £50 from reputable brands, prioritising strong reviews and wireless options only where battery life is very good.",
+      "ambiguities": [],
+      "attempts": [
+        {
+          "stage": "context_action",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "providerRequestId": "resp_0743dcfd1b92ac2b016a95f9c2172487d28807b6971ac20487",
+          "promptVersion": "v0-05-context-action-6",
+          "providerSchemaVersion": 2,
+          "errorCode": null,
+          "ambiguities": []
+        },
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "providerRequestId": "resp_00ec6cebb465c9bb016a95f9b89a5487d2a2b61714e8da4c9e",
+          "promptVersion": "v0-05-interpretation-10",
+          "providerSchemaVersion": 2,
+          "errorCode": null,
+          "ambiguities": []
+        }
+      ],
+      "violations": []
+    },
+    {
+      "name": "rc3-explicit-hard-ergonomic",
+      "status": "completed",
+      "action": "search",
+      "revision": "1",
+      "items": [
+        {
+          "criterionId": "7e40b412-527a-448c-a806-2e6576a80671",
+          "conceptId": "1bfc1a5f-5a0a-4ea4-ba57-d3674cce33bf",
+          "lifecycle": "active",
+          "authority": "unknown",
+          "label": "Ergonomic design",
+          "definition": "The mouse is designed to provide ergonomic comfort and support during use.",
+          "strength": "hard",
+          "targetSemantics": "qualitative",
+          "semanticKind": "qualitative",
+          "summary": "ergonomic design",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "ergonomic design"
+          }
+        }
+      ],
+      "fullItems": [
+        {
+          "criterionId": "7e40b412-527a-448c-a806-2e6576a80671",
+          "conceptId": "1bfc1a5f-5a0a-4ea4-ba57-d3674cce33bf",
+          "lifecycle": "active",
+          "authority": "user_explicit",
+          "label": "Ergonomic design",
+          "definition": "The mouse is designed to provide ergonomic comfort and support during use.",
+          "strength": "hard",
+          "targetSemantics": "qualitative",
+          "semanticKind": "qualitative",
+          "summary": "ergonomic design",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "qualitative",
+            "mode": "text",
+            "text": "ergonomic design"
+          }
+        }
+      ],
+      "concepts": [
+        {
+          "id": "1bfc1a5f-5a0a-4ea4-ba57-d3674cce33bf",
+          "label": "Ergonomic design",
+          "definition": "The mouse is designed to provide ergonomic comfort and support during use.",
+          "valueFamily": "qualitative"
+        }
+      ],
+      "question": null,
+      "actionRationale": "The product category and a qualitative hard requirement are clear and actionable: an ergonomic mouse.",
+      "ambiguities": [],
+      "attempts": [
+        {
+          "stage": "context_action",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "providerRequestId": "resp_022d82936d65c581016a95f9c7e0e887d2899c0e23bac3ee36",
+          "promptVersion": "v0-05-context-action-6",
+          "providerSchemaVersion": 2,
+          "errorCode": null,
+          "ambiguities": []
+        },
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "completed",
+          "providerRequestId": "resp_0f400889fe960809016a95f9c461c087d2bf2d1f2843d42a47",
+          "promptVersion": "v0-05-interpretation-10",
+          "providerSchemaVersion": 2,
+          "errorCode": null,
+          "ambiguities": []
+        }
+      ],
+      "violations": []
+    }
+  ]
+}

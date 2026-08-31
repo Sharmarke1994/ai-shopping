@@ -26,10 +26,16 @@ import { requireTestDatabaseEnvironment } from "../src/infrastructure/config/env
 import { migrateDatabase } from "../src/infrastructure/database/migrate";
 
 const execFile = promisify(execFileCallback);
-const outputBase = new URL(
-  "../docs/evals/v0-05-context-hardening-diagnostic",
-  import.meta.url,
-);
+const outputStem =
+  process.env.CONTEXT_HARDENING_OUTPUT_STEM ??
+  "v0-05-context-hardening-diagnostic";
+if (
+  !/^(?:v0-05-context-hardening-diagnostic(?:-[a-z0-9-]+)?|v0-09-recovery-rc3-context-precheck)$/.test(
+    outputStem,
+  )
+)
+  throw new Error("Unsafe context-hardening diagnostic output stem");
+const outputBase = new URL(`../docs/evals/${outputStem}`, import.meta.url);
 const jsonOutput = new URL(`${outputBase.pathname}.json`, import.meta.url);
 const markdownOutput = new URL(`${outputBase.pathname}.md`, import.meta.url);
 const attemptOutput = new URL(
@@ -620,6 +626,61 @@ const cases: readonly DiagnosticCase[] = [
       return failures;
     },
   },
+  {
+    name: "rc3-ergonomic-mouse",
+    request:
+      "I need an ergonomic mouse under £50. I don’t know much about mouse brands, so I want the best options rather than having to know which specs matter. Reviews matter a lot to me. I’d prefer wireless, but only if the battery life is very good. I like mice that are a little chunkier and sculpted, with a noticeable side profile or thumb-rest shape rather than something flat and minimal. Good brands only, no Amazon Basics stuff or bad brands.",
+    check: (context) => {
+      const failures: string[] = [];
+      const ergonomic = context.fullItems.filter((item) =>
+        /ergonomic/i.test(`${item.label} ${item.definition}`),
+      );
+      if (ergonomic.some((item) => item.strength === "hard"))
+        failures.push("ergonomic design became hard without must-language");
+      if (
+        ergonomic.some(
+          (item) =>
+            item.strength === "preference" && /ergonomic/i.test(item.summary),
+        ) === false &&
+        ergonomic.length > 0
+      )
+        failures.push("ergonomic preference was not represented faithfully");
+      if (
+        !context.fullItems.some(
+          (item) =>
+            item.strength === "preference" &&
+            /sculpt|chunk|thumb|side profile/i.test(
+              `${item.label} ${item.definition} ${item.summary}`,
+            ),
+        )
+      )
+        failures.push("sculpted profile preference was lost");
+      failures.push(...requireSoftCondition(context, /wireless/i, /battery/i));
+      if (
+        !context.fullItems.some(
+          (item) =>
+            item.strength === "strong_preference" &&
+            /review|rating/i.test(`${item.label} ${item.definition}`),
+        )
+      )
+        failures.push(
+          "review importance was not preserved as strong preference",
+        );
+      return failures;
+    },
+  },
+  {
+    name: "rc3-explicit-hard-ergonomic",
+    request: "I need a mouse and it must have an ergonomic design.",
+    check: (context) =>
+      context.fullItems.some(
+        (item) =>
+          item.strength === "hard" &&
+          /ergonomic/i.test(`${item.label} ${item.definition} ${item.summary}`),
+      )
+        ? []
+        : ["explicit must-have ergonomic design was not hard"],
+  },
 ];
 
 const phaseACaseNames = [
@@ -630,8 +691,18 @@ const phaseACaseNames = [
   "headphones-golden",
   "cap-golden",
 ] as const;
+const rc3CaseNames = [
+  "rc3-ergonomic-mouse",
+  "headphones-golden",
+  "cap-golden",
+  "rc3-explicit-hard-ergonomic",
+] as const;
 const diagnosticCaseSet =
-  process.env.CONTEXT_HARDENING_CASE_SET === "phase-a" ? "phase-a" : "full";
+  process.env.CONTEXT_HARDENING_CASE_SET === "phase-a"
+    ? "phase-a"
+    : process.env.CONTEXT_HARDENING_CASE_SET === "rc3"
+      ? "rc3"
+      : "full";
 const selectedCases =
   diagnosticCaseSet === "phase-a"
     ? cases.filter((inputCase) =>
@@ -639,7 +710,13 @@ const selectedCases =
           inputCase.name as (typeof phaseACaseNames)[number],
         ),
       )
-    : cases;
+    : diagnosticCaseSet === "rc3"
+      ? cases.filter((inputCase) =>
+          rc3CaseNames.includes(
+            inputCase.name as (typeof rc3CaseNames)[number],
+          ),
+        )
+      : cases;
 if (
   diagnosticCaseSet === "phase-a" &&
   selectedCases.length !== phaseACaseNames.length
