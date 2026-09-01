@@ -697,6 +697,19 @@ This bounded blocker-remediation branch is isolated from V0-09 at frozen head
   exclusion alongside the explicit Amazon Basics exclusion, even though the
   persisted brief preserved both truths. No RC3 retry was made.
 
+## Recovery RC4 in progress
+
+- RC4 is the next isolated one-shot candidate from RC3 evidence head
+  `3b67784199769cf2efdf711e5972b784a8d10645`; RC1, RC2 and RC3 markers and
+  artifacts remain immutable.
+- The bounded evaluator correction distinguishes hard qualitative brand quality
+  from exact categorical Amazon Basics exclusion. Offline fixtures cover the
+  valid split and simpler forms plus missing, softened, wrong-brand and duplicate
+  variants, while preserving strict rejection of unsupported semantics.
+- No new context prompt change or Terra precheck is planned. RC4's full proof
+  has not run; it requires a clean committed head, exact-head CI and its own
+  acknowledgement/one-shot marker.
+
 ## Exact resume instructions
 
 1. Resume only in

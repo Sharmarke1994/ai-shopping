@@ -26,6 +26,8 @@
     "proof:v0-09:recovery-rc2:live": "tsx scripts/run-v0-09-recovery-rc2-founder-proof.ts",
     "proof:v0-09:recovery-rc3:live": "tsx scripts/run-v0-09-recovery-rc3-founder-proof.ts",
     "test:v0-09:recovery-rc3-oracle": "V0_09_RC3_ORACLE_SELF_TEST=1 tsx scripts/run-v0-09-recovery-rc3-founder-proof.ts",
+    "proof:v0-09:recovery-rc4:live": "tsx scripts/run-v0-09-recovery-rc4-founder-proof.ts",
+    "test:v0-09:recovery-rc4-oracle": "V0_09_RC4_ORACLE_SELF_TEST=1 tsx scripts/run-v0-09-recovery-rc4-founder-proof.ts",
     "diagnostic:v0-09:recovery-rc2:pages": "tsx scripts/run-v0-09-recovery-rc2-page-soak.ts",
     "diagnostic:v0-09:recovery-rc2:understanding": "tsx scripts/run-v0-09-recovery-rc2-understanding-diagnostic.ts",
     "diagnostic:v0-09:recovery-rc2:destinations": "tsx scripts/run-v0-09-recovery-rc2-destination-diagnostic.ts",
