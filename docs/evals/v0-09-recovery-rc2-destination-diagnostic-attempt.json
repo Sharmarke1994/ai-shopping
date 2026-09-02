@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "diagnostic": "v0_09_recovery_rc2_exact_destination",
+  "claimedAt": "2026-08-30T21:05:48.636Z",
+  "provider": "serper",
+  "exactHistoricalListingIds": [
+    "884ea2d0-c19f-4b1d-8a42-c3e3a02d9a60",
+    "492fa4e0-c88a-4bef-a396-d255734520e6",
+    "4ab8dd1f-1c14-4073-b548-33e087a421a8"
+  ]
+}

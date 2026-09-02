@@ -15,7 +15,10 @@ import { taskRevisionSchema } from "@/domain/shopping-state/task";
 import { loadPersistedSearchRunInTransaction } from "@/features/retrieval-spike/persistence/search-runs";
 import type { PersistedCandidateListing } from "@/features/retrieval-spike/persistence/contracts";
 import { searchRunIdSchema } from "@/features/retrieval-spike/contracts";
-import { loadCurrentShoppingState } from "@/features/shopping-state/persistence/state-loaders";
+import {
+  loadCurrentShoppingState,
+  loadShoppingStateAtRevision,
+} from "@/features/shopping-state/persistence/state-loaders";
 import type {
   ShoppingDatabase,
   ShoppingTransaction,
@@ -49,6 +52,7 @@ import {
   type ProductObservationV1,
 } from "./contracts";
 import type { ModelCallMetadata } from "./model-port";
+import { MAX_PAGE_TRANSPORT_BYTES } from "./page-budgets";
 import {
   productUnderstandingProviderWireV1Schema,
   type ProductUnderstandingProviderWireV1,
@@ -92,6 +96,12 @@ import {
   selectDeepResearchCandidates,
   selectResearchCandidates,
 } from "./selection";
+import {
+  assertFirstPassUnderstandingPairsMatchCriteria,
+  FIRST_PASS_UNDERSTANDING_POLICY_IDENTITY,
+  pairFirstPassUnderstandingAttempts,
+  planFirstPassUnderstandingBatches,
+} from "./understanding-batches";
 
 const attemptStageSchema = z.enum([
   "organic_search",
@@ -195,8 +205,8 @@ const fetchedPageMetadataSchema = z.strictObject({
   requestedUrl: z.url().max(4_000),
   finalUrl: z.url().max(4_000),
   contentType: z.enum(["text/html", "application/xhtml+xml", "text/plain"]),
-  encodedBytes: z.number().int().min(1).max(1_500_000),
-  decodedBytes: z.number().int().min(1).max(1_500_000),
+  encodedBytes: z.number().int().min(1).max(MAX_PAGE_TRANSPORT_BYTES),
+  decodedBytes: z.number().int().min(1).max(MAX_PAGE_TRANSPORT_BYTES),
   fetchedAt: z.date(),
   responseHash: z.string().regex(/^[a-f0-9]{64}$/),
 });
@@ -499,6 +509,68 @@ function validateDeepAttemptTargetCoherence(options: {
   }
 }
 
+function usesBatchedFirstPassUnderstanding(
+  run: EvidenceResearchSnapshot["run"],
+) {
+  return (
+    run.phase === "first_pass" &&
+    run.policyVersion ===
+      `${EVIDENCE_POLICY_VERSION}:${FIRST_PASS_UNDERSTANDING_POLICY_IDENTITY}`
+  );
+}
+
+async function validateUnderstandingAttemptCoherence(options: {
+  tx: ShoppingTransaction;
+  run: EvidenceResearchSnapshot["run"];
+  attempts: readonly PersistedEvidenceAttempt[];
+}) {
+  const authoritativeFirstPassCriterionIds = usesBatchedFirstPassUnderstanding(
+    options.run,
+  )
+    ? projectShoppingBrief(
+        await loadShoppingStateAtRevision(
+          options.tx,
+          options.run.taskId,
+          options.run.taskRevision,
+        ),
+      ).items.map(({ criterionId }) => criterionId)
+    : null;
+  const candidateListingIds = new Set(
+    options.attempts.map(({ candidateListingId }) => candidateListingId),
+  );
+  for (const candidateListingId of candidateListingIds) {
+    const candidateAttempts = options.attempts.filter(
+      (attempt) => attempt.candidateListingId === candidateListingId,
+    );
+    const extractionAttempts = candidateAttempts.filter(
+      ({ stage }) => stage === "observation_extraction",
+    );
+    const assessmentAttempts = candidateAttempts.filter(
+      ({ stage }) => stage === "criterion_assessment",
+    );
+    try {
+      if (usesBatchedFirstPassUnderstanding(options.run)) {
+        const pairs = pairFirstPassUnderstandingAttempts(candidateAttempts);
+        assertFirstPassUnderstandingPairsMatchCriteria(
+          pairs,
+          authoritativeFirstPassCriterionIds!,
+        );
+      } else if (
+        extractionAttempts.length !== 1 ||
+        assessmentAttempts.length !== 1 ||
+        !hasExactNonEmptyCriterionTargets(
+          extractionAttempts[0]?.targetCriterionIds ?? [],
+          assessmentAttempts[0]?.targetCriterionIds ?? [],
+        )
+      ) {
+        throw new Error("Understanding attempt pair is incoherent");
+      }
+    } catch (cause) {
+      failPersisted("EvidenceResearchRun", options.run.id, cause);
+    }
+  }
+}
+
 function mapEvidenceSourceRow(
   row: typeof evidenceSources.$inferSelect,
 ): EvidenceSourceV1 {
@@ -710,6 +782,11 @@ async function loadResearchSnapshotInTransaction(options: {
       new Error("Selected candidate count does not match its attempts"),
     );
   }
+  await validateUnderstandingAttemptCoherence({
+    tx: options.tx,
+    run,
+    attempts,
+  });
   validateDeepAttemptTargetCoherence({ run, attempts });
   await validateSnapshotFetchedPageChildren({
     tx: options.tx,
@@ -1399,7 +1476,7 @@ export async function prepareEvidenceResearch(options: {
     }
     const policyIdentity =
       mode === "first_pass"
-        ? "first-pass"
+        ? FIRST_PASS_UNDERSTANDING_POLICY_IDENTITY
         : mode === "reassessment"
           ? `reassess:${createHash("sha256")
               .update(JSON.stringify(savedCandidateListingIds))
@@ -1476,40 +1553,52 @@ export async function prepareEvidenceResearch(options: {
         promptVersion: null,
         targetCriterionIds: plan.criterionIds,
       })),
-      ...selected.flatMap(({ listing, criterionIds }) => [
-        {
-          id: evidenceAcquisitionAttemptIdSchema.parse(randomUUID()),
-          taskId,
-          researchRunId,
-          candidateRunId: searchRunId,
-          candidateListingId: listing.id,
-          stage: "observation_extraction" as const,
-          purpose: "combined" as const,
-          planKey: "observation-extraction-v1",
-          query: null,
-          status: "planned" as const,
-          provider: options.modelProvider,
-          model: options.model,
-          promptVersion: options.promptVersion,
-          targetCriterionIds: criterionIds,
-        },
-        {
-          id: evidenceAcquisitionAttemptIdSchema.parse(randomUUID()),
-          taskId,
-          researchRunId,
-          candidateRunId: searchRunId,
-          candidateListingId: listing.id,
-          stage: "criterion_assessment" as const,
-          purpose: "current_brief" as const,
-          planKey: `criterion-assessment-r${brief.revision}`,
-          query: null,
-          status: "planned" as const,
-          provider: options.modelProvider,
-          model: options.model,
-          promptVersion: options.promptVersion,
-          targetCriterionIds: criterionIds,
-        },
-      ]),
+      ...selected.flatMap(({ listing, criterionIds }) => {
+        const batches =
+          phase === "first_pass"
+            ? planFirstPassUnderstandingBatches(criterionIds)
+            : [
+                {
+                  criterionIds,
+                  extractionPlanKey: "observation-extraction-v1",
+                  assessmentPlanKey: `criterion-assessment-r${brief.revision}`,
+                },
+              ];
+        return batches.flatMap((batch) => [
+          {
+            id: evidenceAcquisitionAttemptIdSchema.parse(randomUUID()),
+            taskId,
+            researchRunId,
+            candidateRunId: searchRunId,
+            candidateListingId: listing.id,
+            stage: "observation_extraction" as const,
+            purpose: "combined" as const,
+            planKey: batch.extractionPlanKey,
+            query: null,
+            status: "planned" as const,
+            provider: options.modelProvider,
+            model: options.model,
+            promptVersion: options.promptVersion,
+            targetCriterionIds: batch.criterionIds,
+          },
+          {
+            id: evidenceAcquisitionAttemptIdSchema.parse(randomUUID()),
+            taskId,
+            researchRunId,
+            candidateRunId: searchRunId,
+            candidateListingId: listing.id,
+            stage: "criterion_assessment" as const,
+            purpose: "current_brief" as const,
+            planKey: batch.assessmentPlanKey,
+            query: null,
+            status: "planned" as const,
+            provider: options.modelProvider,
+            model: options.model,
+            promptVersion: options.promptVersion,
+            targetCriterionIds: batch.criterionIds,
+          },
+        ]);
+      }),
     ];
     await tx.insert(evidenceAcquisitionAttempts).values(
       attempts.map(({ targetCriterionIds, ...attempt }) => {
@@ -2134,16 +2223,43 @@ export async function planEvidencePageFetches(options: {
     const phase = z
       .enum(["first_pass", "deepening", "reassessment"])
       .parse(run.phase);
-    if (
-      extractionAttempts.length !== 1 ||
-      assessmentAttempts.length !== 1 ||
-      !validatePagePlanningTargetCoherence({
-        phase,
-        organicAttempts,
-        extractionAttempt: extractionAttempts[0],
-        assessmentAttempt: assessmentAttempts[0],
-      })
-    ) {
+    const state = await loadCurrentShoppingState(tx, taskId);
+    const brief = projectShoppingBrief(state);
+    let exactTargetIds: readonly string[];
+    try {
+      if (
+        phase === "first_pass" &&
+        run.policyVersion ===
+          `${EVIDENCE_POLICY_VERSION}:${FIRST_PASS_UNDERSTANDING_POLICY_IDENTITY}`
+      ) {
+        const pairs = pairFirstPassUnderstandingAttempts(attempts);
+        assertFirstPassUnderstandingPairsMatchCriteria(
+          pairs,
+          brief.items.map(({ criterionId }) => criterionId),
+        );
+        exactTargetIds = pairs.flatMap(
+          ({ extraction }) => extraction.targetCriterionIds,
+        );
+      } else {
+        if (
+          extractionAttempts.length !== 1 ||
+          assessmentAttempts.length !== 1
+        ) {
+          throw new Error("Understanding attempt pair is unavailable");
+        }
+        exactTargetIds = extractionAttempts[0]!.targetCriterionIds;
+      }
+      if (
+        !validatePagePlanningTargetCoherence({
+          phase,
+          organicAttempts,
+          extractionAttempt: { targetCriterionIds: exactTargetIds },
+          assessmentAttempt: { targetCriterionIds: exactTargetIds },
+        })
+      ) {
+        throw new Error("Page planning targets disagree with model scope");
+      }
+    } catch {
       throw new EvidenceAttemptConflictError(
         extractionAttempts[0]?.id ?? candidateListingId,
       );
@@ -2172,9 +2288,6 @@ export async function planEvidencePageFetches(options: {
       );
     }
 
-    const state = await loadCurrentShoppingState(tx, taskId);
-    const brief = projectShoppingBrief(state);
-    const exactTargetIds = extractionAttempts[0]!.targetCriterionIds;
     const targetIdSet = new Set(exactTargetIds);
     const targetCriteria = brief.items.filter(({ criterionId }) =>
       targetIdSet.has(criterionId),
@@ -3846,6 +3959,10 @@ export async function recordCandidateUnderstanding(options: {
   return options.db.transaction(async (tx) => {
     const runRow = await loadLockedResearchRow({ tx, taskId, researchRunId });
     assertLease(runRow, leaseToken);
+    const strictFirstPassBatch =
+      runRow.phase === "first_pass" &&
+      runRow.policyVersion ===
+        `${EVIDENCE_POLICY_VERSION}:${FIRST_PASS_UNDERSTANDING_POLICY_IDENTITY}`;
     const [task] = await tx
       .select({ currentRevision: shoppingTasks.currentRevision })
       .from(shoppingTasks)
@@ -3884,8 +4001,9 @@ export async function recordCandidateUnderstanding(options: {
       throw new EvidenceAttemptConflictError(extractionAttempt.id);
     }
     if (
-      extractionAttempt.status !== "planned" ||
-      assessmentAttempt.status !== "planned"
+      !strictFirstPassBatch &&
+      (extractionAttempt.status !== "planned" ||
+        assessmentAttempt.status !== "planned")
     ) {
       return false;
     }
@@ -3921,6 +4039,41 @@ export async function recordCandidateUnderstanding(options: {
     }
     const state = await loadCurrentShoppingState(tx, taskId);
     const brief = projectShoppingBrief(state);
+    if (strictFirstPassBatch) {
+      const snapshot = await loadResearchSnapshotInTransaction({
+        tx,
+        taskId,
+        researchRunId,
+      });
+      if (snapshot === null) {
+        throw new EvidenceResearchAuthorityError(
+          "Research batch reservation is unavailable",
+        );
+      }
+      const candidateAttempts = snapshot.attempts.filter(
+        (attempt) => attempt.candidateListingId === candidateListingId,
+      );
+      const pairs = pairFirstPassUnderstandingAttempts(candidateAttempts);
+      assertFirstPassUnderstandingPairsMatchCriteria(
+        pairs,
+        brief.items.map(({ criterionId }) => criterionId),
+      );
+      if (
+        !pairs.some(
+          ({ extraction, assessment }) =>
+            extraction.id === extractionAttempt.id &&
+            assessment.id === assessmentAttempt.id,
+        )
+      ) {
+        throw new EvidenceAttemptConflictError(extractionAttempt.id);
+      }
+    }
+    if (
+      extractionAttempt.status !== "planned" ||
+      assessmentAttempt.status !== "planned"
+    ) {
+      return false;
+    }
     const extractionTargetIds = new Set(extractionAttempt.targetCriterionIds);
     const assessmentTargetIds = new Set(assessmentAttempt.targetCriterionIds);
     if (
@@ -3986,9 +4139,21 @@ export async function recordCandidateUnderstanding(options: {
       const outOfScopeAssessment = result.assessments.find(
         ({ criterionOrdinal }) => targetItems[criterionOrdinal] === undefined,
       );
+      const assessedOrdinals = new Set(
+        result.assessments.map(({ criterionOrdinal }) => criterionOrdinal),
+      );
+      const missingAssessment = targetItems.some(
+        (_, criterionOrdinal) => !assessedOrdinals.has(criterionOrdinal),
+      );
       if (
         outOfScopeObservation !== undefined ||
-        outOfScopeAssessment !== undefined
+        outOfScopeAssessment !== undefined ||
+        result.assessments.length !== targetItems.length ||
+        missingAssessment ||
+        (strictFirstPassBatch &&
+          result.observations.some(
+            ({ criterionOrdinal }) => criterionOrdinal === null,
+          ))
       ) {
         throw new EvidenceAttemptConflictError(assessmentAttempt.id);
       }

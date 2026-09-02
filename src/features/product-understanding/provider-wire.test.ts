@@ -42,6 +42,93 @@ function focusedInput(criterionCount = 1) {
   });
 }
 
+function broadEightCriterionInput() {
+  return productUnderstandingInputV1Schema.parse({
+    schemaVersion: 1,
+    market: { country: "GB", language: "en-GB", currency: "GBP" },
+    candidate: {
+      title: "Ergonomic wireless mouse",
+      merchant: "Example retailer",
+      observedPriceText: "£39.99",
+    },
+    criteria: Array.from({ length: 8 }, (_, ordinal) => ({
+      ordinal,
+      label: `Criterion ${ordinal}`,
+      definition: `Authoritative criterion definition ${ordinal}`,
+      strength: "preference" as const,
+      targetSemantics: "qualitative" as const,
+      value: {
+        schemaVersion: 1,
+        kind: "qualitative",
+        mode: "text",
+        text: `preference ${ordinal}`,
+      },
+    })),
+    sources: [
+      {
+        ordinal: 0,
+        role: "retailer",
+        kind: "listing_field",
+        title: "Retailer listing",
+        url: "https://retailer.example/product",
+        excerpt: "Retailer listing evidence.",
+      },
+      {
+        ordinal: 1,
+        role: "manufacturer",
+        kind: "organic_result",
+        title: "Manufacturer result",
+        url: "https://manufacturer.example/product",
+        excerpt: "Manufacturer evidence.",
+      },
+      {
+        ordinal: 2,
+        role: "independent_review",
+        kind: "organic_result",
+        title: "Independent review",
+        url: "https://review.example/product",
+        excerpt: "Independent review evidence.",
+      },
+      {
+        ordinal: 3,
+        role: "other",
+        kind: "organic_result",
+        title: "Additional source",
+        url: "https://source.example/product",
+        excerpt: "Additional evidence.",
+      },
+    ],
+  });
+}
+
+function broadEightCriterionResult() {
+  return {
+    providerSchemaVersion: 1 as const,
+    observations: Array.from({ length: 8 }, (_, criterionOrdinal) => ({
+      localRef: `evidence_${criterionOrdinal}`,
+      sourceOrdinal: criterionOrdinal % 4,
+      criterionOrdinal,
+      support: "supported" as const,
+      observationKind: "source_assertion" as const,
+      propertyLabel: `Property ${criterionOrdinal}`,
+      claim: `The supplied source states claim ${criterionOrdinal}.`,
+      value: {
+        schemaVersion: 1 as const,
+        kind: "text" as const,
+        text: `evidence ${criterionOrdinal}`,
+      },
+      derivation: "model_text" as const,
+    })),
+    assessments: Array.from({ length: 8 }, (_, criterionOrdinal) => ({
+      criterionOrdinal,
+      status: "meets" as const,
+      relation: "source_support",
+      explanation: `Evidence addresses criterion ${criterionOrdinal}.`,
+      observationRefs: [`evidence_${criterionOrdinal}`],
+    })),
+  };
+}
+
 function proposal(options: {
   observationCriterionOrdinal: number | null;
   assessmentCriterionOrdinal: number;
@@ -323,7 +410,7 @@ describe("product-understanding provider wire", () => {
     ).toBe(false);
   });
 
-  it("does not infer focused mode from a one-criterion input", () => {
+  it("allows criterion-free observations in broad mode while requiring criterion coverage", () => {
     const broadSchema = productUnderstandingProviderStructuredOutputSchema({
       input: focusedInput(),
       requireCriterionBinding: false,
@@ -348,9 +435,48 @@ describe("product-understanding provider wire", () => {
             derivation: "model_text",
           },
         ],
-        assessments: [],
+        assessments: [
+          {
+            criterionOrdinal: 0,
+            status: "uncertain",
+            relation: "insufficient_evidence",
+            explanation: "No criterion-bound evidence was emitted.",
+            observationRefs: [],
+          },
+        ],
       }).success,
     ).toBe(true);
+  });
+
+  it("binds the historical broad eight-criterion, multi-source shape to exact input scope", () => {
+    const input = broadEightCriterionInput();
+    const output = broadEightCriterionResult();
+    const providerSchema = productUnderstandingProviderStructuredOutputSchema({
+      input,
+      requireCriterionBinding: false,
+    });
+    const applicationSchema = productUnderstandingProviderWireV1SchemaForInput({
+      input,
+      requireCriterionBinding: false,
+    });
+
+    expect(providerSchema.safeParse(output).success).toBe(true);
+    expect(applicationSchema.safeParse(output).success).toBe(true);
+    expect(
+      providerSchema.safeParse({
+        ...output,
+        assessments: output.assessments.slice(0, 7),
+      }).success,
+    ).toBe(false);
+    expect(
+      applicationSchema.safeParse({
+        ...output,
+        observations: [
+          { ...output.observations[0], sourceOrdinal: 19 },
+          ...output.observations.slice(1),
+        ],
+      }).success,
+    ).toBe(false);
   });
 
   it("rejects an empty focused target before a provider contract can be built", () => {

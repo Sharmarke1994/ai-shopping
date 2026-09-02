@@ -5,10 +5,14 @@ import https from "node:https";
 import { isIP, type LookupFunction } from "node:net";
 import ipaddr from "ipaddr.js";
 import { z } from "zod";
+import { MAX_PAGE_TRANSPORT_BYTES } from "./page-budgets";
 
 export const PAGE_FETCH_POLICY_VERSION = "bounded-page-fetch-v1";
 export const DEFAULT_PAGE_FETCH_TIMEOUT_MS = 8_000;
-export const DEFAULT_PAGE_FETCH_MAX_BYTES = 1_500_000;
+// The transport budget is intentionally only large enough for the measured
+// modern product pages in the recovery evidence (roughly 1.9–2.34 MB). It is
+// not a retained-evidence budget; callers must extract and discard raw HTML.
+export const DEFAULT_PAGE_FETCH_MAX_BYTES = MAX_PAGE_TRANSPORT_BYTES;
 export const DEFAULT_PAGE_FETCH_MAX_REDIRECTS = 3;
 
 const pageFetchFailureCodeSchema = z.enum([
@@ -446,7 +450,7 @@ export async function fetchBoundedPage(options: {
     .number()
     .int()
     .min(1_024)
-    .max(2_000_000)
+    .max(MAX_PAGE_TRANSPORT_BYTES)
     .parse(options.maxBytes ?? DEFAULT_PAGE_FETCH_MAX_BYTES);
   const maxRedirects = z
     .number()

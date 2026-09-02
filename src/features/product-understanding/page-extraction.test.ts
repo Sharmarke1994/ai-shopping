@@ -85,6 +85,19 @@ describe("bounded product page extraction", () => {
     }
   });
 
+  it("extracts a small document from HTML above the historical 1.5 MB input budget", () => {
+    const document = extractProductPageDocument({
+      sourceUrl: "https://shop.example/products/modern-one",
+      html: `<html><head><title>Modern One</title><script>${"x".repeat(1_600_000)}</script></head><body><h1>Modern One</h1><p>19 cm wide.</p></body></html>`,
+    });
+    expect(document.title).toBe("Modern One");
+    expect(document.visibleText).toContain("Modern One 19 cm wide.");
+    expect(Buffer.byteLength(JSON.stringify(document), "utf8")).toBeLessThan(
+      36_000,
+    );
+    expect(document.visibleText).not.toContain("x".repeat(100));
+  });
+
   it("extracts one coherent JSON-LD Product node without executing or interpreting page instructions", () => {
     const document = extractProductPageDocument({
       sourceUrl: "https://manufacturer.example/coffee/compact-one",

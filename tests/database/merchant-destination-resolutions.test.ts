@@ -352,6 +352,55 @@ describe("merchant destination resolution persistence", () => {
     });
   });
 
+  it("binds every receipt to its exact task, search run and candidate", async () => {
+    const { listings, run, session } = await startedSession(connection);
+    const [candidate, otherCandidate] = listings;
+    if (candidate === undefined || otherCandidate === undefined) {
+      throw new Error("Expected two exact candidate scopes");
+    }
+    const claimed = await claimMerchantDestinationResolution({
+      db: connection.db,
+      taskId: session.taskId,
+      candidateListingId: candidate.id,
+      provider: "serper",
+      leaseDurationMs: 5_000,
+      topAuthority: {
+        sessionId: session.id,
+        contextActionId: run.contextActionId,
+        searchRunId: run.id,
+        taskRevision: run.taskRevision,
+      },
+    });
+    if (claimed.state !== "acquired") {
+      throw new Error("Expected an exact destination receipt");
+    }
+
+    await expect(
+      connection.db
+        .update(merchantDestinationResolutions)
+        .set({ taskId: "90000000-0000-4000-8000-000000000009" })
+        .where(eq(merchantDestinationResolutions.id, claimed.resolution.id)),
+    ).rejects.toThrow();
+    await expect(
+      connection.db
+        .update(merchantDestinationResolutions)
+        .set({ searchRunId: "a0000000-0000-4000-8000-00000000000a" })
+        .where(eq(merchantDestinationResolutions.id, claimed.resolution.id)),
+    ).rejects.toThrow();
+
+    await connection.db
+      .update(merchantDestinationResolutions)
+      .set({ candidateListingId: otherCandidate.id })
+      .where(eq(merchantDestinationResolutions.id, claimed.resolution.id));
+    await expect(
+      loadMerchantDestinationResolutionMap({
+        db: connection.db,
+        taskId: session.taskId,
+        candidateListingIds: [otherCandidate.id],
+      }),
+    ).rejects.toBeInstanceOf(PersistedDataCorruptionError);
+  });
+
   it("persists accepted organic provenance and fails closed when raw title or URL evidence is mutated", async () => {
     const { listings, run, session } = await startedSession(connection);
     const candidate = listings[0]!;

@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "proofMode": "v0_09_recovery_rc1_one_shot",
+  "attemptId": "04a46e0d-561d-4f7b-979a-60b664160ba6",
+  "claimedAt": "2026-08-30T16:47:03.158Z",
+  "state": "claimed",
+  "authorizationReason": "Independent review authorized one fresh Recovery RC1 full founder proof after the context hardening gate and bounded page-budget correction.",
+  "refusalPolicy": "This marker is intentionally durable. Recovery RC1 allows exactly one full release proof; a second run is refused. Historical V0-09 attempts remain untouched."
+}

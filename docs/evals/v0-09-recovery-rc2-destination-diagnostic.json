@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "diagnostic": "v0_09_recovery_rc2_exact_destination",
+  "generatedAt": "2026-08-30T21:05:53.518Z",
+  "provider": "serper",
+  "listingCount": 3,
+  "resolvedCount": 1,
+  "rejectedCount": 2,
+  "results": [
+    {
+      "candidateListingId": "884ea2d0-c19f-4b1d-8a42-c3e3a02d9a60",
+      "title": "Anker 2.4G Wireless Vertical Ergonomic Optical Mouse",
+      "merchant": "eBay",
+      "durationMs": 1422,
+      "outcome": "resolved",
+      "destinationUrl": "https://www.ebay.com/itm/366383873278?epid=28021691848&itmmeta=01KW2AG84Z3PQJB9XP2XWBTZ4W&hash=item554e2e3cfe:g:HHEAAeSw8iBp9hHA&itmprp=enc%3AAQALAAAA4DKQclQvzFwZQpmMrsO4Lup7PdsmsLP5cq5VIPzQKfOb4b5uZYIMTxcDWKzTCWXh52uy8n6hVCOrJVwZD74RkpztIgDdW4ixmziOUh23YXZ9oJFRzZ6ZXtiutr9k6z%2F39RYV1kkMYXO%2BwtkSV%2FDqVkDxLx9UJl7gY7fJwBGAzFwjkveeIs2kTvkUV3wDRlM%2BX6qxwcouR89WxnOmqukdkF6thDEoazN1P9aRJotUETDrmqMp4kUE3qNUlyYaxAhQQaeXRVv6sdw9hHzsX4ZRCUNm%2FPsFYZkyvtbD9gcNHmUq%7Ctkp%3ABk9SR8qCwcrgZw",
+      "acceptedResultTitle": "Anker 2.4G Wireless Vertical Ergonomic Optical Mouse ...",
+      "observedResultUrl": null,
+      "consideredResultCount": 3
+    },
+    {
+      "candidateListingId": "492fa4e0-c88a-4bef-a396-d255734520e6",
+      "title": "Optical Wireless Mouse Trust Bayo II",
+      "merchant": "Argos",
+      "durationMs": 1397,
+      "outcome": "rejected",
+      "rejectionCode": "no_results",
+      "consideredResultCount": 0
+    },
+    {
+      "candidateListingId": "4ab8dd1f-1c14-4073-b548-33e087a421a8",
+      "title": "TeckNet Ergonomic Mouse Wireless Bluetooth Mouse with Jiggler BT5.0/3.0+USB & Type C Vertical Mouse",
+      "merchant": "Amazon.co.uk - Amazon.co.uk-Seller",
+      "durationMs": 2040,
+      "outcome": "rejected",
+      "rejectionCode": "no_results",
+      "consideredResultCount": 0
+    }
+  ],
+  "releaseAccepted": false,
+  "note": "This bounded diagnostic reuses three exact frozen task-local offers. It does not substitute merchants, mutate a SearchRun, or count as V0-09 release evidence."
+}

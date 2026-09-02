@@ -16,6 +16,15 @@ import {
   CONTEXT_ACTION_INSTRUCTIONS,
   CONTEXT_ACTION_PROMPT_VERSION,
   INTERPRETATION_INSTRUCTIONS,
+  INTERPRETATION_COVERAGE_INSTRUCTIONS,
+  INTERPRETATION_COVERAGE_PROMPT_VERSION,
+  INTERPRETATION_REPAIR_INSTRUCTIONS,
+  INTERPRETATION_REPAIR_PROMPT_VERSION,
+  INTERPRETATION_INVENTORY_INSTRUCTIONS,
+  INTERPRETATION_INVENTORY_MAPPING_INSTRUCTIONS,
+  INTERPRETATION_INVENTORY_PROMPT_VERSION,
+  INTERPRETATION_INVENTORY_MAPPING_PROMPT_VERSION,
+  INTERPRETATION_SEMANTIC_POLICY_SUFFIX,
   INTERPRETATION_PROMPT_VERSION,
 } from "./prompts";
 import {
@@ -26,7 +35,18 @@ import {
   type ContextActionProviderWireV2,
   type InterpretationProviderWireV2,
 } from "./provider-wire";
+import {
+  INTERPRETATION_COVERAGE_SCHEMA_VERSION,
+  interpretationCoverageProviderWireV1Schema,
+  type InterpretationCoverageProviderWireV1,
+} from "./interpretation-coverage";
 import type { ProviderInputEnvelopeV1 } from "./provider-input";
+import {
+  interpretationInventoryProviderWireV1Schema,
+  inventoryAwareInterpretationProviderWireV2Schema,
+  type InterpretationInventoryProviderWireV1,
+  type InventoryAwareInterpretationProviderWireV2,
+} from "./interpretation-inventory";
 
 export const V0_05_OPENAI_DEFAULT_CONFIG = {
   model: "gpt-5.6-terra",
@@ -86,7 +106,7 @@ export function createOpenAIContextAcquisitionModel(options?: {
         client,
         config,
         input,
-        instructions: INTERPRETATION_INSTRUCTIONS,
+        instructions: `${INTERPRETATION_INSTRUCTIONS}\n\n${INTERPRETATION_SEMANTIC_POLICY_SUFFIX}`,
         promptVersion: INTERPRETATION_PROMPT_VERSION,
         providerSchemaVersion: INTERPRETATION_PROVIDER_SCHEMA_VERSION_V2,
         schemaName: "shopping_interpretation_v2",
@@ -102,6 +122,50 @@ export function createOpenAIContextAcquisitionModel(options?: {
         providerSchemaVersion: CONTEXT_ACTION_PROVIDER_SCHEMA_VERSION_V2,
         schemaName: "shopping_context_action_v2",
         schema: contextActionProviderWireV2Schema,
+      }),
+    verifyInterpretationCoverage: (input) =>
+      callStructuredOutput<InterpretationCoverageProviderWireV1>({
+        client,
+        config,
+        input,
+        instructions: INTERPRETATION_COVERAGE_INSTRUCTIONS,
+        promptVersion: INTERPRETATION_COVERAGE_PROMPT_VERSION,
+        providerSchemaVersion: INTERPRETATION_COVERAGE_SCHEMA_VERSION,
+        schemaName: "shopping_interpretation_coverage_v1",
+        schema: interpretationCoverageProviderWireV1Schema,
+      }),
+    repairInterpretation: (input) =>
+      callStructuredOutput<InterpretationProviderWireV2>({
+        client,
+        config,
+        input,
+        instructions: INTERPRETATION_REPAIR_INSTRUCTIONS,
+        promptVersion: INTERPRETATION_REPAIR_PROMPT_VERSION,
+        providerSchemaVersion: INTERPRETATION_PROVIDER_SCHEMA_VERSION_V2,
+        schemaName: "shopping_interpretation_repair_v2",
+        schema: interpretationProviderWireV2Schema,
+      }),
+    inventoryInterpretation: (input) =>
+      callStructuredOutput<InterpretationInventoryProviderWireV1>({
+        client,
+        config,
+        input,
+        instructions: INTERPRETATION_INVENTORY_INSTRUCTIONS,
+        promptVersion: INTERPRETATION_INVENTORY_PROMPT_VERSION,
+        providerSchemaVersion: 1,
+        schemaName: "shopping_interpretation_inventory_v1",
+        schema: interpretationInventoryProviderWireV1Schema,
+      }),
+    interpretWithInventory: (input) =>
+      callStructuredOutput<InventoryAwareInterpretationProviderWireV2>({
+        client,
+        config,
+        input,
+        instructions: INTERPRETATION_INVENTORY_MAPPING_INSTRUCTIONS,
+        promptVersion: INTERPRETATION_INVENTORY_MAPPING_PROMPT_VERSION,
+        providerSchemaVersion: INTERPRETATION_PROVIDER_SCHEMA_VERSION_V2,
+        schemaName: "shopping_interpretation_inventory_mapping_v2",
+        schema: inventoryAwareInterpretationProviderWireV2Schema,
       }),
   };
 }
@@ -265,6 +329,7 @@ export function parseOpenAIResponse<T>(options: {
   response: ResponseLike;
   schema: ZodType<T>;
   fallbackMetadata: ModelCallMetadata;
+  validationErrorCode?: (error: unknown) => string;
 }): ModelCallResult<T> {
   const metadata: ModelCallMetadata = {
     ...options.fallbackMetadata,
@@ -327,10 +392,12 @@ export function parseOpenAIResponse<T>(options: {
       value: options.schema.parse(JSON.parse(item.text)),
       metadata,
     };
-  } catch {
+  } catch (error) {
     return {
       status: "malformed",
-      errorCode: "structured_output_validation_failed",
+      errorCode:
+        options.validationErrorCode?.(error) ??
+        "structured_output_validation_failed",
       metadata,
     };
   }

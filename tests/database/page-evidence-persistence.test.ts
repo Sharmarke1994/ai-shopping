@@ -19,6 +19,7 @@ import {
   startLiveShopping,
   type LiveShoppingDependencies,
 } from "../../src/features/live-shopping/application";
+import { MAX_PAGE_TRANSPORT_BYTES } from "../../src/features/product-understanding/page-budgets";
 import { admitFetchedPageEvidence } from "../../src/features/product-understanding/page-evidence-admission";
 import { extractProductPageDocument } from "../../src/features/product-understanding/page-extraction";
 import {
@@ -448,25 +449,33 @@ describe("bounded fetched-page persistence", () => {
       promptVersion: "product-understanding-v1",
       mode: "first_pass",
     });
-    const extractionAttempt = prepared.attempts.find(
-      ({ stage }) => stage === "observation_extraction",
-    );
-    const assessmentAttempt = prepared.attempts.find(
-      ({ stage }) => stage === "criterion_assessment",
-    );
     const organicAttempt = prepared.attempts.find(
       ({ stage }) => stage === "organic_search",
     );
-    if (
-      extractionAttempt === undefined ||
-      assessmentAttempt === undefined ||
-      organicAttempt === undefined
-    ) {
+    if (organicAttempt === undefined) {
       throw new Error("Expected first-pass candidate attempts");
     }
-    expect(extractionAttempt.targetCriterionIds).toHaveLength(6);
-    expect(assessmentAttempt.targetCriterionIds).toEqual(
-      extractionAttempt.targetCriterionIds,
+    const extractionAttempts = prepared.attempts.filter(
+      ({ stage, candidateListingId }) =>
+        stage === "observation_extraction" &&
+        candidateListingId === organicAttempt.candidateListingId,
+    );
+    const assessmentAttempts = prepared.attempts.filter(
+      ({ stage, candidateListingId }) =>
+        stage === "criterion_assessment" &&
+        candidateListingId === organicAttempt.candidateListingId,
+    );
+    const extractionCriterionIds = extractionAttempts.flatMap(
+      ({ targetCriterionIds }) => targetCriterionIds,
+    );
+    const assessmentCriterionIds = assessmentAttempts.flatMap(
+      ({ targetCriterionIds }) => targetCriterionIds,
+    );
+    expect(extractionAttempts).toHaveLength(3);
+    expect(assessmentAttempts).toHaveLength(3);
+    expect(new Set(extractionCriterionIds).size).toBe(6);
+    expect(new Set(assessmentCriterionIds)).toEqual(
+      new Set(extractionCriterionIds),
     );
     expect(organicAttempt.targetCriterionIds).toHaveLength(5);
     const searchSnapshot = await loadPersistedSearchRun({
@@ -525,7 +534,7 @@ describe("bounded fetched-page persistence", () => {
         .map((attempt) => [attempt.id, attempt] as const),
     );
     expect(organicAttemptsById.size).toBeGreaterThan(0);
-    const omittedCriterionIds = extractionAttempt.targetCriterionIds.filter(
+    const omittedCriterionIds = extractionCriterionIds.filter(
       (criterionId) => !organicAttempt.targetCriterionIds.includes(criterionId),
     );
     expect(omittedCriterionIds).toHaveLength(1);
@@ -550,7 +559,7 @@ describe("bounded fetched-page persistence", () => {
       }
       for (const criterionId of plan.attempt.targetCriterionIds) {
         expect(discoveryAttempt.targetCriterionIds).toContain(criterionId);
-        expect(extractionAttempt.targetCriterionIds).toContain(criterionId);
+        expect(extractionCriterionIds).toContain(criterionId);
       }
     }
   });
@@ -673,6 +682,55 @@ describe("bounded fetched-page persistence", () => {
         researchRunId: seeded.prepared.run.id,
       }),
     ).rejects.toBeInstanceOf(PersistedDataCorruptionError);
+  });
+
+  it("replays historical fetched-page metadata at the former 1.5 MB ceiling", async () => {
+    const seeded = await seedPlannedPage();
+    const page = successfulPage(seeded);
+    const fetch = {
+      ...page.fetch,
+      encodedBytes: 1_500_000,
+      decodedBytes: 1_500_000,
+    };
+    const write = () =>
+      recordFetchedPageSuccess({
+        db: connection.db,
+        taskId: seeded.session.taskId,
+        researchRunId: seeded.prepared.run.id,
+        attemptId: seeded.plan.attempt.id,
+        leaseToken: seeded.leaseToken,
+        fetch,
+        document: page.document,
+        admission: page.admission,
+        startedAt: new Date("2026-08-29T09:00:02.100Z"),
+        finishedAt: new Date("2026-08-29T09:00:03.100Z"),
+      });
+
+    const stored = await write();
+    await expect(write()).resolves.toEqual(stored);
+    await expect(
+      loadFetchedEvidenceDocuments({
+        db: connection.db,
+        taskId: seeded.session.taskId,
+        researchRunId: seeded.prepared.run.id,
+        candidateListingId: seeded.listing.id,
+        attemptIdsInOrder: [seeded.plan.attempt.id],
+      }),
+    ).resolves.toEqual([stored]);
+  });
+
+  it("rejects raw fetched-page metadata above the shared transport ceiling", async () => {
+    const seeded = await seedPlannedPage();
+    const { stored } = await persistSuccessfulPage(seeded);
+
+    await expect(
+      connection.client`
+        UPDATE shopping_private.fetched_evidence_documents
+        SET encoded_bytes = ${MAX_PAGE_TRANSPORT_BYTES + 1}
+        WHERE task_id = ${seeded.session.taskId}
+          AND id = ${stored.id}
+      `,
+    ).rejects.toMatchObject({ code: "23514" });
   });
 
   it("does not project an orphan fetched-page source after its raw document is removed", async () => {

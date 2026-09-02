@@ -9,6 +9,11 @@ import {
   unique,
   uuid,
 } from "drizzle-orm/pg-core";
+import {
+  MAX_PAGE_TRANSPORT_BYTES,
+  MAX_PERSISTED_PAGE_ADMISSION_JSON_BYTES,
+  MAX_PERSISTED_PAGE_DOCUMENT_JSON_BYTES,
+} from "../../../features/product-understanding/page-budgets";
 import { evidenceAcquisitionAttempts } from "./evidence-acquisition-attempts";
 import { evidencePageFetchTargets } from "./evidence-page-fetch-targets";
 import { evidenceSources } from "./evidence-sources";
@@ -131,7 +136,7 @@ export const fetchedEvidenceDocuments = shoppingPrivate.table(
     ),
     check(
       "fetched_evidence_documents_content_shape",
-      sql`${table.contentType} in ('text/html', 'application/xhtml+xml', 'text/plain') and ${table.encodedBytes} between 1 and 1500000 and ${table.decodedBytes} between 1 and 1500000 and ${table.responseHash} ~ '^[a-f0-9]{64}$' and ${table.documentHash} ~ '^[a-f0-9]{64}$' and char_length(btrim(${table.extractionVersion})) between 1 and 120 and jsonb_typeof(${table.document}) = 'object' and octet_length(${table.document}::text) between 2 and 40000 and jsonb_typeof(${table.admission}) = 'object' and octet_length(${table.admission}::text) between 2 and 8000`,
+      sql`${table.contentType} in ('text/html', 'application/xhtml+xml', 'text/plain') and ${table.encodedBytes} between 1 and ${sql.raw(String(MAX_PAGE_TRANSPORT_BYTES))} and ${table.decodedBytes} between 1 and ${sql.raw(String(MAX_PAGE_TRANSPORT_BYTES))} and ${table.responseHash} ~ '^[a-f0-9]{64}$' and ${table.documentHash} ~ '^[a-f0-9]{64}$' and char_length(btrim(${table.extractionVersion})) between 1 and 120 and jsonb_typeof(${table.document}) = 'object' and octet_length(${table.document}::text) between 2 and ${sql.raw(String(MAX_PERSISTED_PAGE_DOCUMENT_JSON_BYTES))} and jsonb_typeof(${table.admission}) = 'object' and octet_length(${table.admission}::text) between 2 and ${sql.raw(String(MAX_PERSISTED_PAGE_ADMISSION_JSON_BYTES))}`,
     ),
   ],
 );

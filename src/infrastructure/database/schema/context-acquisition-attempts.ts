@@ -36,6 +36,7 @@ export const contextAcquisitionAttempts = shoppingPrivate.table(
     outputTokens: integer("output_tokens"),
     interpretationProposal: jsonb("interpretation_proposal").$type<unknown>(),
     contextActionProposal: jsonb("context_action_proposal").$type<unknown>(),
+    coverageDiagnostic: jsonb("coverage_diagnostic").$type<unknown>(),
     errorCode: text("error_code"),
     stateChangeApplicationId: uuid("state_change_application_id"),
     contextActionId: uuid("context_action_id"),
@@ -69,11 +70,11 @@ export const contextAcquisitionAttempts = shoppingPrivate.table(
     }).onDelete("restrict"),
     check(
       "context_acquisition_attempts_stage_allowed",
-      sql`${table.stage} in ('interpretation', 'context_action')`,
+      sql`${table.stage} in ('interpretation', 'interpretation_coverage', 'interpretation_repair', 'interpretation_repair_coverage', 'context_action')`,
     ),
     check(
       "context_acquisition_attempts_status_allowed",
-      sql`${table.status} in ('completed', 'refused', 'incomplete', 'malformed', 'timed_out', 'provider_failed', 'input_too_large', 'invalid_patch', 'stale', 'superseded_by_winner')`,
+      sql`${table.status} in ('completed', 'refused', 'incomplete', 'malformed', 'timed_out', 'provider_failed', 'input_too_large', 'invalid_patch', 'stale', 'superseded_by_winner', 'coverage_completed', 'coverage_needs_repair', 'coverage_failed')`,
     ),
     check(
       "context_acquisition_attempts_numbers_nonnegative",
@@ -89,7 +90,7 @@ export const contextAcquisitionAttempts = shoppingPrivate.table(
     ),
     check(
       "context_acquisition_attempts_stage_proposal",
-      sql`not (${table.interpretationProposal} is not null and ${table.contextActionProposal} is not null) and (${table.stage} = 'interpretation' or ${table.interpretationProposal} is null) and (${table.stage} = 'context_action' or ${table.contextActionProposal} is null)`,
+      sql`not (${table.interpretationProposal} is not null and ${table.contextActionProposal} is not null) and (${table.stage} in ('interpretation', 'interpretation_coverage', 'interpretation_repair', 'interpretation_repair_coverage') or ${table.interpretationProposal} is null) and (${table.stage} = 'context_action' or ${table.contextActionProposal} is null)`,
     ),
     check(
       "context_acquisition_attempts_text_bounds",

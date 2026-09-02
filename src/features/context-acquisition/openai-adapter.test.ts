@@ -8,9 +8,10 @@ import {
 } from "./openai-adapter";
 import {
   contextActionProviderWireV2Schema,
-  interpretationProviderWireV1Schema,
   interpretationProviderWireV2Schema,
+  interpretationProviderWireV1Schema,
 } from "./provider-wire";
+import { interpretationCoverageProviderWireV1Schema } from "./interpretation-coverage";
 
 const metadata: ModelCallMetadata = {
   provider: "openai",
@@ -70,6 +71,48 @@ function createTestModel(
 }
 
 describe("OpenAI context-acquisition adapter", () => {
+  it("uses a strict coverage schema and parses bounded verdicts", async () => {
+    const schema = zodTextFormat(
+      interpretationCoverageProviderWireV1Schema,
+      "shopping_interpretation_coverage_v1",
+    ).schema as Record<string, unknown>;
+    expect(schema.type).toBe("object");
+    expect(schema.additionalProperties).toBe(false);
+    expect(schema.required).toEqual([
+      "providerSchemaVersion",
+      "verdict",
+      "issues",
+    ]);
+
+    const model = createTestModel(async () =>
+      response([
+        {
+          type: "message",
+          id: "m",
+          role: "assistant",
+          status: "completed",
+          content: [
+            {
+              type: "output_text",
+              annotations: [],
+              logprobs: [],
+              text: JSON.stringify({
+                providerSchemaVersion: 1,
+                verdict: "complete",
+                issues: [],
+              }),
+            },
+          ],
+        },
+      ]),
+    );
+    const result = await model.verifyInterpretationCoverage?.({
+      providerInputSchemaVersion: 1,
+      payload: {},
+    });
+    expect(result?.status).toBe("completed");
+  });
+
   it("generates an object-root strict Structured Outputs schema", () => {
     const schema = zodTextFormat(
       interpretationProviderWireV2Schema,

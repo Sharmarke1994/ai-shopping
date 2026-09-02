@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { MAX_PAGE_TRANSPORT_BYTES } from "./page-budgets";
 import {
   buildPinnedRequestOptions,
   fetchBoundedPage,
@@ -305,6 +306,17 @@ describe("bounded page response policy", () => {
     ).rejects.toMatchObject({ code: "response_too_large" });
   });
 
+  it("accepts a measured modern page above the historical 1.5 MB transport budget", async () => {
+    const body = `<html><head><title>Modern product</title></head><body><h1>Modern product</h1><script>${"x".repeat(1_600_000)}</script></body></html>`;
+    const result = await fetchBoundedPage({
+      url: "https://example.com/product",
+      resolver: publicResolver,
+      requester: async () => response({ body }),
+    });
+    expect(result.encodedBytes).toBe(Buffer.byteLength(body));
+    expect(result.text).toBe(body);
+  });
+
   it("enforces one total deadline across resolver and requester work", async () => {
     await expect(
       fetchBoundedPage({
@@ -401,6 +413,26 @@ describe("bounded page response policy", () => {
             }),
           ).rejects.toMatchObject({ code: "response_too_large" });
         }
+      },
+    );
+  });
+
+  it("fails closed while streaming one byte beyond the production transport budget", async () => {
+    await withPinnedHttpServer(
+      (_request, response) => {
+        response.writeHead(200, { "content-type": "text/html" });
+        response.write(Buffer.alloc(MAX_PAGE_TRANSPORT_BYTES, 120));
+        response.end("x");
+      },
+      async ({ url }) => {
+        await expect(
+          requestWithPinnedAddress({
+            url,
+            address: { address: "127.0.0.1", family: 4 },
+            timeoutMs: 2_000,
+            maxBytes: MAX_PAGE_TRANSPORT_BYTES,
+          }),
+        ).rejects.toMatchObject({ code: "response_too_large" });
       },
     );
   });

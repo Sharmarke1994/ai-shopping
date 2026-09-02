@@ -1,0 +1,5 @@
+ALTER TABLE "shopping_private"."context_acquisition_attempts" DROP CONSTRAINT "context_acquisition_attempts_stage_allowed";--> statement-breakpoint
+ALTER TABLE "shopping_private"."context_acquisition_attempts" DROP CONSTRAINT "context_acquisition_attempts_status_allowed";--> statement-breakpoint
+ALTER TABLE "shopping_private"."context_acquisition_attempts" ADD COLUMN "coverage_diagnostic" jsonb;--> statement-breakpoint
+ALTER TABLE "shopping_private"."context_acquisition_attempts" ADD CONSTRAINT "context_acquisition_attempts_stage_allowed" CHECK ("shopping_private"."context_acquisition_attempts"."stage" in ('interpretation', 'interpretation_coverage', 'interpretation_repair', 'interpretation_repair_coverage', 'context_action'));--> statement-breakpoint
+ALTER TABLE "shopping_private"."context_acquisition_attempts" ADD CONSTRAINT "context_acquisition_attempts_status_allowed" CHECK ("shopping_private"."context_acquisition_attempts"."status" in ('completed', 'refused', 'incomplete', 'malformed', 'timed_out', 'provider_failed', 'input_too_large', 'invalid_patch', 'stale', 'superseded_by_winner', 'coverage_completed', 'coverage_needs_repair', 'coverage_failed'));

@@ -40,6 +40,16 @@ describe("exact-offer merchant destination policy", () => {
       resultUrl: "https://ao.com/product/v8absolute-dyson-vacuum-cleaner",
       expected: "https://ao.com/product/v8absolute-dyson-vacuum-cleaner",
     },
+    {
+      candidateTitle: "Logitech Lift Vertical Ergonomic Mouse Graphite",
+      merchant: "Currys PC World UK",
+      resultTitle:
+        "Buy Logitech Lift Vertical Ergonomic Mouse Graphite - Currys",
+      resultUrl:
+        "https://www.currys.co.uk/products/logitech-lift-vertical-mouse.html",
+      expected:
+        "https://www.currys.co.uk/products/logitech-lift-vertical-mouse.html",
+    },
   ])(
     "accepts the exact same $merchant offer without category-specific rules",
     ({ expected, ...candidate }) => {

@@ -31,7 +31,11 @@ import type {
   ProductUnderstandingModel,
   ProductUnderstandingModelResult,
 } from "../../src/features/product-understanding/model-port";
-import { PageFetchError } from "../../src/features/product-understanding/page-fetch";
+import { MAX_PAGE_TRANSPORT_BYTES } from "../../src/features/product-understanding/page-budgets";
+import {
+  fetchBoundedPage,
+  PageFetchError,
+} from "../../src/features/product-understanding/page-fetch";
 import {
   loadEvidenceResearchRun,
   prepareEvidenceResearch,
@@ -53,6 +57,7 @@ import {
 import { loadPersistedSearchRun } from "../../src/features/retrieval-spike/persistence/search-runs";
 import {
   evidenceResearchRuns,
+  fetchedEvidenceDocuments,
   founderLiveSessions,
   searchRuns,
 } from "../../src/infrastructure/database/schema";
@@ -270,6 +275,38 @@ class ControlledPageFetcher implements EvidencePageFetcher {
 
   releaseAll() {
     for (const gate of this.gates) gate.resolve();
+  }
+}
+
+class ModernPageBudgetFetcher implements EvidencePageFetcher {
+  readonly provider = "fixture" as const;
+  readonly calls: Parameters<EvidencePageFetcher["fetch"]>[0][] = [];
+  readonly base = new FakeEvidencePageFetcher();
+  largeCandidateTitle: string | null = null;
+
+  async fetch(input: Parameters<EvidencePageFetcher["fetch"]>[0]) {
+    this.calls.push(input);
+    if (this.largeCandidateTitle !== null) return this.base.fetch(input);
+
+    this.largeCandidateTitle = input.candidateTitle;
+    const productJson = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Product",
+      name: input.candidateTitle,
+      description: "Official warm-weather running product details.",
+    }).replace(/</g, "\\u003c");
+    const html = `<!doctype html><html><head><title>${input.candidateTitle}</title><meta property="og:title" content="${input.candidateTitle}"><script type="application/ld+json">${productJson}</script><script>${"x".repeat(1_600_000)}</script></head><body><main><h1>${input.candidateTitle}</h1><p>Lightweight construction with ventilation for warm-weather running.</p></main></body></html>`;
+
+    return fetchBoundedPage({
+      url: input.url,
+      resolver: async () => [{ address: "93.184.216.34", family: 4 }],
+      requester: async () => ({
+        statusCode: 200,
+        headers: { "content-type": "text/html; charset=utf-8" },
+        body: Buffer.from(html, "utf8"),
+      }),
+      now: () => new Date("2026-08-30T18:00:00.000Z"),
+    });
   }
 }
 
@@ -632,6 +669,68 @@ describe("V0-09 staged evidence research concurrency", () => {
       pageFetcher.releaseAll();
       model.releaseAll();
     }
+  });
+
+  it("carries a modern page above 1.5 MB through fetch, extraction, admission, persistence, reload, and model input", async () => {
+    const seeded = await seedSearch();
+    const prepared = await prepare(seeded, "modern-page-understanding");
+    const evidenceProvider = new ControlledEvidenceProvider(4);
+    evidenceProvider.releaseAll();
+    const pageFetcher = new ModernPageBudgetFetcher();
+    const model = new ControlledUnderstandingModel(4);
+    model.releaseAll();
+
+    const completed = await executeOrResumeEvidenceResearch({
+      dependencies: dependencies({
+        evidenceProvider,
+        pageFetcher,
+        model,
+        modelName: "modern-page-understanding",
+      }),
+      taskId: seeded.session.taskId,
+      searchRunId: seeded.run.portfolio.run.id,
+    });
+
+    const largeCandidateTitle = pageFetcher.largeCandidateTitle;
+    if (largeCandidateTitle === null) {
+      throw new Error("Expected a modern fetched page");
+    }
+    const largeCandidate = seeded.run.listings.find(
+      ({ title }) => title === largeCandidateTitle,
+    );
+    if (largeCandidate === undefined) {
+      throw new Error("Expected the modern-page candidate");
+    }
+    const [stored] = await connection.db
+      .select()
+      .from(fetchedEvidenceDocuments)
+      .where(
+        eq(fetchedEvidenceDocuments.candidateListingId, largeCandidate.id),
+      );
+    expect(stored).toBeDefined();
+    expect(stored?.encodedBytes).toBeGreaterThan(1_500_000);
+    expect(stored?.encodedBytes).toBeLessThanOrEqual(MAX_PAGE_TRANSPORT_BYTES);
+    expect(stored?.decodedBytes).toBe(stored?.encodedBytes);
+    expect(JSON.stringify(stored?.document)).not.toContain("x".repeat(1_000));
+
+    const reloadedSource = completed.sources.find(
+      ({ candidateListingId, sourceKind }) =>
+        candidateListingId === largeCandidate.id &&
+        sourceKind === "fetched_page",
+    );
+    expect(reloadedSource).toBeDefined();
+    const modelInput = model.calls.find(
+      ({ input }) => input.candidate.title === largeCandidateTitle,
+    )?.input;
+    expect(modelInput?.sources).toContainEqual(
+      expect.objectContaining({
+        kind: "fetched_page",
+        url: reloadedSource?.sourceUrl,
+        excerpt: reloadedSource?.excerpt,
+      }),
+    );
+    expect(completed.run.id).toBe(prepared.run.id);
+    expect(completed.run.status).toBe("succeeded");
   });
 
   it("keeps one page failure terminal and lets that candidate model proceed from remaining attributable sources", async () => {

@@ -10,10 +10,11 @@ and comparison are meaningfully better than beginning with Google.
 - Repository: `Sharmarke1994/ai-shopping`.
 - Founder-MVP execution brief: `docs/plans/founder-usable-mvp.md`.
 - Active isolated worktree:
-  `/Users/alchemist32/Documents/AI Shopping/ai-shopping-v0-09-source-depth`.
-- Active branch: `codex/v0-09-source-depth-purchase-path`, starting exactly at
-  the independently accepted V0-08 head
-  `cfd809740ae64be307798eb7870feaf56227d9dc`.
+  `/Users/alchemist32/Documents/AI Shopping/ai-shopping-v0-09-recovery`.
+- Active branch: `codex/v0-09-recovery-rc`, descending from preserved Recovery
+  RC1 failure head `f02560132639e2095356e1ce54afbc87fbded068`, accepted context head
+  `a17d37d80a710bb05b8c79d996596f2492c2424c` and frozen V0-09 head
+  `934067e7d3796a4a68ba3b00387a16632a563f15`.
 - Independently reviewed V0-08 pre-correction head:
   `c28c891885462eb2990f0b098f3817e744afdec0` in draft stacked PR #12.
 - The final bounded six-issue correction and hardened one-shot proof harness
@@ -577,27 +578,154 @@ This bounded blocker-remediation branch is isolated from V0-09 at frozen head
   persistence and browser-smoke in run `33278612605`. Draft stacked PR #13
   remains mergeable and unmerged. No production context-acquisition code,
   prompt or schema changed in the proof attempt.
+- Context hardening Phase A was accepted separately on
+  `a17d37d80a710bb05b8c79d996596f2492c2424c` after one final Terra six-case
+  gate: 6/6 completed, with zero provider failures, structured-output
+  failures, invalid patches or semantic violations. PR #14 remains draft and
+  unmerged.
+- Recovery RC1 is isolated in
+  `/Users/alchemist32/Documents/AI Shopping/ai-shopping-v0-09-recovery` on
+  `codex/v0-09-recovery-rc`. The bounded modern-page correction committed as
+  `e742fe0` uses a 2.5 MB transport cap and a separate 36 KB retained-document
+  cap; 66/66 page fetch/extraction tests, full deterministic checks and 8/8
+  fixture E2E tests pass with the migrated test database.
+- The single Recovery RC1 Terra + Serper proof was claimed once as attempt
+  `04a46e0d-561d-4f7b-979a-60b664160ba6` on 2026-08-30 and failed in the
+  ergonomic-mouse first case before any assessment or purchase path. The
+  earliest responsible layer is the persisted fetched-page metadata schema,
+  which still caps `encodedBytes` and `decodedBytes` at the historical
+  1,500,000 bytes even though the bounded transport path now admits measured
+  modern pages up to 2,500,000 bytes. The exact sanitized failure and durable
+  one-shot marker are preserved as
+  `docs/evals/v0-09-recovery-rc1-founder-proof-failure.{json,md}` and
+  `docs/evals/v0-09-recovery-rc1-founder-proof-attempt.json`. No patch or
+  second RC1 proof is authorized from this checkpoint.
+- Recovery RC2 is the frozen diagnostic checkpoint pending independent review.
+  It replaces the stale 1.5 MB
+  persisted fetched-page metadata ceiling with one shared 2.5 MB transient
+  transport/persistence contract while retaining a separate 36 KB extracted
+  document bound. Additive migration `0017_shallow_jetstream.sql` changes only
+  the fetched-document content CHECK.
+- The RC2 page soak successfully exercised a 2,329,807-byte Tom's Guide page
+  through production fetch, extraction, exact admission, PostgreSQL
+  persistence, replay and bounded model input; the retained document was
+  12,815 bytes. Two additional historical pages also crossed 1.5 MB: the
+  Anker page was admitted as manufacturer evidence and the Amazon page failed
+  closed as a wrong model/variant. The disposable database was destroyed and
+  raw HTML was not retained.
+- Historical broad-call failures plus one non-repeatable fixture-only Terra
+  diagnostic evidenced an eight-criterion
+  `assessment_observation_ref_criterion_mismatch`. RC2 now partitions only
+  first-pass product understanding into deterministic one- or two-criterion
+  calls with hashed paired receipts, strict bindings, atomic batch
+  persistence, honest partial failure and unfinished-only resume. Deepening
+  and reassessment semantics remain unchanged. Historical reads revalidate the
+  exact partition against the authoritative brief at the run revision.
+- Sanitized product-understanding failure taxonomy is diagnostic-only and
+  contains no provider payload, source text or raw error. The founder proof
+  requires failed model receipt pairs and taxonomy diagnostics to match
+  exactly. The explicit schema-maximum cost ceiling is 25 calls per candidate,
+  100 across four candidates; no criteria are silently truncated.
+- The single bounded destination diagnostic resolved one same-merchant offer
+  and rejected two no-result offers without cross-retailer substitution or DB
+  mutation. The global eBay `.com` destination is recorded as an honest
+  UK-market limitation for release inspection.
+- RC2 deterministic evidence includes 376/376 unit/component tests,
+  157/157 functional PostgreSQL tests, the real page soak and the destination
+  diagnostic. The sole full-DB red result is the intentional local environment
+  check: Homebrew PostgreSQL 17.11 does not impersonate the repository/CI pin
+  at 17.6. `pnpm check`, production build, 8/8 browser tests, migration replay,
+  no-drift generation, production dependency audit and eight production-render
+  screenshot/overflow checks are green. Pre-proof checkpoint
+  `326b1231031dd292347fa6c3d5af176a4bd85570` is pushed on draft PR #15,
+  stacked on PR #14. Exact-head GitHub run `33337409664` passed quality,
+  pinned-PostgreSQL persistence and browser-smoke; browser-smoke used its
+  configured retry once and then passed 7/7.
+- The only Recovery RC2 founder proof was claimed as attempt
+  `9d1c6eea-6e66-47f6-95c5-86732b3829fd` at
+  `2026-08-30T21:50:49.730Z` and failed closed in the ergonomic-mouse case.
+  It completed two interpretation, two action-selection, six Shopping, eleven
+  organic evidence-search, two page-fetch and thirty-one product-understanding
+  logical provider operations without a provider failure. Two exact pages
+  were admitted and persisted: a 2,329,807-byte independent review with a
+  12,815-byte retained document and a 1,943,252-byte manufacturer page with a
+  6,154-byte retained document. The active case contained two successful
+  SearchRuns, five successful research runs, 75 succeeded evidence attempts,
+  62 observations and 57 assessments. Destination work had not begun.
+- The thrown message says the initial brief invented `Ergonomic design`, but
+  the earliest actual failing layer is the release harness's deterministic
+  founder-intent classifier. It builds meaning from the concept label plus
+  definition, so `Ergonomic design` / `...ergonomic shape` matches both the
+  allowed `ergonomic_subject` rule and the allowed `sculpted_shape` rule. The
+  assertion requires exactly one match and misleadingly labels multiple
+  matches as invention. This is not evidence of a provider, persistence or
+  product-understanding failure. A separate, unreached semantic question
+  remains for independent review: the persisted ergonomic criterion is
+  `hard`, while the current prompt/oracle policy expects a preference.
+- The sanitized failure, Markdown summary and durable marker are preserved as
+  `docs/evals/v0-09-recovery-rc2-founder-proof-failure.{json,md}` and
+  `docs/evals/v0-09-recovery-rc2-founder-proof-attempt.json`. Release
+  acceptance is false, completed founder categories are zero, the disposable
+  database was destroyed with zero cleanup errors, and no RC2 success artifact
+  exists. The RC2 marker is permanently consumed; there will be no RC2 retry.
+
+## Recovery RC3 in progress
+
+- RC3 is a separately namespaced, one-shot recovery candidate based on the
+  accepted RC2 evidence head `e4ad5b340a21ace15c6bb58dba6d981cc1055d6d`.
+  RC2's marker and failure artifacts remain immutable historical evidence.
+- The bounded correction separates lexical overlap from semantic founder-intent
+  authorization and narrows interpretation policy so ordinary ergonomic design
+  is a preference while explicit “must/only/requires” remains hard.
+- One non-release Terra context precheck completed 4/4 protected cases with zero
+  violations (`gpt-5.6-terra`): cap, headphones, ordinary ergonomic mouse and
+  explicit-hard ergonomic mouse. Artifacts are preserved under the
+  `v0-09-recovery-rc3-context-precheck` namespace.
+- The full RC3 proof has not run. It has its own durable marker, artifacts,
+  disposable database pattern and acknowledgement variable; it may be run
+  exactly once after the clean committed checkpoint and deterministic gates are
+  green. Acceptance remains the strict four-category Terra + Serper predicate.
+
+- The single RC3 proof was then claimed as attempt
+  `8619d766-d79e-44a6-8a67-39a6c4ac1749` and failed closed at the initial
+  `ergonomic-mouse` oracle check. The exact sanitized failure artifacts and
+  marker are preserved under `docs/evals/v0-09-recovery-rc3-founder-proof-*`;
+  the disposable database was destroyed with zero cleanup errors. All completed
+  Terra provider operations succeeded. The earliest responsible layer is the
+  deterministic oracle's brand-facet cardinality check: it counted the single
+  qualitative “good brands only; exclude bad brands” item as an additional
+  exclusion alongside the explicit Amazon Basics exclusion, even though the
+  persisted brief preserved both truths. No RC3 retry was made.
+
+## Recovery RC4 in progress
+
+- RC4 is the next isolated one-shot candidate from RC3 evidence head
+  `3b67784199769cf2efdf711e5972b784a8d10645`; RC1, RC2 and RC3 markers and
+  artifacts remain immutable.
+- The bounded evaluator correction distinguishes hard qualitative brand quality
+  from exact categorical Amazon Basics exclusion. Offline fixtures cover the
+  valid split and simpler forms plus missing, softened, wrong-brand and duplicate
+  variants, while preserving strict rejection of unsupported semantics.
+- No new context prompt change or Terra precheck is planned. RC4's full proof
+  has not run; it requires a clean committed head, exact-head CI and its own
+  acknowledgement/one-shot marker.
 
 ## Exact resume instructions
 
-1. Work only in
-   `/Users/alchemist32/Documents/AI Shopping/ai-shopping-v0-09-source-depth` on
-   `codex/v0-09-source-depth-purchase-path`; confirm it descends exactly from
-   accepted V0-08 head `cfd809740ae64be307798eb7870feaf56227d9dc`
-   and inspect the tree first.
-2. Read this file and `docs/plans/v0-09.md`. Read only the V0-08 seams required
-   by the current implementation layer; do not reopen accepted V0-03/V0-04 or
-   earlier retrieval/evidence architecture.
-3. Preserve V0-05 PR #9, V0-06 PR #10 and V0-07 PR #11 exactly. Do not merge
-   them and do not weaken V0-05's Terra rule.
-4. Do not rerun V0-08 evidence. Build V0-09 in the ordered layers recorded in
-   its plan. Never weaken unknown, exact offer identity, evidence provenance,
-   money, task authority, revisions, leases or focused target scope.
-5. Do not fetch arbitrary user URLs, crawl links, create ProductIdentity,
-   substitute another merchant, add auth/deployment/checkout/affiliate work or
-   begin V0-10.
-6. Attempts 1, 2 and 3 are immutable diagnostics. Attempt 3 is the final
-   independent-review-authorized run and did not satisfy release acceptance.
-   Preserve the complete three-attempt ledger, keep PR #13 draft/unmerged,
-   leave the worktree clean and stop for independent review. Do not begin
-   V0-10 or attempt another live proof from this checkpoint.
+1. Resume only in
+   `/Users/alchemist32/Documents/AI Shopping/ai-shopping-v0-09-recovery` on
+   `codex/v0-09-recovery-rc`. Preserve RC1 and V0-09 Attempts 1–3 exactly; never
+   rerun any of them or rewrite their markers/artifacts.
+2. Do not run `proof:v0-09:recovery-rc2:live` again. Its one-shot marker is
+   consumed. The RC3 deterministic oracle and semantic prompt correction are
+   bounded and separately tested; do not broaden them or weaken the release
+   predicate.
+3. Preserve the exact RC2 failure artifacts and marker, the RC2 evidence head
+   `e4ad5b340a21ace15c6bb58dba6d981cc1055d6d`, and PR #15. The RC3 full proof
+   requires its own clean committed head, acknowledgement and one-shot marker;
+   it must never reuse or rewrite RC2 evidence.
+4. Keep the stacked PR draft/unmerged and stop for independent review after the
+   single RC3 proof; do not begin V0-10.
+5. Preserve V0-05 PR #9, V0-06 PR #10, V0-07 PR #11, PR #13, PR #14 and PR #15 as
+   draft/unmerged historical checkpoints. Do not weaken V0-05's Terra rule,
+   rerun V0-08 evidence, or begin V0-10.

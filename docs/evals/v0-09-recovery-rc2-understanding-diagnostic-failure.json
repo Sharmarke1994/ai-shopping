@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "diagnostic": "v0_09_recovery_rc2_broad_product_understanding",
+  "generatedAt": "2026-08-30T21:03:44.056Z",
+  "model": "gpt-5.6-terra",
+  "fixtureOnly": true,
+  "criterionCount": 8,
+  "sourceCount": 4,
+  "status": "malformed",
+  "errorCode": "product_understanding_assessment_observation_ref_criterion_mismatch",
+  "failureTaxonomy": {
+    "failureCode": "invalid_model_output",
+    "category": "provider_output_contract",
+    "rule": "assessment_observation_ref_criterion_mismatch",
+    "offendingCriterionOrdinal": null,
+    "offendingSourceOrdinal": null
+  },
+  "providerRequestId": "resp_0df26902e448f63b016a949aa545d087d2a7d937d5def52685",
+  "durationMs": 12024,
+  "observationCount": null,
+  "assessmentCount": null,
+  "assessedOrdinals": [],
+  "applicationScopeValid": false,
+  "releaseAccepted": false,
+  "note": "This single provider-contract diagnostic uses synthetic fixture evidence and does not become authoritative shopping truth or V0-09 release evidence."
+}

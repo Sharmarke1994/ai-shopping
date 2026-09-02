@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import {
   afterAll,
   beforeAll,
@@ -30,6 +30,7 @@ import {
   FakeEvidenceSearchProvider,
   FakeProductUnderstandingModel,
 } from "../../src/features/product-understanding/fakes";
+import type { ProductUnderstandingFailureDiagnostic } from "../../src/features/product-understanding/failure-taxonomy";
 import type { ProductUnderstandingCallPolicy } from "../../src/features/product-understanding/model-port";
 import {
   claimEvidenceResearch,
@@ -46,6 +47,11 @@ import {
 import { evidenceSearchResponseSchema } from "../../src/features/product-understanding/evidence-search";
 import { buildDecisionSupport } from "../../src/features/product-understanding/decision-support";
 import { executeOrResumeEvidenceResearch } from "../../src/features/product-understanding/research-orchestrator";
+import {
+  MAX_FIRST_PASS_MODEL_CALLS_PER_CANDIDATE,
+  pairFirstPassUnderstandingAttempts,
+  planFirstPassUnderstandingBatches,
+} from "../../src/features/product-understanding/understanding-batches";
 import { FakeShoppingProvider } from "../../src/features/retrieval-spike/fake-shopping-provider";
 import { loadPersistedSearchRun } from "../../src/features/retrieval-spike/persistence/search-runs";
 import { recordTaskInput } from "../../src/features/shopping-state/persistence/inputs-and-messages";
@@ -171,6 +177,56 @@ function fourCriteriaContextModel(): ContextAcquisitionModel {
               },
             },
           ]),
+          ambiguities: [],
+        },
+        metadata: acquisitionMetadata,
+      }),
+    ),
+    selectAction: vi.fn(() =>
+      Promise.resolve({
+        status: "completed" as const,
+        value: search,
+        metadata: acquisitionMetadata,
+      }),
+    ),
+  };
+}
+
+function manyCriteriaContextModel(count: number): ContextAcquisitionModel {
+  const operations = Array.from({ length: count }, (_, index) => {
+    const localRef = `criterion_${index + 1}`;
+    return [
+      {
+        op: "create_concept" as const,
+        localRef,
+        label: `Criterion ${index + 1}`,
+        definition: `Explicit shopping criterion ${index + 1}`,
+        valueFamily: "qualitative" as const,
+        canonicalUnit: null,
+      },
+      {
+        op: "add_criterion" as const,
+        concept: { kind: "created" as const, localRef },
+        target: {
+          strength: "preference" as const,
+          targetSemantics: "qualitative" as const,
+          semanticValue: {
+            schemaVersion: 1 as const,
+            kind: "qualitative_text" as const,
+            text: `Preference ${index + 1}`,
+          },
+        },
+      },
+    ];
+  }).flat();
+  return {
+    interpret: vi.fn(() =>
+      Promise.resolve({
+        status: "completed" as const,
+        value: {
+          providerSchemaVersion: 1 as const,
+          outcome: "change" as const,
+          operations,
           ambiguities: [],
         },
         metadata: acquisitionMetadata,
@@ -404,7 +460,7 @@ describe("evidence-backed product understanding persistence", () => {
     expect(model.calls).toHaveLength(modelCallCount);
   });
 
-  it("keeps first-pass and reassessment model calls broad while preserving a title trade-off", async () => {
+  it("keeps batched first-pass calls exact and reassessment broad while preserving a title trade-off", async () => {
     const { session, run } = await seedSearch(appearanceContextModel());
     await connection.db
       .update(candidateListings)
@@ -429,8 +485,11 @@ describe("evidence-backed product understanding persistence", () => {
     expect(firstPassModel.policies.length).toBeGreaterThan(0);
     expect(
       firstPassModel.policies.every(
-        ({ requireCriterionBinding }) => !requireCriterionBinding,
+        ({ requireCriterionBinding }) => requireCriterionBinding,
       ),
+    ).toBe(true);
+    expect(
+      firstPassModel.calls.every(({ criteria }) => criteria.length <= 2),
     ).toBe(true);
     const titleAssessment = completed.assessments.find(
       ({ relation }) => relation === "direct_title_preference_mismatch",
@@ -517,7 +576,7 @@ describe("evidence-backed product understanding persistence", () => {
     });
   });
 
-  it("prepares research for an authoritative brief with thirteen criteria", async () => {
+  it("reserves complete disjoint first-pass batches for thirteen authoritative criteria", async () => {
     const operations = Array.from({ length: 13 }, (_, index) => {
       const localRef = `criterion_${index + 1}`;
       return [
@@ -582,9 +641,697 @@ describe("evidence-backed product understanding persistence", () => {
     expect(modelAttempts.length).toBeGreaterThan(0);
     expect(
       modelAttempts.every(
-        ({ targetCriterionIds }) => targetCriterionIds.length === 13,
+        ({ targetCriterionIds }) =>
+          targetCriterionIds.length >= 1 && targetCriterionIds.length <= 2,
       ),
     ).toBe(true);
+    const candidateIds = [
+      ...new Set(
+        modelAttempts.map(({ candidateListingId }) => candidateListingId),
+      ),
+    ];
+    for (const candidateListingId of candidateIds) {
+      const candidateAttempts = modelAttempts.filter(
+        (attempt) => attempt.candidateListingId === candidateListingId,
+      );
+      const extraction = candidateAttempts.filter(
+        ({ stage }) => stage === "observation_extraction",
+      );
+      const assessment = candidateAttempts.filter(
+        ({ stage }) => stage === "criterion_assessment",
+      );
+      expect(extraction).toHaveLength(7);
+      expect(assessment).toHaveLength(7);
+      const extractionCriteria = extraction.flatMap(
+        ({ targetCriterionIds }) => targetCriterionIds,
+      );
+      expect(new Set(extractionCriteria).size).toBe(13);
+      expect(
+        new Set(
+          assessment.flatMap(({ targetCriterionIds }) => targetCriterionIds),
+        ),
+      ).toEqual(new Set(extractionCriteria));
+    }
+  });
+
+  it("keeps successful first-pass batches while one malformed batch yields honest uncertainty and an idempotent partial run", async () => {
+    const { session, run } = await seedSearch(manyCriteriaContextModel(8));
+    const baseModel = new FakeProductUnderstandingModel();
+    const calls: Array<{
+      input: Parameters<FakeProductUnderstandingModel["understand"]>[0];
+      policy: ProductUnderstandingCallPolicy;
+    }> = [];
+    let failNextBatch = true;
+    const model = {
+      understand: vi.fn(
+        async (
+          input: Parameters<FakeProductUnderstandingModel["understand"]>[0],
+          policy: ProductUnderstandingCallPolicy,
+        ) => {
+          calls.push({ input, policy });
+          if (failNextBatch) {
+            failNextBatch = false;
+            return {
+              status: "malformed" as const,
+              errorCode: "fixture_batch_contract_failure",
+              metadata: understandingMetadata,
+            };
+          }
+          return baseModel.understand(input);
+        },
+      ),
+    };
+    const pageFetcher = new FakeEvidencePageFetcher();
+    const dependencies = {
+      db: connection.db,
+      evidenceProvider: new FakeEvidenceSearchProvider(),
+      pageFetcher,
+      model,
+      modelIdentity: {
+        provider: "fixture" as const,
+        model: "fixture-product-understanding",
+        promptVersion: "product-understanding-v1",
+      },
+    };
+
+    const completed = await executeOrResumeEvidenceResearch({
+      dependencies,
+      taskId: session.taskId,
+      searchRunId: run.id,
+    });
+
+    expect(completed.run.status).toBe("partial");
+    expect(pageFetcher.calls.length).toBeGreaterThan(0);
+    expect(
+      completed.attempts.filter(({ stage }) => stage === "page_fetch").length,
+    ).toBe(pageFetcher.calls.length);
+    expect(calls).toHaveLength(completed.run.selectedCandidateCount * 4);
+    expect(
+      calls.every(
+        ({ input, policy }) =>
+          policy.requireCriterionBinding && input.criteria.length <= 2,
+      ),
+    ).toBe(true);
+    const callsByCandidate = new Map<string, typeof calls>();
+    for (const call of calls) {
+      const candidateCalls =
+        callsByCandidate.get(call.input.candidate.title) ?? [];
+      candidateCalls.push(call);
+      callsByCandidate.set(call.input.candidate.title, candidateCalls);
+      expect(call.input.criteria.map(({ ordinal }) => ordinal)).toEqual([0, 1]);
+    }
+    for (const candidateCalls of callsByCandidate.values()) {
+      expect(candidateCalls.map(({ input }) => input.criteria.length)).toEqual([
+        2, 2, 2, 2,
+      ]);
+    }
+    const failedModelAttempts = completed.attempts.filter(
+      ({ stage, status }) =>
+        (stage === "observation_extraction" ||
+          stage === "criterion_assessment") &&
+        status === "failed",
+    );
+    expect(failedModelAttempts).toHaveLength(2);
+    expect(
+      failedModelAttempts.every(
+        ({ failureCode }) => failureCode === "invalid_model_output",
+      ),
+    ).toBe(true);
+    const failedCandidateListingId = failedModelAttempts[0]!.candidateListingId;
+    const failedCriterionIds = new Set(
+      failedModelAttempts[0]!.targetCriterionIds,
+    );
+    expect(failedCriterionIds.size).toBe(2);
+    const failedAssessments = completed.assessments.filter(
+      ({ candidateListingId, criterionId }) =>
+        candidateListingId === failedCandidateListingId &&
+        failedCriterionIds.has(criterionId),
+    );
+    expect(failedAssessments).toEqual([
+      expect.objectContaining({
+        generation: 1,
+        status: "uncertain",
+        observationIds: [],
+      }),
+      expect.objectContaining({
+        generation: 1,
+        status: "uncertain",
+        observationIds: [],
+      }),
+    ]);
+    expect(completed.assessments).toHaveLength(
+      completed.run.selectedCandidateCount * 8,
+    );
+    const generationsBeforeRetry = completed.assessments.map(
+      ({ id, generation }) => [id, generation] as const,
+    );
+    const callCountBeforeRetry = calls.length;
+
+    const exactRetry = await executeOrResumeEvidenceResearch({
+      dependencies,
+      taskId: session.taskId,
+      searchRunId: run.id,
+    });
+    expect(exactRetry.run.status).toBe("partial");
+    expect(calls).toHaveLength(callCountBeforeRetry);
+    expect(
+      exactRetry.assessments.map(
+        ({ id, generation }) => [id, generation] as const,
+      ),
+    ).toEqual(generationsBeforeRetry);
+  });
+
+  it("uses exact local ordinals for seven criteria and accepts zero-observation uncertainty", async () => {
+    const { session, run } = await seedSearch(manyCriteriaContextModel(7));
+    const model = assessmentOnlyModel("uncertain");
+    const completed = await executeOrResumeEvidenceResearch({
+      dependencies: {
+        db: connection.db,
+        evidenceProvider: new FakeEvidenceSearchProvider(),
+        model,
+        modelIdentity: {
+          provider: "fixture",
+          model: "fixture-product-understanding",
+          promptVersion: "product-understanding-v1",
+        },
+      },
+      taskId: session.taskId,
+      searchRunId: run.id,
+    });
+    expect(completed.run.status).toBe("succeeded");
+    expect(model.calls).toHaveLength(completed.run.selectedCandidateCount * 4);
+    const callsByCandidate = new Map<string, typeof model.calls>();
+    for (const call of model.calls) {
+      const calls = callsByCandidate.get(call.candidate.title) ?? [];
+      calls.push(call);
+      callsByCandidate.set(call.candidate.title, calls);
+      expect(call.criteria.map(({ ordinal }) => ordinal)).toEqual(
+        call.criteria.map((_, ordinal) => ordinal),
+      );
+    }
+    for (const calls of callsByCandidate.values()) {
+      expect(calls.map(({ criteria }) => criteria.length)).toEqual([
+        2, 2, 2, 1,
+      ]);
+    }
+    expect(completed.observations).toEqual(
+      expect.not.arrayContaining([
+        expect.objectContaining({ derivation: "model_text" }),
+      ]),
+    );
+    expect(completed.assessments).toHaveLength(
+      completed.run.selectedCandidateCount * 7,
+    );
+    expect(
+      completed.assessments.every(
+        ({ status, observationIds }) =>
+          status === "uncertain" && observationIds.length === 0,
+      ),
+    ).toBe(true);
+  });
+
+  it("keeps an eight-criterion reassessment as one broad unbound call with normal generation supersession", async () => {
+    const { session, run } = await seedSearch(manyCriteriaContextModel(8));
+    const first = await executeOrResumeEvidenceResearch({
+      dependencies: {
+        db: connection.db,
+        evidenceProvider: new FakeEvidenceSearchProvider(),
+        model: assessmentOnlyModel("uncertain"),
+        modelIdentity: {
+          provider: "fixture",
+          model: "fixture-product-understanding",
+          promptVersion: "product-understanding-v1",
+        },
+      },
+      taskId: session.taskId,
+      searchRunId: run.id,
+    });
+    const candidateListingId = first.assessments[0]?.candidateListingId;
+    if (candidateListingId === undefined) {
+      throw new Error("Expected a first-pass candidate");
+    }
+    await saveCandidateListing({
+      db: connection.db,
+      taskId: session.taskId,
+      candidateListingId,
+    });
+    const model = assessmentOnlyModel("uncertain");
+    const reassessed = await executeOrResumeEvidenceResearch({
+      dependencies: {
+        db: connection.db,
+        evidenceProvider: new FakeEvidenceSearchProvider(),
+        model,
+        modelIdentity: {
+          provider: "fixture",
+          model: "fixture-product-understanding",
+          promptVersion: "product-understanding-v1",
+        },
+      },
+      taskId: session.taskId,
+      searchRunId: run.id,
+      mode: "reassessment",
+      savedCandidateListingIds: [candidateListingId],
+    });
+    expect(model.calls).toHaveLength(1);
+    expect(model.policies).toEqual([{ requireCriterionBinding: false }]);
+    expect(model.calls[0]?.criteria.map(({ ordinal }) => ordinal)).toEqual([
+      0, 1, 2, 3, 4, 5, 6, 7,
+    ]);
+    expect(reassessed.assessments).toHaveLength(8);
+    expect(
+      reassessed.assessments.every(({ generation }) => generation === 2),
+    ).toBe(true);
+  });
+
+  it.each(["missing_pair", "substitute_partition", "overlap"] as const)(
+    "rejects raw %s batch corruption before any provider call",
+    async (corruption) => {
+      const { session, run } = await seedSearch(manyCriteriaContextModel(8));
+      const prepared = await prepareEvidenceResearch({
+        db: connection.db,
+        taskId: session.taskId,
+        searchRunId: run.id,
+        evidenceProvider: "fixture",
+        modelProvider: "fixture",
+        model: "fixture-product-understanding",
+        promptVersion: "product-understanding-v1",
+      });
+      const candidateListingId = prepared.attempts.find(
+        ({ stage }) => stage === "observation_extraction",
+      )?.candidateListingId;
+      if (candidateListingId === undefined) {
+        throw new Error("Expected a first-pass candidate reservation");
+      }
+      const pairs = pairFirstPassUnderstandingAttempts(
+        prepared.attempts.filter(
+          (attempt) => attempt.candidateListingId === candidateListingId,
+        ),
+      );
+      const replacePair = async (options: {
+        pair: (typeof pairs)[number];
+        criterionIds: readonly string[];
+        extractionPlanKey: string;
+        assessmentPlanKey: string;
+      }) => {
+        const attemptIds = [
+          options.pair.extraction.id,
+          options.pair.assessment.id,
+        ];
+        await connection.db
+          .delete(evidenceAttemptTargetCriteria)
+          .where(inArray(evidenceAttemptTargetCriteria.attemptId, attemptIds));
+        await connection.db
+          .update(evidenceAcquisitionAttempts)
+          .set({ planKey: options.extractionPlanKey })
+          .where(eq(evidenceAcquisitionAttempts.id, attemptIds[0]!));
+        await connection.db
+          .update(evidenceAcquisitionAttempts)
+          .set({ planKey: options.assessmentPlanKey })
+          .where(eq(evidenceAcquisitionAttempts.id, attemptIds[1]!));
+        await connection.db.insert(evidenceAttemptTargetCriteria).values(
+          attemptIds.flatMap((attemptId) =>
+            options.criterionIds.map((criterionId) => ({
+              taskId: options.pair.extraction.taskId,
+              researchRunId: options.pair.extraction.researchRunId,
+              candidateRunId: options.pair.extraction.candidateRunId,
+              candidateListingId,
+              attemptId,
+              criterionId,
+            })),
+          ),
+        );
+      };
+
+      if (corruption === "missing_pair") {
+        const removed = pairs.at(-1)!;
+        const attemptIds = [removed.extraction.id, removed.assessment.id];
+        await connection.db
+          .delete(evidenceAttemptTargetCriteria)
+          .where(inArray(evidenceAttemptTargetCriteria.attemptId, attemptIds));
+        await connection.db
+          .delete(evidenceAcquisitionAttempts)
+          .where(inArray(evidenceAcquisitionAttempts.id, attemptIds));
+      } else if (corruption === "substitute_partition") {
+        const authoritativeIds = pairs.flatMap(
+          ({ extraction }) => extraction.targetCriterionIds,
+        );
+        const substitutedIds = [...authoritativeIds];
+        [substitutedIds[1], substitutedIds[2]] = [
+          substitutedIds[2]!,
+          substitutedIds[1]!,
+        ];
+        const substitutedPlans =
+          planFirstPassUnderstandingBatches(substitutedIds);
+        for (const ordinal of [0, 1]) {
+          await replacePair({
+            pair: pairs[ordinal]!,
+            criterionIds: substitutedPlans[ordinal]!.criterionIds,
+            extractionPlanKey: substitutedPlans[ordinal]!.extractionPlanKey,
+            assessmentPlanKey: substitutedPlans[ordinal]!.assessmentPlanKey,
+          });
+        }
+      } else {
+        const first = pairs[0]!;
+        const second = pairs[1]!;
+        const firstHash = first.extraction.planKey.split(":").at(-1)!;
+        const withFirstHash = (planKey: string) =>
+          `${planKey.slice(0, planKey.lastIndexOf(":") + 1)}${firstHash}`;
+        await replacePair({
+          pair: second,
+          criterionIds: first.extraction.targetCriterionIds,
+          extractionPlanKey: withFirstHash(second.extraction.planKey),
+          assessmentPlanKey: withFirstHash(second.assessment.planKey),
+        });
+      }
+
+      const evidenceProvider = new FakeEvidenceSearchProvider();
+      const model = assessmentOnlyModel();
+      await expect(
+        executeOrResumeEvidenceResearch({
+          dependencies: {
+            db: connection.db,
+            evidenceProvider,
+            model,
+            modelIdentity: {
+              provider: "fixture",
+              model: "fixture-product-understanding",
+              promptVersion: "product-understanding-v1",
+            },
+          },
+          taskId: session.taskId,
+          searchRunId: run.id,
+        }),
+      ).rejects.toThrow();
+      expect(evidenceProvider.calls).toHaveLength(0);
+      expect(model.calls).toHaveLength(0);
+    },
+  );
+
+  it("rejects a terminal historical run whose self-consistent batch reservation omits authoritative criteria", async () => {
+    const { session, run } = await seedSearch(manyCriteriaContextModel(8));
+    const completed = await executeOrResumeEvidenceResearch({
+      dependencies: {
+        db: connection.db,
+        evidenceProvider: new FakeEvidenceSearchProvider(),
+        model: assessmentOnlyModel("uncertain"),
+        modelIdentity: {
+          provider: "fixture",
+          model: "fixture-product-understanding",
+          promptVersion: "product-understanding-v1",
+        },
+      },
+      taskId: session.taskId,
+      searchRunId: run.id,
+    });
+    expect(completed.run.status).toBe("succeeded");
+    const candidateListingId = completed.attempts.find(
+      ({ stage }) => stage === "observation_extraction",
+    )?.candidateListingId;
+    if (candidateListingId === undefined) {
+      throw new Error("Expected a completed first-pass candidate");
+    }
+    const pairs = pairFirstPassUnderstandingAttempts(
+      completed.attempts.filter(
+        (attempt) => attempt.candidateListingId === candidateListingId,
+      ),
+    );
+    expect(pairs).toHaveLength(4);
+    const omitted = pairs.at(-1)!;
+    const omittedAttemptIds = [omitted.extraction.id, omitted.assessment.id];
+    await connection.db
+      .delete(evidenceAttemptTargetCriteria)
+      .where(
+        inArray(evidenceAttemptTargetCriteria.attemptId, omittedAttemptIds),
+      );
+    await connection.db
+      .delete(evidenceAcquisitionAttempts)
+      .where(inArray(evidenceAcquisitionAttempts.id, omittedAttemptIds));
+    const retainedCriterionIds = pairs
+      .slice(0, -1)
+      .flatMap(({ extraction }) => extraction.targetCriterionIds);
+    const replacementPlans =
+      planFirstPassUnderstandingBatches(retainedCriterionIds);
+    for (const [index, pair] of pairs.slice(0, -1).entries()) {
+      await connection.db
+        .update(evidenceAcquisitionAttempts)
+        .set({ planKey: replacementPlans[index]!.extractionPlanKey })
+        .where(eq(evidenceAcquisitionAttempts.id, pair.extraction.id));
+      await connection.db
+        .update(evidenceAcquisitionAttempts)
+        .set({ planKey: replacementPlans[index]!.assessmentPlanKey })
+        .where(eq(evidenceAcquisitionAttempts.id, pair.assessment.id));
+    }
+
+    await expect(
+      loadEvidenceResearchRun({
+        db: connection.db,
+        taskId: session.taskId,
+        researchRunId: completed.run.id,
+      }),
+    ).rejects.toMatchObject({ name: "PersistedDataCorruptionError" });
+  });
+
+  it("rejects a terminal historical run whose coherent batch pair mutates the reserved model identity", async () => {
+    const { session, run } = await seedSearch(manyCriteriaContextModel(8));
+    const model = assessmentOnlyModel("uncertain");
+    const completed = await executeOrResumeEvidenceResearch({
+      dependencies: {
+        db: connection.db,
+        evidenceProvider: new FakeEvidenceSearchProvider(),
+        model,
+        modelIdentity: {
+          provider: "fixture",
+          model: "fixture-product-understanding",
+          promptVersion: "product-understanding-v1",
+        },
+      },
+      taskId: session.taskId,
+      searchRunId: run.id,
+    });
+    const providerCallCount = model.calls.length;
+    const candidateListingId = completed.attempts.find(
+      ({ stage }) => stage === "observation_extraction",
+    )?.candidateListingId;
+    if (candidateListingId === undefined) {
+      throw new Error("Expected a completed first-pass candidate");
+    }
+    const pairs = pairFirstPassUnderstandingAttempts(
+      completed.attempts.filter(
+        (attempt) => attempt.candidateListingId === candidateListingId,
+      ),
+    );
+    const mutatedPair = pairs[1];
+    if (mutatedPair === undefined) {
+      throw new Error("Expected a second completed batch");
+    }
+    await connection.db
+      .update(evidenceAcquisitionAttempts)
+      .set({
+        model: "coherently-mutated-model",
+        promptVersion: "coherently-mutated-prompt-v1",
+      })
+      .where(
+        inArray(evidenceAcquisitionAttempts.id, [
+          mutatedPair.extraction.id,
+          mutatedPair.assessment.id,
+        ]),
+      );
+
+    await expect(
+      loadEvidenceResearchRun({
+        db: connection.db,
+        taskId: session.taskId,
+        researchRunId: completed.run.id,
+      }),
+    ).rejects.toMatchObject({ name: "PersistedDataCorruptionError" });
+    expect(model.calls).toHaveLength(providerCallCount);
+  });
+
+  it("rejects a terminal historical run with an oversized encoded batch total before provider work", async () => {
+    const { session, run } = await seedSearch(manyCriteriaContextModel(8));
+    const model = assessmentOnlyModel("uncertain");
+    const completed = await executeOrResumeEvidenceResearch({
+      dependencies: {
+        db: connection.db,
+        evidenceProvider: new FakeEvidenceSearchProvider(),
+        model,
+        modelIdentity: {
+          provider: "fixture",
+          model: "fixture-product-understanding",
+          promptVersion: "product-understanding-v1",
+        },
+      },
+      taskId: session.taskId,
+      searchRunId: run.id,
+    });
+    const providerCallCount = model.calls.length;
+    const candidateListingId = completed.attempts.find(
+      ({ stage }) => stage === "observation_extraction",
+    )?.candidateListingId;
+    if (candidateListingId === undefined) {
+      throw new Error("Expected a completed first-pass candidate");
+    }
+    const pair = pairFirstPassUnderstandingAttempts(
+      completed.attempts.filter(
+        (attempt) => attempt.candidateListingId === candidateListingId,
+      ),
+    )[0];
+    if (pair === undefined) {
+      throw new Error("Expected a completed first-pass batch");
+    }
+    const oversizedTotal = MAX_FIRST_PASS_MODEL_CALLS_PER_CANDIDATE + 1;
+    for (const attempt of [pair.extraction, pair.assessment]) {
+      await connection.db
+        .update(evidenceAcquisitionAttempts)
+        .set({
+          planKey: attempt.planKey.replace(
+            /-of-\d+:/,
+            `-of-${oversizedTotal}:`,
+          ),
+        })
+        .where(eq(evidenceAcquisitionAttempts.id, attempt.id));
+    }
+
+    await expect(
+      loadEvidenceResearchRun({
+        db: connection.db,
+        taskId: session.taskId,
+        researchRunId: completed.run.id,
+      }),
+    ).rejects.toMatchObject({ name: "PersistedDataCorruptionError" });
+    expect(model.calls).toHaveLength(providerCallCount);
+  });
+
+  it("resumes only unfinished first-pass batches while preserving a failed terminal pair under concurrent retry", async () => {
+    const { session, run } = await seedSearch(manyCriteriaContextModel(8));
+    const prepared = await prepareEvidenceResearch({
+      db: connection.db,
+      taskId: session.taskId,
+      searchRunId: run.id,
+      evidenceProvider: "fixture",
+      modelProvider: "fixture",
+      model: "fixture-product-understanding",
+      promptVersion: "product-understanding-v1",
+    });
+    const candidateListingId = prepared.attempts.find(
+      ({ stage }) => stage === "observation_extraction",
+    )?.candidateListingId;
+    if (candidateListingId === undefined) {
+      throw new Error("Expected a first-pass candidate reservation");
+    }
+    const firstPair = pairFirstPassUnderstandingAttempts(
+      prepared.attempts.filter(
+        (attempt) => attempt.candidateListingId === candidateListingId,
+      ),
+    )[0];
+    if (firstPair === undefined) {
+      throw new Error("Expected a first-pass batch pair");
+    }
+    const leaseToken = await claimEvidenceResearch({
+      db: connection.db,
+      taskId: session.taskId,
+      researchRunId: prepared.run.id,
+    });
+    if (leaseToken === null) throw new Error("Expected research lease");
+    const precompleted = await recordCandidateUnderstanding({
+      db: connection.db,
+      taskId: session.taskId,
+      researchRunId: prepared.run.id,
+      candidateListingId,
+      extractionAttemptId: firstPair.extraction.id,
+      assessmentAttemptId: firstPair.assessment.id,
+      leaseToken,
+      sourceIdsInOrder: [],
+      result: null,
+      metadata: null,
+      failureCode: "model_failed",
+      startedAt: new Date("2026-08-30T20:00:00.000Z"),
+      finishedAt: new Date("2026-08-30T20:00:01.000Z"),
+    });
+    expect(precompleted).toBe(true);
+    await releaseEvidenceResearchLease({
+      db: connection.db,
+      taskId: session.taskId,
+      researchRunId: prepared.run.id,
+      leaseToken,
+    });
+
+    const evidenceProvider = new FakeEvidenceSearchProvider();
+    const model = assessmentOnlyModel();
+    const dependencies = {
+      db: connection.db,
+      evidenceProvider,
+      pageFetcher: new FakeEvidencePageFetcher(),
+      model,
+      modelIdentity: {
+        provider: "fixture" as const,
+        model: "fixture-product-understanding",
+        promptVersion: "product-understanding-v1",
+      },
+    };
+    await Promise.all([
+      executeOrResumeEvidenceResearch({
+        dependencies,
+        taskId: session.taskId,
+        searchRunId: run.id,
+      }),
+      executeOrResumeEvidenceResearch({
+        dependencies,
+        taskId: session.taskId,
+        searchRunId: run.id,
+      }),
+    ]);
+    const completed = await loadEvidenceResearchRun({
+      db: connection.db,
+      taskId: session.taskId,
+      researchRunId: prepared.run.id,
+    });
+    if (completed === null) throw new Error("Expected completed research");
+    expect(completed.run.status).toBe("partial");
+    const totalReservedPairs =
+      prepared.run.selectedCandidateCount * Math.ceil(8 / 2);
+    expect(model.calls).toHaveLength(totalReservedPairs - 1);
+    expect(evidenceProvider.calls).toHaveLength(
+      prepared.run.selectedCandidateCount,
+    );
+    expect(completed.assessments).toHaveLength(
+      prepared.run.selectedCandidateCount * 8,
+    );
+    expect(
+      completed.assessments.every(({ generation }) => generation === 1),
+    ).toBe(true);
+    expect(
+      completed.assessments.filter(
+        ({ candidateListingId: id, criterionId }) =>
+          id === candidateListingId &&
+          firstPair.extraction.targetCriterionIds.includes(criterionId),
+      ),
+    ).toEqual([
+      expect.objectContaining({
+        generation: 1,
+        status: "uncertain",
+        observationIds: [],
+      }),
+      expect.objectContaining({
+        generation: 1,
+        status: "uncertain",
+        observationIds: [],
+      }),
+    ]);
+    expect(
+      completed.attempts.filter(({ id }) =>
+        [firstPair.extraction.id, firstPair.assessment.id].includes(id),
+      ),
+    ).toEqual([
+      expect.objectContaining({
+        status: "failed",
+        failureCode: "model_failed",
+      }),
+      expect.objectContaining({
+        status: "failed",
+        failureCode: "model_failed",
+      }),
+    ]);
   });
 
   it("requires criterion binding while scoping targeted supersession to one exact criterion", async () => {
@@ -609,7 +1356,7 @@ describe("evidence-backed product understanding persistence", () => {
     expect(initialModel.policies.length).toBeGreaterThan(0);
     expect(
       initialModel.policies.every(
-        ({ requireCriterionBinding }) => !requireCriterionBinding,
+        ({ requireCriterionBinding }) => requireCriterionBinding,
       ),
     ).toBe(true);
     const candidateListingId = first.assessments[0]?.candidateListingId;
@@ -794,6 +1541,7 @@ describe("evidence-backed product understanding persistence", () => {
       }))
       .sort((left, right) => left.criterionId.localeCompare(right.criterionId));
     const calls: unknown[] = [];
+    const diagnostics: ProductUnderstandingFailureDiagnostic[] = [];
     const malformedModel = {
       understand: vi.fn(
         (input: Parameters<FakeProductUnderstandingModel["understand"]>[0]) => {
@@ -824,6 +1572,8 @@ describe("evidence-backed product understanding persistence", () => {
         ...baseDependencies,
         evidenceProvider: new FakeEvidenceSearchProvider(),
         model: malformedModel,
+        reportProductUnderstandingFailure: (diagnostic) =>
+          diagnostics.push(diagnostic),
       },
       taskId: session.taskId,
       searchRunId: run.id,
@@ -839,6 +1589,19 @@ describe("evidence-backed product understanding persistence", () => {
       }),
     ]);
     expect(deep.run.status).toBe("partial");
+    expect(diagnostics).toEqual([
+      expect.objectContaining({
+        failureCode: "invalid_model_output",
+        category: "application_scope_contract",
+        rule: "assessment_criterion_ordinal_out_of_scope",
+        candidateListingId,
+        researchPhase: "deepening",
+        requireCriterionBinding: true,
+        criterionCount: 1,
+        offendingCriterionOrdinal: nonTargetOrdinal,
+        providerRequestId: understandingMetadata.providerRequestId,
+      }),
+    ]);
     const modelAttempts = await connection.db
       .select()
       .from(evidenceAcquisitionAttempts)
@@ -2145,6 +2908,169 @@ describe("evidence-backed product understanding persistence", () => {
         finishedAt: new Date("2026-08-28T00:00:01.000Z"),
       }),
     ).rejects.toMatchObject({ name: "StaleTaskRevisionError" });
+  });
+
+  it("rejects direct first-pass publication with missing assessment coverage or an unbound observation", async () => {
+    const { session, run } = await seedSearch();
+    const prepared = await prepareEvidenceResearch({
+      db: connection.db,
+      taskId: session.taskId,
+      searchRunId: run.id,
+      evidenceProvider: "fixture",
+      modelProvider: "fixture",
+      model: "fixture-product-understanding",
+      promptVersion: "product-understanding-v1",
+    });
+    const extraction = prepared.attempts.find(
+      ({ stage }) => stage === "observation_extraction",
+    );
+    const assessment = prepared.attempts.find(
+      ({ candidateListingId, stage }) =>
+        candidateListingId === extraction?.candidateListingId &&
+        stage === "criterion_assessment",
+    );
+    if (extraction === undefined || assessment === undefined) {
+      throw new Error("Expected a reserved first-pass batch");
+    }
+    const candidateSources = prepared.sources.filter(
+      ({ candidateListingId }) =>
+        candidateListingId === extraction.candidateListingId,
+    );
+    const textualSourceOrdinal = candidateSources.findIndex(
+      ({ sourceKind }) => sourceKind !== "listing_image",
+    );
+    if (textualSourceOrdinal < 0) {
+      throw new Error("Expected a textual candidate source");
+    }
+    const leaseToken = await claimEvidenceResearch({
+      db: connection.db,
+      taskId: session.taskId,
+      researchRunId: prepared.run.id,
+    });
+    if (leaseToken === null) throw new Error("Expected research lease");
+    const common = {
+      db: connection.db,
+      taskId: session.taskId,
+      researchRunId: prepared.run.id,
+      candidateListingId: extraction.candidateListingId,
+      extractionAttemptId: extraction.id,
+      assessmentAttemptId: assessment.id,
+      leaseToken,
+      sourceIdsInOrder: candidateSources.map(({ id }) => id),
+      metadata: understandingMetadata,
+      startedAt: new Date("2026-08-30T19:00:00.000Z"),
+      finishedAt: new Date("2026-08-30T19:00:01.000Z"),
+    };
+
+    await expect(
+      recordCandidateUnderstanding({
+        ...common,
+        result: {
+          providerSchemaVersion: 1,
+          observations: [],
+          assessments: [],
+        },
+      }),
+    ).rejects.toMatchObject({ name: "EvidenceAttemptConflictError" });
+
+    await expect(
+      recordCandidateUnderstanding({
+        ...common,
+        result: {
+          providerSchemaVersion: 1,
+          observations: [
+            {
+              localRef: "unbound",
+              sourceOrdinal: textualSourceOrdinal,
+              criterionOrdinal: null,
+              support: "ambiguous",
+              observationKind: "source_assertion",
+              propertyLabel: "Unbound product property",
+              claim: "The supplied source contains an unbound product claim.",
+              value: {
+                schemaVersion: 1,
+                kind: "text",
+                text: "unbound claim",
+              },
+              derivation: "model_text",
+            },
+          ],
+          assessments: extraction.targetCriterionIds.map((_, ordinal) => ({
+            criterionOrdinal: ordinal,
+            status: "uncertain" as const,
+            relation: "insufficient_evidence",
+            explanation: "The available evidence is insufficient.",
+            observationRefs: [],
+          })),
+        },
+      }),
+    ).rejects.toMatchObject({ name: "EvidenceAttemptConflictError" });
+
+    await releaseEvidenceResearchLease({
+      db: connection.db,
+      taskId: session.taskId,
+      researchRunId: prepared.run.id,
+      leaseToken,
+    });
+  });
+
+  it("fails a raw mixed-status first-pass batch closed instead of treating it as an exact retry", async () => {
+    const { session, run } = await seedSearch();
+    const prepared = await prepareEvidenceResearch({
+      db: connection.db,
+      taskId: session.taskId,
+      searchRunId: run.id,
+      evidenceProvider: "fixture",
+      modelProvider: "fixture",
+      model: "fixture-product-understanding",
+      promptVersion: "product-understanding-v1",
+    });
+    const extraction = prepared.attempts.find(
+      ({ stage }) => stage === "observation_extraction",
+    );
+    const assessment = prepared.attempts.find(
+      ({ candidateListingId, stage }) =>
+        candidateListingId === extraction?.candidateListingId &&
+        stage === "criterion_assessment",
+    );
+    if (extraction === undefined || assessment === undefined) {
+      throw new Error("Expected a reserved first-pass batch");
+    }
+    const startedAt = new Date("2026-08-30T19:10:00.000Z");
+    const finishedAt = new Date("2026-08-30T19:10:01.000Z");
+    await connection.db
+      .update(evidenceAcquisitionAttempts)
+      .set({
+        status: "succeeded",
+        receivedResultCount: 0,
+        startedAt,
+        finishedAt,
+      })
+      .where(eq(evidenceAcquisitionAttempts.id, extraction.id));
+    const leaseToken = await claimEvidenceResearch({
+      db: connection.db,
+      taskId: session.taskId,
+      researchRunId: prepared.run.id,
+    });
+    if (leaseToken === null) throw new Error("Expected research lease");
+
+    await expect(
+      recordCandidateUnderstanding({
+        db: connection.db,
+        taskId: session.taskId,
+        researchRunId: prepared.run.id,
+        candidateListingId: extraction.candidateListingId,
+        extractionAttemptId: extraction.id,
+        assessmentAttemptId: assessment.id,
+        leaseToken,
+        sourceIdsInOrder: [],
+        result: null,
+        metadata: null,
+        failureCode: "model_failed",
+        startedAt,
+        finishedAt,
+      }),
+    ).rejects.toMatchObject({ name: "PersistedDataCorruptionError" });
   });
 
   it("rejects cross-candidate assessment evidence and revision mismatch at raw SQL boundaries", async () => {

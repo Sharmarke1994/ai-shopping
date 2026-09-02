@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "diagnostic": "v0_09_recovery_rc2_broad_product_understanding",
+  "claimedAt": "2026-08-30T21:03:32.006Z",
+  "model": "gpt-5.6-terra",
+  "criterionCount": 8,
+  "sourceCount": 4
+}

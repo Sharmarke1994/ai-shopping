@@ -10,6 +10,7 @@ import {
   PRODUCT_UNDERSTANDING_PROMPT_VERSION,
   productUnderstandingInstructionsForCall,
 } from "./prompts";
+import { productUnderstandingValidationErrorCode } from "./failure-taxonomy";
 import {
   PRODUCT_UNDERSTANDING_PROVIDER_SCHEMA_VERSION,
   productUnderstandingInputV1Schema,
@@ -115,6 +116,7 @@ export function createOpenAIProductUnderstandingModel(options: {
           response,
           schema: providerSchema,
           fallbackMetadata: metadata(),
+          validationErrorCode: productUnderstandingValidationErrorCode,
         });
       } catch (error) {
         const timedOut =

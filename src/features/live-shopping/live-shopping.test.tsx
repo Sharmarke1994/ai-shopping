@@ -231,6 +231,110 @@ describe("founder live shopping decision loop", () => {
     );
   });
 
+  it("shows honest page-check failure, fetched-page roles and purchase provenance", async () => {
+    localStorage.setItem("consider-live-session-v1", sessionId);
+    const base = view({
+      researchStatus: "ready",
+      deepResearchStatus: "complete",
+      includeDecision: true,
+    });
+    if (
+      base.action.kind !== "search" ||
+      base.action.search === null ||
+      base.decisionSupport === null ||
+      base.decisionSupport.topOptions[0] === undefined
+    ) {
+      throw new Error("Expected a decision-support fixture");
+    }
+    const acceptedListing = {
+      ...listing,
+      sourceUrl: "https://www.google.co.uk/search?ibp=oshop&q=product",
+      sourceLabel: "View Google Shopping source",
+    };
+    const sourceDepth = liveShoppingViewSchema.parse({
+      ...base,
+      decisionSupport: {
+        ...base.decisionSupport,
+        topOptions: [
+          {
+            ...base.decisionSupport.topOptions[0],
+            listing: acceptedListing,
+            unknowns: [
+              {
+                criterionId,
+                label: "Battery life",
+                reason: "check_failed",
+                explanation:
+                  "The exact-page check could not complete; existing evidence is preserved.",
+              },
+            ],
+            evidenceSources: [
+              {
+                title: "Exact manufacturer specification",
+                url: "https://manufacturer.example.test/product",
+                role: "manufacturer",
+                depth: "fetched_page",
+              },
+              {
+                title: "Exact retailer product page",
+                url: "https://retailer.example.test/product",
+                role: "retailer",
+                depth: "fetched_page",
+              },
+              {
+                title: "Independent hands-on review",
+                url: "https://review.example.test/product",
+                role: "independent_review",
+                depth: "fetched_page",
+              },
+            ],
+          },
+        ],
+      },
+      action: {
+        ...base.action,
+        search: { ...base.action.search, listings: [acceptedListing] },
+      },
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(jsonResponse(sourceDepth))),
+    );
+
+    render(<LiveShopping />);
+
+    expect(
+      (
+        await screen.findAllByRole("link", {
+          name: /View at Example Retailer/i,
+        })
+      )[0],
+    ).toHaveAttribute("href", listing.destinationUrl);
+    expect(
+      screen.getAllByRole("link", { name: "View Google Shopping source" })[0],
+    ).toHaveAttribute("href", acceptedListing.sourceUrl);
+    expect(
+      screen.getByText("Battery life · Check could not complete"),
+    ).toBeVisible();
+    expect(
+      screen.getByText(
+        "The exact-page check could not complete; existing evidence is preserved.",
+      ),
+    ).toBeVisible();
+    expect(
+      screen.queryByText("Conflicts with current brief"),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("3 attributable sources"));
+    expect(
+      screen.getByText("Manufacturer · checked product page"),
+    ).toBeVisible();
+    expect(screen.getByText("Retailer · checked product page")).toBeVisible();
+    expect(
+      screen.getByText("Independent review · checked product page"),
+    ).toBeVisible();
+  });
+
   it("keeps progressive decision cards visible while first-pass research is still running", async () => {
     localStorage.setItem("consider-live-session-v1", sessionId);
     const progressive = view({

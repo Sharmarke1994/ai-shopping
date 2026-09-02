@@ -24,12 +24,24 @@ import {
 } from "../src/infrastructure/database/clients";
 import { requireTestDatabaseEnvironment } from "../src/infrastructure/config/environment";
 import { migrateDatabase } from "../src/infrastructure/database/migrate";
+import { safeDiagnosticJsonStringify } from "../src/features/context-acquisition/diagnostic-json";
+import {
+  assignInventoryOrdinals,
+  buildInventoryAwareInterpretationInputV1,
+  validateInventoryCoverage,
+} from "../src/features/context-acquisition/interpretation-inventory";
 
 const execFile = promisify(execFileCallback);
-const outputBase = new URL(
-  "../docs/evals/v0-05-context-hardening-diagnostic",
-  import.meta.url,
-);
+const outputStem =
+  process.env.CONTEXT_HARDENING_OUTPUT_STEM ??
+  "v0-05-context-hardening-diagnostic";
+if (
+  !/^(?:v0-05-context-hardening-diagnostic(?:-[a-z0-9-]+)?|v0-09-recovery-rc3-context-precheck|v0-09-recovery-rc4-context-stability|v0-09-recovery-rc4-context-architecture-[ab]|v0-09-recovery-rc4-context-inventory)$/.test(
+    outputStem,
+  )
+)
+  throw new Error("Unsafe context-hardening diagnostic output stem");
+const outputBase = new URL(`../docs/evals/${outputStem}`, import.meta.url);
 const jsonOutput = new URL(`${outputBase.pathname}.json`, import.meta.url);
 const markdownOutput = new URL(`${outputBase.pathname}.md`, import.meta.url);
 const attemptOutput = new URL(
@@ -67,7 +79,15 @@ type DiagnosticAttempt = Readonly<{
   promptVersion: string;
   providerSchemaVersion: number;
   errorCode: string | null;
+  durationMs: number;
+  inputTokens: number | null;
+  outputTokens: number | null;
   ambiguities: readonly string[];
+  interpretationProposal: unknown;
+  coverageDiagnostic: Readonly<{
+    verdict: string | undefined;
+    issueKinds: readonly string[] | undefined;
+  }> | null;
 }>;
 
 type DiagnosticContext = Readonly<{
@@ -620,6 +640,61 @@ const cases: readonly DiagnosticCase[] = [
       return failures;
     },
   },
+  {
+    name: "rc3-ergonomic-mouse",
+    request:
+      "I need an ergonomic mouse under £50. I don’t know much about mouse brands, so I want the best options rather than having to know which specs matter. Reviews matter a lot to me. I’d prefer wireless, but only if the battery life is very good. I like mice that are a little chunkier and sculpted, with a noticeable side profile or thumb-rest shape rather than something flat and minimal. Good brands only, no Amazon Basics stuff or bad brands.",
+    check: (context) => {
+      const failures: string[] = [];
+      const ergonomic = context.fullItems.filter((item) =>
+        /ergonomic/i.test(`${item.label} ${item.definition}`),
+      );
+      if (ergonomic.some((item) => item.strength === "hard"))
+        failures.push("ergonomic design became hard without must-language");
+      if (
+        ergonomic.some(
+          (item) =>
+            item.strength === "preference" && /ergonomic/i.test(item.summary),
+        ) === false &&
+        ergonomic.length > 0
+      )
+        failures.push("ergonomic preference was not represented faithfully");
+      if (
+        !context.fullItems.some(
+          (item) =>
+            item.strength === "preference" &&
+            /sculpt|chunk|thumb|side profile/i.test(
+              `${item.label} ${item.definition} ${item.summary}`,
+            ),
+        )
+      )
+        failures.push("sculpted profile preference was lost");
+      failures.push(...requireSoftCondition(context, /wireless/i, /battery/i));
+      if (
+        !context.fullItems.some(
+          (item) =>
+            item.strength === "strong_preference" &&
+            /review|rating/i.test(`${item.label} ${item.definition}`),
+        )
+      )
+        failures.push(
+          "review importance was not preserved as strong preference",
+        );
+      return failures;
+    },
+  },
+  {
+    name: "rc3-explicit-hard-ergonomic",
+    request: "I need a mouse and it must have an ergonomic design.",
+    check: (context) =>
+      context.fullItems.some(
+        (item) =>
+          item.strength === "hard" &&
+          /ergonomic/i.test(`${item.label} ${item.definition} ${item.summary}`),
+      )
+        ? []
+        : ["explicit must-have ergonomic design was not hard"],
+  },
 ];
 
 const phaseACaseNames = [
@@ -630,8 +705,47 @@ const phaseACaseNames = [
   "headphones-golden",
   "cap-golden",
 ] as const;
+const architectureContrastCaseNames = [
+  "cap-golden",
+  "headphones-golden",
+  "shelving-golden",
+  "contextual-soft-lighter",
+  "conditional-wireless-battery",
+  "explicit-hard-battery",
+  "explicit-indifference",
+  "change-of-mind-relaxation",
+] as const;
+const rc3CaseNames = [
+  "rc3-ergonomic-mouse",
+  "headphones-golden",
+  "cap-golden",
+  "rc3-explicit-hard-ergonomic",
+] as const;
 const diagnosticCaseSet =
-  process.env.CONTEXT_HARDENING_CASE_SET === "phase-a" ? "phase-a" : "full";
+  process.env.CONTEXT_HARDENING_CASE_SET === "phase-a"
+    ? "phase-a"
+    : process.env.CONTEXT_HARDENING_CASE_SET === "rc3"
+      ? "rc3"
+      : process.env.CONTEXT_HARDENING_CASE_SET === "rc4"
+        ? "rc4"
+        : process.env.CONTEXT_HARDENING_CASE_SET === "architecture-a"
+          ? "architecture-a"
+          : process.env.CONTEXT_HARDENING_CASE_SET === "architecture-b"
+            ? "architecture-b"
+            : process.env.CONTEXT_HARDENING_CASE_SET === "inventory"
+              ? "inventory"
+              : "full";
+const rc4MouseCase = cases.find(
+  (inputCase) => inputCase.name === "rc3-ergonomic-mouse",
+);
+if (
+  (diagnosticCaseSet === "rc4" ||
+    diagnosticCaseSet === "architecture-a" ||
+    diagnosticCaseSet === "architecture-b" ||
+    diagnosticCaseSet === "inventory") &&
+  rc4MouseCase === undefined
+)
+  throw new Error("RC4 mouse diagnostic case is missing");
 const selectedCases =
   diagnosticCaseSet === "phase-a"
     ? cases.filter((inputCase) =>
@@ -639,12 +753,57 @@ const selectedCases =
           inputCase.name as (typeof phaseACaseNames)[number],
         ),
       )
-    : cases;
+    : diagnosticCaseSet === "rc3"
+      ? cases.filter((inputCase) =>
+          rc3CaseNames.includes(
+            inputCase.name as (typeof rc3CaseNames)[number],
+          ),
+        )
+      : diagnosticCaseSet === "rc4"
+        ? [
+            ...Array.from({ length: 8 }, (_, index) => ({
+              ...rc4MouseCase!,
+              name: `rc4-ergonomic-mouse-${index + 1}`,
+            })),
+            ...cases.filter((inputCase) =>
+              [
+                "headphones-golden",
+                "cap-golden",
+                "contextual-strong-comfort",
+                "explicit-indifference",
+                "change-of-mind-relaxation",
+                "conditional-wireless-battery",
+                "contextual-soft-lighter",
+              ].includes(inputCase.name),
+            ),
+          ]
+        : diagnosticCaseSet === "architecture-a" ||
+            diagnosticCaseSet === "architecture-b" ||
+            diagnosticCaseSet === "inventory"
+          ? [
+              ...Array.from({ length: 6 }, (_, index) => ({
+                ...rc4MouseCase!,
+                name: `architecture-${diagnosticCaseSet.slice(-1)}-ergonomic-mouse-${index + 1}`,
+              })),
+              ...cases.filter((inputCase) =>
+                architectureContrastCaseNames.includes(
+                  inputCase.name as (typeof architectureContrastCaseNames)[number],
+                ),
+              ),
+            ]
+          : cases;
 if (
   diagnosticCaseSet === "phase-a" &&
   selectedCases.length !== phaseACaseNames.length
 )
   throw new Error("Phase-A diagnostic case portfolio is incomplete");
+if (
+  (diagnosticCaseSet === "architecture-a" ||
+    diagnosticCaseSet === "architecture-b" ||
+    diagnosticCaseSet === "inventory") &&
+  selectedCases.length !== 14
+)
+  throw new Error("Architecture diagnostic case portfolio is incomplete");
 
 type CaseResult = Readonly<{
   name: string;
@@ -783,7 +942,7 @@ function summarizeValue(value: { kind: string; [key: string]: unknown }) {
   if (value.kind === "money_stretch")
     return `${String(value.targetMinor)} -> ${String(value.stretchCeilingMinor)} ${String(value.currency)}`;
   if (value.kind === "measurement_range")
-    return JSON.stringify({
+    return safeDiagnosticJsonStringify({
       lower: value.lower,
       upper: value.upper,
       unit: value.unit,
@@ -806,7 +965,11 @@ async function loadSanitizedAttempts(taskId: string, inputId: string) {
       promptVersion: contextAcquisitionAttempts.promptVersion,
       providerSchemaVersion: contextAcquisitionAttempts.providerSchemaVersion,
       errorCode: contextAcquisitionAttempts.errorCode,
+      durationMs: contextAcquisitionAttempts.durationMs,
+      inputTokens: contextAcquisitionAttempts.inputTokens,
+      outputTokens: contextAcquisitionAttempts.outputTokens,
       interpretationProposal: contextAcquisitionAttempts.interpretationProposal,
+      coverageDiagnostic: contextAcquisitionAttempts.coverageDiagnostic,
     })
     .from(contextAcquisitionAttempts)
     .where(
@@ -827,8 +990,54 @@ async function loadSanitizedAttempts(taskId: string, inputId: string) {
     promptVersion: row.promptVersion,
     providerSchemaVersion: row.providerSchemaVersion,
     errorCode: row.errorCode,
+    durationMs: row.durationMs,
+    inputTokens: row.inputTokens,
+    outputTokens: row.outputTokens,
+    interpretationProposal: projectInterpretationProposal(
+      row.interpretationProposal,
+    ),
     ambiguities: extractAmbiguitySummaries(row.interpretationProposal),
+    coverageDiagnostic:
+      row.coverageDiagnostic !== null &&
+      typeof row.coverageDiagnostic === "object"
+        ? {
+            verdict:
+              "verdict" in row.coverageDiagnostic &&
+              typeof row.coverageDiagnostic.verdict === "string"
+                ? row.coverageDiagnostic.verdict
+                : undefined,
+            issueKinds:
+              "issueKinds" in row.coverageDiagnostic &&
+              Array.isArray(row.coverageDiagnostic.issueKinds)
+                ? row.coverageDiagnostic.issueKinds.filter(
+                    (kind): kind is string => typeof kind === "string",
+                  )
+                : undefined,
+          }
+        : null,
   }));
+}
+
+function projectInterpretationProposal(value: unknown): unknown {
+  if (typeof value !== "object" || value === null) return null;
+  const proposal = value as Record<string, unknown>;
+  const result: Record<string, unknown> = {
+    providerSchemaVersion: proposal.providerSchemaVersion,
+    outcome: proposal.outcome,
+    ambiguities: proposal.ambiguities,
+  };
+  if ("operations" in proposal) result.operations = proposal.operations;
+  if (
+    typeof proposal.interpretation === "object" &&
+    proposal.interpretation !== null
+  ) {
+    const interpretation = proposal.interpretation as Record<string, unknown>;
+    result.interpretation = {
+      outcome: interpretation.outcome,
+      operations: interpretation.operations,
+    };
+  }
+  return result;
 }
 
 function extractAmbiguitySummaries(value: unknown): readonly string[] {
@@ -1155,6 +1364,10 @@ if (existsSync(jsonOutput) || existsSync(attemptOutput)) {
 const startedAt = new Date().toISOString();
 const counts = {
   logicalInterpretationCalls: 0,
+  logicalInventoryCalls: 0,
+  logicalInventoryMappingCalls: 0,
+  logicalCoverageCalls: 0,
+  logicalRepairCalls: 0,
   logicalActionCalls: 0,
   completed: 0,
   failed: 0,
@@ -1169,22 +1382,100 @@ try {
   ]);
   database = await createDisposableDatabase();
   currentConnection = database.connection;
-  const baseModel = createOpenAIContextAcquisitionModel({
-    environment: { ...process.env, OPENAI_API_KEY: openAIKey },
+  const environment = { ...process.env, OPENAI_API_KEY: openAIKey };
+  const lowModel = createOpenAIContextAcquisitionModel({
+    environment,
     config: {
       ...V0_05_OPENAI_DEFAULT_CONFIG,
       model: "gpt-5.6-terra",
       reasoningEffort: "low",
     },
   });
+  const mediumModel =
+    diagnosticCaseSet === "architecture-a" ||
+    diagnosticCaseSet === "architecture-b" ||
+    diagnosticCaseSet === "inventory"
+      ? createOpenAIContextAcquisitionModel({
+          environment,
+          config: {
+            ...V0_05_OPENAI_DEFAULT_CONFIG,
+            model: "gpt-5.6-terra",
+            reasoningEffort: "medium",
+          },
+        })
+      : lowModel;
+  const operationReasoning = {
+    interpretation:
+      diagnosticCaseSet === "architecture-b" ||
+      diagnosticCaseSet === "inventory"
+        ? "medium"
+        : "low",
+    coverage:
+      diagnosticCaseSet === "architecture-a" ||
+      diagnosticCaseSet === "architecture-b"
+        ? "medium"
+        : "low",
+    repair:
+      diagnosticCaseSet === "architecture-a" ||
+      diagnosticCaseSet === "architecture-b"
+        ? "medium"
+        : "low",
+    action: "low",
+  } as const;
   const model: ContextAcquisitionModel = {
     interpret: async (input) => {
       counts.logicalInterpretationCalls += 1;
-      return baseModel.interpret(input);
+      if (diagnosticCaseSet !== "inventory") {
+        return (
+          diagnosticCaseSet === "architecture-b" ? mediumModel : lowModel
+        ).interpret(input);
+      }
+      if (
+        mediumModel.inventoryInterpretation === undefined ||
+        mediumModel.interpretWithInventory === undefined
+      )
+        throw new Error("inventory prototype unavailable");
+      counts.logicalInventoryCalls += 1;
+      const inventoryResult = await mediumModel.inventoryInterpretation(input);
+      if (inventoryResult.status !== "completed") return inventoryResult;
+      const inventory = assignInventoryOrdinals(inventoryResult.value);
+      counts.logicalInventoryMappingCalls += 1;
+      const mappedResult = await mediumModel.interpretWithInventory(
+        buildInventoryAwareInterpretationInputV1({ input, inventory }),
+      );
+      if (mappedResult.status !== "completed") return mappedResult;
+      try {
+        return {
+          status: "completed" as const,
+          value: validateInventoryCoverage({
+            wire: mappedResult.value,
+            inventory,
+          }),
+          metadata: mappedResult.metadata,
+        };
+      } catch {
+        return {
+          status: "malformed" as const,
+          errorCode: "inventory_coverage_invalid",
+          metadata: mappedResult.metadata,
+        };
+      }
     },
     selectAction: async (input) => {
       counts.logicalActionCalls += 1;
-      return baseModel.selectAction(input);
+      return lowModel.selectAction(input);
+    },
+    verifyInterpretationCoverage: async (input) => {
+      counts.logicalCoverageCalls += 1;
+      if (mediumModel.verifyInterpretationCoverage === undefined)
+        throw new Error("coverage verifier unavailable");
+      return mediumModel.verifyInterpretationCoverage(input);
+    },
+    repairInterpretation: async (input) => {
+      counts.logicalRepairCalls += 1;
+      if (mediumModel.repairInterpretation === undefined)
+        throw new Error("interpretation repair unavailable");
+      return mediumModel.repairInterpretation(input);
     },
   };
   for (const [index, inputCase] of selectedCases.entries()) {
@@ -1206,12 +1497,13 @@ try {
     releaseAccepted: false,
     model: "gpt-5.6-terra",
     reasoningEffort: "low",
+    operationReasoning,
     startedAt,
     finishedAt: new Date().toISOString(),
     counts: { ...counts, caseCount: results.length, violationCount },
     results,
   };
-  await writeFile(jsonOutput, JSON.stringify(artifact, null, 2));
+  await writeFile(jsonOutput, safeDiagnosticJsonStringify(artifact, 2));
   await writeFile(
     markdownOutput,
     [
@@ -1221,6 +1513,8 @@ try {
       "",
       `- Model: ${artifact.model} (reasoning ${artifact.reasoningEffort})`,
       `- Logical interpretation calls: ${counts.logicalInterpretationCalls}`,
+      `- Proposal-blind inventory calls: ${counts.logicalInventoryCalls}; mapped interpretation calls: ${counts.logicalInventoryMappingCalls}`,
+      `- Coverage checks: ${counts.logicalCoverageCalls}; repairs: ${counts.logicalRepairCalls}`,
       `- Logical action calls: ${counts.logicalActionCalls}`,
       `- Cases: ${results.length}; completed: ${counts.completed}; failed: ${counts.failed}`,
       `- Protected semantic violations: ${violationCount}`,
@@ -1235,38 +1529,48 @@ try {
   );
   await writeFile(
     attemptOutput,
-    JSON.stringify(
+    safeDiagnosticJsonStringify(
       {
         schemaVersion: 1,
         startedAt,
         finishedAt: artifact.finishedAt,
         releaseAccepted: false,
       },
-      null,
       2,
     ),
   );
 } catch (error) {
-  await writeFile(
-    attemptOutput,
-    JSON.stringify(
-      {
-        schemaVersion: 1,
-        diagnostic: `v0-05-context-hardening-${diagnosticCaseSet}`,
-        caseSet: diagnosticCaseSet,
-        releaseAccepted: false,
-        startedAt,
-        finishedAt: new Date().toISOString(),
-        counts,
-        completedCases: results,
-        error: error instanceof Error ? error.message : "diagnostic_failed",
-      },
-      null,
-      2,
-    ),
-  );
+  const failureArtifact = {
+    schemaVersion: 1,
+    diagnostic: `v0-05-context-hardening-${diagnosticCaseSet}`,
+    caseSet: diagnosticCaseSet,
+    releaseAccepted: false,
+    startedAt,
+    finishedAt: new Date().toISOString(),
+    counts,
+    completedCases: results,
+    error: error instanceof Error ? error.message : "diagnostic_failed",
+  };
+  try {
+    await writeFile(
+      attemptOutput,
+      safeDiagnosticJsonStringify(failureArtifact, 2),
+    );
+  } catch (artifactError) {
+    console.error(
+      "context diagnostic artifact write failed",
+      artifactError instanceof Error ? artifactError.message : artifactError,
+    );
+  }
   throw error;
 } finally {
-  await database?.close();
+  try {
+    await database?.close();
+  } catch (cleanupError) {
+    console.error(
+      "context diagnostic cleanup failed",
+      cleanupError instanceof Error ? cleanupError.message : cleanupError,
+    );
+  }
   currentConnection = null;
 }

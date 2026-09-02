@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 1,
+  "diagnostic": "v0_09_recovery_rc2_page_soak_failed",
+  "generatedAt": "2026-08-30T21:02:29.448Z",
+  "sourceDiagnostics": [
+    {
+      "outcome": "fetched",
+      "key": "toms-guide-anker-review",
+      "requestedUrl": "https://www.tomsguide.com/computing/peripherals/anker-2-4g-wireless-vertical-ergonomic-mouse-review",
+      "requestedHost": "www.tomsguide.com",
+      "finalUrl": "https://www.tomsguide.com/computing/peripherals/anker-2-4g-wireless-vertical-ergonomic-mouse-review",
+      "finalHost": "www.tomsguide.com",
+      "sourceRole": "independent_review",
+      "responseStatus": 200,
+      "declaredContentLength": 2329807,
+      "encodedBytes": 2329807,
+      "decodedBytes": 2329807,
+      "redirectCount": 0,
+      "retainedDocumentBytes": 12815,
+      "retainedVisibleTextCharacters": 10735,
+      "canonicalUrlCandidate": "https://www.tomsguide.com/computing/peripherals/anker-2-4g-wireless-vertical-ergonomic-mouse-review",
+      "title": "Anker 2.4G Wireless Vertical Ergonomic mouse review | Tom's Guide",
+      "products": [
+        {
+          "name": "Anker 2.4G Wireless Vertical Ergonomic mouse review",
+          "brand": null,
+          "model": null,
+          "sku": null,
+          "mpn": null
+        }
+      ],
+      "admission": {
+        "decision": "admit",
+        "sourceRole": "independent_review"
+      },
+      "durationMs": 282
+    },
+    {
+      "outcome": "fetched",
+      "key": "anker-product",
+      "requestedUrl": "https://www.anker.com/products/a7582",
+      "requestedHost": "www.anker.com",
+      "finalUrl": "https://www.anker.com/products/a7582",
+      "finalHost": "www.anker.com",
+      "sourceRole": "other",
+      "responseStatus": 200,
+      "declaredContentLength": 1943250,
+      "encodedBytes": 1943250,
+      "decodedBytes": 1943250,
+      "redirectCount": 0,
+      "retainedDocumentBytes": 6154,
+      "retainedVisibleTextCharacters": 4196,
+      "canonicalUrlCandidate": "https://www.anker.com/products/a7582",
+      "title": "Anker 2.4G Wireless Vertical Ergonomic Optical Mouse - Anker US",
+      "products": [
+        {
+          "name": "Anker 2.4G Wireless Vertical Ergonomic Optical Mouse",
+          "brand": "Anker",
+          "model": null,
+          "sku": "A7852011",
+          "mpn": null
+        }
+      ],
+      "admission": {
+        "decision": "admit",
+        "sourceRole": "manufacturer"
+      },
+      "durationMs": 1474
+    },
+    {
+      "outcome": "fetched",
+      "key": "amazon-kensington-retailer",
+      "requestedUrl": "https://www.amazon.co.uk/Kensington-Rechargeable-Bluetooth-Post-Consumer-K72482WW/dp/B0DDTPGZ66",
+      "requestedHost": "www.amazon.co.uk",
+      "finalUrl": "https://www.amazon.co.uk/Kensington-Rechargeable-Bluetooth-Post-Consumer-K72482WW/dp/B0DDTPGZ66",
+      "finalHost": "www.amazon.co.uk",
+      "sourceRole": "retailer",
+      "responseStatus": 200,
+      "declaredContentLength": null,
+      "encodedBytes": 1659971,
+      "decodedBytes": 1659971,
+      "redirectCount": 0,
+      "retainedDocumentBytes": 27153,
+      "retainedVisibleTextCharacters": 23933,
+      "canonicalUrlCandidate": "https://www.amazon.co.uk/Kensington-Rechargeable-Bluetooth-Post-Consumer-K72482WW/dp/B0DDTPGZ66",
+      "title": "Kensington Pro Fit Ergo MY630 EQ Rechargeable Bluetooth Mouse with 2.4GHz USB-A Reciever, 57% Post-Consumer Recycled (SCS) Content, With Up to 4 Months Of Battery Life Per Charge (K72482WW) : Amazon.co.uk: Computers & Accessories",
+      "products": [],
+      "admission": {
+        "decision": "reject",
+        "reason": "wrong_model_or_variant"
+      },
+      "durationMs": 2573
+    }
+  ],
+  "failure": {
+    "name": "Error",
+    "message": "RC2 soak did not persist an admitted fetched page"
+  },
+  "cleanup": {
+    "disposableDatabaseDestroyed": true,
+    "errorCount": 0
+  }
+}

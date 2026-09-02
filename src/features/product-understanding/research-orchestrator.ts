@@ -14,6 +14,10 @@ import type {
   ProductUnderstandingModel,
   ProductUnderstandingModelResult,
 } from "./model-port";
+import {
+  diagnoseProductUnderstandingFailure,
+  type ProductUnderstandingFailureDiagnostic,
+} from "./failure-taxonomy";
 import { PRODUCT_UNDERSTANDING_PROMPT_VERSION } from "./prompts";
 import {
   productUnderstandingInputV1Schema,
@@ -34,6 +38,13 @@ import {
   renewEvidenceResearchLease,
   type EvidenceResearchSnapshot,
 } from "./persistence";
+import { EVIDENCE_POLICY_VERSION } from "./selection";
+import {
+  assertFirstPassUnderstandingPairsMatchCriteria,
+  FIRST_PASS_UNDERSTANDING_POLICY_IDENTITY,
+  pairFirstPassUnderstandingAttempts,
+  parseFirstPassUnderstandingPlanKey,
+} from "./understanding-batches";
 
 export const EVIDENCE_SEARCH_CONCURRENCY = 3;
 export const PAGE_FETCH_CONCURRENCY = 2;
@@ -65,7 +76,21 @@ export type EvidenceResearchDependencies = Readonly<{
     model: string;
     promptVersion: string;
   }>;
+  reportProductUnderstandingFailure?: (
+    diagnostic: ProductUnderstandingFailureDiagnostic,
+  ) => void;
 }>;
+
+function reportProductUnderstandingFailure(
+  dependencies: EvidenceResearchDependencies,
+  diagnostic: ProductUnderstandingFailureDiagnostic,
+) {
+  try {
+    dependencies.reportProductUnderstandingFailure?.(diagnostic);
+  } catch {
+    // Diagnostics cannot alter authoritative research state.
+  }
+}
 
 function hasVisualCriterion(
   criteria: ReturnType<typeof projectShoppingBrief>["items"],
@@ -84,10 +109,45 @@ function sourcePriority(source: EvidenceResearchSnapshot["sources"][number]) {
   return 3;
 }
 
+function usesBatchedFirstPassUnderstanding(snapshot: EvidenceResearchSnapshot) {
+  return (
+    snapshot.run.phase === "first_pass" &&
+    snapshot.run.policyVersion ===
+      `${EVIDENCE_POLICY_VERSION}:${FIRST_PASS_UNDERSTANDING_POLICY_IDENTITY}`
+  );
+}
+
+function candidateUnderstandingPairs(options: {
+  snapshot: EvidenceResearchSnapshot;
+  candidateListingId: string;
+}) {
+  const attempts = options.snapshot.attempts.filter(
+    ({ candidateListingId }) =>
+      candidateListingId === options.candidateListingId,
+  );
+  if (usesBatchedFirstPassUnderstanding(options.snapshot)) {
+    return pairFirstPassUnderstandingAttempts(attempts).map(
+      ({ extraction, assessment }) => ({ extraction, assessment }),
+    );
+  }
+  const extraction = attempts.filter(
+    ({ stage }) => stage === "observation_extraction",
+  );
+  const assessment = attempts.filter(
+    ({ stage }) => stage === "criterion_assessment",
+  );
+  if (extraction.length !== 1 || assessment.length !== 1) {
+    throw new Error("Research model attempt pair is incoherent");
+  }
+  return [{ extraction: extraction[0]!, assessment: assessment[0]! }];
+}
+
 async function buildUnderstandingInput(options: {
   dependencies: EvidenceResearchDependencies;
   snapshot: EvidenceResearchSnapshot;
   candidateListingId: string;
+  extractionAttemptId: string;
+  assessmentAttemptId: string;
 }): Promise<{
   input: ProductUnderstandingInputV1;
   sourceIdsInOrder: readonly string[];
@@ -99,6 +159,20 @@ async function buildUnderstandingInput(options: {
   if (brief.revision !== options.snapshot.run.taskRevision) {
     throw new Error("Research snapshot is stale before model acquisition");
   }
+  if (usesBatchedFirstPassUnderstanding(options.snapshot)) {
+    const pairs = pairFirstPassUnderstandingAttempts(
+      options.snapshot.attempts.filter(
+        (attempt) =>
+          attempt.candidateListingId === options.candidateListingId &&
+          (attempt.stage === "observation_extraction" ||
+            attempt.stage === "criterion_assessment"),
+      ),
+    );
+    assertFirstPassUnderstandingPairsMatchCriteria(
+      pairs,
+      brief.items.map(({ criterionId }) => criterionId),
+    );
+  }
   const run = await loadPersistedSearchRun({
     db: options.dependencies.db,
     taskId: options.snapshot.run.taskId,
@@ -108,21 +182,22 @@ async function buildUnderstandingInput(options: {
     ({ id }) => id === options.candidateListingId,
   );
   if (listing === undefined) throw new Error("Research listing is unavailable");
-  const candidateModelAttempts = options.snapshot.attempts.filter(
-    (attempt) =>
-      attempt.candidateListingId === options.candidateListingId &&
-      (attempt.stage === "observation_extraction" ||
-        attempt.stage === "criterion_assessment"),
+  const extractionAttempt = options.snapshot.attempts.find(
+    ({ id }) => id === options.extractionAttemptId,
   );
-  const extractionTargets = candidateModelAttempts.find(
-    ({ stage }) => stage === "observation_extraction",
-  )?.targetCriterionIds;
-  const assessmentTargets = candidateModelAttempts.find(
-    ({ stage }) => stage === "criterion_assessment",
-  )?.targetCriterionIds;
-  if (extractionTargets === undefined || assessmentTargets === undefined) {
-    throw new Error("Research model target bindings are unavailable");
+  const assessmentAttempt = options.snapshot.attempts.find(
+    ({ id }) => id === options.assessmentAttemptId,
+  );
+  if (
+    extractionAttempt?.candidateListingId !== options.candidateListingId ||
+    assessmentAttempt?.candidateListingId !== options.candidateListingId ||
+    extractionAttempt.stage !== "observation_extraction" ||
+    assessmentAttempt.stage !== "criterion_assessment"
+  ) {
+    throw new Error("Research model attempt pair is unavailable");
   }
+  const extractionTargets = extractionAttempt.targetCriterionIds;
+  const assessmentTargets = assessmentAttempt.targetCriterionIds;
   const extractionTargetSet = new Set(extractionTargets);
   const assessmentTargetSet = new Set(assessmentTargets);
   if (
@@ -330,6 +405,31 @@ export async function executeOrResumeEvidenceResearch(options: {
     if (candidateIds.length !== selectedCandidateIds.size) {
       throw new Error("Research candidate portfolio is incomplete");
     }
+    if (usesBatchedFirstPassUnderstanding(claimedSnapshot)) {
+      const state = await options.dependencies.db.transaction((tx) =>
+        loadCurrentShoppingState(tx, claimedSnapshot.run.taskId),
+      );
+      const brief = projectShoppingBrief(state);
+      if (brief.revision !== claimedSnapshot.run.taskRevision) {
+        throw new Error("Research snapshot is stale before batch validation");
+      }
+      const authoritativeCriterionIds = brief.items.map(
+        ({ criterionId }) => criterionId,
+      );
+      for (const candidateListingId of candidateIds) {
+        const candidateAttempts = claimedSnapshot.attempts.filter(
+          (attempt) =>
+            attempt.candidateListingId === candidateListingId &&
+            (attempt.stage === "observation_extraction" ||
+              attempt.stage === "criterion_assessment"),
+        );
+        const pairs = pairFirstPassUnderstandingAttempts(candidateAttempts);
+        assertFirstPassUnderstandingPairsMatchCriteria(
+          pairs,
+          authoritativeCriterionIds,
+        );
+      }
+    }
     const runEvidenceSearch = createStageLimiter(EVIDENCE_SEARCH_CONCURRENCY);
     const runPageFetch = createStageLimiter(PAGE_FETCH_CONCURRENCY);
     const runUnderstanding = createStageLimiter(
@@ -530,104 +630,157 @@ export async function executeOrResumeEvidenceResearch(options: {
           throwFirstRejected(pageSettlements);
         }
 
-        await runUnderstanding(async () => {
-          const snapshot = await loadCurrentSnapshot();
-          const extraction = snapshot.attempts.find(
-            (attempt) =>
-              attempt.candidateListingId === candidateListingId &&
-              attempt.stage === "observation_extraction",
-          );
-          const assessment = snapshot.attempts.find(
-            (attempt) =>
-              attempt.candidateListingId === candidateListingId &&
-              attempt.stage === "criterion_assessment",
-          );
-          if (
-            extraction?.status !== "planned" ||
-            assessment?.status !== "planned"
-          ) {
-            return;
-          }
-          await renewEvidenceResearchLease({
-            db: options.dependencies.db,
-            taskId: prepared.run.taskId,
-            researchRunId: prepared.run.id,
-            leaseToken,
-          });
-          const { input, sourceIdsInOrder } = await buildUnderstandingInput({
-            dependencies: options.dependencies,
-            snapshot,
-            candidateListingId,
-          });
-          const callPolicy: ProductUnderstandingCallPolicy = {
-            requireCriterionBinding: snapshot.run.phase === "deepening",
-          };
-          const startedAt = new Date();
-          unsafeAttemptIds.add(extraction.id);
-          unsafeAttemptIds.add(assessment.id);
-          let result: ProductUnderstandingModelResult;
-          try {
-            result = await options.dependencies.model.understand(
-              input,
-              callPolicy,
-            );
-          } catch {
-            await recordCandidateUnderstanding({
-              db: options.dependencies.db,
-              taskId: prepared.run.taskId,
-              researchRunId: prepared.run.id,
-              candidateListingId,
-              extractionAttemptId: extraction.id,
-              assessmentAttemptId: assessment.id,
-              leaseToken,
-              sourceIdsInOrder,
-              result: null,
-              metadata: null,
-              failureCode: "model_failed",
-              startedAt,
-              finishedAt: new Date(),
-            });
-            unsafeAttemptIds.delete(extraction.id);
-            unsafeAttemptIds.delete(assessment.id);
-            return;
-          }
-          const scopedResult =
-            result.status === "completed"
-              ? productUnderstandingProviderWireV1SchemaForInput({
+        const snapshotBeforeUnderstanding = await loadCurrentSnapshot();
+        const plannedPairs = candidateUnderstandingPairs({
+          snapshot: snapshotBeforeUnderstanding,
+          candidateListingId,
+        }).filter(
+          ({ extraction, assessment }) =>
+            extraction.status === "planned" && assessment.status === "planned",
+        );
+        const understandingSettlements = await Promise.allSettled(
+          plannedPairs.map((plannedPair) =>
+            runUnderstanding(async () => {
+              const snapshot = await loadCurrentSnapshot();
+              const pair = candidateUnderstandingPairs({
+                snapshot,
+                candidateListingId,
+              }).find(
+                ({ extraction, assessment }) =>
+                  extraction.id === plannedPair.extraction.id &&
+                  assessment.id === plannedPair.assessment.id,
+              );
+              if (pair === undefined) {
+                throw new Error("Reserved model batch is unavailable");
+              }
+              const { extraction, assessment } = pair;
+              if (
+                extraction.status !== "planned" ||
+                assessment.status !== "planned"
+              ) {
+                return;
+              }
+              await renewEvidenceResearchLease({
+                db: options.dependencies.db,
+                taskId: prepared.run.taskId,
+                researchRunId: prepared.run.id,
+                leaseToken,
+              });
+              const { input, sourceIdsInOrder } = await buildUnderstandingInput(
+                {
+                  dependencies: options.dependencies,
+                  snapshot,
+                  candidateListingId,
+                  extractionAttemptId: extraction.id,
+                  assessmentAttemptId: assessment.id,
+                },
+              );
+              const callPolicy: ProductUnderstandingCallPolicy = {
+                requireCriterionBinding:
+                  snapshot.run.phase === "deepening" ||
+                  parseFirstPassUnderstandingPlanKey(extraction.planKey) !==
+                    null,
+              };
+              const startedAt = new Date();
+              unsafeAttemptIds.add(extraction.id);
+              unsafeAttemptIds.add(assessment.id);
+              let result: ProductUnderstandingModelResult;
+              try {
+                result = await options.dependencies.model.understand(
                   input,
-                  requireCriterionBinding: callPolicy.requireCriterionBinding,
-                }).safeParse(result.value)
-              : null;
-          await recordCandidateUnderstanding({
-            db: options.dependencies.db,
-            taskId: prepared.run.taskId,
-            researchRunId: prepared.run.id,
-            candidateListingId,
-            extractionAttemptId: extraction.id,
-            assessmentAttemptId: assessment.id,
-            leaseToken,
-            sourceIdsInOrder,
-            result:
-              result.status === "completed" && scopedResult?.success === true
-                ? scopedResult.data
-                : null,
-            metadata: result.metadata,
-            ...(result.status === "completed" && scopedResult?.success === true
-              ? {}
-              : {
-                  failureCode:
-                    result.status === "malformed" ||
-                    (result.status === "completed" &&
-                      scopedResult?.success === false)
-                      ? ("invalid_model_output" as const)
-                      : ("model_failed" as const),
-                }),
-            startedAt,
-            finishedAt: new Date(),
-          });
-          unsafeAttemptIds.delete(extraction.id);
-          unsafeAttemptIds.delete(assessment.id);
-        });
+                  callPolicy,
+                );
+              } catch {
+                reportProductUnderstandingFailure(
+                  options.dependencies,
+                  diagnoseProductUnderstandingFailure({
+                    result: null,
+                    input,
+                    policy: callPolicy,
+                    candidateListingId,
+                    researchPhase: snapshot.run.phase,
+                  }),
+                );
+                await recordCandidateUnderstanding({
+                  db: options.dependencies.db,
+                  taskId: prepared.run.taskId,
+                  researchRunId: prepared.run.id,
+                  candidateListingId,
+                  extractionAttemptId: extraction.id,
+                  assessmentAttemptId: assessment.id,
+                  leaseToken,
+                  sourceIdsInOrder,
+                  result: null,
+                  metadata: null,
+                  failureCode: "model_failed",
+                  startedAt,
+                  finishedAt: new Date(),
+                });
+                unsafeAttemptIds.delete(extraction.id);
+                unsafeAttemptIds.delete(assessment.id);
+                return;
+              }
+              const scopedResult =
+                result.status === "completed"
+                  ? productUnderstandingProviderWireV1SchemaForInput({
+                      input,
+                      requireCriterionBinding:
+                        callPolicy.requireCriterionBinding,
+                    }).safeParse(result.value)
+                  : null;
+              if (
+                result.status !== "completed" ||
+                scopedResult?.success !== true
+              ) {
+                reportProductUnderstandingFailure(
+                  options.dependencies,
+                  diagnoseProductUnderstandingFailure({
+                    result,
+                    ...(scopedResult?.success === false
+                      ? { scopedValidationError: scopedResult.error }
+                      : {}),
+                    input,
+                    policy: callPolicy,
+                    candidateListingId,
+                    researchPhase: snapshot.run.phase,
+                  }),
+                );
+              }
+              await recordCandidateUnderstanding({
+                db: options.dependencies.db,
+                taskId: prepared.run.taskId,
+                researchRunId: prepared.run.id,
+                candidateListingId,
+                extractionAttemptId: extraction.id,
+                assessmentAttemptId: assessment.id,
+                leaseToken,
+                sourceIdsInOrder,
+                result:
+                  result.status === "completed" &&
+                  scopedResult?.success === true
+                    ? scopedResult.data
+                    : null,
+                metadata: result.metadata,
+                ...(result.status === "completed" &&
+                scopedResult?.success === true
+                  ? {}
+                  : {
+                      failureCode:
+                        result.status === "malformed" ||
+                        (result.status === "completed" &&
+                          scopedResult?.success === false)
+                          ? ("invalid_model_output" as const)
+                          : ("model_failed" as const),
+                    }),
+                startedAt,
+                finishedAt: new Date(),
+              });
+              unsafeAttemptIds.delete(extraction.id);
+              unsafeAttemptIds.delete(assessment.id);
+            }),
+          ),
+        );
+        throwFirstRejected(understandingSettlements);
       }),
     );
     throwFirstRejected(candidateSettlements);
