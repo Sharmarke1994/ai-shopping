@@ -1,0 +1,14 @@
+{
+  "kind": "development_product_engine_preflight",
+  "started": "2026-09-02T13:14:48.123Z",
+  "providers": {
+    "openai": {
+      "status": "blocked",
+      "reason": "provider_http_400"
+    },
+    "serper": {
+      "status": "available"
+    }
+  },
+  "finished": "2026-09-02T13:14:51.536Z"
+}
