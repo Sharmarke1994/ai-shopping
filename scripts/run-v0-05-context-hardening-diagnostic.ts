@@ -30,7 +30,7 @@ const outputStem =
   process.env.CONTEXT_HARDENING_OUTPUT_STEM ??
   "v0-05-context-hardening-diagnostic";
 if (
-  !/^(?:v0-05-context-hardening-diagnostic(?:-[a-z0-9-]+)?|v0-09-recovery-rc3-context-precheck)$/.test(
+  !/^(?:v0-05-context-hardening-diagnostic(?:-[a-z0-9-]+)?|v0-09-recovery-rc3-context-precheck|v0-09-recovery-rc4-context-stability)$/.test(
     outputStem,
   )
 )
@@ -74,6 +74,10 @@ type DiagnosticAttempt = Readonly<{
   providerSchemaVersion: number;
   errorCode: string | null;
   ambiguities: readonly string[];
+  coverageDiagnostic: Readonly<{
+    verdict: string | undefined;
+    issueKinds: readonly string[] | undefined;
+  }> | null;
 }>;
 
 type DiagnosticContext = Readonly<{
@@ -702,7 +706,14 @@ const diagnosticCaseSet =
     ? "phase-a"
     : process.env.CONTEXT_HARDENING_CASE_SET === "rc3"
       ? "rc3"
-      : "full";
+      : process.env.CONTEXT_HARDENING_CASE_SET === "rc4"
+        ? "rc4"
+        : "full";
+const rc4MouseCase = cases.find(
+  (inputCase) => inputCase.name === "rc3-ergonomic-mouse",
+);
+if (diagnosticCaseSet === "rc4" && rc4MouseCase === undefined)
+  throw new Error("RC4 mouse diagnostic case is missing");
 const selectedCases =
   diagnosticCaseSet === "phase-a"
     ? cases.filter((inputCase) =>
@@ -716,7 +727,25 @@ const selectedCases =
             inputCase.name as (typeof rc3CaseNames)[number],
           ),
         )
-      : cases;
+      : diagnosticCaseSet === "rc4"
+        ? [
+            ...Array.from({ length: 8 }, (_, index) => ({
+              ...rc4MouseCase!,
+              name: `rc4-ergonomic-mouse-${index + 1}`,
+            })),
+            ...cases.filter((inputCase) =>
+              [
+                "headphones-golden",
+                "cap-golden",
+                "contextual-strong-comfort",
+                "explicit-indifference",
+                "change-of-mind-relaxation",
+                "conditional-wireless-battery",
+                "contextual-soft-lighter",
+              ].includes(inputCase.name),
+            ),
+          ]
+        : cases;
 if (
   diagnosticCaseSet === "phase-a" &&
   selectedCases.length !== phaseACaseNames.length
@@ -884,6 +913,7 @@ async function loadSanitizedAttempts(taskId: string, inputId: string) {
       providerSchemaVersion: contextAcquisitionAttempts.providerSchemaVersion,
       errorCode: contextAcquisitionAttempts.errorCode,
       interpretationProposal: contextAcquisitionAttempts.interpretationProposal,
+      coverageDiagnostic: contextAcquisitionAttempts.coverageDiagnostic,
     })
     .from(contextAcquisitionAttempts)
     .where(
@@ -905,6 +935,24 @@ async function loadSanitizedAttempts(taskId: string, inputId: string) {
     providerSchemaVersion: row.providerSchemaVersion,
     errorCode: row.errorCode,
     ambiguities: extractAmbiguitySummaries(row.interpretationProposal),
+    coverageDiagnostic:
+      row.coverageDiagnostic !== null &&
+      typeof row.coverageDiagnostic === "object"
+        ? {
+            verdict:
+              "verdict" in row.coverageDiagnostic &&
+              typeof row.coverageDiagnostic.verdict === "string"
+                ? row.coverageDiagnostic.verdict
+                : undefined,
+            issueKinds:
+              "issueKinds" in row.coverageDiagnostic &&
+              Array.isArray(row.coverageDiagnostic.issueKinds)
+                ? row.coverageDiagnostic.issueKinds.filter(
+                    (kind): kind is string => typeof kind === "string",
+                  )
+                : undefined,
+          }
+        : null,
   }));
 }
 
@@ -1232,6 +1280,8 @@ if (existsSync(jsonOutput) || existsSync(attemptOutput)) {
 const startedAt = new Date().toISOString();
 const counts = {
   logicalInterpretationCalls: 0,
+  logicalCoverageCalls: 0,
+  logicalRepairCalls: 0,
   logicalActionCalls: 0,
   completed: 0,
   failed: 0,
@@ -1262,6 +1312,18 @@ try {
     selectAction: async (input) => {
       counts.logicalActionCalls += 1;
       return baseModel.selectAction(input);
+    },
+    verifyInterpretationCoverage: async (input) => {
+      counts.logicalCoverageCalls += 1;
+      if (baseModel.verifyInterpretationCoverage === undefined)
+        throw new Error("coverage verifier unavailable");
+      return baseModel.verifyInterpretationCoverage(input);
+    },
+    repairInterpretation: async (input) => {
+      counts.logicalRepairCalls += 1;
+      if (baseModel.repairInterpretation === undefined)
+        throw new Error("interpretation repair unavailable");
+      return baseModel.repairInterpretation(input);
     },
   };
   for (const [index, inputCase] of selectedCases.entries()) {
@@ -1298,6 +1360,7 @@ try {
       "",
       `- Model: ${artifact.model} (reasoning ${artifact.reasoningEffort})`,
       `- Logical interpretation calls: ${counts.logicalInterpretationCalls}`,
+      `- Coverage checks: ${counts.logicalCoverageCalls}; repairs: ${counts.logicalRepairCalls}`,
       `- Logical action calls: ${counts.logicalActionCalls}`,
       `- Cases: ${results.length}; completed: ${counts.completed}; failed: ${counts.failed}`,
       `- Protected semantic violations: ${violationCount}`,

@@ -27,6 +27,9 @@ const attemptStatusSchema = z.enum([
   "invalid_patch",
   "stale",
   "superseded_by_winner",
+  "coverage_completed",
+  "coverage_needs_repair",
+  "coverage_failed",
 ]);
 
 const modelMetadataSchema = z.strictObject({
@@ -47,7 +50,13 @@ export const contextAcquisitionAttemptInputSchema = z
     taskId: shoppingTaskIdSchema,
     sourceTaskInputId: taskInputIdSchema,
     snapshotRevision: taskRevisionSchema,
-    stage: z.enum(["interpretation", "context_action"]),
+    stage: z.enum([
+      "interpretation",
+      "interpretation_coverage",
+      "interpretation_repair",
+      "interpretation_repair_coverage",
+      "context_action",
+    ]),
     attemptOrdinal: z.number().int().positive(),
     status: attemptStatusSchema,
     metadata: modelMetadataSchema,
@@ -69,6 +78,11 @@ export const contextAcquisitionAttemptInputSchema = z
       .nullable(),
     stateChangeApplicationId: stateChangeApplicationIdSchema.nullable(),
     contextActionId: contextActionIdSchema.nullable(),
+    coverageDiagnostic: z
+      .record(z.string(), z.unknown())
+      .nullable()
+      .optional()
+      .default(null),
   })
   .superRefine((attempt, context) => {
     if (
@@ -82,13 +96,23 @@ export const contextAcquisitionAttemptInputSchema = z
       });
     }
     if (
-      attempt.stage === "interpretation" &&
+      attempt.stage !== "context_action" &&
       attempt.contextActionProposal !== null
     ) {
       context.addIssue({
         code: "custom",
         path: ["contextActionProposal"],
         message: "An interpretation attempt cannot contain an action proposal",
+      });
+    }
+    if (
+      attempt.stage === "context_action" &&
+      attempt.coverageDiagnostic !== null
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["coverageDiagnostic"],
+        message: "Coverage diagnostics belong only to interpretation stages",
       });
     }
     if (
@@ -163,6 +187,7 @@ export async function recordContextAcquisitionAttempt(options: {
       errorCode: attempt.errorCode,
       stateChangeApplicationId: attempt.stateChangeApplicationId,
       contextActionId: attempt.contextActionId,
+      coverageDiagnostic: attempt.coverageDiagnostic,
     })
     .returning({ id: contextAcquisitionAttempts.id });
 

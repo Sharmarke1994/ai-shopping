@@ -16,6 +16,10 @@ import {
   CONTEXT_ACTION_INSTRUCTIONS,
   CONTEXT_ACTION_PROMPT_VERSION,
   INTERPRETATION_INSTRUCTIONS,
+  INTERPRETATION_COVERAGE_INSTRUCTIONS,
+  INTERPRETATION_COVERAGE_PROMPT_VERSION,
+  INTERPRETATION_REPAIR_INSTRUCTIONS,
+  INTERPRETATION_REPAIR_PROMPT_VERSION,
   INTERPRETATION_SEMANTIC_POLICY_SUFFIX,
   INTERPRETATION_PROMPT_VERSION,
 } from "./prompts";
@@ -27,6 +31,11 @@ import {
   type ContextActionProviderWireV2,
   type InterpretationProviderWireV2,
 } from "./provider-wire";
+import {
+  INTERPRETATION_COVERAGE_SCHEMA_VERSION,
+  interpretationCoverageProviderWireV1Schema,
+  type InterpretationCoverageProviderWireV1,
+} from "./interpretation-coverage";
 import type { ProviderInputEnvelopeV1 } from "./provider-input";
 
 export const V0_05_OPENAI_DEFAULT_CONFIG = {
@@ -103,6 +112,28 @@ export function createOpenAIContextAcquisitionModel(options?: {
         providerSchemaVersion: CONTEXT_ACTION_PROVIDER_SCHEMA_VERSION_V2,
         schemaName: "shopping_context_action_v2",
         schema: contextActionProviderWireV2Schema,
+      }),
+    verifyInterpretationCoverage: (input) =>
+      callStructuredOutput<InterpretationCoverageProviderWireV1>({
+        client,
+        config,
+        input,
+        instructions: INTERPRETATION_COVERAGE_INSTRUCTIONS,
+        promptVersion: INTERPRETATION_COVERAGE_PROMPT_VERSION,
+        providerSchemaVersion: INTERPRETATION_COVERAGE_SCHEMA_VERSION,
+        schemaName: "shopping_interpretation_coverage_v1",
+        schema: interpretationCoverageProviderWireV1Schema,
+      }),
+    repairInterpretation: (input) =>
+      callStructuredOutput<InterpretationProviderWireV2>({
+        client,
+        config,
+        input,
+        instructions: INTERPRETATION_REPAIR_INSTRUCTIONS,
+        promptVersion: INTERPRETATION_REPAIR_PROMPT_VERSION,
+        providerSchemaVersion: INTERPRETATION_PROVIDER_SCHEMA_VERSION_V2,
+        schemaName: "shopping_interpretation_repair_v2",
+        schema: interpretationProviderWireV2Schema,
       }),
   };
 }

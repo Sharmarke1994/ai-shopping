@@ -16,6 +16,7 @@ import type {
   ContextActionProviderWireV1,
   InterpretationProviderWireV1,
 } from "../../src/features/context-acquisition/provider-wire";
+import type { InterpretationCoverageProviderWireV1 } from "../../src/features/context-acquisition/interpretation-coverage";
 import { acquireShoppingContext } from "../../src/features/context-acquisition/coordinator";
 import { recordContextActionAnswer } from "../../src/features/context-acquisition/persistence/context-action-answers";
 import { recordTaskInput } from "../../src/features/shopping-state/persistence/inputs-and-messages";
@@ -122,6 +123,75 @@ describe("context-acquisition coordinator", () => {
     expect(retry).toEqual(first);
     expect(retryModel.interpret).not.toHaveBeenCalled();
     expect(retryModel.selectAction).not.toHaveBeenCalled();
+  });
+
+  it("performs at most one semantic repair before applying the final proposal", async () => {
+    const task = await createShoppingTask(connection.db);
+    const input = await recordTaskInput({
+      db: connection.db,
+      taskId: task.id,
+      clientActionId: "coverage-repair",
+      request: {
+        inputSchemaVersion: 1,
+        expectedRevision: 0n,
+        kind: "message",
+        body: "No change to my shopping criteria",
+      },
+    });
+    let coverageCalls = 0;
+    let repairCalls = 0;
+    const incomplete: InterpretationCoverageProviderWireV1 = {
+      providerSchemaVersion: 1,
+      verdict: "needs_repair",
+      issues: [
+        {
+          kind: "missing_explicit_meaning",
+          summary: "A meaning needs review",
+        },
+      ],
+    };
+    const complete: InterpretationCoverageProviderWireV1 = {
+      providerSchemaVersion: 1,
+      verdict: "complete",
+      issues: [],
+    };
+    const model: ContextAcquisitionModel = {
+      interpret: () => completed(noChange),
+      verifyInterpretationCoverage: () => {
+        coverageCalls += 1;
+        return completed(coverageCalls === 1 ? incomplete : complete);
+      },
+      repairInterpretation: () => {
+        repairCalls += 1;
+        return completed({
+          providerSchemaVersion: 2,
+          interpretation: { outcome: "no_change", operations: [] },
+          ambiguities: [],
+        });
+      },
+      selectAction: () => completed(search),
+    };
+
+    const result = await acquireShoppingContext({
+      db: connection.db,
+      model,
+      taskId: task.id,
+      sourceInputId: input.input.id,
+    });
+    expect(result.status).toBe("completed");
+    expect(coverageCalls).toBe(2);
+    expect(repairCalls).toBe(1);
+    const coverageAttempts = await connection.db
+      .select({ errorCode: contextAcquisitionAttempts.errorCode })
+      .from(contextAcquisitionAttempts)
+      .where(
+        and(
+          eq(contextAcquisitionAttempts.taskId, task.id),
+          eq(contextAcquisitionAttempts.sourceTaskInputId, input.input.id),
+          eq(contextAcquisitionAttempts.errorCode, "coverage_needs_repair"),
+        ),
+      );
+    expect(coverageAttempts).toHaveLength(1);
   });
 
   it("records both stale action races and fails closed without changing semantic truth", async () => {

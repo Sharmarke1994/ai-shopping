@@ -32,6 +32,7 @@
     "diagnostic:v0-09:recovery-rc2:understanding": "tsx scripts/run-v0-09-recovery-rc2-understanding-diagnostic.ts",
     "diagnostic:v0-09:recovery-rc2:destinations": "tsx scripts/run-v0-09-recovery-rc2-destination-diagnostic.ts",
     "diagnostic:v0-09:recovery-rc3:context": "CONTEXT_HARDENING_CASE_SET=rc3 CONTEXT_HARDENING_OUTPUT_STEM=v0-09-recovery-rc3-context-precheck tsx scripts/run-v0-05-context-hardening-diagnostic.ts",
+    "diagnostic:v0-09:recovery-rc4:context": "CONTEXT_HARDENING_CASE_SET=rc4 CONTEXT_HARDENING_OUTPUT_STEM=v0-09-recovery-rc4-context-stability tsx scripts/run-v0-05-context-hardening-diagnostic.ts",
     "eval:v0-05:live": "tsx scripts/run-v0-05-live-eval.ts",
     "diagnostic:v0-05:context-hardening": "tsx scripts/run-v0-05-context-hardening-diagnostic.ts",
     "screenshots:v0-02": "node scripts/capture-v0-02-screenshots.mjs",

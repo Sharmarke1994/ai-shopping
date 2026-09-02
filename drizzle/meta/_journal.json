@@ -127,6 +127,20 @@
       "when": 1788122829339,
       "tag": "0017_shallow_jetstream",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1788335002765,
+      "tag": "0018_classy_sentinels",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1788335062014,
+      "tag": "0019_high_mac_gargan",
+      "breakpoints": true
     }
   ]
 }

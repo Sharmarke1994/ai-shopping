@@ -3,6 +3,7 @@ import type {
   InterpretationProviderWire,
 } from "./provider-wire";
 import type { ProviderInputEnvelopeV1 } from "./provider-input";
+import type { InterpretationCoverageProviderWireV1 } from "./interpretation-coverage";
 
 export type ModelCallMetadata = Readonly<{
   provider: string;
@@ -39,4 +40,11 @@ export interface ContextAcquisitionModel {
   selectAction(
     input: ProviderInputEnvelopeV1,
   ): Promise<ModelCallResult<ContextActionProviderWire>>;
+  /** Optional on legacy fixtures; production adapters implement both calls. */
+  verifyInterpretationCoverage?(
+    input: ProviderInputEnvelopeV1,
+  ): Promise<ModelCallResult<InterpretationCoverageProviderWireV1>>;
+  repairInterpretation?(
+    input: ProviderInputEnvelopeV1,
+  ): Promise<ModelCallResult<InterpretationProviderWire>>;
 }

@@ -48,6 +48,7 @@ import {
   CONTEXT_ACTION_PROMPT_VERSION,
   INTERPRETATION_PROMPT_VERSION,
 } from "./prompts";
+import { buildInterpretationCoverageInputV1 } from "./interpretation-coverage";
 
 export type ContextAcquisitionResult =
   | Readonly<{
@@ -218,6 +219,19 @@ async function interpretAndApply(options: {
       };
     }
 
+    if (options.model.verifyInterpretationCoverage !== undefined) {
+      const coverage = await verifyInterpretationCoverage({
+        ...options,
+        state,
+        proposal,
+        interpretationProposal: modelResult.value,
+        attemptOrdinal,
+        metadata: modelResult.metadata,
+      });
+      if (coverage.status === "failed") return coverage;
+      proposal = coverage.proposal;
+    }
+
     try {
       const applied = await applyStatePatch(options.db, {
         applicationSchemaVersion: 1,
@@ -305,6 +319,196 @@ async function interpretAndApply(options: {
     stage: "interpretation",
     errorCode: "retry_exhausted",
   };
+}
+
+async function verifyInterpretationCoverage(options: {
+  db: ShoppingDatabase;
+  model: ContextAcquisitionModel;
+  taskId: ReturnType<typeof shoppingTaskIdSchema.parse>;
+  sourceInputId: ReturnType<typeof taskInputIdSchema.parse>;
+  source: Awaited<ReturnType<typeof resolveStoredShoppingInput>>;
+  orchestrationRunId: string;
+  state: Awaited<ReturnType<typeof loadCurrentShoppingState>>;
+  proposal: ReturnType<typeof lowerInterpretationProviderWire>;
+  interpretationProposal: InterpretationProviderWire;
+  attemptOrdinal: number;
+  metadata: ModelCallMetadata;
+}): Promise<
+  | {
+      status: "completed";
+      proposal: ReturnType<typeof lowerInterpretationProviderWire>;
+    }
+  | Extract<ContextAcquisitionResult, { status: "failed" }>
+> {
+  const verifierInput = buildInterpretationCoverageInputV1({
+    state: options.state,
+    sourceInputId: options.sourceInputId,
+    source: options.source,
+    proposal: options.proposal,
+  });
+  const result =
+    await options.model.verifyInterpretationCoverage!(verifierInput);
+  if (result.status !== "completed") {
+    await recordFailureAttempt({
+      ...options,
+      stage: "interpretation_coverage",
+      attemptOrdinal: 100 + options.attemptOrdinal,
+      snapshotRevision: options.state.task.currentRevision,
+      status: result.status,
+      errorCode: `interpretation_coverage_${result.errorCode}`,
+      metadata: result.metadata,
+      interpretationProposal: options.interpretationProposal,
+    });
+    return {
+      status: "failed",
+      stage: "interpretation",
+      errorCode: `interpretation_coverage_${result.errorCode}`,
+    };
+  }
+  if (result.value.verdict === "complete") {
+    await recordFailureAttempt({
+      ...options,
+      stage: "interpretation_coverage",
+      attemptOrdinal: 100 + options.attemptOrdinal,
+      snapshotRevision: options.state.task.currentRevision,
+      status: "coverage_completed",
+      errorCode: "coverage_complete",
+      metadata: result.metadata,
+      interpretationProposal: options.interpretationProposal,
+      coverageDiagnostic: { verdict: result.value.verdict, issueKinds: [] },
+    });
+    return { status: "completed", proposal: options.proposal };
+  }
+  if (options.model.repairInterpretation === undefined) {
+    await recordFailureAttempt({
+      ...options,
+      stage: "interpretation_coverage",
+      attemptOrdinal: 100 + options.attemptOrdinal,
+      snapshotRevision: options.state.task.currentRevision,
+      status: "malformed",
+      errorCode: "semantic_coverage_failed",
+      metadata: result.metadata,
+      interpretationProposal: options.interpretationProposal,
+    });
+    return {
+      status: "failed",
+      stage: "interpretation",
+      errorCode: "semantic_coverage_failed",
+    };
+  }
+  await recordFailureAttempt({
+    ...options,
+    stage: "interpretation_coverage",
+    attemptOrdinal: 100 + options.attemptOrdinal,
+    snapshotRevision: options.state.task.currentRevision,
+    status: "coverage_needs_repair",
+    errorCode: "coverage_needs_repair",
+    metadata: result.metadata,
+    interpretationProposal: options.interpretationProposal,
+    coverageDiagnostic: {
+      verdict: result.value.verdict,
+      issueKinds: result.value.issues.map((issue) => issue.kind),
+    },
+  });
+  const repaired = await options.model.repairInterpretation(
+    buildInterpretationCoverageInputV1({
+      state: options.state,
+      sourceInputId: options.sourceInputId,
+      source: options.source,
+      proposal: options.proposal,
+      issues: result.value.issues,
+    }),
+  );
+  if (repaired.status !== "completed") {
+    await recordFailureAttempt({
+      ...options,
+      stage: "interpretation_repair",
+      attemptOrdinal: 200 + options.attemptOrdinal,
+      snapshotRevision: options.state.task.currentRevision,
+      status: repaired.status,
+      errorCode: `interpretation_repair_${repaired.errorCode}`,
+      metadata: repaired.metadata,
+      interpretationProposal: options.interpretationProposal,
+    });
+    return {
+      status: "failed",
+      stage: "interpretation",
+      errorCode: `interpretation_repair_${repaired.errorCode}`,
+    };
+  }
+  let repairedProposal: ReturnType<typeof lowerInterpretationProviderWire>;
+  try {
+    repairedProposal = lowerInterpretationProviderWire(repaired.value);
+  } catch {
+    return {
+      status: "failed",
+      stage: "interpretation",
+      errorCode: "semantic_coverage_failed",
+    };
+  }
+  await recordFailureAttempt({
+    ...options,
+    stage: "interpretation_repair",
+    attemptOrdinal: 200 + options.attemptOrdinal,
+    snapshotRevision: options.state.task.currentRevision,
+    status: "coverage_completed",
+    errorCode: "repair_completed",
+    metadata: repaired.metadata,
+    interpretationProposal: repaired.value,
+    coverageDiagnostic: { verdict: "repair_completed", issueKinds: [] },
+  });
+  const verifyCoverage = options.model.verifyInterpretationCoverage;
+  if (verifyCoverage === undefined) {
+    return {
+      status: "failed",
+      stage: "interpretation",
+      errorCode: "repair_coverage_failed",
+    };
+  }
+  const finalCheck = await verifyCoverage(
+    buildInterpretationCoverageInputV1({
+      state: options.state,
+      sourceInputId: options.sourceInputId,
+      source: options.source,
+      proposal: repairedProposal,
+    }),
+  );
+  if (
+    finalCheck.status !== "completed" ||
+    finalCheck.value.verdict !== "complete"
+  ) {
+    await recordFailureAttempt({
+      ...options,
+      stage: "interpretation_repair_coverage",
+      attemptOrdinal: 300 + options.attemptOrdinal,
+      snapshotRevision: options.state.task.currentRevision,
+      status: "malformed",
+      errorCode: "semantic_coverage_failed",
+      metadata:
+        finalCheck.status === "completed"
+          ? finalCheck.metadata
+          : finalCheck.metadata,
+      interpretationProposal: repaired.value,
+      coverageDiagnostic: { verdict: "needs_repair", issueKinds: [] },
+    });
+    return {
+      status: "failed",
+      stage: "interpretation",
+      errorCode: "semantic_coverage_failed",
+    };
+  }
+  await recordFailureAttempt({
+    ...options,
+    stage: "interpretation_repair_coverage",
+    attemptOrdinal: 300 + options.attemptOrdinal,
+    snapshotRevision: options.state.task.currentRevision,
+    status: "coverage_completed",
+    errorCode: "repair_coverage_complete",
+    metadata: finalCheck.metadata,
+    interpretationProposal: repaired.value,
+    coverageDiagnostic: { verdict: "complete", issueKinds: [] },
+  });
+  return { status: "completed", proposal: repairedProposal };
 }
 
 async function selectAndPersistAction(options: {
@@ -503,7 +707,12 @@ function attemptRecord(options: {
   orchestrationRunId: string;
   taskId: string;
   sourceInputId: string;
-  stage: "interpretation" | "context_action";
+  stage:
+    | "interpretation"
+    | "interpretation_coverage"
+    | "interpretation_repair"
+    | "interpretation_repair_coverage"
+    | "context_action";
   attemptOrdinal: number;
   snapshotRevision: bigint;
   status:
@@ -516,13 +725,17 @@ function attemptRecord(options: {
     | "input_too_large"
     | "invalid_patch"
     | "stale"
-    | "superseded_by_winner";
+    | "superseded_by_winner"
+    | "coverage_completed"
+    | "coverage_needs_repair"
+    | "coverage_failed";
   errorCode?: string;
   metadata: ModelCallMetadata;
   interpretationProposal?: InterpretationProviderWire;
   contextActionProposal?: ContextActionProviderWire;
   stateChangeApplicationId?: string;
   contextActionId?: string;
+  coverageDiagnostic?: Record<string, unknown>;
 }) {
   return {
     orchestrationRunId: options.orchestrationRunId,
@@ -538,5 +751,6 @@ function attemptRecord(options: {
     errorCode: options.errorCode ?? null,
     stateChangeApplicationId: options.stateChangeApplicationId ?? null,
     contextActionId: options.contextActionId ?? null,
+    coverageDiagnostic: options.coverageDiagnostic ?? null,
   };
 }
