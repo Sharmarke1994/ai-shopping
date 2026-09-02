@@ -14,6 +14,7 @@ import {
   createOpenAIProductUnderstandingModel,
   V0_07_OPENAI_DEFAULT_CONFIG,
 } from "../src/features/product-understanding/openai-adapter";
+import type { ProductUnderstandingInputV1 } from "../src/features/product-understanding/provider-wire";
 import { PRODUCT_UNDERSTANDING_PROMPT_VERSION } from "../src/features/product-understanding/prompts";
 import { executeOrResumeEvidenceResearch } from "../src/features/product-understanding/research-orchestrator";
 import { loadCurrentDecisionSupport } from "../src/features/product-understanding/persistence";
@@ -221,20 +222,50 @@ async function preflight() {
   const serper = await secret("SERPER_API_KEY", "ai-shopping-serper");
   for (const [provider, operation] of Object.entries({
     openai: async () => {
-      const response = await fetch("https://api.openai.com/v1/responses", {
-        method: "POST",
-        headers: {
-          authorization: `Bearer ${openAI}`,
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "gpt-5.6-terra",
-          input: "health check; reply OK",
-          max_output_tokens: 8,
-          store: false,
-        }),
+      const model = createOpenAIProductUnderstandingModel({
+        apiKey: openAI,
+        config: { timeoutMs: 10_000, maxOutputTokens: 64 },
       });
-      if (!response.ok) throw new Error(`provider_http_${response.status}`);
+      const input: ProductUnderstandingInputV1 = {
+        schemaVersion: 1,
+        market: { country: "GB", language: "en-GB", currency: "GBP" },
+        candidate: {
+          title: "Preflight product",
+          merchant: "Preflight merchant",
+          observedPriceText: "£1",
+        },
+        criteria: [
+          {
+            ordinal: 0,
+            label: "Availability",
+            definition: "Whether this product is available",
+            strength: "preference",
+            targetSemantics: "qualitative",
+            value: {
+              schemaVersion: 1,
+              kind: "qualitative",
+              mode: "text",
+              text: "available",
+            },
+          },
+        ],
+        sources: [
+          {
+            ordinal: 0,
+            role: "listing",
+            kind: "listing_field",
+            title: "Preflight listing",
+            url: "https://example.com/preflight",
+            excerpt: "A development-only provider preflight listing.",
+          },
+        ],
+      };
+      const result = await model.understand(input, {
+        requireCriterionBinding: false,
+      });
+      if (result.status !== "completed") {
+        throw new Error(`adapter_${result.status}_${result.errorCode}`);
+      }
     },
     serper: async () => {
       const response = await fetch("https://google.serper.dev/search", {
