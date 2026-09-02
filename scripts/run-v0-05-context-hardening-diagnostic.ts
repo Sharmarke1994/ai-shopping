@@ -36,7 +36,7 @@ const outputStem =
   process.env.CONTEXT_HARDENING_OUTPUT_STEM ??
   "v0-05-context-hardening-diagnostic";
 if (
-  !/^(?:v0-05-context-hardening-diagnostic(?:-[a-z0-9-]+)?|v0-09-recovery-rc3-context-precheck|v0-09-recovery-rc4-context-stability|v0-09-recovery-rc4-context-architecture-[ab]|v0-09-recovery-rc4-context-inventory)$/.test(
+  !/^(?:v0-05-context-hardening-diagnostic(?:-[a-z0-9-]+)?|v0-09-recovery-rc3-context-precheck|v0-09-recovery-rc4-context-stability|v0-09-recovery-rc4-context-architecture-[abcd]|v0-09-recovery-rc4-context-inventory)$/.test(
     outputStem,
   )
 )
@@ -520,6 +520,22 @@ const cases: readonly DiagnosticCase[] = [
     },
   },
   {
+    name: "cordless-vacuum",
+    request: "I need a cordless vacuum for everyday home cleaning.",
+    check: (context) =>
+      context.status === "completed"
+        ? []
+        : ["cordless vacuum context acquisition did not complete"],
+  },
+  {
+    name: "compact-coffee-machine",
+    request: "I need a compact coffee machine for a small kitchen.",
+    check: (context) =>
+      context.status === "completed"
+        ? []
+        : ["compact coffee-machine context acquisition did not complete"],
+  },
+  {
     name: "conditional-money-stretch",
     request:
       "I want a shelving unit around £30, but I can stretch to £45 if it looks visually light.",
@@ -715,6 +731,19 @@ const architectureContrastCaseNames = [
   "explicit-indifference",
   "change-of-mind-relaxation",
 ] as const;
+const architectureSelectionCaseNames = [
+  "cap-golden",
+  "headphones-golden",
+  "shelving-golden",
+  "contextual-strong-comfort",
+  "cordless-vacuum",
+  "compact-coffee-machine",
+  "conditional-wireless-battery",
+  "explicit-hard-battery",
+  "contextual-soft-lighter",
+  "explicit-indifference",
+  "change-of-mind-relaxation",
+] as const;
 const rc3CaseNames = [
   "rc3-ergonomic-mouse",
   "headphones-golden",
@@ -732,9 +761,13 @@ const diagnosticCaseSet =
           ? "architecture-a"
           : process.env.CONTEXT_HARDENING_CASE_SET === "architecture-b"
             ? "architecture-b"
-            : process.env.CONTEXT_HARDENING_CASE_SET === "inventory"
-              ? "inventory"
-              : "full";
+            : process.env.CONTEXT_HARDENING_CASE_SET === "architecture-c"
+              ? "architecture-c"
+              : process.env.CONTEXT_HARDENING_CASE_SET === "architecture-d"
+                ? "architecture-d"
+                : process.env.CONTEXT_HARDENING_CASE_SET === "inventory"
+                  ? "inventory"
+                  : "full";
 const rc4MouseCase = cases.find(
   (inputCase) => inputCase.name === "rc3-ergonomic-mouse",
 );
@@ -742,6 +775,8 @@ if (
   (diagnosticCaseSet === "rc4" ||
     diagnosticCaseSet === "architecture-a" ||
     diagnosticCaseSet === "architecture-b" ||
+    diagnosticCaseSet === "architecture-c" ||
+    diagnosticCaseSet === "architecture-d" ||
     diagnosticCaseSet === "inventory") &&
   rc4MouseCase === undefined
 )
@@ -779,14 +814,29 @@ const selectedCases =
           ]
         : diagnosticCaseSet === "architecture-a" ||
             diagnosticCaseSet === "architecture-b" ||
+            diagnosticCaseSet === "architecture-c" ||
+            diagnosticCaseSet === "architecture-d" ||
             diagnosticCaseSet === "inventory"
           ? [
-              ...Array.from({ length: 6 }, (_, index) => ({
-                ...rc4MouseCase!,
-                name: `architecture-${diagnosticCaseSet.slice(-1)}-ergonomic-mouse-${index + 1}`,
-              })),
+              ...Array.from(
+                {
+                  length:
+                    diagnosticCaseSet === "architecture-c" ||
+                    diagnosticCaseSet === "architecture-d"
+                      ? 8
+                      : 6,
+                },
+                (_, index) => ({
+                  ...rc4MouseCase!,
+                  name: `architecture-${diagnosticCaseSet.slice(-1)}-ergonomic-mouse-${index + 1}`,
+                }),
+              ),
               ...cases.filter((inputCase) =>
-                architectureContrastCaseNames.includes(
+                (diagnosticCaseSet === "architecture-c" ||
+                diagnosticCaseSet === "architecture-d"
+                  ? architectureSelectionCaseNames
+                  : architectureContrastCaseNames
+                ).includes(
                   inputCase.name as (typeof architectureContrastCaseNames)[number],
                 ),
               ),
@@ -800,8 +850,14 @@ if (
 if (
   (diagnosticCaseSet === "architecture-a" ||
     diagnosticCaseSet === "architecture-b" ||
+    diagnosticCaseSet === "architecture-c" ||
+    diagnosticCaseSet === "architecture-d" ||
     diagnosticCaseSet === "inventory") &&
-  selectedCases.length !== 14
+  selectedCases.length !==
+    (diagnosticCaseSet === "architecture-c" ||
+    diagnosticCaseSet === "architecture-d"
+      ? 19
+      : 14)
 )
   throw new Error("Architecture diagnostic case portfolio is incomplete");
 
@@ -1404,22 +1460,39 @@ try {
           },
         })
       : lowModel;
+  const highModel =
+    diagnosticCaseSet === "architecture-c" ||
+    diagnosticCaseSet === "architecture-d"
+      ? createOpenAIContextAcquisitionModel({
+          environment,
+          config: {
+            ...V0_05_OPENAI_DEFAULT_CONFIG,
+            model: "gpt-5.6-terra",
+            reasoningEffort: "high",
+          },
+        })
+      : mediumModel;
   const operationReasoning = {
     interpretation:
-      diagnosticCaseSet === "architecture-b" ||
-      diagnosticCaseSet === "inventory"
-        ? "medium"
-        : "low",
+      diagnosticCaseSet === "architecture-c" ||
+      diagnosticCaseSet === "architecture-d"
+        ? "high"
+        : diagnosticCaseSet === "architecture-b" ||
+            diagnosticCaseSet === "inventory"
+          ? "medium"
+          : "low",
     coverage:
-      diagnosticCaseSet === "architecture-a" ||
-      diagnosticCaseSet === "architecture-b"
-        ? "medium"
-        : "low",
+      diagnosticCaseSet === "architecture-d"
+        ? "high"
+        : diagnosticCaseSet === "architecture-a" ||
+            diagnosticCaseSet === "architecture-b"
+          ? "medium"
+          : "none",
     repair:
       diagnosticCaseSet === "architecture-a" ||
       diagnosticCaseSet === "architecture-b"
         ? "medium"
-        : "low",
+        : "none",
     action: "low",
   } as const;
   const model: ContextAcquisitionModel = {
@@ -1427,7 +1500,12 @@ try {
       counts.logicalInterpretationCalls += 1;
       if (diagnosticCaseSet !== "inventory") {
         return (
-          diagnosticCaseSet === "architecture-b" ? mediumModel : lowModel
+          diagnosticCaseSet === "architecture-c" ||
+          diagnosticCaseSet === "architecture-d"
+            ? highModel
+            : diagnosticCaseSet === "architecture-b"
+              ? mediumModel
+              : lowModel
         ).interpret(input);
       }
       if (
@@ -1467,9 +1545,11 @@ try {
     },
     verifyInterpretationCoverage: async (input) => {
       counts.logicalCoverageCalls += 1;
-      if (mediumModel.verifyInterpretationCoverage === undefined)
+      const coverageModel =
+        diagnosticCaseSet === "architecture-d" ? highModel : mediumModel;
+      if (coverageModel.verifyInterpretationCoverage === undefined)
         throw new Error("coverage verifier unavailable");
-      return mediumModel.verifyInterpretationCoverage(input);
+      return coverageModel.verifyInterpretationCoverage(input);
     },
     repairInterpretation: async (input) => {
       counts.logicalRepairCalls += 1;
@@ -1478,6 +1558,15 @@ try {
       return mediumModel.repairInterpretation(input);
     },
   };
+  if (
+    diagnosticCaseSet === "architecture-c" ||
+    diagnosticCaseSet === "architecture-d"
+  ) {
+    delete model.repairInterpretation;
+  }
+  if (diagnosticCaseSet === "architecture-c") {
+    delete model.verifyInterpretationCoverage;
+  }
   for (const [index, inputCase] of selectedCases.entries()) {
     const result = inputCase.twoTurn
       ? await runTwoTurnCase(database.connection, model, inputCase, index)

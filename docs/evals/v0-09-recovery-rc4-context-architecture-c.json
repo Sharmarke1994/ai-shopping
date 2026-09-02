@@ -1,0 +1,776 @@
+{
+  "schemaVersion": 1,
+  "diagnostic": "v0-05-context-hardening-architecture-c",
+  "caseSet": "architecture-c",
+  "releaseAccepted": false,
+  "model": "gpt-5.6-terra",
+  "reasoningEffort": "low",
+  "operationReasoning": {
+    "interpretation": "high",
+    "coverage": "none",
+    "repair": "none",
+    "action": "low"
+  },
+  "startedAt": "2026-09-02T10:54:14.636Z",
+  "finishedAt": "2026-09-02T10:55:44.167Z",
+  "counts": {
+    "logicalInterpretationCalls": 19,
+    "logicalInventoryCalls": 0,
+    "logicalInventoryMappingCalls": 0,
+    "logicalCoverageCalls": 0,
+    "logicalRepairCalls": 0,
+    "logicalActionCalls": 0,
+    "completed": 0,
+    "failed": 19,
+    "caseCount": 19,
+    "violationCount": 55
+  },
+  "results": [
+    {
+      "name": "architecture-c-ergonomic-mouse-1",
+      "status": "failed",
+      "action": null,
+      "revision": null,
+      "items": [],
+      "fullItems": [],
+      "concepts": [],
+      "question": null,
+      "actionRationale": null,
+      "ambiguities": [],
+      "attempts": [
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "provider_failed",
+          "providerRequestId": null,
+          "promptVersion": "v0-05-interpretation-11",
+          "providerSchemaVersion": 2,
+          "errorCode": "provider_rate_limited",
+          "durationMs": 5522,
+          "inputTokens": null,
+          "outputTokens": null,
+          "interpretationProposal": null,
+          "ambiguities": [],
+          "coverageDiagnostic": null
+        }
+      ],
+      "violations": [
+        "sculpted profile preference was lost",
+        "parent preference was lost",
+        "subordinate condition silently disappeared from state, ambiguity, and question",
+        "review importance was not preserved as strong preference"
+      ]
+    },
+    {
+      "name": "architecture-c-ergonomic-mouse-2",
+      "status": "failed",
+      "action": null,
+      "revision": null,
+      "items": [],
+      "fullItems": [],
+      "concepts": [],
+      "question": null,
+      "actionRationale": null,
+      "ambiguities": [],
+      "attempts": [
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "provider_failed",
+          "providerRequestId": null,
+          "promptVersion": "v0-05-interpretation-11",
+          "providerSchemaVersion": 2,
+          "errorCode": "provider_rate_limited",
+          "durationMs": 3911,
+          "inputTokens": null,
+          "outputTokens": null,
+          "interpretationProposal": null,
+          "ambiguities": [],
+          "coverageDiagnostic": null
+        }
+      ],
+      "violations": [
+        "sculpted profile preference was lost",
+        "parent preference was lost",
+        "subordinate condition silently disappeared from state, ambiguity, and question",
+        "review importance was not preserved as strong preference"
+      ]
+    },
+    {
+      "name": "architecture-c-ergonomic-mouse-3",
+      "status": "failed",
+      "action": null,
+      "revision": null,
+      "items": [],
+      "fullItems": [],
+      "concepts": [],
+      "question": null,
+      "actionRationale": null,
+      "ambiguities": [],
+      "attempts": [
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "provider_failed",
+          "providerRequestId": null,
+          "promptVersion": "v0-05-interpretation-11",
+          "providerSchemaVersion": 2,
+          "errorCode": "provider_rate_limited",
+          "durationMs": 4282,
+          "inputTokens": null,
+          "outputTokens": null,
+          "interpretationProposal": null,
+          "ambiguities": [],
+          "coverageDiagnostic": null
+        }
+      ],
+      "violations": [
+        "sculpted profile preference was lost",
+        "parent preference was lost",
+        "subordinate condition silently disappeared from state, ambiguity, and question",
+        "review importance was not preserved as strong preference"
+      ]
+    },
+    {
+      "name": "architecture-c-ergonomic-mouse-4",
+      "status": "failed",
+      "action": null,
+      "revision": null,
+      "items": [],
+      "fullItems": [],
+      "concepts": [],
+      "question": null,
+      "actionRationale": null,
+      "ambiguities": [],
+      "attempts": [
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "provider_failed",
+          "providerRequestId": null,
+          "promptVersion": "v0-05-interpretation-11",
+          "providerSchemaVersion": 2,
+          "errorCode": "provider_rate_limited",
+          "durationMs": 6578,
+          "inputTokens": null,
+          "outputTokens": null,
+          "interpretationProposal": null,
+          "ambiguities": [],
+          "coverageDiagnostic": null
+        }
+      ],
+      "violations": [
+        "sculpted profile preference was lost",
+        "parent preference was lost",
+        "subordinate condition silently disappeared from state, ambiguity, and question",
+        "review importance was not preserved as strong preference"
+      ]
+    },
+    {
+      "name": "architecture-c-ergonomic-mouse-5",
+      "status": "failed",
+      "action": null,
+      "revision": null,
+      "items": [],
+      "fullItems": [],
+      "concepts": [],
+      "question": null,
+      "actionRationale": null,
+      "ambiguities": [],
+      "attempts": [
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "provider_failed",
+          "providerRequestId": null,
+          "promptVersion": "v0-05-interpretation-11",
+          "providerSchemaVersion": 2,
+          "errorCode": "provider_rate_limited",
+          "durationMs": 3800,
+          "inputTokens": null,
+          "outputTokens": null,
+          "interpretationProposal": null,
+          "ambiguities": [],
+          "coverageDiagnostic": null
+        }
+      ],
+      "violations": [
+        "sculpted profile preference was lost",
+        "parent preference was lost",
+        "subordinate condition silently disappeared from state, ambiguity, and question",
+        "review importance was not preserved as strong preference"
+      ]
+    },
+    {
+      "name": "architecture-c-ergonomic-mouse-6",
+      "status": "failed",
+      "action": null,
+      "revision": null,
+      "items": [],
+      "fullItems": [],
+      "concepts": [],
+      "question": null,
+      "actionRationale": null,
+      "ambiguities": [],
+      "attempts": [
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "provider_failed",
+          "providerRequestId": null,
+          "promptVersion": "v0-05-interpretation-11",
+          "providerSchemaVersion": 2,
+          "errorCode": "provider_rate_limited",
+          "durationMs": 5909,
+          "inputTokens": null,
+          "outputTokens": null,
+          "interpretationProposal": null,
+          "ambiguities": [],
+          "coverageDiagnostic": null
+        }
+      ],
+      "violations": [
+        "sculpted profile preference was lost",
+        "parent preference was lost",
+        "subordinate condition silently disappeared from state, ambiguity, and question",
+        "review importance was not preserved as strong preference"
+      ]
+    },
+    {
+      "name": "architecture-c-ergonomic-mouse-7",
+      "status": "failed",
+      "action": null,
+      "revision": null,
+      "items": [],
+      "fullItems": [],
+      "concepts": [],
+      "question": null,
+      "actionRationale": null,
+      "ambiguities": [],
+      "attempts": [
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "provider_failed",
+          "providerRequestId": null,
+          "promptVersion": "v0-05-interpretation-11",
+          "providerSchemaVersion": 2,
+          "errorCode": "provider_rate_limited",
+          "durationMs": 5609,
+          "inputTokens": null,
+          "outputTokens": null,
+          "interpretationProposal": null,
+          "ambiguities": [],
+          "coverageDiagnostic": null
+        }
+      ],
+      "violations": [
+        "sculpted profile preference was lost",
+        "parent preference was lost",
+        "subordinate condition silently disappeared from state, ambiguity, and question",
+        "review importance was not preserved as strong preference"
+      ]
+    },
+    {
+      "name": "architecture-c-ergonomic-mouse-8",
+      "status": "failed",
+      "action": null,
+      "revision": null,
+      "items": [],
+      "fullItems": [],
+      "concepts": [],
+      "question": null,
+      "actionRationale": null,
+      "ambiguities": [],
+      "attempts": [
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "provider_failed",
+          "providerRequestId": null,
+          "promptVersion": "v0-05-interpretation-11",
+          "providerSchemaVersion": 2,
+          "errorCode": "provider_rate_limited",
+          "durationMs": 4017,
+          "inputTokens": null,
+          "outputTokens": null,
+          "interpretationProposal": null,
+          "ambiguities": [],
+          "coverageDiagnostic": null
+        }
+      ],
+      "violations": [
+        "sculpted profile preference was lost",
+        "parent preference was lost",
+        "subordinate condition silently disappeared from state, ambiguity, and question",
+        "review importance was not preserved as strong preference"
+      ]
+    },
+    {
+      "name": "conditional-wireless-battery",
+      "status": "failed",
+      "action": null,
+      "revision": null,
+      "items": [],
+      "fullItems": [],
+      "concepts": [],
+      "question": null,
+      "actionRationale": null,
+      "ambiguities": [],
+      "attempts": [
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "provider_failed",
+          "providerRequestId": null,
+          "promptVersion": "v0-05-interpretation-11",
+          "providerSchemaVersion": 2,
+          "errorCode": "provider_rate_limited",
+          "durationMs": 3606,
+          "inputTokens": null,
+          "outputTokens": null,
+          "interpretationProposal": null,
+          "ambiguities": [],
+          "coverageDiagnostic": null
+        }
+      ],
+      "violations": [
+        "parent preference was lost",
+        "subordinate condition silently disappeared from state, ambiguity, and question"
+      ]
+    },
+    {
+      "name": "explicit-hard-battery",
+      "status": "failed",
+      "action": null,
+      "revision": null,
+      "items": [],
+      "fullItems": [],
+      "concepts": [],
+      "question": null,
+      "actionRationale": null,
+      "ambiguities": [],
+      "attempts": [
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "provider_failed",
+          "providerRequestId": null,
+          "promptVersion": "v0-05-interpretation-11",
+          "providerSchemaVersion": 2,
+          "errorCode": "provider_rate_limited",
+          "durationMs": 3833,
+          "inputTokens": null,
+          "outputTokens": null,
+          "interpretationProposal": null,
+          "ambiguities": [],
+          "coverageDiagnostic": null
+        }
+      ],
+      "violations": [
+        "hard time condition was neither represented nor surfaced as ambiguity/ASK"
+      ]
+    },
+    {
+      "name": "contextual-soft-lighter",
+      "status": "failed",
+      "action": null,
+      "revision": null,
+      "items": [],
+      "fullItems": [],
+      "concepts": [],
+      "question": null,
+      "actionRationale": null,
+      "ambiguities": [],
+      "attempts": [
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "provider_failed",
+          "providerRequestId": null,
+          "promptVersion": "v0-05-interpretation-11",
+          "providerSchemaVersion": 2,
+          "errorCode": "provider_rate_limited",
+          "durationMs": 4779,
+          "inputTokens": null,
+          "outputTokens": null,
+          "interpretationProposal": null,
+          "ambiguities": [],
+          "coverageDiagnostic": null
+        }
+      ],
+      "violations": [
+        "contextual lighter preference/direction was not preserved"
+      ]
+    },
+    {
+      "name": "contextual-strong-comfort",
+      "status": "failed",
+      "action": null,
+      "revision": null,
+      "items": [],
+      "fullItems": [],
+      "concepts": [],
+      "question": null,
+      "actionRationale": null,
+      "ambiguities": [],
+      "attempts": [
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "provider_failed",
+          "providerRequestId": null,
+          "promptVersion": "v0-05-interpretation-11",
+          "providerSchemaVersion": 2,
+          "errorCode": "provider_rate_limited",
+          "durationMs": 6484,
+          "inputTokens": null,
+          "outputTokens": null,
+          "interpretationProposal": null,
+          "ambiguities": [],
+          "coverageDiagnostic": null
+        }
+      ],
+      "violations": [
+        "contextual comfort was not preserved as strong_preference"
+      ]
+    },
+    {
+      "name": "cap-golden",
+      "status": "failed",
+      "action": null,
+      "revision": null,
+      "items": [],
+      "fullItems": [],
+      "concepts": [],
+      "question": null,
+      "actionRationale": null,
+      "ambiguities": [],
+      "attempts": [
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "provider_failed",
+          "providerRequestId": null,
+          "promptVersion": "v0-05-interpretation-11",
+          "providerSchemaVersion": 2,
+          "errorCode": "provider_rate_limited",
+          "durationMs": 5102,
+          "inputTokens": null,
+          "outputTokens": null,
+          "interpretationProposal": null,
+          "ambiguities": [],
+          "coverageDiagnostic": null
+        }
+      ],
+      "violations": [
+        "light/low-weight direction missing",
+        "breathable meaning missing"
+      ]
+    },
+    {
+      "name": "shelving-golden",
+      "status": "failed",
+      "action": null,
+      "revision": null,
+      "items": [],
+      "fullItems": [],
+      "concepts": [],
+      "question": null,
+      "actionRationale": null,
+      "ambiguities": [],
+      "attempts": [
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "provider_failed",
+          "providerRequestId": null,
+          "promptVersion": "v0-05-interpretation-11",
+          "providerSchemaVersion": 2,
+          "errorCode": "provider_rate_limited",
+          "durationMs": 4363,
+          "inputTokens": null,
+          "outputTokens": null,
+          "interpretationProposal": null,
+          "ambiguities": [],
+          "coverageDiagnostic": null
+        }
+      ],
+      "violations": [
+        "around £30 target missing",
+        "maximum width 60 cm missing",
+        "maximum depth 30 cm missing",
+        "categorical exclude /^white$/i at hard was not preserved",
+        "visually light preference missing"
+      ]
+    },
+    {
+      "name": "headphones-golden",
+      "status": "failed",
+      "action": null,
+      "revision": null,
+      "items": [],
+      "fullItems": [],
+      "concepts": [],
+      "question": null,
+      "actionRationale": null,
+      "ambiguities": [],
+      "attempts": [
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "provider_failed",
+          "providerRequestId": null,
+          "promptVersion": "v0-05-interpretation-11",
+          "providerSchemaVersion": 2,
+          "errorCode": "provider_rate_limited",
+          "durationMs": 4612,
+          "inputTokens": null,
+          "outputTokens": null,
+          "interpretationProposal": null,
+          "ambiguities": [],
+          "coverageDiagnostic": null
+        }
+      ],
+      "violations": [
+        "wireless product mode was not preserved as a hard requirement",
+        "over-ear form factor missing",
+        "glasses comfort missing",
+        "noise cancellation missing",
+        "around £150 target missing"
+      ]
+    },
+    {
+      "name": "cordless-vacuum",
+      "status": "failed",
+      "action": null,
+      "revision": null,
+      "items": [],
+      "fullItems": [],
+      "concepts": [],
+      "question": null,
+      "actionRationale": null,
+      "ambiguities": [],
+      "attempts": [
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "provider_failed",
+          "providerRequestId": null,
+          "promptVersion": "v0-05-interpretation-11",
+          "providerSchemaVersion": 2,
+          "errorCode": "provider_rate_limited",
+          "durationMs": 3842,
+          "inputTokens": null,
+          "outputTokens": null,
+          "interpretationProposal": null,
+          "ambiguities": [],
+          "coverageDiagnostic": null
+        }
+      ],
+      "violations": [
+        "cordless vacuum context acquisition did not complete"
+      ]
+    },
+    {
+      "name": "compact-coffee-machine",
+      "status": "failed",
+      "action": null,
+      "revision": null,
+      "items": [],
+      "fullItems": [],
+      "concepts": [],
+      "question": null,
+      "actionRationale": null,
+      "ambiguities": [],
+      "attempts": [
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "provider_failed",
+          "providerRequestId": null,
+          "promptVersion": "v0-05-interpretation-11",
+          "providerSchemaVersion": 2,
+          "errorCode": "provider_rate_limited",
+          "durationMs": 4331,
+          "inputTokens": null,
+          "outputTokens": null,
+          "interpretationProposal": null,
+          "ambiguities": [],
+          "coverageDiagnostic": null
+        }
+      ],
+      "violations": [
+        "compact coffee-machine context acquisition did not complete"
+      ]
+    },
+    {
+      "name": "explicit-indifference",
+      "status": "failed",
+      "action": null,
+      "revision": null,
+      "items": [
+        {
+          "criterionId": "f5d14ab3-6f76-4561-bc1e-20bab230ee83",
+          "conceptId": "be22b8e4-d56a-42dc-ae88-61bc4cec56f7",
+          "lifecycle": "active",
+          "authority": "unknown",
+          "label": "Maximum width",
+          "definition": "Maximum product width",
+          "strength": "hard",
+          "targetSemantics": "range",
+          "semanticKind": "measurement_range",
+          "summary": "{\"upper\":{\"amount\":\"60\",\"inclusive\":true},\"unit\":\"cm\"}",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "measurement_range",
+            "upper": {
+              "amount": "60",
+              "inclusive": true
+            },
+            "unit": "cm"
+          }
+        }
+      ],
+      "fullItems": [
+        {
+          "criterionId": "f5d14ab3-6f76-4561-bc1e-20bab230ee83",
+          "conceptId": "be22b8e4-d56a-42dc-ae88-61bc4cec56f7",
+          "lifecycle": "active",
+          "authority": "user_explicit",
+          "label": "Maximum width",
+          "definition": "Maximum product width",
+          "strength": "hard",
+          "targetSemantics": "range",
+          "semanticKind": "measurement_range",
+          "summary": "{\"upper\":{\"amount\":\"60\",\"inclusive\":true},\"unit\":\"cm\"}",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "measurement_range",
+            "upper": {
+              "amount": "60",
+              "inclusive": true
+            },
+            "unit": "cm"
+          }
+        }
+      ],
+      "concepts": [
+        {
+          "id": "be22b8e4-d56a-42dc-ae88-61bc4cec56f7",
+          "label": "Maximum width",
+          "definition": "Maximum product width",
+          "valueFamily": "measurement"
+        }
+      ],
+      "question": null,
+      "actionRationale": null,
+      "ambiguities": [],
+      "attempts": [
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "provider_failed",
+          "providerRequestId": null,
+          "promptVersion": "v0-05-interpretation-11",
+          "providerSchemaVersion": 2,
+          "errorCode": "provider_rate_limited",
+          "durationMs": 3881,
+          "inputTokens": null,
+          "outputTokens": null,
+          "interpretationProposal": null,
+          "ambiguities": [],
+          "coverageDiagnostic": null
+        }
+      ],
+      "violations": [
+        "authoritative full state did not mark the seeded width concept indifferent",
+        "the prior active width criterion remained effective after indifference",
+        "visible ShoppingBrief exposed an indifferent width item"
+      ]
+    },
+    {
+      "name": "change-of-mind-relaxation",
+      "status": "failed",
+      "action": null,
+      "revision": null,
+      "items": [
+        {
+          "criterionId": "b4172410-b248-46f2-8b2d-2be2563286ba",
+          "conceptId": "ed9df224-05b4-4f66-8531-0c74d47a6fa2",
+          "lifecycle": "active",
+          "authority": "unknown",
+          "label": "Maximum width",
+          "definition": "Maximum product width",
+          "strength": "hard",
+          "targetSemantics": "range",
+          "semanticKind": "measurement_range",
+          "summary": "{\"upper\":{\"amount\":\"60\",\"inclusive\":true},\"unit\":\"cm\"}",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "measurement_range",
+            "upper": {
+              "amount": "60",
+              "inclusive": true
+            },
+            "unit": "cm"
+          }
+        }
+      ],
+      "fullItems": [
+        {
+          "criterionId": "b4172410-b248-46f2-8b2d-2be2563286ba",
+          "conceptId": "ed9df224-05b4-4f66-8531-0c74d47a6fa2",
+          "lifecycle": "active",
+          "authority": "user_explicit",
+          "label": "Maximum width",
+          "definition": "Maximum product width",
+          "strength": "hard",
+          "targetSemantics": "range",
+          "semanticKind": "measurement_range",
+          "summary": "{\"upper\":{\"amount\":\"60\",\"inclusive\":true},\"unit\":\"cm\"}",
+          "semanticValue": {
+            "schemaVersion": 1,
+            "kind": "measurement_range",
+            "upper": {
+              "amount": "60",
+              "inclusive": true
+            },
+            "unit": "cm"
+          }
+        }
+      ],
+      "concepts": [
+        {
+          "id": "ed9df224-05b4-4f66-8531-0c74d47a6fa2",
+          "label": "Maximum width",
+          "definition": "Maximum product width",
+          "valueFamily": "measurement"
+        }
+      ],
+      "question": null,
+      "actionRationale": null,
+      "ambiguities": [],
+      "attempts": [
+        {
+          "stage": "interpretation",
+          "attemptOrdinal": 1,
+          "status": "provider_failed",
+          "providerRequestId": null,
+          "promptVersion": "v0-05-interpretation-11",
+          "providerSchemaVersion": 2,
+          "errorCode": "provider_rate_limited",
+          "durationMs": 3995,
+          "inputTokens": null,
+          "outputTokens": null,
+          "interpretationProposal": null,
+          "ambiguities": [],
+          "coverageDiagnostic": null
+        }
+      ],
+      "violations": [
+        "width relaxation did not preserve the new 80 cm ceiling"
+      ]
+    }
+  ]
+}
