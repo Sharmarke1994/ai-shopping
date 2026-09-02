@@ -20,6 +20,10 @@ import {
   INTERPRETATION_COVERAGE_PROMPT_VERSION,
   INTERPRETATION_REPAIR_INSTRUCTIONS,
   INTERPRETATION_REPAIR_PROMPT_VERSION,
+  INTERPRETATION_INVENTORY_INSTRUCTIONS,
+  INTERPRETATION_INVENTORY_MAPPING_INSTRUCTIONS,
+  INTERPRETATION_INVENTORY_PROMPT_VERSION,
+  INTERPRETATION_INVENTORY_MAPPING_PROMPT_VERSION,
   INTERPRETATION_SEMANTIC_POLICY_SUFFIX,
   INTERPRETATION_PROMPT_VERSION,
 } from "./prompts";
@@ -37,6 +41,12 @@ import {
   type InterpretationCoverageProviderWireV1,
 } from "./interpretation-coverage";
 import type { ProviderInputEnvelopeV1 } from "./provider-input";
+import {
+  interpretationInventoryProviderWireV1Schema,
+  inventoryAwareInterpretationProviderWireV2Schema,
+  type InterpretationInventoryProviderWireV1,
+  type InventoryAwareInterpretationProviderWireV2,
+} from "./interpretation-inventory";
 
 export const V0_05_OPENAI_DEFAULT_CONFIG = {
   model: "gpt-5.6-terra",
@@ -134,6 +144,28 @@ export function createOpenAIContextAcquisitionModel(options?: {
         providerSchemaVersion: INTERPRETATION_PROVIDER_SCHEMA_VERSION_V2,
         schemaName: "shopping_interpretation_repair_v2",
         schema: interpretationProviderWireV2Schema,
+      }),
+    inventoryInterpretation: (input) =>
+      callStructuredOutput<InterpretationInventoryProviderWireV1>({
+        client,
+        config,
+        input,
+        instructions: INTERPRETATION_INVENTORY_INSTRUCTIONS,
+        promptVersion: INTERPRETATION_INVENTORY_PROMPT_VERSION,
+        providerSchemaVersion: 1,
+        schemaName: "shopping_interpretation_inventory_v1",
+        schema: interpretationInventoryProviderWireV1Schema,
+      }),
+    interpretWithInventory: (input) =>
+      callStructuredOutput<InventoryAwareInterpretationProviderWireV2>({
+        client,
+        config,
+        input,
+        instructions: INTERPRETATION_INVENTORY_MAPPING_INSTRUCTIONS,
+        promptVersion: INTERPRETATION_INVENTORY_MAPPING_PROMPT_VERSION,
+        providerSchemaVersion: INTERPRETATION_PROVIDER_SCHEMA_VERSION_V2,
+        schemaName: "shopping_interpretation_inventory_mapping_v2",
+        schema: inventoryAwareInterpretationProviderWireV2Schema,
       }),
   };
 }

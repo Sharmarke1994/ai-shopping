@@ -4,6 +4,10 @@ import type {
 } from "./provider-wire";
 import type { ProviderInputEnvelopeV1 } from "./provider-input";
 import type { InterpretationCoverageProviderWireV1 } from "./interpretation-coverage";
+import type {
+  InterpretationInventoryProviderWireV1,
+  InventoryAwareInterpretationProviderWireV2,
+} from "./interpretation-inventory";
 
 export type ModelCallMetadata = Readonly<{
   provider: string;
@@ -47,4 +51,11 @@ export interface ContextAcquisitionModel {
   repairInterpretation?(
     input: ProviderInputEnvelopeV1,
   ): Promise<ModelCallResult<InterpretationProviderWire>>;
+  /** Diagnostic-only proposal-blind inventory prototype. */
+  inventoryInterpretation?(
+    input: ProviderInputEnvelopeV1,
+  ): Promise<ModelCallResult<InterpretationInventoryProviderWireV1>>;
+  interpretWithInventory?(
+    input: ProviderInputEnvelopeV1,
+  ): Promise<ModelCallResult<InventoryAwareInterpretationProviderWireV2>>;
 }

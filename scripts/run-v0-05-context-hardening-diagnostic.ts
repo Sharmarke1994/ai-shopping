@@ -25,13 +25,18 @@ import {
 import { requireTestDatabaseEnvironment } from "../src/infrastructure/config/environment";
 import { migrateDatabase } from "../src/infrastructure/database/migrate";
 import { safeDiagnosticJsonStringify } from "../src/features/context-acquisition/diagnostic-json";
+import {
+  assignInventoryOrdinals,
+  buildInventoryAwareInterpretationInputV1,
+  validateInventoryCoverage,
+} from "../src/features/context-acquisition/interpretation-inventory";
 
 const execFile = promisify(execFileCallback);
 const outputStem =
   process.env.CONTEXT_HARDENING_OUTPUT_STEM ??
   "v0-05-context-hardening-diagnostic";
 if (
-  !/^(?:v0-05-context-hardening-diagnostic(?:-[a-z0-9-]+)?|v0-09-recovery-rc3-context-precheck|v0-09-recovery-rc4-context-stability|v0-09-recovery-rc4-context-architecture-[ab])$/.test(
+  !/^(?:v0-05-context-hardening-diagnostic(?:-[a-z0-9-]+)?|v0-09-recovery-rc3-context-precheck|v0-09-recovery-rc4-context-stability|v0-09-recovery-rc4-context-architecture-[ab]|v0-09-recovery-rc4-context-inventory)$/.test(
     outputStem,
   )
 )
@@ -727,14 +732,17 @@ const diagnosticCaseSet =
           ? "architecture-a"
           : process.env.CONTEXT_HARDENING_CASE_SET === "architecture-b"
             ? "architecture-b"
-            : "full";
+            : process.env.CONTEXT_HARDENING_CASE_SET === "inventory"
+              ? "inventory"
+              : "full";
 const rc4MouseCase = cases.find(
   (inputCase) => inputCase.name === "rc3-ergonomic-mouse",
 );
 if (
   (diagnosticCaseSet === "rc4" ||
     diagnosticCaseSet === "architecture-a" ||
-    diagnosticCaseSet === "architecture-b") &&
+    diagnosticCaseSet === "architecture-b" ||
+    diagnosticCaseSet === "inventory") &&
   rc4MouseCase === undefined
 )
   throw new Error("RC4 mouse diagnostic case is missing");
@@ -770,7 +778,8 @@ const selectedCases =
             ),
           ]
         : diagnosticCaseSet === "architecture-a" ||
-            diagnosticCaseSet === "architecture-b"
+            diagnosticCaseSet === "architecture-b" ||
+            diagnosticCaseSet === "inventory"
           ? [
               ...Array.from({ length: 6 }, (_, index) => ({
                 ...rc4MouseCase!,
@@ -790,7 +799,8 @@ if (
   throw new Error("Phase-A diagnostic case portfolio is incomplete");
 if (
   (diagnosticCaseSet === "architecture-a" ||
-    diagnosticCaseSet === "architecture-b") &&
+    diagnosticCaseSet === "architecture-b" ||
+    diagnosticCaseSet === "inventory") &&
   selectedCases.length !== 14
 )
   throw new Error("Architecture diagnostic case portfolio is incomplete");
@@ -1354,6 +1364,8 @@ if (existsSync(jsonOutput) || existsSync(attemptOutput)) {
 const startedAt = new Date().toISOString();
 const counts = {
   logicalInterpretationCalls: 0,
+  logicalInventoryCalls: 0,
+  logicalInventoryMappingCalls: 0,
   logicalCoverageCalls: 0,
   logicalRepairCalls: 0,
   logicalActionCalls: 0,
@@ -1381,7 +1393,8 @@ try {
   });
   const mediumModel =
     diagnosticCaseSet === "architecture-a" ||
-    diagnosticCaseSet === "architecture-b"
+    diagnosticCaseSet === "architecture-b" ||
+    diagnosticCaseSet === "inventory"
       ? createOpenAIContextAcquisitionModel({
           environment,
           config: {
@@ -1392,7 +1405,11 @@ try {
         })
       : lowModel;
   const operationReasoning = {
-    interpretation: diagnosticCaseSet === "architecture-b" ? "medium" : "low",
+    interpretation:
+      diagnosticCaseSet === "architecture-b" ||
+      diagnosticCaseSet === "inventory"
+        ? "medium"
+        : "low",
     coverage:
       diagnosticCaseSet === "architecture-a" ||
       diagnosticCaseSet === "architecture-b"
@@ -1408,9 +1425,41 @@ try {
   const model: ContextAcquisitionModel = {
     interpret: async (input) => {
       counts.logicalInterpretationCalls += 1;
-      return (
-        diagnosticCaseSet === "architecture-b" ? mediumModel : lowModel
-      ).interpret(input);
+      if (diagnosticCaseSet !== "inventory") {
+        return (
+          diagnosticCaseSet === "architecture-b" ? mediumModel : lowModel
+        ).interpret(input);
+      }
+      if (
+        mediumModel.inventoryInterpretation === undefined ||
+        mediumModel.interpretWithInventory === undefined
+      )
+        throw new Error("inventory prototype unavailable");
+      counts.logicalInventoryCalls += 1;
+      const inventoryResult = await mediumModel.inventoryInterpretation(input);
+      if (inventoryResult.status !== "completed") return inventoryResult;
+      const inventory = assignInventoryOrdinals(inventoryResult.value);
+      counts.logicalInventoryMappingCalls += 1;
+      const mappedResult = await mediumModel.interpretWithInventory(
+        buildInventoryAwareInterpretationInputV1({ input, inventory }),
+      );
+      if (mappedResult.status !== "completed") return mappedResult;
+      try {
+        return {
+          status: "completed" as const,
+          value: validateInventoryCoverage({
+            wire: mappedResult.value,
+            inventory,
+          }),
+          metadata: mappedResult.metadata,
+        };
+      } catch {
+        return {
+          status: "malformed" as const,
+          errorCode: "inventory_coverage_invalid",
+          metadata: mappedResult.metadata,
+        };
+      }
     },
     selectAction: async (input) => {
       counts.logicalActionCalls += 1;
@@ -1464,6 +1513,7 @@ try {
       "",
       `- Model: ${artifact.model} (reasoning ${artifact.reasoningEffort})`,
       `- Logical interpretation calls: ${counts.logicalInterpretationCalls}`,
+      `- Proposal-blind inventory calls: ${counts.logicalInventoryCalls}; mapped interpretation calls: ${counts.logicalInventoryMappingCalls}`,
       `- Coverage checks: ${counts.logicalCoverageCalls}; repairs: ${counts.logicalRepairCalls}`,
       `- Logical action calls: ${counts.logicalActionCalls}`,
       `- Cases: ${results.length}; completed: ${counts.completed}; failed: ${counts.failed}`,

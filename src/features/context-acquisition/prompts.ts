@@ -3,6 +3,10 @@ export const INTERPRETATION_COVERAGE_PROMPT_VERSION =
   "v0-05-interpretation-coverage-1";
 export const INTERPRETATION_REPAIR_PROMPT_VERSION =
   "v0-05-interpretation-repair-1";
+export const INTERPRETATION_INVENTORY_PROMPT_VERSION =
+  "v0-05-interpretation-inventory-1";
+export const INTERPRETATION_INVENTORY_MAPPING_PROMPT_VERSION =
+  "v0-05-interpretation-inventory-mapping-1";
 export const CONTEXT_ACTION_PROMPT_VERSION = "v0-05-context-action-6";
 
 export const INTERPRETATION_INSTRUCTIONS = `You interpret one shopper input against authoritative current shopping state.
@@ -20,6 +24,10 @@ export const INTERPRETATION_SEMANTIC_POLICY_SUFFIX = `Treat â€œergonomic designâ
 export const INTERPRETATION_COVERAGE_INSTRUCTIONS = `You are a semantic coverage verifier. The payload contains the exact shopper input, the authoritative current state, and one proposed interpretation. Decide whether the proposal preserves every materially explicit decision-relevant meaning without inventing or strengthening anything. Treat separate facets, subordinate conditions, changes of mind, indifference, and explicit exclusions independently. Do not write state, choose IDs, or propose a patch. Return complete only when no repair is needed; otherwise return at most four bounded issue summaries. Do not expose chain-of-thought.`;
 
 export const INTERPRETATION_REPAIR_INSTRUCTIONS = `Repair one interpretation proposal against the original shopper input and authoritative snapshot. Preserve correct parts and fix only the verifier-identified semantic gaps. Produce a complete replacement proposal, not a patch-on-patch mutation. Do not invent requirements, strengthen soft language, or expose chain-of-thought. Return the normal strict interpretation contract.`;
+
+export const INTERPRETATION_INVENTORY_INSTRUCTIONS = `Create a proposal-blind inventory of the materially explicit shopping meanings in the exact shopper input. Do not see or infer any proposed interpretation. Return each atomic meaning once with a short faithful summary and one role: criterion, subject_context, change_of_mind, indifference, or condition. Do not invent product facts, IDs, or unstated preferences. Keep subordinate conditions separate unless they are literally inseparable from the parent meaning. Do not expose chain-of-thought.`;
+
+export const INTERPRETATION_INVENTORY_MAPPING_INSTRUCTIONS = `Interpret the shopper input against authoritative state while accounting for the supplied proposal-blind semantic inventory. Return a complete replacement interpretation and one mapping entry for every inventory ordinal. A meaning may map to one or more operation indexes, subject/context, a bounded ambiguity, or an intentional combination. Never invent requirements or strengthen language. Do not expose chain-of-thought.`;
 
 export const CONTEXT_ACTION_INSTRUCTIONS = `Choose the next context-acquisition action from the freshly authoritative state.
 
