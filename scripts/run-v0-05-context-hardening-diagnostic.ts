@@ -24,13 +24,14 @@ import {
 } from "../src/infrastructure/database/clients";
 import { requireTestDatabaseEnvironment } from "../src/infrastructure/config/environment";
 import { migrateDatabase } from "../src/infrastructure/database/migrate";
+import { safeDiagnosticJsonStringify } from "../src/features/context-acquisition/diagnostic-json";
 
 const execFile = promisify(execFileCallback);
 const outputStem =
   process.env.CONTEXT_HARDENING_OUTPUT_STEM ??
   "v0-05-context-hardening-diagnostic";
 if (
-  !/^(?:v0-05-context-hardening-diagnostic(?:-[a-z0-9-]+)?|v0-09-recovery-rc3-context-precheck|v0-09-recovery-rc4-context-stability)$/.test(
+  !/^(?:v0-05-context-hardening-diagnostic(?:-[a-z0-9-]+)?|v0-09-recovery-rc3-context-precheck|v0-09-recovery-rc4-context-stability|v0-09-recovery-rc4-context-architecture-[ab])$/.test(
     outputStem,
   )
 )
@@ -73,7 +74,11 @@ type DiagnosticAttempt = Readonly<{
   promptVersion: string;
   providerSchemaVersion: number;
   errorCode: string | null;
+  durationMs: number;
+  inputTokens: number | null;
+  outputTokens: number | null;
   ambiguities: readonly string[];
+  interpretationProposal: unknown;
   coverageDiagnostic: Readonly<{
     verdict: string | undefined;
     issueKinds: readonly string[] | undefined;
@@ -695,6 +700,16 @@ const phaseACaseNames = [
   "headphones-golden",
   "cap-golden",
 ] as const;
+const architectureContrastCaseNames = [
+  "cap-golden",
+  "headphones-golden",
+  "shelving-golden",
+  "contextual-soft-lighter",
+  "conditional-wireless-battery",
+  "explicit-hard-battery",
+  "explicit-indifference",
+  "change-of-mind-relaxation",
+] as const;
 const rc3CaseNames = [
   "rc3-ergonomic-mouse",
   "headphones-golden",
@@ -708,11 +723,20 @@ const diagnosticCaseSet =
       ? "rc3"
       : process.env.CONTEXT_HARDENING_CASE_SET === "rc4"
         ? "rc4"
-        : "full";
+        : process.env.CONTEXT_HARDENING_CASE_SET === "architecture-a"
+          ? "architecture-a"
+          : process.env.CONTEXT_HARDENING_CASE_SET === "architecture-b"
+            ? "architecture-b"
+            : "full";
 const rc4MouseCase = cases.find(
   (inputCase) => inputCase.name === "rc3-ergonomic-mouse",
 );
-if (diagnosticCaseSet === "rc4" && rc4MouseCase === undefined)
+if (
+  (diagnosticCaseSet === "rc4" ||
+    diagnosticCaseSet === "architecture-a" ||
+    diagnosticCaseSet === "architecture-b") &&
+  rc4MouseCase === undefined
+)
   throw new Error("RC4 mouse diagnostic case is missing");
 const selectedCases =
   diagnosticCaseSet === "phase-a"
@@ -745,12 +769,31 @@ const selectedCases =
               ].includes(inputCase.name),
             ),
           ]
-        : cases;
+        : diagnosticCaseSet === "architecture-a" ||
+            diagnosticCaseSet === "architecture-b"
+          ? [
+              ...Array.from({ length: 6 }, (_, index) => ({
+                ...rc4MouseCase!,
+                name: `architecture-${diagnosticCaseSet.slice(-1)}-ergonomic-mouse-${index + 1}`,
+              })),
+              ...cases.filter((inputCase) =>
+                architectureContrastCaseNames.includes(
+                  inputCase.name as (typeof architectureContrastCaseNames)[number],
+                ),
+              ),
+            ]
+          : cases;
 if (
   diagnosticCaseSet === "phase-a" &&
   selectedCases.length !== phaseACaseNames.length
 )
   throw new Error("Phase-A diagnostic case portfolio is incomplete");
+if (
+  (diagnosticCaseSet === "architecture-a" ||
+    diagnosticCaseSet === "architecture-b") &&
+  selectedCases.length !== 14
+)
+  throw new Error("Architecture diagnostic case portfolio is incomplete");
 
 type CaseResult = Readonly<{
   name: string;
@@ -889,7 +932,7 @@ function summarizeValue(value: { kind: string; [key: string]: unknown }) {
   if (value.kind === "money_stretch")
     return `${String(value.targetMinor)} -> ${String(value.stretchCeilingMinor)} ${String(value.currency)}`;
   if (value.kind === "measurement_range")
-    return JSON.stringify({
+    return safeDiagnosticJsonStringify({
       lower: value.lower,
       upper: value.upper,
       unit: value.unit,
@@ -912,6 +955,9 @@ async function loadSanitizedAttempts(taskId: string, inputId: string) {
       promptVersion: contextAcquisitionAttempts.promptVersion,
       providerSchemaVersion: contextAcquisitionAttempts.providerSchemaVersion,
       errorCode: contextAcquisitionAttempts.errorCode,
+      durationMs: contextAcquisitionAttempts.durationMs,
+      inputTokens: contextAcquisitionAttempts.inputTokens,
+      outputTokens: contextAcquisitionAttempts.outputTokens,
       interpretationProposal: contextAcquisitionAttempts.interpretationProposal,
       coverageDiagnostic: contextAcquisitionAttempts.coverageDiagnostic,
     })
@@ -934,6 +980,12 @@ async function loadSanitizedAttempts(taskId: string, inputId: string) {
     promptVersion: row.promptVersion,
     providerSchemaVersion: row.providerSchemaVersion,
     errorCode: row.errorCode,
+    durationMs: row.durationMs,
+    inputTokens: row.inputTokens,
+    outputTokens: row.outputTokens,
+    interpretationProposal: projectInterpretationProposal(
+      row.interpretationProposal,
+    ),
     ambiguities: extractAmbiguitySummaries(row.interpretationProposal),
     coverageDiagnostic:
       row.coverageDiagnostic !== null &&
@@ -954,6 +1006,28 @@ async function loadSanitizedAttempts(taskId: string, inputId: string) {
           }
         : null,
   }));
+}
+
+function projectInterpretationProposal(value: unknown): unknown {
+  if (typeof value !== "object" || value === null) return null;
+  const proposal = value as Record<string, unknown>;
+  const result: Record<string, unknown> = {
+    providerSchemaVersion: proposal.providerSchemaVersion,
+    outcome: proposal.outcome,
+    ambiguities: proposal.ambiguities,
+  };
+  if ("operations" in proposal) result.operations = proposal.operations;
+  if (
+    typeof proposal.interpretation === "object" &&
+    proposal.interpretation !== null
+  ) {
+    const interpretation = proposal.interpretation as Record<string, unknown>;
+    result.interpretation = {
+      outcome: interpretation.outcome,
+      operations: interpretation.operations,
+    };
+  }
+  return result;
 }
 
 function extractAmbiguitySummaries(value: unknown): readonly string[] {
@@ -1296,34 +1370,63 @@ try {
   ]);
   database = await createDisposableDatabase();
   currentConnection = database.connection;
-  const baseModel = createOpenAIContextAcquisitionModel({
-    environment: { ...process.env, OPENAI_API_KEY: openAIKey },
+  const environment = { ...process.env, OPENAI_API_KEY: openAIKey };
+  const lowModel = createOpenAIContextAcquisitionModel({
+    environment,
     config: {
       ...V0_05_OPENAI_DEFAULT_CONFIG,
       model: "gpt-5.6-terra",
       reasoningEffort: "low",
     },
   });
+  const mediumModel =
+    diagnosticCaseSet === "architecture-a" ||
+    diagnosticCaseSet === "architecture-b"
+      ? createOpenAIContextAcquisitionModel({
+          environment,
+          config: {
+            ...V0_05_OPENAI_DEFAULT_CONFIG,
+            model: "gpt-5.6-terra",
+            reasoningEffort: "medium",
+          },
+        })
+      : lowModel;
+  const operationReasoning = {
+    interpretation: diagnosticCaseSet === "architecture-b" ? "medium" : "low",
+    coverage:
+      diagnosticCaseSet === "architecture-a" ||
+      diagnosticCaseSet === "architecture-b"
+        ? "medium"
+        : "low",
+    repair:
+      diagnosticCaseSet === "architecture-a" ||
+      diagnosticCaseSet === "architecture-b"
+        ? "medium"
+        : "low",
+    action: "low",
+  } as const;
   const model: ContextAcquisitionModel = {
     interpret: async (input) => {
       counts.logicalInterpretationCalls += 1;
-      return baseModel.interpret(input);
+      return (
+        diagnosticCaseSet === "architecture-b" ? mediumModel : lowModel
+      ).interpret(input);
     },
     selectAction: async (input) => {
       counts.logicalActionCalls += 1;
-      return baseModel.selectAction(input);
+      return lowModel.selectAction(input);
     },
     verifyInterpretationCoverage: async (input) => {
       counts.logicalCoverageCalls += 1;
-      if (baseModel.verifyInterpretationCoverage === undefined)
+      if (mediumModel.verifyInterpretationCoverage === undefined)
         throw new Error("coverage verifier unavailable");
-      return baseModel.verifyInterpretationCoverage(input);
+      return mediumModel.verifyInterpretationCoverage(input);
     },
     repairInterpretation: async (input) => {
       counts.logicalRepairCalls += 1;
-      if (baseModel.repairInterpretation === undefined)
+      if (mediumModel.repairInterpretation === undefined)
         throw new Error("interpretation repair unavailable");
-      return baseModel.repairInterpretation(input);
+      return mediumModel.repairInterpretation(input);
     },
   };
   for (const [index, inputCase] of selectedCases.entries()) {
@@ -1345,12 +1448,13 @@ try {
     releaseAccepted: false,
     model: "gpt-5.6-terra",
     reasoningEffort: "low",
+    operationReasoning,
     startedAt,
     finishedAt: new Date().toISOString(),
     counts: { ...counts, caseCount: results.length, violationCount },
     results,
   };
-  await writeFile(jsonOutput, JSON.stringify(artifact, null, 2));
+  await writeFile(jsonOutput, safeDiagnosticJsonStringify(artifact, 2));
   await writeFile(
     markdownOutput,
     [
@@ -1375,38 +1479,48 @@ try {
   );
   await writeFile(
     attemptOutput,
-    JSON.stringify(
+    safeDiagnosticJsonStringify(
       {
         schemaVersion: 1,
         startedAt,
         finishedAt: artifact.finishedAt,
         releaseAccepted: false,
       },
-      null,
       2,
     ),
   );
 } catch (error) {
-  await writeFile(
-    attemptOutput,
-    JSON.stringify(
-      {
-        schemaVersion: 1,
-        diagnostic: `v0-05-context-hardening-${diagnosticCaseSet}`,
-        caseSet: diagnosticCaseSet,
-        releaseAccepted: false,
-        startedAt,
-        finishedAt: new Date().toISOString(),
-        counts,
-        completedCases: results,
-        error: error instanceof Error ? error.message : "diagnostic_failed",
-      },
-      null,
-      2,
-    ),
-  );
+  const failureArtifact = {
+    schemaVersion: 1,
+    diagnostic: `v0-05-context-hardening-${diagnosticCaseSet}`,
+    caseSet: diagnosticCaseSet,
+    releaseAccepted: false,
+    startedAt,
+    finishedAt: new Date().toISOString(),
+    counts,
+    completedCases: results,
+    error: error instanceof Error ? error.message : "diagnostic_failed",
+  };
+  try {
+    await writeFile(
+      attemptOutput,
+      safeDiagnosticJsonStringify(failureArtifact, 2),
+    );
+  } catch (artifactError) {
+    console.error(
+      "context diagnostic artifact write failed",
+      artifactError instanceof Error ? artifactError.message : artifactError,
+    );
+  }
   throw error;
 } finally {
-  await database?.close();
+  try {
+    await database?.close();
+  } catch (cleanupError) {
+    console.error(
+      "context diagnostic cleanup failed",
+      cleanupError instanceof Error ? cleanupError.message : cleanupError,
+    );
+  }
   currentConnection = null;
 }

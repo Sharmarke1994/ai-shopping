@@ -194,6 +194,79 @@ describe("context-acquisition coordinator", () => {
     expect(coverageAttempts).toHaveLength(1);
   });
 
+  it("persists final verifier issue kinds when one repair is still incomplete", async () => {
+    const task = await createShoppingTask(connection.db);
+    const input = await recordTaskInput({
+      db: connection.db,
+      taskId: task.id,
+      clientActionId: "coverage-final-issues",
+      request: {
+        inputSchemaVersion: 1,
+        expectedRevision: 0n,
+        kind: "message",
+        body: "I need a mouse with a comfortable shape and good battery life.",
+      },
+    });
+    let coverageCalls = 0;
+    const model: ContextAcquisitionModel = {
+      interpret: () => completed(noChange),
+      verifyInterpretationCoverage: () => {
+        coverageCalls += 1;
+        return completed({
+          providerSchemaVersion: 1,
+          verdict: "needs_repair",
+          issues: [
+            {
+              kind:
+                coverageCalls === 1
+                  ? "missing_explicit_meaning"
+                  : "conditional_loss",
+              summary: "The proposal does not preserve this meaning.",
+            },
+          ],
+        });
+      },
+      repairInterpretation: () => completed(noChange),
+      selectAction: vi.fn(() => completed(search)),
+    };
+
+    const result = await acquireShoppingContext({
+      db: connection.db,
+      model,
+      taskId: task.id,
+      sourceInputId: input.input.id,
+    });
+    expect(result).toEqual({
+      status: "failed",
+      stage: "interpretation",
+      errorCode: "semantic_coverage_failed",
+    });
+    expect(model.selectAction).not.toHaveBeenCalled();
+
+    const [finalAttempt] = await connection.db
+      .select({
+        status: contextAcquisitionAttempts.status,
+        coverageDiagnostic: contextAcquisitionAttempts.coverageDiagnostic,
+      })
+      .from(contextAcquisitionAttempts)
+      .where(
+        and(
+          eq(contextAcquisitionAttempts.taskId, task.id),
+          eq(
+            contextAcquisitionAttempts.stage,
+            "interpretation_repair_coverage",
+          ),
+        ),
+      );
+    expect(finalAttempt).toMatchObject({
+      status: "malformed",
+      coverageDiagnostic: {
+        verdict: "needs_repair",
+        issueKinds: ["conditional_loss"],
+      },
+    });
+  });
+
   it("records both stale action races and fails closed without changing semantic truth", async () => {
     const task = await createShoppingTask(connection.db);
     const baselineInput = await recordTaskInput({

@@ -440,6 +440,20 @@ async function verifyInterpretationCoverage(options: {
   try {
     repairedProposal = lowerInterpretationProviderWire(repaired.value);
   } catch {
+    await recordFailureAttempt({
+      ...options,
+      stage: "interpretation_repair",
+      attemptOrdinal: 200 + options.attemptOrdinal,
+      snapshotRevision: options.state.task.currentRevision,
+      status: "malformed",
+      errorCode: "provider_lowering_failed",
+      metadata: repaired.metadata,
+      interpretationProposal: repaired.value,
+      coverageDiagnostic: {
+        verdict: "repair_failed",
+        issueKinds: [],
+      },
+    });
     return {
       status: "failed",
       stage: "interpretation",
@@ -477,6 +491,17 @@ async function verifyInterpretationCoverage(options: {
     finalCheck.status !== "completed" ||
     finalCheck.value.verdict !== "complete"
   ) {
+    const finalCoverageDiagnostic =
+      finalCheck.status === "completed"
+        ? {
+            verdict: finalCheck.value.verdict,
+            issueKinds: finalCheck.value.issues.map((issue) => issue.kind),
+          }
+        : {
+            verdict: "provider_failed",
+            issueKinds: [],
+            errorCode: finalCheck.errorCode,
+          };
     await recordFailureAttempt({
       ...options,
       stage: "interpretation_repair_coverage",
@@ -484,12 +509,9 @@ async function verifyInterpretationCoverage(options: {
       snapshotRevision: options.state.task.currentRevision,
       status: "malformed",
       errorCode: "semantic_coverage_failed",
-      metadata:
-        finalCheck.status === "completed"
-          ? finalCheck.metadata
-          : finalCheck.metadata,
+      metadata: finalCheck.metadata,
       interpretationProposal: repaired.value,
-      coverageDiagnostic: { verdict: "needs_repair", issueKinds: [] },
+      coverageDiagnostic: finalCoverageDiagnostic,
     });
     return {
       status: "failed",

@@ -3,6 +3,7 @@ import type { CurrentShoppingState } from "@/domain/shopping-state/shopping-stat
 import type { InterpretationProposalV1 } from "./provider-wire";
 import type { ResolvedShoppingInputV1 } from "./contracts";
 import type { ProviderInputEnvelopeV1 } from "./provider-input";
+import { safeDiagnosticJsonStringify } from "./diagnostic-json";
 
 export const INTERPRETATION_COVERAGE_SCHEMA_VERSION = 1 as const;
 
@@ -73,7 +74,9 @@ export function buildInterpretationCoverageInputV1(options: {
     providerInputSchemaVersion: 1 as const,
     payload,
   } satisfies ProviderInputEnvelopeV1;
-  if (Buffer.byteLength(JSON.stringify(envelope), "utf8") > 96_000) {
+  if (
+    Buffer.byteLength(safeDiagnosticJsonStringify(envelope), "utf8") > 96_000
+  ) {
     throw new Error("interpretation_coverage_input_too_large");
   }
   return envelope;
