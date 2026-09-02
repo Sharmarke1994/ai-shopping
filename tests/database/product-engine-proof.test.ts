@@ -6,7 +6,6 @@
  * createShoppingTask -> recordInitialShoppingSubject -> applyStatePatch.
  * This file is product-engine evidence, never release acceptance evidence.
  */
-import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { persistContextAction } from "../../src/features/context-acquisition/persistence/context-actions";
 import { saveCandidateListing } from "../../src/features/live-shopping/saved-listings";
@@ -19,14 +18,12 @@ import { executeOrResumeEvidenceResearch } from "../../src/features/product-unde
 import { loadCurrentDecisionSupport } from "../../src/features/product-understanding/persistence";
 import { buildDecisionSupport } from "../../src/features/product-understanding/decision-support";
 import { executeOrResumeMerchantDestinationResolution } from "../../src/features/purchase-destinations/orchestrator";
-import { FakeShoppingProvider } from "../../src/features/retrieval-spike/fake-shopping-provider";
 import {
   candidateListingSchema,
   providerSearchResultSchema,
   type SearchQuery,
   type ShoppingSearchProvider,
 } from "../../src/features/retrieval-spike/contracts";
-import { loadPersistedSearchRun } from "../../src/features/retrieval-spike/persistence/search-runs";
 import { executeOrResumeRetrieval } from "../../src/features/retrieval-spike/retrieval-orchestrator";
 import { recordInitialShoppingSubject } from "../../src/features/retrieval-spike/persistence/shopping-subjects";
 import { createShoppingTask } from "../../src/features/shopping-state/persistence/tasks";
@@ -58,7 +55,8 @@ type ProductCase = {
     label: string;
     definition: string;
     strength: "hard" | "strong_preference" | "preference";
-    targetSemantics: "qualitative" | "range";
+    targetSemantics:
+      "exact" | "range" | "stretch" | "categorical" | "qualitative";
     semanticValue: Record<string, unknown>;
   }[];
 };
@@ -109,6 +107,58 @@ const cases: readonly ProductCase[] = [
           text: "wireless",
         },
       },
+      {
+        localRef: "reviews",
+        label: "Reviews",
+        definition: "Importance of review evidence",
+        strength: "strong_preference",
+        targetSemantics: "qualitative",
+        semanticValue: {
+          schemaVersion: 1,
+          kind: "qualitative",
+          mode: "text",
+          text: "reviews matter a lot",
+        },
+      },
+      {
+        localRef: "battery",
+        label: "Battery life",
+        definition: "Battery quality required for a wireless mouse",
+        strength: "preference",
+        targetSemantics: "qualitative",
+        semanticValue: {
+          schemaVersion: 1,
+          kind: "qualitative",
+          mode: "text",
+          text: "very good battery life when wireless",
+        },
+      },
+      {
+        localRef: "shape",
+        label: "Sculpted shape",
+        definition: "A chunkier sculpted side profile or thumb rest",
+        strength: "preference",
+        targetSemantics: "qualitative",
+        semanticValue: {
+          schemaVersion: 1,
+          kind: "qualitative",
+          mode: "text",
+          text: "chunkier and sculpted with a noticeable side profile or thumb rest",
+        },
+      },
+      {
+        localRef: "brands",
+        label: "Brand quality",
+        definition: "Avoid explicitly excluded low-quality brands",
+        strength: "hard",
+        targetSemantics: "categorical",
+        semanticValue: {
+          schemaVersion: 1,
+          kind: "categorical",
+          operator: "exclude",
+          values: ["Amazon Basics", "bad brands"],
+        },
+      },
     ],
   },
   {
@@ -121,12 +171,13 @@ const cases: readonly ProductCase[] = [
         label: "Budget",
         definition: "Target chair price",
         strength: "hard",
-        targetSemantics: "range",
+        targetSemantics: "stretch",
         semanticValue: {
           schemaVersion: 1,
-          kind: "money",
-          mode: "ceiling",
-          amountMinor: 35000,
+          kind: "money_stretch",
+          targetMinor: 25000,
+          stretchCeilingMinor: 35000,
+          condition: "only if genuinely better for long sessions",
           currency: "GBP",
         },
       },
@@ -154,6 +205,32 @@ const cases: readonly ProductCase[] = [
           kind: "qualitative",
           mode: "text",
           text: "breathable fabric or mesh",
+        },
+      },
+      {
+        localRef: "height",
+        label: "Shopper height",
+        definition: "Shopper height for chair fit",
+        strength: "preference",
+        targetSemantics: "exact",
+        semanticValue: {
+          schemaVersion: 1,
+          kind: "measurement",
+          amount: "178",
+          unit: "cm",
+        },
+      },
+      {
+        localRef: "size",
+        label: "Compact size",
+        definition: "Avoid an oversized chair",
+        strength: "hard",
+        targetSemantics: "categorical",
+        semanticValue: {
+          schemaVersion: 1,
+          kind: "categorical",
+          operator: "exclude",
+          values: ["huge", "gamer-looking"],
         },
       },
     ],
@@ -203,6 +280,32 @@ const cases: readonly ProductCase[] = [
           text: "not very loud",
         },
       },
+      {
+        localRef: "runtime",
+        label: "Useful runtime",
+        definition: "Useful battery runtime",
+        strength: "preference",
+        targetSemantics: "qualitative",
+        semanticValue: {
+          schemaVersion: 1,
+          kind: "qualitative",
+          mode: "text",
+          text: "at least 40 minutes of useful runtime",
+        },
+      },
+      {
+        localRef: "weight",
+        label: "Low weight",
+        definition: "Vacuum weight",
+        strength: "preference",
+        targetSemantics: "range",
+        semanticValue: {
+          schemaVersion: 1,
+          kind: "measurement_range",
+          upper: { amount: "3", inclusive: true },
+          unit: "kg",
+        },
+      },
     ],
   },
   {
@@ -249,6 +352,45 @@ const cases: readonly ProductCase[] = [
           text: "genuinely good espresso",
         },
       },
+      {
+        localRef: "cleaning",
+        label: "Easy cleaning",
+        definition: "Ease of cleaning the machine",
+        strength: "strong_preference",
+        targetSemantics: "qualitative",
+        semanticValue: {
+          schemaVersion: 1,
+          kind: "qualitative",
+          mode: "text",
+          text: "easy to clean",
+        },
+      },
+      {
+        localRef: "noise",
+        label: "Quiet operation",
+        definition: "Avoid very loud operation",
+        strength: "preference",
+        targetSemantics: "qualitative",
+        semanticValue: {
+          schemaVersion: 1,
+          kind: "qualitative",
+          mode: "text",
+          text: "not very loud",
+        },
+      },
+      {
+        localRef: "milk",
+        label: "Milk frothing",
+        definition: "Optional useful milk frothing",
+        strength: "preference",
+        targetSemantics: "qualitative",
+        semanticValue: {
+          schemaVersion: 1,
+          kind: "qualitative",
+          mode: "text",
+          text: "milk frothing useful but not essential",
+        },
+      },
     ],
   },
 ];
@@ -274,14 +416,19 @@ function completedPatch(
           label: criterion.label,
           definition: criterion.definition,
           valueFamily:
-            criterion.semanticValue.kind === "money"
+            criterion.semanticValue.kind === "money" ||
+            criterion.semanticValue.kind === "money_stretch"
               ? ("money" as const)
-              : criterion.targetSemantics === "range"
+              : criterion.semanticValue.kind === "measurement" ||
+                  criterion.semanticValue.kind === "measurement_range"
                 ? ("measurement" as const)
-                : ("qualitative" as const),
+                : criterion.semanticValue.kind === "categorical"
+                  ? ("categorical" as const)
+                  : ("qualitative" as const),
           canonicalUnit:
+            criterion.semanticValue.kind === "measurement" ||
             criterion.semanticValue.kind === "measurement_range"
-              ? ("cm" as const)
+              ? (criterion.semanticValue as { unit: "cm" | "kg" }).unit
               : null,
         },
         {
@@ -322,6 +469,24 @@ async function seedFixture(
     db,
     completedPatch(productCase, task.id, subject.input.id),
   );
+  expect(application.brief).toMatchObject({
+    taskId: task.id,
+    revision: 1n,
+    market: { country: "GB", language: "en-GB", currency: "GBP" },
+  });
+  expect(application.brief.items).toHaveLength(productCase.criteria.length);
+  for (const expected of productCase.criteria) {
+    const item = application.brief.items.find(
+      ({ conceptLabel }) => conceptLabel === expected.label,
+    );
+    expect(item).toMatchObject({
+      conceptLabel: expected.label,
+      conceptDefinition: expected.definition,
+      strength: expected.strength,
+      targetSemantics: expected.targetSemantics,
+      semanticValue: expected.semanticValue,
+    });
+  }
   const trigger = await recordTaskInput({
     db,
     taskId: task.id,
