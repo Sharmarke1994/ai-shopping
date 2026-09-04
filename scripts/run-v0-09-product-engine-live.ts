@@ -5,7 +5,8 @@
  */
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { projectShoppingBrief } from "../src/domain/shopping-state/brief";
 import { persistContextAction } from "../src/features/context-acquisition/persistence/context-actions";
@@ -18,6 +19,7 @@ import type { ProductUnderstandingInputV1 } from "../src/features/product-unders
 import { PRODUCT_UNDERSTANDING_PROMPT_VERSION } from "../src/features/product-understanding/prompts";
 import { executeOrResumeEvidenceResearch } from "../src/features/product-understanding/research-orchestrator";
 import { loadCurrentDecisionSupport } from "../src/features/product-understanding/persistence";
+import { buildDecisionSupport } from "../src/features/product-understanding/decision-support";
 import { loadCurrentShoppingState } from "../src/features/shopping-state/persistence/state-loaders";
 import { SerperMerchantDestinationResolver } from "../src/features/purchase-destinations/serper-merchant-destination-resolver";
 import { executeOrResumeMerchantDestinationResolution } from "../src/features/purchase-destinations/orchestrator";
@@ -27,177 +29,34 @@ import { recordInitialShoppingSubject } from "../src/features/retrieval-spike/pe
 import { createShoppingTask } from "../src/features/shopping-state/persistence/tasks";
 import { recordTaskInput } from "../src/features/shopping-state/persistence/inputs-and-messages";
 import { applyStatePatch } from "../src/features/shopping-state/persistence/state-transitions";
+import { saveCandidateListing } from "../src/features/live-shopping/saved-listings";
 import { requireTestDatabaseEnvironment } from "../src/infrastructure/config/environment";
 import { createDatabaseConnection } from "../src/infrastructure/database/clients";
 import { fetchBoundedPage } from "../src/features/product-understanding/page-fetch";
+import {
+  buildProductEngineInitialPatch,
+  buildMouseRevisionTwoPatch,
+  V0_09_PRODUCT_ENGINE_CASES,
+} from "./support/v0-09-product-engine-cases";
 
 const exec = promisify(execFile);
-const output = new URL(
+const preflightOutput = new URL(
   "../docs/evals/v0-09-product-engine-preflight.json",
   import.meta.url,
 );
-const cases = [
-  {
-    name: "ergonomic-mouse",
-    request: "ergonomic mouse under £50, comfortable for long workdays",
-    criteria: [
-      [
-        "Budget",
-        "Maximum price",
-        "range",
-        {
-          schemaVersion: 1,
-          kind: "money",
-          mode: "ceiling",
-          amountMinor: 5000,
-          currency: "GBP",
-        },
-      ],
-      [
-        "Comfort",
-        "Long-session comfort",
-        "qualitative",
-        {
-          schemaVersion: 1,
-          kind: "qualitative",
-          mode: "text",
-          text: "comfortable for long workdays",
-        },
-      ],
-      [
-        "Wireless",
-        "Wireless connectivity",
-        "qualitative",
-        {
-          schemaVersion: 1,
-          kind: "qualitative",
-          mode: "text",
-          text: "wireless",
-        },
-      ],
-    ],
-  },
-  {
-    name: "office-chair",
-    request: "breathable office chair around £250 for long sessions",
-    criteria: [
-      [
-        "Budget",
-        "Maximum price",
-        "range",
-        {
-          schemaVersion: 1,
-          kind: "money",
-          mode: "ceiling",
-          amountMinor: 35000,
-          currency: "GBP",
-        },
-      ],
-      [
-        "Lumbar support",
-        "Lower-back support",
-        "qualitative",
-        {
-          schemaVersion: 1,
-          kind: "qualitative",
-          mode: "text",
-          text: "good lower-back support",
-        },
-      ],
-      [
-        "Material",
-        "Breathable fabric or mesh",
-        "qualitative",
-        {
-          schemaVersion: 1,
-          kind: "qualitative",
-          mode: "text",
-          text: "breathable fabric or mesh",
-        },
-      ],
-    ],
-  },
-  {
-    name: "cordless-vacuum",
-    request: "quiet cordless vacuum under £250 for hard floors and rugs",
-    criteria: [
-      [
-        "Budget",
-        "Maximum price",
-        "range",
-        {
-          schemaVersion: 1,
-          kind: "money",
-          mode: "ceiling",
-          amountMinor: 25000,
-          currency: "GBP",
-        },
-      ],
-      [
-        "Floor coverage",
-        "Hard floors and rugs",
-        "qualitative",
-        {
-          schemaVersion: 1,
-          kind: "qualitative",
-          mode: "text",
-          text: "hard floors and rugs",
-        },
-      ],
-      [
-        "Noise",
-        "Low noise around a cat",
-        "qualitative",
-        {
-          schemaVersion: 1,
-          kind: "qualitative",
-          mode: "text",
-          text: "not very loud",
-        },
-      ],
-    ],
-  },
-  {
-    name: "compact-coffee-machine",
-    request: "compact coffee machine under £350 with good espresso",
-    criteria: [
-      [
-        "Budget",
-        "Maximum price",
-        "range",
-        {
-          schemaVersion: 1,
-          kind: "money",
-          mode: "ceiling",
-          amountMinor: 35000,
-          currency: "GBP",
-        },
-      ],
-      [
-        "Width",
-        "Maximum machine width",
-        "range",
-        {
-          schemaVersion: 1,
-          kind: "measurement_range",
-          upper: { amount: "25", inclusive: true },
-          unit: "cm",
-        },
-      ],
-      [
-        "Espresso",
-        "Espresso quality",
-        "qualitative",
-        {
-          schemaVersion: 1,
-          kind: "qualitative",
-          mode: "text",
-          text: "genuinely good espresso",
-        },
-      ],
-    ],
-  },
-] as const;
+const proofMarkerOutput = new URL(
+  "../docs/evals/v0-09-product-engine-proof-marker.json",
+  import.meta.url,
+);
+const proofOutput = new URL(
+  "../docs/evals/v0-09-product-engine-proof.json",
+  import.meta.url,
+);
+const proofMarkdownOutput = new URL(
+  "../docs/evals/v0-09-product-engine-proof.md",
+  import.meta.url,
+);
+const cases = V0_09_PRODUCT_ENGINE_CASES;
 
 async function secret(name: string, service: string) {
   const configured = process.env[name]?.trim();
@@ -297,7 +156,11 @@ async function preflight() {
     }
   }
   result.finished = new Date().toISOString();
-  await writeFile(output, JSON.stringify(result, null, 2) + "\n", "utf8");
+  await writeFile(
+    preflightOutput,
+    JSON.stringify(result, null, 2) + "\n",
+    "utf8",
+  );
   console.log(JSON.stringify(result));
   if (
     Object.values(result.providers as Record<string, { status: string }>).some(
@@ -305,64 +168,6 @@ async function preflight() {
     )
   )
     process.exitCode = 2;
-}
-
-function patchFor(
-  productCase: (typeof cases)[number],
-  taskId: string,
-  inputId: string,
-) {
-  return {
-    applicationSchemaVersion: 1,
-    applicationKind: "patch" as const,
-    taskId,
-    expectedRevision: 0n,
-    source: { kind: "user_explicit" as const, inputId },
-    patch: {
-      schemaVersion: 1 as const,
-      outcome: "change" as const,
-      operations: productCase.criteria.flatMap(
-        ([label, definition, semantics, value]) => [
-          {
-            op: "create_concept" as const,
-            localRef: label
-              .toLocaleLowerCase("en-GB")
-              .replace(/[^a-z0-9]+/g, "_"),
-            label,
-            definition,
-            valueFamily:
-              value.kind === "money"
-                ? ("money" as const)
-                : value.kind === "measurement_range"
-                  ? ("measurement" as const)
-                  : ("qualitative" as const),
-            canonicalUnit:
-              value.kind === "measurement_range" ? value.unit : null,
-          },
-          {
-            op: "add_criterion" as const,
-            concept: {
-              kind: "created" as const,
-              localRef: label
-                .toLocaleLowerCase("en-GB")
-                .replace(/[^a-z0-9]+/g, "_"),
-            },
-            target: {
-              strength:
-                semantics === "range"
-                  ? ("hard" as const)
-                  : ("preference" as const),
-              targetSemantics:
-                semantics === "range"
-                  ? ("range" as const)
-                  : ("qualitative" as const),
-              semanticValue: value,
-            },
-          },
-        ],
-      ),
-    },
-  };
 }
 
 async function seed(
@@ -385,7 +190,10 @@ async function seed(
       body: productCase.request,
     },
   });
-  await applyStatePatch(db, patchFor(productCase, task.id, subject.input.id));
+  await applyStatePatch(
+    db,
+    buildProductEngineInitialPatch(productCase, task.id, subject.input.id),
+  );
   const trigger = await recordTaskInput({
     db,
     taskId: task.id,
@@ -434,6 +242,36 @@ async function clear(db: ReturnType<typeof createDatabaseConnection>["db"]) {
 }
 
 async function proof() {
+  const preflight = JSON.parse(await readFile(preflightOutput, "utf8")) as {
+    providers?: Record<string, { status?: string }>;
+  };
+  if (
+    preflight.providers?.openai?.status !== "available" ||
+    preflight.providers?.serper?.status !== "available"
+  ) {
+    throw new Error("proof_requires_healthy_fresh_preflight");
+  }
+  const proofId = randomUUID();
+  const started = new Date().toISOString();
+  const { stdout: gitHead } = await exec("git", ["rev-parse", "HEAD"]);
+  await writeFile(
+    proofMarkerOutput,
+    JSON.stringify(
+      {
+        schemaVersion: 1,
+        proofId,
+        started,
+        gitHead: gitHead.trim(),
+        kind: "development_product_engine_proof",
+        contextBypassed: true,
+        releaseAccepted: false,
+        note: "This is product-engine evidence only; not RC5 or release evidence.",
+      },
+      null,
+      2,
+    ) + "\n",
+    "utf8",
+  );
   const { TEST_DATABASE_URL } = requireTestDatabaseEnvironment(process.env);
   const connection = createDatabaseConnection({
     url: TEST_DATABASE_URL,
@@ -452,6 +290,7 @@ async function proof() {
     apiKey: serperKey,
   });
   const rows: unknown[] = [];
+  let failure: { code: string } | null = null;
   try {
     for (const productCase of cases) {
       await clear(connection.db);
@@ -462,27 +301,121 @@ async function proof() {
         contextActionId: seeded.action.id,
         provider: shopping,
       });
-      const research = await executeOrResumeEvidenceResearch({
-        dependencies: {
-          db: connection.db,
-          evidenceProvider: evidence,
-          pageFetcher: { provider: "server_http", fetch: fetchBoundedPage },
-          model: understanding,
-          modelIdentity: {
-            provider: "openai",
-            model: V0_07_OPENAI_DEFAULT_CONFIG.model,
-            promptVersion: PRODUCT_UNDERSTANDING_PROMPT_VERSION,
-          },
+      const evidenceDependencies = {
+        db: connection.db,
+        evidenceProvider: evidence,
+        pageFetcher: {
+          provider: "server_http" as const,
+          fetch: fetchBoundedPage,
         },
+        model: understanding,
+        modelIdentity: {
+          provider: "openai" as const,
+          model: V0_07_OPENAI_DEFAULT_CONFIG.model,
+          promptVersion: PRODUCT_UNDERSTANDING_PROMPT_VERSION,
+        },
+      };
+      const research = await executeOrResumeEvidenceResearch({
+        dependencies: evidenceDependencies,
         taskId: seeded.task.id,
         searchRunId: retrieval.run.portfolio.run.id,
         mode: "first_pass",
       });
-      const support = await loadCurrentDecisionSupport({
+      let support = await loadCurrentDecisionSupport({
         db: connection.db,
         taskId: seeded.task.id,
       });
       const ids = support.candidates.slice(0, 2).map(({ id }) => id);
+      for (const candidateListingId of ids) {
+        await saveCandidateListing({
+          db: connection.db,
+          taskId: seeded.task.id,
+          candidateListingId,
+        });
+      }
+      const savedSupport = await loadCurrentDecisionSupport({
+        db: connection.db,
+        taskId: seeded.task.id,
+      });
+      const decision = buildDecisionSupport({
+        support: savedSupport,
+        savedListingIds: new Set(ids),
+        savedListings: savedSupport.candidates,
+      });
+      const gap = decision.decisionGaps[0];
+      let deepening: { status: string; attempts: number } | null = null;
+      if (gap !== undefined && gap.candidateListingIds[0] !== undefined) {
+        const targeted = await executeOrResumeEvidenceResearch({
+          dependencies: evidenceDependencies,
+          taskId: seeded.task.id,
+          searchRunId: retrieval.run.portfolio.run.id,
+          mode: "targeted",
+          targetCandidateListingId: gap.candidateListingIds[0],
+          targetCriterionId: gap.criterionId,
+        });
+        deepening = {
+          status: targeted.run.status,
+          attempts: targeted.attempts.length,
+        };
+        support = await loadCurrentDecisionSupport({
+          db: connection.db,
+          taskId: seeded.task.id,
+        });
+      }
+      let refinement: {
+        revision: string;
+        reassessmentAttempts: number;
+      } | null = null;
+      if (productCase.name === "ergonomic-mouse" && productCase.refinement) {
+        const state = await loadCurrentShoppingState(
+          connection.db,
+          seeded.task.id,
+        );
+        const conceptLabel = (conceptId: string) =>
+          state.concepts.find(({ id }) => id === conceptId)?.label;
+        const reviews = state.activeCriteria.find(
+          ({ criterion }) => conceptLabel(criterion.conceptId) === "Reviews",
+        )?.criterion;
+        if (reviews === undefined)
+          throw new Error("mouse_reviews_criterion_missing");
+        const input = await recordTaskInput({
+          db: connection.db,
+          taskId: seeded.task.id,
+          clientActionId: `product-live-refinement-${seeded.task.id}`,
+          request: {
+            inputSchemaVersion: 1,
+            expectedRevision: 1n,
+            kind: "message",
+            body: productCase.refinement.request,
+          },
+        });
+        await applyStatePatch(
+          connection.db,
+          buildMouseRevisionTwoPatch(
+            productCase,
+            seeded.task.id,
+            input.input.id,
+            reviews.id,
+          ),
+        );
+        const reassessment = await executeOrResumeEvidenceResearch({
+          dependencies: evidenceDependencies,
+          taskId: seeded.task.id,
+          searchRunId: retrieval.run.portfolio.run.id,
+          mode: "reassessment",
+          savedCandidateListingIds: ids,
+        });
+        refinement = {
+          revision: (
+            await loadCurrentShoppingState(connection.db, seeded.task.id)
+          ).task.currentRevision.toString(),
+          reassessmentAttempts: reassessment.attempts.length,
+        };
+        support = await loadCurrentDecisionSupport({
+          db: connection.db,
+          taskId: seeded.task.id,
+        });
+      }
       const destinations = await executeOrResumeMerchantDestinationResolution({
         db: connection.db,
         taskId: seeded.task.id,
@@ -494,6 +427,16 @@ async function proof() {
         revision: projectShoppingBrief(
           await loadCurrentShoppingState(connection.db, seeded.task.id),
         ).revision.toString(),
+        brief: projectShoppingBrief(
+          await loadCurrentShoppingState(connection.db, seeded.task.id),
+        ).items.map(
+          ({ conceptLabel, strength, targetSemantics, semanticValue }) => ({
+            label: conceptLabel,
+            strength,
+            targetSemantics,
+            semanticValue,
+          }),
+        ),
         queries: retrieval.run.portfolio.queries.map(({ text }) => text),
         listings: support.candidates
           .slice(0, 2)
@@ -507,24 +450,49 @@ async function proof() {
         evidenceAttempts: research.attempts.length,
         observations: support.observations.length,
         assessments: support.assessments.length,
+        unknowns: decision.decisionGaps.length,
+        savedCandidates: ids.length,
+        comparisonRows: decision.comparison?.rows.length ?? 0,
+        deepening,
+        refinement,
         destinations: destinations.results.length,
       });
     }
+  } catch (error) {
+    failure = {
+      code: error instanceof Error ? error.name : "proof_failed",
+    };
   } finally {
     await connection.close();
   }
   await writeFile(
-    output,
+    proofOutput,
     JSON.stringify(
-      { kind: "development_product_engine_proof", rows },
+      {
+        kind: "development_product_engine_proof",
+        proofId,
+        started,
+        finished: new Date().toISOString(),
+        releaseAccepted: false,
+        contextBypassed: true,
+        status: failure === null ? "completed" : "failed",
+        failure,
+        rows,
+      },
       null,
       2,
     ) + "\n",
     "utf8",
   );
-  console.log(
-    JSON.stringify({ categories: rows.length, artifact: output.pathname }),
+  await writeFile(
+    proofMarkdownOutput,
+    `# Development product-engine proof\n\nRelease acceptance: false\nContext bypassed: true\nStatus: ${failure === null ? "completed" : "failed"}\nCategories attempted: ${rows.length}/${cases.length}\n`,
+    "utf8",
   );
+  console.log(
+    JSON.stringify({ categories: rows.length, artifact: proofOutput.pathname }),
+  );
+  if (failure !== null) process.exitCode = 3;
 }
 
 if (process.argv.includes("--preflight")) await preflight();

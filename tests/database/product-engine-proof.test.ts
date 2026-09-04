@@ -7,6 +7,12 @@
  * This file is product-engine evidence, never release acceptance evidence.
  */
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import {
+  buildMouseRevisionTwoPatch,
+  buildProductEngineInitialPatch,
+  V0_09_PRODUCT_ENGINE_CASES,
+  type ProductEngineFixture,
+} from "../../scripts/support/v0-09-product-engine-cases";
 import { persistContextAction } from "../../src/features/context-acquisition/persistence/context-actions";
 import { saveCandidateListing } from "../../src/features/live-shopping/saved-listings";
 import {
@@ -43,411 +49,19 @@ const actionConfig = {
   providerSchemaVersion: 1,
 } as const;
 
-type ProductCase = {
-  name:
-    | "ergonomic-mouse"
-    | "office-chair"
-    | "cordless-vacuum"
-    | "compact-coffee-machine";
-  request: string;
-  criteria: readonly {
-    localRef: string;
-    label: string;
-    definition: string;
-    strength: "hard" | "strong_preference" | "preference";
-    targetSemantics:
-      "exact" | "range" | "stretch" | "categorical" | "qualitative";
-    semanticValue: Record<string, unknown>;
-  }[];
-};
-
-const cases: readonly ProductCase[] = [
-  {
-    name: "ergonomic-mouse",
-    request:
-      "I need an ergonomic mouse under £50 with good comfort for long workdays.",
-    criteria: [
-      {
-        localRef: "budget",
-        label: "Budget",
-        definition: "Maximum purchase price",
-        strength: "hard",
-        targetSemantics: "range",
-        semanticValue: {
-          schemaVersion: 1,
-          kind: "money",
-          mode: "ceiling",
-          amountMinor: 5000,
-          currency: "GBP",
-        },
-      },
-      {
-        localRef: "comfort",
-        label: "Long-session comfort",
-        definition: "Comfort during extended workdays",
-        strength: "strong_preference",
-        targetSemantics: "qualitative",
-        semanticValue: {
-          schemaVersion: 1,
-          kind: "qualitative",
-          mode: "text",
-          text: "comfortable for long workdays",
-        },
-      },
-      {
-        localRef: "wireless",
-        label: "Wireless",
-        definition: "Wireless connectivity",
-        strength: "preference",
-        targetSemantics: "qualitative",
-        semanticValue: {
-          schemaVersion: 1,
-          kind: "qualitative",
-          mode: "text",
-          text: "wireless",
-        },
-      },
-      {
-        localRef: "reviews",
-        label: "Reviews",
-        definition: "Importance of review evidence",
-        strength: "strong_preference",
-        targetSemantics: "qualitative",
-        semanticValue: {
-          schemaVersion: 1,
-          kind: "qualitative",
-          mode: "text",
-          text: "reviews matter a lot",
-        },
-      },
-      {
-        localRef: "battery",
-        label: "Battery life",
-        definition: "Battery quality required for a wireless mouse",
-        strength: "preference",
-        targetSemantics: "qualitative",
-        semanticValue: {
-          schemaVersion: 1,
-          kind: "qualitative",
-          mode: "text",
-          text: "very good battery life when wireless",
-        },
-      },
-      {
-        localRef: "shape",
-        label: "Sculpted shape",
-        definition: "A chunkier sculpted side profile or thumb rest",
-        strength: "preference",
-        targetSemantics: "qualitative",
-        semanticValue: {
-          schemaVersion: 1,
-          kind: "qualitative",
-          mode: "text",
-          text: "chunkier and sculpted with a noticeable side profile or thumb rest",
-        },
-      },
-      {
-        localRef: "brands",
-        label: "Brand quality",
-        definition: "Avoid explicitly excluded low-quality brands",
-        strength: "hard",
-        targetSemantics: "categorical",
-        semanticValue: {
-          schemaVersion: 1,
-          kind: "categorical",
-          operator: "exclude",
-          values: ["Amazon Basics", "bad brands"],
-        },
-      },
-    ],
-  },
-  {
-    name: "office-chair",
-    request:
-      "I need a breathable office chair around £250 for long work sessions.",
-    criteria: [
-      {
-        localRef: "budget",
-        label: "Budget",
-        definition: "Target chair price",
-        strength: "hard",
-        targetSemantics: "stretch",
-        semanticValue: {
-          schemaVersion: 1,
-          kind: "money_stretch",
-          targetMinor: 25000,
-          stretchCeilingMinor: 35000,
-          condition: "only if genuinely better for long sessions",
-          currency: "GBP",
-        },
-      },
-      {
-        localRef: "lumbar",
-        label: "Lower-back support",
-        definition: "Support for the lower back",
-        strength: "strong_preference",
-        targetSemantics: "qualitative",
-        semanticValue: {
-          schemaVersion: 1,
-          kind: "qualitative",
-          mode: "text",
-          text: "good lower-back support",
-        },
-      },
-      {
-        localRef: "material",
-        label: "Breathable material",
-        definition: "Fabric or mesh rather than leather",
-        strength: "preference",
-        targetSemantics: "qualitative",
-        semanticValue: {
-          schemaVersion: 1,
-          kind: "qualitative",
-          mode: "text",
-          text: "breathable fabric or mesh",
-        },
-      },
-      {
-        localRef: "height",
-        label: "Shopper height",
-        definition: "Shopper height for chair fit",
-        strength: "preference",
-        targetSemantics: "exact",
-        semanticValue: {
-          schemaVersion: 1,
-          kind: "measurement",
-          amount: "178",
-          unit: "cm",
-        },
-      },
-      {
-        localRef: "size",
-        label: "Compact size",
-        definition: "Avoid an oversized chair",
-        strength: "hard",
-        targetSemantics: "categorical",
-        semanticValue: {
-          schemaVersion: 1,
-          kind: "categorical",
-          operator: "exclude",
-          values: ["huge", "gamer-looking"],
-        },
-      },
-    ],
-  },
-  {
-    name: "cordless-vacuum",
-    request:
-      "I need a quiet cordless vacuum under £250 for hard floors and rugs.",
-    criteria: [
-      {
-        localRef: "budget",
-        label: "Budget",
-        definition: "Maximum vacuum price",
-        strength: "hard",
-        targetSemantics: "range",
-        semanticValue: {
-          schemaVersion: 1,
-          kind: "money",
-          mode: "ceiling",
-          amountMinor: 25000,
-          currency: "GBP",
-        },
-      },
-      {
-        localRef: "surfaces",
-        label: "Floor coverage",
-        definition: "Works on hard floors and rugs",
-        strength: "hard",
-        targetSemantics: "qualitative",
-        semanticValue: {
-          schemaVersion: 1,
-          kind: "qualitative",
-          mode: "text",
-          text: "hard floors and rugs",
-        },
-      },
-      {
-        localRef: "noise",
-        label: "Low noise",
-        definition: "Suitable around a noise-sensitive cat",
-        strength: "strong_preference",
-        targetSemantics: "qualitative",
-        semanticValue: {
-          schemaVersion: 1,
-          kind: "qualitative",
-          mode: "text",
-          text: "not very loud",
-        },
-      },
-      {
-        localRef: "runtime",
-        label: "Useful runtime",
-        definition: "Useful battery runtime",
-        strength: "preference",
-        targetSemantics: "qualitative",
-        semanticValue: {
-          schemaVersion: 1,
-          kind: "qualitative",
-          mode: "text",
-          text: "at least 40 minutes of useful runtime",
-        },
-      },
-      {
-        localRef: "weight",
-        label: "Low weight",
-        definition: "Vacuum weight",
-        strength: "preference",
-        targetSemantics: "range",
-        semanticValue: {
-          schemaVersion: 1,
-          kind: "measurement_range",
-          upper: { amount: "3", inclusive: true },
-          unit: "kg",
-        },
-      },
-    ],
-  },
-  {
-    name: "compact-coffee-machine",
-    request: "I need a compact coffee machine under £350 with good espresso.",
-    criteria: [
-      {
-        localRef: "budget",
-        label: "Budget",
-        definition: "Maximum coffee-machine price",
-        strength: "hard",
-        targetSemantics: "range",
-        semanticValue: {
-          schemaVersion: 1,
-          kind: "money",
-          mode: "ceiling",
-          amountMinor: 35000,
-          currency: "GBP",
-        },
-      },
-      {
-        localRef: "width",
-        label: "Compact width",
-        definition: "Maximum machine width",
-        strength: "hard",
-        targetSemantics: "range",
-        semanticValue: {
-          schemaVersion: 1,
-          kind: "measurement_range",
-          upper: { amount: "25", inclusive: true },
-          unit: "cm",
-        },
-      },
-      {
-        localRef: "espresso",
-        label: "Espresso quality",
-        definition: "Quality of espresso produced",
-        strength: "strong_preference",
-        targetSemantics: "qualitative",
-        semanticValue: {
-          schemaVersion: 1,
-          kind: "qualitative",
-          mode: "text",
-          text: "genuinely good espresso",
-        },
-      },
-      {
-        localRef: "cleaning",
-        label: "Easy cleaning",
-        definition: "Ease of cleaning the machine",
-        strength: "strong_preference",
-        targetSemantics: "qualitative",
-        semanticValue: {
-          schemaVersion: 1,
-          kind: "qualitative",
-          mode: "text",
-          text: "easy to clean",
-        },
-      },
-      {
-        localRef: "noise",
-        label: "Quiet operation",
-        definition: "Avoid very loud operation",
-        strength: "preference",
-        targetSemantics: "qualitative",
-        semanticValue: {
-          schemaVersion: 1,
-          kind: "qualitative",
-          mode: "text",
-          text: "not very loud",
-        },
-      },
-      {
-        localRef: "milk",
-        label: "Milk frothing",
-        definition: "Optional useful milk frothing",
-        strength: "preference",
-        targetSemantics: "qualitative",
-        semanticValue: {
-          schemaVersion: 1,
-          kind: "qualitative",
-          mode: "text",
-          text: "milk frothing useful but not essential",
-        },
-      },
-    ],
-  },
-];
+const cases = V0_09_PRODUCT_ENGINE_CASES;
 
 function completedPatch(
-  productCase: ProductCase,
-  taskId: string,
-  inputId: string,
+  productCase: ProductEngineFixture,
+  taskId: Parameters<typeof buildProductEngineInitialPatch>[1],
+  inputId: Parameters<typeof buildProductEngineInitialPatch>[2],
 ) {
-  return {
-    applicationSchemaVersion: 1,
-    applicationKind: "patch" as const,
-    taskId,
-    expectedRevision: 0n,
-    source: { kind: "user_explicit" as const, inputId },
-    patch: {
-      schemaVersion: 1 as const,
-      outcome: "change" as const,
-      operations: productCase.criteria.flatMap((criterion) => [
-        {
-          op: "create_concept" as const,
-          localRef: criterion.localRef,
-          label: criterion.label,
-          definition: criterion.definition,
-          valueFamily:
-            criterion.semanticValue.kind === "money" ||
-            criterion.semanticValue.kind === "money_stretch"
-              ? ("money" as const)
-              : criterion.semanticValue.kind === "measurement" ||
-                  criterion.semanticValue.kind === "measurement_range"
-                ? ("measurement" as const)
-                : criterion.semanticValue.kind === "categorical"
-                  ? ("categorical" as const)
-                  : ("qualitative" as const),
-          canonicalUnit:
-            criterion.semanticValue.kind === "measurement" ||
-            criterion.semanticValue.kind === "measurement_range"
-              ? (criterion.semanticValue as { unit: "cm" | "kg" }).unit
-              : null,
-        },
-        {
-          op: "add_criterion" as const,
-          concept: { kind: "created" as const, localRef: criterion.localRef },
-          target: {
-            strength: criterion.strength,
-            targetSemantics: criterion.targetSemantics,
-            semanticValue: criterion.semanticValue,
-          },
-        },
-      ]),
-    },
-  };
+  return buildProductEngineInitialPatch(productCase, taskId, inputId);
 }
 
 async function seedFixture(
   db: TestDatabaseConnection["db"],
-  productCase: ProductCase,
+  productCase: ProductEngineFixture,
 ) {
   const task = await createShoppingTask(db, {
     country: "GB",
@@ -469,6 +83,7 @@ async function seedFixture(
     db,
     completedPatch(productCase, task.id, subject.input.id),
   );
+  expect(subject.message.body).toBe(productCase.request);
   expect(application.brief).toMatchObject({
     taskId: task.id,
     revision: 1n,
@@ -485,6 +100,30 @@ async function seedFixture(
       strength: expected.strength,
       targetSemantics: expected.targetSemantics,
       semanticValue: expected.semanticValue,
+    });
+  }
+  if (productCase.name === "ergonomic-mouse") {
+    expect(
+      application.brief.items.some(({ conceptLabel }) =>
+        /ergonomic design/i.test(conceptLabel),
+      ),
+    ).toBe(false);
+  }
+  const persistedState = await loadCurrentShoppingState(db, task.id);
+  for (const indifferent of productCase.indifferentConcepts) {
+    const concept = persistedState.concepts.find(
+      ({ label }) => label === indifferent.label,
+    );
+    expect(concept).toMatchObject({
+      label: indifferent.label,
+      definition: indifferent.definition,
+    });
+    const criterion = persistedState.activeCriteria.find(
+      ({ criterion }) => criterion.conceptId === concept?.id,
+    )?.criterion;
+    expect(criterion?.semanticValue).toEqual({
+      schemaVersion: 1,
+      kind: "indifferent",
     });
   }
   const trigger = await recordTaskInput({
@@ -673,6 +312,7 @@ describe("development-only V0-09 product engine proof", () => {
       expect(reassessment.run.phase).toBe("reassessment");
       expect(reassessment.run.status).toBe("succeeded");
 
+      let destinationCall = 0;
       const destinations = await executeOrResumeMerchantDestinationResolution({
         db: connection.db,
         taskId: seeded.task.id,
@@ -680,21 +320,35 @@ describe("development-only V0-09 product engine proof", () => {
         resolver: {
           provider: "fixture",
           maxRequestDurationMs: 0,
-          resolve: async (request) => ({
-            outcome: "resolved" as const,
-            destinationUrl: `https://fixtureoutfitters.co.uk/products/${request.candidateListingId}`,
-            acceptedResultTitle: request.title,
-            observedResultUrl: null,
-            consideredResultCount: 1,
-          }),
+          resolve: async (request) => {
+            destinationCall += 1;
+            return destinationCall === 1
+              ? {
+                  outcome: "resolved" as const,
+                  destinationUrl: `https://fixtureoutfitters.co.uk/products/${request.candidateListingId}`,
+                  acceptedResultTitle: request.title,
+                  observedResultUrl: null,
+                  consideredResultCount: 1,
+                }
+              : {
+                  outcome: "rejected" as const,
+                  rejectionCode: "no_results" as const,
+                  consideredResultCount: 0,
+                };
+          },
         },
       });
       expect(destinations.results).toHaveLength(2);
       expect(
-        destinations.results.every(
+        destinations.results.filter(
           ({ resolution }) => resolution?.status === "resolved",
         ),
-      ).toBe(true);
+      ).toHaveLength(1);
+      expect(
+        destinations.results.filter(
+          ({ resolution }) => resolution?.status === "rejected",
+        ),
+      ).toHaveLength(1);
     },
   );
 
@@ -728,13 +382,30 @@ describe("development-only V0-09 product engine proof", () => {
       taskId: seeded.task.id,
     });
     const candidateId = before.candidates[0]?.id;
-    const comfort = (
-      await loadCurrentShoppingState(connection.db, seeded.task.id)
-    ).activeCriteria.find(
-      ({ criterion }) => criterion.targetSemantics === "qualitative",
+    const stateBeforeRefinement = await loadCurrentShoppingState(
+      connection.db,
+      seeded.task.id,
+    );
+    const conceptLabel = (conceptId: string) =>
+      stateBeforeRefinement.concepts.find(({ id }) => id === conceptId)?.label;
+    const reviews = stateBeforeRefinement.activeCriteria.find(
+      ({ criterion }) => conceptLabel(criterion.conceptId) === "Reviews",
     )?.criterion;
     expect(candidateId).toBeDefined();
-    expect(comfort).toBeDefined();
+    expect(reviews).toBeDefined();
+    expect(reviews?.strength).toBe("strong_preference");
+    const preservedBefore = new Map(
+      stateBeforeRefinement.activeCriteria
+        .filter(({ criterion }) => criterion.id !== reviews?.id)
+        .map(({ criterion }) => [
+          conceptLabel(criterion.conceptId),
+          {
+            criterionId: criterion.id,
+            strength: criterion.strength,
+            semanticValue: criterion.semanticValue,
+          },
+        ]),
+    );
     await saveCandidateListing({
       db: connection.db,
       taskId: seeded.task.id,
@@ -748,41 +419,61 @@ describe("development-only V0-09 product engine proof", () => {
         inputSchemaVersion: 1,
         expectedRevision: 1n,
         kind: "message",
-        body: "Comfort for long workdays matters most now.",
+        body: cases[0]!.refinement!.request,
       },
     });
     await applyStatePatch(connection.db, {
-      applicationSchemaVersion: 1,
-      applicationKind: "patch",
-      taskId: seeded.task.id,
-      expectedRevision: 1n,
-      source: { kind: "user_explicit", inputId: refinement.input.id },
-      patch: {
-        schemaVersion: 1,
-        outcome: "change",
-        operations: [
-          {
-            op: "replace_target",
-            targetCriterionId: comfort!.id,
-            result: {
-              strength: "hard",
-              targetSemantics: "qualitative",
-              semanticValue: {
-                schemaVersion: 1,
-                kind: "qualitative",
-                mode: "text",
-                text: "comfortable for long workdays",
-              },
-            },
-          },
-        ],
-      },
+      ...buildMouseRevisionTwoPatch(
+        cases[0]!,
+        seeded.task.id,
+        refinement.input.id,
+        reviews!.id,
+      ),
     });
     const afterState = await loadCurrentShoppingState(
       connection.db,
       seeded.task.id,
     );
     expect(afterState.task.currentRevision).toBe(2n);
+    const afterLabel = (conceptId: string) =>
+      afterState.concepts.find(({ id }) => id === conceptId)?.label;
+    const afterReviews = afterState.activeCriteria.find(
+      ({ criterion }) => afterLabel(criterion.conceptId) === "Reviews",
+    )?.criterion;
+    const comfort = afterState.activeCriteria.find(
+      ({ criterion }) =>
+        afterLabel(criterion.conceptId) === "Comfort for long workdays",
+    )?.criterion;
+    expect(afterReviews).toMatchObject({
+      strength: "preference",
+      targetSemantics: "qualitative",
+      semanticValue: {
+        schemaVersion: 1,
+        kind: "qualitative",
+        mode: "text",
+        text: "reviews matter less now",
+      },
+    });
+    expect(comfort).toMatchObject({
+      strength: "strong_preference",
+      targetSemantics: "qualitative",
+      semanticValue: {
+        schemaVersion: 1,
+        kind: "qualitative",
+        mode: "text",
+        text: "comfort for long workdays matters most",
+      },
+    });
+    expect(comfort?.strength).not.toBe("hard");
+    for (const [label, before] of preservedBefore) {
+      const current = afterState.activeCriteria.find(
+        ({ criterion }) => afterLabel(criterion.conceptId) === label,
+      )?.criterion;
+      expect(current).toMatchObject({
+        strength: before.strength,
+        semanticValue: before.semanticValue,
+      });
+    }
     await executeOrResumeEvidenceResearch({
       dependencies: fakeDeps,
       taskId: seeded.task.id,
