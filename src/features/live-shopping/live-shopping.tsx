@@ -166,6 +166,7 @@ function Brief({ view }: { view: LiveShoppingView }) {
 type LiveListing = LiveShoppingView["savedListings"][number];
 type DecisionSupport = NonNullable<LiveShoppingView["decisionSupport"]>;
 type DecisionOption = DecisionSupport["topOptions"][number];
+type CurrentDecision = DecisionSupport["currentDecision"];
 
 function unknownReasonLabel(
   reason: DecisionOption["unknowns"][number]["reason"],
@@ -207,6 +208,207 @@ function evidenceSourceLabel(
           ? "listing fact"
           : "image";
   return `${role} · ${depth}`;
+}
+
+function decisionStateLabel(state: CurrentDecision["state"]) {
+  if (state === "ready_to_choose") return "Ready to choose";
+  if (state === "leader_with_tradeoff") return "Choice with a trade-off";
+  if (state === "leader_needs_verification")
+    return "Provisional · verify first";
+  if (state === "researching") return "Decision still developing";
+  if (state === "no_clear_winner") return "No clear winner";
+  if (state === "no_eligible_option") return "No eligible option";
+  return "Not enough evidence";
+}
+
+function CurrentDecisionSummary({
+  support,
+  busy,
+  onResearchCandidate,
+}: {
+  support: DecisionSupport;
+  busy: boolean;
+  onResearchCandidate: (listing: LiveListing, criterionId?: string) => void;
+}) {
+  const decision = support.currentDecision;
+  const leader = support.topOptions.find(
+    ({ listing }) =>
+      listing.candidateListingId === decision.leadingCandidateListingId,
+  );
+  const alternative = support.topOptions.find(
+    ({ listing }) =>
+      listing.candidateListingId === decision.alternativeCandidateListingId,
+  );
+  const nextGap = decision.whatCouldChangeDecision;
+  const gapOptions =
+    nextGap === null
+      ? []
+      : nextGap.candidateListingIds
+          .map((candidateListingId) =>
+            support.topOptions.find(
+              ({ listing }) =>
+                listing.candidateListingId === candidateListingId,
+            ),
+          )
+          .filter((option) => option !== undefined);
+  const gapOption =
+    gapOptions.find(({ researchState }) => researchState === "available") ??
+    gapOptions.find(({ researchState }) => researchState === "researching") ??
+    gapOptions.find(({ researchState }) => researchState === "failed") ??
+    gapOptions[0];
+  const watch = decision.keyTradeoff;
+  const stateClass =
+    decision.recommendationLevel === "ready"
+      ? styles.decisionReady
+      : decision.recommendationLevel === "provisional"
+        ? styles.decisionProvisional
+        : styles.decisionUnresolved;
+
+  return (
+    <section
+      className={[styles.currentDecision, stateClass].join(" ")}
+      aria-labelledby="current-decision-heading"
+      aria-live={decision.state === "researching" ? "polite" : undefined}
+    >
+      <div className={styles.currentDecisionHeader}>
+        <div>
+          <p className={styles.eyebrow}>Current decision</p>
+          <span className={styles.decisionStateBadge}>
+            {decisionStateLabel(decision.state)}
+          </span>
+        </div>
+        {leader !== undefined ? (
+          <div className={styles.decisionLeaderMeta}>
+            <span>{leader.listing.merchant ?? "Retailer not confirmed"}</span>
+            {leader.listing.priceText !== null ? (
+              <strong>{leader.listing.priceText}</strong>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+      <h2 id="current-decision-heading">{decision.headline}</h2>
+      <p className={styles.currentDecisionExplanation}>
+        {decision.explanation}
+      </p>
+
+      {leader !== undefined || watch !== null ? (
+        <div className={styles.decisionSummaryGrid}>
+          {leader !== undefined ? (
+            <div className={styles.decisionReasons}>
+              <div className={styles.decisionSummaryLabel}>
+                <span>Why this choice</span>
+                {leader.mustHaveCount > 0 ? (
+                  <strong>
+                    {leader.supportedMustHaveCount}/{leader.mustHaveCount}{" "}
+                    must-haves verified
+                  </strong>
+                ) : null}
+              </div>
+              {decision.keyReasons.length > 0 ? (
+                <ul>
+                  {decision.keyReasons.map((reason) => (
+                    <li key={reason.criterionId}>
+                      <span>{reason.label}</span>
+                      <p>{reason.explanation}</p>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className={styles.decisionQuietCopy}>
+                  Current evidence does not yet establish a shopper-relevant
+                  advantage.
+                </p>
+              )}
+            </div>
+          ) : null}
+          {watch !== null ? (
+            <div className={styles.decisionWatch}>
+              <span>The trade-off</span>
+              <strong>{watch.label}</strong>
+              <p>{watch.explanation}</p>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {alternative !== undefined && decision.alternativeReason !== null ? (
+        <div className={styles.decisionAlternative}>
+          <span>Best alternative</span>
+          <strong>{alternative.listing.title}</strong>
+          <p>{decision.alternativeReason}</p>
+        </div>
+      ) : null}
+
+      {nextGap !== null ? (
+        <div className={styles.decisionNextCheck}>
+          <div>
+            <span>
+              {decision.blockingGap?.criterionId === nextGap.criterionId
+                ? "Verify before choosing"
+                : "What could change this decision"}
+            </span>
+            <strong>{nextGap.label}</strong>
+            <p>{nextGap.explanation}</p>
+          </div>
+          {gapOption?.researchState === "available" ? (
+            <button
+              className={styles.decisionInvestigateButton}
+              disabled={busy}
+              onClick={() =>
+                onResearchCandidate(gapOption.listing, nextGap.criterionId)
+              }
+            >
+              Investigate {nextGap.label.toLocaleLowerCase("en-GB")}
+              <span aria-hidden="true">→</span>
+            </button>
+          ) : gapOption?.researchState === "researching" ? (
+            <span className={styles.decisionCheckState}>Checking now…</span>
+          ) : gapOption?.researchState === "failed" ? (
+            <span className={styles.decisionCheckState}>
+              Check paused · current evidence preserved
+            </span>
+          ) : gapOption === undefined ? null : (
+            <span className={styles.decisionCheckState}>
+              Checked · still unresolved
+            </span>
+          )}
+        </div>
+      ) : null}
+
+      {decision.purchase !== null ? (
+        <div className={styles.decisionPurchase}>
+          <a
+            href={decision.purchase.destinationUrl}
+            target="_blank"
+            rel="noreferrer"
+            className={
+              decision.purchase.state === "direct"
+                ? styles.decisionBuyButton
+                : styles.decisionOffersButton
+            }
+          >
+            <span>
+              {decision.purchase.label}
+              {decision.purchase.priceText !== null
+                ? " · " + decision.purchase.priceText
+                : ""}
+            </span>
+            <span aria-hidden="true">↗</span>
+          </a>
+          {decision.purchase.state === "direct" ? (
+            <p>Verified same-merchant product destination.</p>
+          ) : decision.purchase.state === "checking" ? (
+            <p>
+              Checking for the exact retailer page. Google Shopping remains
+              available.
+            </p>
+          ) : (
+            <p>Fallback shopping result · verify the seller and offer.</p>
+          )}
+        </div>
+      ) : null}
+    </section>
+  );
 }
 
 function ProductCard({
@@ -667,13 +869,12 @@ function EvidenceDecisionSupport({
   }
   if (support.topOptions.length === 0) {
     return (
-      <section className={styles.researchInvitation}>
-        <p className={styles.eyebrow}>Evidence check complete</p>
-        <h2>No option has enough current support to recommend yet</h2>
-        <p>
-          We kept partial sources and unknowns, but did not manufacture a winner
-          from weak evidence.
-        </p>
+      <section className={styles.decisionSection}>
+        <CurrentDecisionSummary
+          support={support}
+          busy={busy}
+          onResearchCandidate={onResearchCandidate}
+        />
       </section>
     );
   }
@@ -682,46 +883,11 @@ function EvidenceDecisionSupport({
       className={styles.decisionSection}
       aria-labelledby="decision-support-heading"
     >
-      <div className={styles.decisionIntro}>
-        <div>
-          <p className={styles.eyebrow}>
-            {support.researchStatus === "researching"
-              ? "Early evidence · research still running"
-              : support.researchStatus === "partial"
-                ? "Supported from partial research"
-                : support.sectionMode === "qualified_options"
-                  ? "Best-supported options"
-                  : "Promising options · verification still needed"}
-          </p>
-          <h2 id="decision-support-heading">
-            {support.sectionMode === "qualified_options"
-              ? "The options with the strongest current evidence"
-              : "No product has cleared every must-have yet"}
-          </h2>
-          <p>
-            {support.researchedCandidateCount} promising{" "}
-            {support.researchedCandidateCount === 1 ? "product" : "products"}{" "}
-            {support.researchStatus === "researching"
-              ? support.researchedCandidateCount === 1
-                ? "has early criterion-level evidence while the saved research continues."
-                : "have early criterion-level evidence while the saved research continues."
-              : support.researchedCandidateCount === 1
-                ? "was checked criterion by criterion."
-                : "were checked criterion by criterion."}{" "}
-            Hard unknowns matter before softer preference wins, without being
-            mislabeled as conflicts.
-          </p>
-          {support.excludedCandidateCount > 0 ? (
-            <p className={styles.excludedNote}>
-              {support.excludedCandidateCount}{" "}
-              {support.excludedCandidateCount === 1
-                ? "option is"
-                : "options are"}{" "}
-              outside an evidenced purchase boundary and not recommended here.
-            </p>
-          ) : null}
-        </div>
-      </div>
+      <CurrentDecisionSummary
+        support={support}
+        busy={busy}
+        onResearchCandidate={onResearchCandidate}
+      />
       {support.researchStatus === "researching" ? (
         <div className={styles.progressiveResearch} aria-live="polite">
           <span className={styles.spinner} aria-hidden="true" />
@@ -735,6 +901,33 @@ function EvidenceDecisionSupport({
           </div>
         </div>
       ) : null}
+      <div className={styles.decisionIntro}>
+        <div>
+          <p className={styles.eyebrow}>
+            {support.researchStatus === "researching"
+              ? "Early option evidence"
+              : support.sectionMode === "qualified_options"
+                ? "Best-supported options"
+                : "Verification needed"}
+          </p>
+          <h2 id="decision-support-heading">
+            Why these options earned a closer look
+          </h2>
+          <p>
+            Each card explains the product-level evidence, uncertainty and
+            provenance behind the current decision.
+          </p>
+          {support.excludedCandidateCount > 0 ? (
+            <p className={styles.excludedNote}>
+              {support.excludedCandidateCount}{" "}
+              {support.excludedCandidateCount === 1
+                ? "option is"
+                : "options are"}{" "}
+              outside an evidenced purchase boundary and cannot be recommended.
+            </p>
+          ) : null}
+        </div>
+      </div>
       {support.deepResearchStatus === "researching" ||
       (busy && support.deepResearchStatus === "available") ? (
         <div className={styles.progressiveResearch} aria-live="polite">
@@ -1782,6 +1975,18 @@ export function LiveShopping() {
               onToggleRejected={toggleRejected}
               onResearchCandidate={researchCandidate}
             />
+            <SavedProducts
+              view={view}
+              busy={busy}
+              onToggleSaved={toggleSaved}
+              onToggleRejected={toggleRejected}
+            />
+            <SavedComparison
+              view={view}
+              busy={busy}
+              onResearchCandidate={researchCandidate}
+              onToggleSaved={toggleSaved}
+            />
             <SearchResults
               view={view}
               busy={busy}
@@ -1821,18 +2026,6 @@ export function LiveShopping() {
                 </p>
               </form>
             ) : null}
-            <SavedProducts
-              view={view}
-              busy={busy}
-              onToggleSaved={toggleSaved}
-              onToggleRejected={toggleRejected}
-            />
-            <SavedComparison
-              view={view}
-              busy={busy}
-              onResearchCandidate={researchCandidate}
-              onToggleSaved={toggleSaved}
-            />
             <RejectedProducts view={view} busy={busy} onUndo={toggleRejected} />
           </div>
           <Brief view={view} />

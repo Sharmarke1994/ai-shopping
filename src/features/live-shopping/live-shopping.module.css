@@ -1049,12 +1049,356 @@
   font-size: 12px;
 }
 
+.currentDecision {
+  position: relative;
+  margin-bottom: 32px;
+  padding: clamp(26px, 4vw, 44px);
+  overflow: hidden;
+  border: 1px solid rgb(23 26 23 / 12%);
+  border-radius: 28px;
+  box-shadow: 0 22px 60px rgb(23 26 23 / 9%);
+}
+
+.currentDecision::after {
+  position: absolute;
+  z-index: 0;
+  top: -90px;
+  right: -70px;
+  width: 260px;
+  height: 260px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  content: "";
+  opacity: 0.07;
+  pointer-events: none;
+}
+
+.decisionReady {
+  color: #f9f7ef;
+  border-color: rgb(255 255 255 / 10%);
+  background:
+    radial-gradient(circle at 88% 8%, rgb(126 162 126 / 34%), transparent 36%),
+    #173d2c;
+}
+
+.decisionProvisional {
+  color: var(--ink);
+  border-color: rgb(138 100 27 / 24%);
+  background:
+    radial-gradient(circle at 90% 0%, rgb(255 255 255 / 70%), transparent 34%),
+    #f3ead2;
+}
+
+.decisionUnresolved {
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 90% 0%, rgb(255 255 255 / 75%), transparent 34%),
+    #ecebe5;
+}
+
+.currentDecision > * {
+  position: relative;
+  z-index: 1;
+}
+
+.currentDecisionHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.currentDecisionHeader .eyebrow {
+  margin-bottom: 9px;
+  color: inherit;
+  opacity: 0.72;
+}
+
+.decisionStateBadge {
+  display: inline-flex;
+  padding: 7px 10px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
+  opacity: 0.88;
+}
+
+.decisionLeaderMeta {
+  display: grid;
+  min-width: 130px;
+  text-align: right;
+  gap: 4px;
+}
+
+.decisionLeaderMeta span {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.decisionLeaderMeta strong {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 25px;
+  font-weight: 540;
+}
+
+.currentDecision h2 {
+  max-width: 900px;
+  margin: 26px 0 0;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: clamp(38px, 5.2vw, 64px);
+  font-weight: 480;
+  letter-spacing: -0.045em;
+  line-height: 0.99;
+}
+
+.currentDecisionExplanation {
+  max-width: 760px;
+  margin: 16px 0 0;
+  font-size: 16px;
+  line-height: 1.58;
+  opacity: 0.78;
+}
+
+.decisionSummaryGrid {
+  display: grid;
+  margin-top: 28px;
+  grid-template-columns: minmax(0, 1.55fr) minmax(220px, 0.75fr);
+  gap: 12px;
+}
+
+.decisionReasons,
+.decisionWatch,
+.decisionAlternative,
+.decisionNextCheck {
+  border: 1px solid currentColor;
+  border-radius: 17px;
+}
+
+.decisionReasons,
+.decisionWatch {
+  padding: 18px;
+}
+
+.decisionReady .decisionReasons,
+.decisionReady .decisionWatch,
+.decisionReady .decisionAlternative,
+.decisionReady .decisionNextCheck {
+  border-color: rgb(255 255 255 / 16%);
+  background: rgb(255 255 255 / 7%);
+}
+
+.decisionProvisional .decisionReasons,
+.decisionProvisional .decisionWatch,
+.decisionProvisional .decisionAlternative,
+.decisionProvisional .decisionNextCheck,
+.decisionUnresolved .decisionReasons,
+.decisionUnresolved .decisionWatch,
+.decisionUnresolved .decisionAlternative,
+.decisionUnresolved .decisionNextCheck {
+  border-color: rgb(23 26 23 / 11%);
+  background: rgb(255 255 255 / 47%);
+}
+
+.decisionSummaryLabel {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 15px;
+}
+
+.decisionSummaryLabel > span,
+.decisionWatch > span,
+.decisionAlternative > span,
+.decisionNextCheck > div > span {
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  opacity: 0.66;
+}
+
+.decisionSummaryLabel > strong {
+  font-size: 11px;
+  font-weight: 750;
+  opacity: 0.72;
+}
+
+.decisionReasons ul {
+  display: grid;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+  gap: 11px;
+}
+
+.decisionReasons li {
+  display: grid;
+  padding-top: 11px;
+  border-top: 1px solid currentColor;
+  gap: 3px;
+}
+
+.decisionReady .decisionReasons li {
+  border-color: rgb(255 255 255 / 12%);
+}
+
+.decisionProvisional .decisionReasons li,
+.decisionUnresolved .decisionReasons li {
+  border-color: rgb(23 26 23 / 9%);
+}
+
+.decisionReasons li > span {
+  font-size: 13px;
+  font-weight: 760;
+}
+
+.decisionReasons p,
+.decisionWatch p,
+.decisionAlternative p,
+.decisionNextCheck p,
+.decisionQuietCopy {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.52;
+  opacity: 0.72;
+}
+
+.decisionQuietCopy {
+  margin-top: 15px;
+}
+
+.decisionWatch {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.decisionWatch > strong {
+  margin: 13px 0 5px;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 24px;
+  font-weight: 540;
+}
+
+.decisionAlternative {
+  display: grid;
+  margin-top: 12px;
+  padding: 17px 18px;
+  grid-template-columns: 110px minmax(160px, 0.65fr) minmax(260px, 1fr);
+  align-items: baseline;
+  gap: 16px;
+}
+
+.decisionAlternative > strong {
+  font-size: 13px;
+}
+
+.decisionNextCheck {
+  display: flex;
+  margin-top: 12px;
+  padding: 17px 18px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 22px;
+}
+
+.decisionNextCheck > div {
+  display: grid;
+  max-width: 670px;
+  gap: 4px;
+}
+
+.decisionNextCheck > div > strong {
+  font-size: 14px;
+}
+
+.decisionInvestigateButton,
+.decisionBuyButton,
+.decisionOffersButton {
+  display: flex;
+  border: 0;
+  border-radius: 13px;
+  font: inherit;
+  font-weight: 780;
+  cursor: pointer;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.decisionInvestigateButton {
+  min-width: 210px;
+  padding: 13px 15px;
+  color: var(--ink);
+  background: #fff;
+}
+
+.decisionProvisional .decisionInvestigateButton,
+.decisionUnresolved .decisionInvestigateButton {
+  color: #fff;
+  background: var(--forest);
+}
+
+.decisionInvestigateButton:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.decisionCheckState {
+  max-width: 210px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.4;
+  opacity: 0.7;
+}
+
+.decisionPurchase {
+  display: flex;
+  margin-top: 20px;
+  align-items: center;
+  gap: 15px;
+}
+
+.decisionPurchase a {
+  min-width: min(100%, 330px);
+  padding: 16px 18px;
+  text-decoration: none;
+}
+
+.decisionBuyButton {
+  color: var(--forest);
+  background: #f8f5e9;
+  box-shadow: 0 12px 28px rgb(0 0 0 / 15%);
+}
+
+.decisionOffersButton {
+  color: inherit;
+  border: 1px solid currentColor !important;
+  background: transparent;
+}
+
+.decisionPurchase p {
+  max-width: 300px;
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.4;
+  opacity: 0.64;
+}
+
 .decisionSection {
   margin-bottom: 46px;
 }
 
 .decisionIntro {
-  margin-bottom: 24px;
+  margin: 34px 0 20px;
+}
+
+.decisionIntro h2 {
+  font-size: clamp(29px, 3.6vw, 43px);
 }
 
 .excludedNote {
@@ -1534,6 +1878,15 @@
   .resultsIntro {
     align-items: flex-start;
   }
+
+  .decisionSummaryGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .decisionAlternative {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
 }
 
 @media (max-width: 600px) {
@@ -1644,6 +1997,47 @@
 
   .researchButton {
     width: 100%;
+  }
+
+  .currentDecision {
+    padding: 23px 20px;
+    border-radius: 21px;
+  }
+
+  .currentDecisionHeader {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .decisionLeaderMeta {
+    display: flex;
+    min-width: 0;
+    text-align: left;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  .currentDecision h2 {
+    margin-top: 21px;
+    font-size: 39px;
+  }
+
+  .decisionSummaryLabel {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .decisionNextCheck,
+  .decisionPurchase {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .decisionInvestigateButton,
+  .decisionPurchase a {
+    width: 100%;
+    min-width: 0;
   }
 
   .topOptionGrid {

@@ -81,6 +81,53 @@ function view(options?: {
       researchedCandidateCount: includeDecision ? 1 : 0,
       sectionMode: "qualified_options",
       excludedCandidateCount: 0,
+      currentDecision: includeDecision
+        ? {
+            state: "ready_to_choose",
+            recommendationLevel: "ready",
+            leadingCandidateListingId: candidateListingId,
+            alternativeCandidateListingId: null,
+            headline: `I’d choose ${listing.title}`,
+            explanation:
+              "It clears the current must-have and has meaningful evidence separation.",
+            keyReasons: [
+              {
+                criterionId,
+                label: "Maximum price",
+                strength: "hard",
+                explanation: "The observed price is within the £50 maximum.",
+              },
+            ],
+            keyTradeoff: null,
+            blockingGap: null,
+            whatCouldChangeDecision: null,
+            alternativeReason: null,
+            recommendationBasis: "sole_eligible_option",
+            purchase: {
+              candidateListingId,
+              state: "direct",
+              destinationUrl: listing.destinationUrl,
+              label: "Buy from Example Retailer",
+              priceText: listing.priceText,
+              merchant: listing.merchant,
+            },
+          }
+        : {
+            state: "insufficient_evidence",
+            recommendationLevel: "none",
+            leadingCandidateListingId: null,
+            alternativeCandidateListingId: null,
+            headline: "I don’t have enough evidence to recommend yet",
+            explanation:
+              "Product research has not produced grounded current assessments yet.",
+            keyReasons: [],
+            keyTradeoff: null,
+            blockingGap: null,
+            whatCouldChangeDecision: null,
+            alternativeReason: null,
+            recommendationBasis: "insufficient_grounded_evidence",
+            purchase: null,
+          },
       decisionGaps:
         includeDecision && options?.deepResearchStatus !== "not_needed"
           ? [
@@ -149,6 +196,55 @@ function view(options?: {
   };
 }
 
+function decisionView(options: {
+  decision: Partial<
+    NonNullable<LiveShoppingView["decisionSupport"]>["currentDecision"]
+  >;
+  listing?: Partial<typeof listing>;
+  option?: Partial<
+    NonNullable<LiveShoppingView["decisionSupport"]>["topOptions"][number]
+  >;
+}) {
+  const base = view({
+    researchStatus: "ready",
+    deepResearchStatus: "complete",
+    includeDecision: true,
+  });
+  if (
+    base.decisionSupport === null ||
+    base.decisionSupport.topOptions[0] === undefined ||
+    base.action.kind !== "search" ||
+    base.action.search === null
+  ) {
+    throw new Error("Expected decision fixture");
+  }
+  const projectedListing = { ...listing, ...options.listing };
+  return liveShoppingViewSchema.parse({
+    ...base,
+    decisionSupport: {
+      ...base.decisionSupport,
+      currentDecision: {
+        ...base.decisionSupport.currentDecision,
+        ...options.decision,
+      },
+      topOptions: [
+        {
+          ...base.decisionSupport.topOptions[0],
+          ...options.option,
+          listing: projectedListing,
+        },
+      ],
+    },
+    action: {
+      ...base.action,
+      search: {
+        ...base.action.search,
+        listings: [projectedListing],
+      },
+    },
+  });
+}
+
 function jsonResponse(value: unknown) {
   return new Response(JSON.stringify(value), {
     status: 200,
@@ -161,6 +257,179 @@ describe("founder live shopping decision loop", () => {
     localStorage.clear();
     vi.restoreAllMocks();
     window.history.replaceState({}, "", "/live");
+  });
+
+  it("makes a ready, direct Current Decision the first decision surface", async () => {
+    localStorage.setItem("consider-live-session-v1", sessionId);
+    const ready = decisionView({ decision: {} });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(jsonResponse(ready))),
+    );
+
+    render(<LiveShopping />);
+
+    const heading = await screen.findByRole("heading", {
+      name: "I’d choose " + listing.title,
+    });
+    expect(screen.getByText("Ready to choose")).toBeVisible();
+    expect(screen.getByText("1/1 must-haves verified")).toBeVisible();
+    expect(
+      screen.getByRole("link", {
+        name: "Buy from Example Retailer · " + listing.priceText,
+      }),
+    ).toHaveAttribute("href", listing.destinationUrl);
+    const firstCard = screen.getAllByRole("article", {
+      name: listing.title,
+    })[0];
+    if (firstCard === undefined) throw new Error("Expected a product card");
+    expect(
+      heading.compareDocumentPosition(firstCard) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("keeps a hard-unknown leader visibly provisional and withholds purchase CTA", async () => {
+    localStorage.setItem("consider-live-session-v1", sessionId);
+    const gap = {
+      criterionId,
+      label: "Battery life",
+      strength: "hard" as const,
+      candidateListingIds: [candidateListingId],
+      candidateTitles: [listing.title],
+      explanation: "Battery life still needs verification.",
+    };
+    const provisional = decisionView({
+      decision: {
+        state: "leader_needs_verification",
+        recommendationLevel: "provisional",
+        headline: listing.title + " leads, but verify one must-have",
+        explanation: "Battery life prevents an honest buy recommendation.",
+        blockingGap: gap,
+        whatCouldChangeDecision: gap,
+        recommendationBasis: "unresolved_hard_requirement",
+        purchase: null,
+      },
+      option: {
+        readiness: "needs_verification",
+        researchState: "available",
+        supportedMustHaveCount: 0,
+        unresolvedMustHaves: [
+          {
+            criterionId,
+            label: "Battery life",
+            explanation: "Battery life still needs verification.",
+          },
+        ],
+      },
+    });
+    const operations: unknown[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_request: RequestInfo | URL, init?: RequestInit) => {
+        if (init?.method === "POST") {
+          operations.push(JSON.parse(String(init.body)));
+        }
+        return jsonResponse(provisional);
+      }),
+    );
+
+    render(<LiveShopping />);
+
+    expect(await screen.findByText("Provisional · verify first")).toBeVisible();
+    expect(screen.getByText("Verify before choosing")).toBeVisible();
+    expect(
+      screen.queryByRole("link", { name: /Buy from/i }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Investigate battery life" }),
+    );
+    await waitFor(() =>
+      expect(operations).toContainEqual({
+        operation: "research_candidate",
+        sessionId,
+        candidateListingId,
+        criterionId,
+      }),
+    );
+  });
+
+  it("states an honest no-winner outcome instead of promoting the first card", async () => {
+    localStorage.setItem("consider-live-session-v1", sessionId);
+    const tied = decisionView({
+      decision: {
+        state: "no_clear_winner",
+        recommendationLevel: "none",
+        leadingCandidateListingId: null,
+        headline: "I wouldn’t choose between these yet",
+        explanation:
+          "Their evidence is equivalent on what matters for this brief.",
+        keyReasons: [],
+        blockingGap: null,
+        whatCouldChangeDecision: null,
+        recommendationBasis: "equivalent_evidence",
+        purchase: null,
+      },
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(jsonResponse(tied))),
+    );
+
+    render(<LiveShopping />);
+
+    expect(await screen.findByText("No clear winner")).toBeVisible();
+    expect(
+      screen.getByRole("heading", {
+        name: "I wouldn’t choose between these yet",
+      }),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("link", { name: /Buy from|Check current offers/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("presents a fallback offer as weaker than a verified direct destination", async () => {
+    localStorage.setItem("consider-live-session-v1", sessionId);
+    const fallbackUrl = "https://google.example/shopping/product";
+    const fallbackListing = {
+      destinationUrl: fallbackUrl,
+      destinationLabel: "View on Google Shopping",
+      purchaseState: "fallback" as const,
+    };
+    const fallback = decisionView({
+      listing: fallbackListing,
+      decision: {
+        purchase: {
+          candidateListingId,
+          state: "fallback",
+          destinationUrl: fallbackUrl,
+          label: "Check current offers",
+          priceText: listing.priceText,
+          merchant: listing.merchant,
+        },
+      },
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(jsonResponse(fallback))),
+    );
+
+    render(<LiveShopping />);
+
+    expect(
+      await screen.findByRole("link", {
+        name: "Check current offers · " + listing.priceText,
+      }),
+    ).toHaveAttribute("href", fallbackUrl);
+    expect(
+      screen.getByText(
+        "Fallback shopping result · verify the seller and offer.",
+      ),
+    ).toBeVisible();
+    expect(
+      screen.queryByText("Verified same-merchant product destination."),
+    ).not.toBeInTheDocument();
   });
 
   it("keeps Google Shopping usable while an exact retailer page is checking", async () => {

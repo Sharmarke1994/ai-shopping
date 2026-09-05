@@ -119,6 +119,31 @@ Rank from criterion assessments rather than raw observations. Allow ties and evi
 
 Do not create percentages, scalar match scores, arbitrary category weights, or affiliate signals. Diversity may expose a useful alternative direction but must not displace a clearly better evidenced candidate merely to create variety.
 
+## Current decision synthesis
+
+The consumer-facing current decision is a deterministic projection over the
+current authoritative brief, current-revision assessments, comparative ordering,
+research gaps, saved state and purchase-path state. It is not a reusable product
+fact and does not invoke another model.
+
+The projection distinguishes research in progress, a leader blocked by a hard
+unknown, a qualified leader with a softer trade-off, a ready choice, no clear
+winner, insufficient evidence and no eligible option. An ordered first candidate
+is not automatically a recommendation. A leader requires a grounded
+criterion-level advantage over the best eligible alternative (or, for a sole
+eligible option, non-popularity evidence that it satisfies the brief). Provider
+rank, identical assessment profiles, review volume alone and unrequested tiny
+price differences do not create separation.
+
+Recommendation eligibility fails closed: a hard conflict excludes the candidate,
+an unresolved hard requirement blocks ready-to-choose, and evidence from an old
+task revision is ignored. Explanations use the qualitative criterion-strength
+ordering rather than an additive score. At most one supported alternative and
+one current decision-changing gap are promoted into the primary summary. A
+purchase action is projected only for a ready decision; verified same-merchant
+destinations remain visually distinct from checking and Google Shopping fallback
+paths.
+
 ## Progressive investigation
 
 ```text

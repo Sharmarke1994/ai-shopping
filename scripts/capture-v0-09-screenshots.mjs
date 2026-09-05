@@ -207,7 +207,7 @@ async function waitForTerminalDecision(page) {
 
 async function expandFetchedSource(page) {
   const region = page.getByRole("region", {
-    name: /The options with the strongest current evidence|No product has cleared every must-have yet/,
+    name: "Why these options earned a closer look",
   });
   const details = region.locator("details");
   for (let index = 0; index < (await details.count()); index += 1) {
@@ -225,7 +225,7 @@ async function expandFetchedSource(page) {
 
 async function saveTwo(page) {
   const decision = page.getByRole("region", {
-    name: /The options with the strongest current evidence|No product has cleared every must-have yet/,
+    name: "Why these options earned a closer look",
   });
   await decision
     .getByRole("button", { name: "Save", exact: true })
@@ -305,6 +305,8 @@ try {
     .getByRole("link", { name: "View on Google Shopping" })
     .first()
     .waitFor();
+  await desktopPage.getByText("Current decision", { exact: true }).waitFor();
+  await screenshot(desktopPage, "fixture-desktop-current-decision.png", false);
   await expandFetchedSource(desktopPage);
   await screenshot(
     desktopPage,
@@ -323,6 +325,10 @@ try {
   await mobilePage
     .getByRole("heading", { name: "What separates your saved options" })
     .waitFor();
+  await mobilePage
+    .getByText("Current decision", { exact: true })
+    .scrollIntoViewIfNeeded();
+  await screenshot(mobilePage, "fixture-mobile-current-decision.png", false);
   const mobileUnknown = mobilePage
     .getByText(/· Checked · source did not answer$/)
     .first();
@@ -338,7 +344,7 @@ try {
   await screenshot(mobilePage, "fixture-mobile-comparison-purchase.png", false);
 
   const mobileDecision = mobilePage.getByRole("region", {
-    name: /The options with the strongest current evidence|No product has cleared every must-have yet/,
+    name: "Why these options earned a closer look",
   });
   await mobileDecision
     .getByRole("button", { name: "Not for me" })
@@ -409,5 +415,5 @@ try {
 }
 
 process.stdout.write(
-  "Captured eight V0-09 production fixture states with horizontal-overflow and no-dev-runtime assertions.\n",
+  "Captured ten V0-09 production fixture states with horizontal-overflow and no-dev-runtime assertions.\n",
 );

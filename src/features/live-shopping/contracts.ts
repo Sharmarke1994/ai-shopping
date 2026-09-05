@@ -256,6 +256,54 @@ const decisionGapSchema = z.strictObject({
   explanation: z.string().min(1).max(500),
 });
 
+const currentDecisionReasonSchema = z.strictObject({
+  criterionId: z.uuid(),
+  label: z.string().min(1).max(200),
+  strength: z.enum(["hard", "strong_preference", "preference"]),
+  explanation: z.string().min(1).max(500),
+});
+
+const currentDecisionSchema = z.strictObject({
+  state: z.enum([
+    "researching",
+    "leader_needs_verification",
+    "leader_with_tradeoff",
+    "ready_to_choose",
+    "no_clear_winner",
+    "insufficient_evidence",
+    "no_eligible_option",
+  ]),
+  recommendationLevel: z.enum(["none", "provisional", "ready"]),
+  leadingCandidateListingId: candidateListingIdSchema.nullable(),
+  alternativeCandidateListingId: candidateListingIdSchema.nullable(),
+  headline: z.string().min(1).max(700),
+  explanation: z.string().min(1).max(1_500),
+  keyReasons: z.array(currentDecisionReasonSchema).max(3),
+  keyTradeoff: currentDecisionReasonSchema.nullable(),
+  blockingGap: decisionGapSchema.nullable(),
+  whatCouldChangeDecision: decisionGapSchema.nullable(),
+  alternativeReason: z.string().min(1).max(1_500).nullable(),
+  recommendationBasis: z.enum([
+    "evidence_still_developing",
+    "meaningful_criterion_separation",
+    "sole_eligible_option",
+    "unresolved_hard_requirement",
+    "equivalent_evidence",
+    "insufficient_grounded_evidence",
+    "no_eligible_candidate",
+  ]),
+  purchase: z
+    .strictObject({
+      candidateListingId: candidateListingIdSchema,
+      state: z.enum(["direct", "checking", "fallback"]),
+      destinationUrl: z.url(),
+      label: z.string().min(1).max(120),
+      priceText: z.string().nullable(),
+      merchant: z.string().nullable(),
+    })
+    .nullable(),
+});
+
 const liveDecisionSupportSchema = z.strictObject({
   researchStatus: z.enum([
     "not_started",
@@ -282,6 +330,7 @@ const liveDecisionSupportSchema = z.strictObject({
   excludedCandidateCount: z.number().int().nonnegative(),
   decisionGaps: z.array(decisionGapSchema).max(3),
   topOptions: z.array(decisionSupportCandidateSchema).max(5),
+  currentDecision: currentDecisionSchema,
   comparison: savedComparisonSchema.nullable(),
 });
 

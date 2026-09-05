@@ -11,8 +11,11 @@ test("automatically investigates, supports exact rejection, comparison, refineme
 
   await expect(
     page.getByRole("heading", {
-      name: "The options with the strongest current evidence",
+      name: "Why these options earned a closer look",
     }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Current decision", { exact: true }),
   ).toBeVisible();
   await expect(
     page
@@ -24,7 +27,7 @@ test("automatically investigates, supports exact rejection, comparison, refineme
   ).toHaveAttribute("href", /^https:\/\/example\.test\/products\//);
 
   const decisionRegion = page.getByRole("region", {
-    name: "The options with the strongest current evidence",
+    name: "Why these options earned a closer look",
   });
   await decisionRegion
     .getByRole("button", { name: "Save", exact: true })
@@ -124,9 +127,16 @@ test("keeps unresolved must-haves honest and reject/undo usable on mobile", asyn
 
   await expect(
     page.getByRole("heading", {
-      name: "No product has cleared every must-have yet",
+      name: "Why these options earned a closer look",
     }),
   ).toBeVisible();
+  await expect(
+    page.getByText("Current decision", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("Not enough evidence")).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: /Buy from|Check current offers/ }),
+  ).toHaveCount(0);
   await expect(page.getByText("Needs verification").first()).toBeVisible();
   await expect(page.getByText("Must-haves to verify").first()).toBeVisible();
   await expect(
@@ -134,7 +144,7 @@ test("keeps unresolved must-haves honest and reject/undo usable on mobile", asyn
   ).toBeVisible();
 
   const decisionRegion = page.getByRole("region", {
-    name: "No product has cleared every must-have yet",
+    name: "Why these options earned a closer look",
   });
   await decisionRegion
     .getByRole("button", { name: "Not for me" })

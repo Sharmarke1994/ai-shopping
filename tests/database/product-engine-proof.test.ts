@@ -780,6 +780,16 @@ describe("development-only V0-09 product engine proof", () => {
     expect(
       researched.decisionSupport?.topOptions.length,
     ).toBeGreaterThanOrEqual(2);
+    expect(researched.decisionSupport?.currentDecision).toMatchObject({
+      state: "no_clear_winner",
+      recommendationLevel: "none",
+      leadingCandidateListingId: null,
+      recommendationBasis: "equivalent_evidence",
+    });
+    expect(
+      JSON.stringify(researched.decisionSupport?.currentDecision),
+    ).not.toMatch(/\d+(?:\.\d+)?%|\/10/);
+    const decisionBeforeSave = researched.decisionSupport?.currentDecision;
     const candidateIds = researched
       .decisionSupport!.topOptions.slice(0, 2)
       .map(({ listing }) => listing.candidateListingId);
@@ -794,6 +804,9 @@ describe("development-only V0-09 product engine proof", () => {
       sessionId,
     });
     expect(compared.decisionSupport?.comparison?.candidates).toHaveLength(2);
+    expect(compared.decisionSupport?.currentDecision).toEqual(
+      decisionBeforeSave,
+    );
     const deepened = await deepenLiveShoppingResearch({
       dependencies,
       input: { operation: "deepen_research", sessionId },
@@ -818,6 +831,9 @@ describe("development-only V0-09 product engine proof", () => {
       sessionId,
     });
     expect(refreshed).toEqual(withDestinations);
+    expect(refreshed.decisionSupport?.currentDecision).toEqual(
+      withDestinations.decisionSupport?.currentDecision,
+    );
     expect(evidenceProvider.calls.length).toBeGreaterThan(0);
     expect(pageFetcher.calls.length).toBeGreaterThan(0);
     expect(understanding.calls.length).toBeGreaterThan(0);

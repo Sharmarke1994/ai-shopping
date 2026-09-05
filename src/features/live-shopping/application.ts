@@ -1061,6 +1061,29 @@ function liveListingDto(options: {
   };
 }
 
+type LiveListingDto = ReturnType<typeof liveListingDto>;
+
+export function projectCurrentDecisionPurchase(options: {
+  recommendationLevel: "none" | "provisional" | "ready";
+  leader: LiveListingDto | undefined;
+}) {
+  if (options.recommendationLevel !== "ready" || options.leader === undefined) {
+    return null;
+  }
+  const leader = options.leader;
+  return {
+    candidateListingId: leader.candidateListingId,
+    state: leader.purchaseState,
+    destinationUrl: leader.destinationUrl,
+    label:
+      leader.purchaseState === "direct"
+        ? "Buy from " + (leader.merchant ?? "retailer").slice(0, 100)
+        : "Check current offers",
+    priceText: leader.priceText,
+    merchant: leader.merchant,
+  };
+}
+
 export function displayListings(
   run: NonNullable<Awaited<ReturnType<typeof loadPersistedSearchRunByTrigger>>>,
   options: {
@@ -1265,6 +1288,33 @@ export async function loadLiveShoppingSession(options: {
       ]),
     ],
   });
+  const projectedTopOptions = decision.topOptions.map((option) => ({
+    listing: liveListingDto({
+      listing: option.listing,
+      brief: snapshot.brief,
+      saved: savedListingIds.has(option.listing.id),
+      destinationResolutions,
+    }),
+    strongestSupported: option.strongestSupported,
+    readiness: option.readiness,
+    researchState: option.researchState,
+    supportedMustHaveCount: option.supportedMustHaveCount,
+    mustHaveCount: option.mustHaveCount,
+    unresolvedMustHaves: option.unresolvedMustHaves,
+    whyItFits: option.whyItFits,
+    watchouts: option.watchouts,
+    unknowns: option.unknowns,
+    evidenceSources: option.evidenceSources,
+  }));
+  const decisionLeader = projectedTopOptions.find(
+    ({ listing }) =>
+      listing.candidateListingId ===
+      decision.currentDecision.leadingCandidateListingId,
+  )?.listing;
+  const decisionPurchase = projectCurrentDecisionPurchase({
+    recommendationLevel: decision.currentDecision.recommendationLevel,
+    leader: decisionLeader,
+  });
   const decisionSupport = {
     researchStatus: decision.researchStatus,
     deepResearchStatus: decision.deepResearchStatus,
@@ -1273,24 +1323,11 @@ export async function loadLiveShoppingSession(options: {
     sectionMode: decision.sectionMode,
     excludedCandidateCount: decision.excludedCandidateCount,
     decisionGaps: decision.decisionGaps,
-    topOptions: decision.topOptions.map((option) => ({
-      listing: liveListingDto({
-        listing: option.listing,
-        brief: snapshot.brief,
-        saved: savedListingIds.has(option.listing.id),
-        destinationResolutions,
-      }),
-      strongestSupported: option.strongestSupported,
-      readiness: option.readiness,
-      researchState: option.researchState,
-      supportedMustHaveCount: option.supportedMustHaveCount,
-      mustHaveCount: option.mustHaveCount,
-      unresolvedMustHaves: option.unresolvedMustHaves,
-      whyItFits: option.whyItFits,
-      watchouts: option.watchouts,
-      unknowns: option.unknowns,
-      evidenceSources: option.evidenceSources,
-    })),
+    topOptions: projectedTopOptions,
+    currentDecision: {
+      ...decision.currentDecision,
+      purchase: decisionPurchase,
+    },
     comparison:
       decision.comparison === null
         ? null

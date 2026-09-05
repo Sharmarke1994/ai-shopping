@@ -83,6 +83,409 @@ export type DecisionGap = Readonly<{
   explanation: string;
 }>;
 
+export type CurrentDecisionReason = Readonly<{
+  criterionId: string;
+  label: string;
+  strength: BriefItemV1["strength"];
+  explanation: string;
+}>;
+
+export type CurrentDecision = Readonly<{
+  state:
+    | "researching"
+    | "leader_needs_verification"
+    | "leader_with_tradeoff"
+    | "ready_to_choose"
+    | "no_clear_winner"
+    | "insufficient_evidence"
+    | "no_eligible_option";
+  recommendationLevel: "none" | "provisional" | "ready";
+  leadingCandidateListingId: string | null;
+  alternativeCandidateListingId: string | null;
+  headline: string;
+  explanation: string;
+  keyReasons: readonly CurrentDecisionReason[];
+  keyTradeoff: CurrentDecisionReason | null;
+  blockingGap: DecisionGap | null;
+  whatCouldChangeDecision: DecisionGap | null;
+  alternativeReason: string | null;
+  recommendationBasis:
+    | "evidence_still_developing"
+    | "meaningful_criterion_separation"
+    | "sole_eligible_option"
+    | "unresolved_hard_requirement"
+    | "equivalent_evidence"
+    | "insufficient_grounded_evidence"
+    | "no_eligible_candidate";
+}>;
+
+type CriterionDifference = Readonly<{
+  item: BriefItemV1;
+  leaderAssessment: CriterionAssessmentV1 | undefined;
+  challengerAssessment: CriterionAssessmentV1 | undefined;
+  favours: "leader" | "challenger";
+}>;
+
+const decisionStrengthOrder: Record<BriefItemV1["strength"], number> = {
+  hard: 0,
+  strong_preference: 1,
+  preference: 2,
+};
+
+function decisionStatusRank(assessment: CriterionAssessmentV1 | undefined) {
+  if (assessment?.status === "meets") return 0;
+  if (assessment?.status === "conflicts") return 2;
+  return 1;
+}
+
+function isPopularitySignal(item: BriefItemV1) {
+  return /\b(?:review|reviews|rating|ratings|popular|popularity)\b/i.test(
+    `${item.conceptLabel} ${item.conceptDefinition}`,
+  );
+}
+
+function decisionReason(
+  item: BriefItemV1,
+  assessment: CriterionAssessmentV1,
+): CurrentDecisionReason {
+  return {
+    criterionId: item.criterionId,
+    label: item.conceptLabel,
+    strength: item.strength,
+    explanation: assessment.explanation,
+  };
+}
+
+function criterionDifferences(options: {
+  items: readonly BriefItemV1[];
+  assessments: readonly CriterionAssessmentV1[];
+  leaderId: string;
+  challengerId: string;
+}) {
+  return [...options.items]
+    .sort(
+      (left, right) =>
+        decisionStrengthOrder[left.strength] -
+        decisionStrengthOrder[right.strength],
+    )
+    .flatMap((item): CriterionDifference[] => {
+      const leaderAssessment = options.assessments.find(
+        (assessment) =>
+          assessment.candidateListingId === options.leaderId &&
+          assessment.criterionId === item.criterionId,
+      );
+      const challengerAssessment = options.assessments.find(
+        (assessment) =>
+          assessment.candidateListingId === options.challengerId &&
+          assessment.criterionId === item.criterionId,
+      );
+      const leaderRank = decisionStatusRank(leaderAssessment);
+      const challengerRank = decisionStatusRank(challengerAssessment);
+      if (leaderRank === challengerRank) return [];
+      return [
+        {
+          item,
+          leaderAssessment,
+          challengerAssessment,
+          favours: leaderRank < challengerRank ? "leader" : "challenger",
+        },
+      ];
+    });
+}
+
+function primaryDecisionGap(options: {
+  gaps: readonly DecisionGap[];
+  leaderId: string | null;
+  challengerId: string | null;
+}) {
+  if (options.leaderId === null) return options.gaps[0] ?? null;
+  return (
+    options.gaps.find(
+      ({ candidateListingIds }) =>
+        options.challengerId !== null &&
+        candidateListingIds.includes(options.leaderId!) &&
+        candidateListingIds.includes(options.challengerId),
+    ) ??
+    options.gaps.find(({ candidateListingIds }) =>
+      candidateListingIds.includes(options.leaderId!),
+    ) ??
+    options.gaps[0] ??
+    null
+  );
+}
+
+export function synthesizeCurrentDecision(options: {
+  items: readonly BriefItemV1[];
+  candidates: readonly DecisionSupportCandidate[];
+  assessments: readonly CriterionAssessmentV1[];
+  decisionGaps: readonly DecisionGap[];
+  researchStatus:
+    "not_started" | "researching" | "partial" | "failed" | "ready";
+  assessedCandidateCount: number;
+  eligibleCandidateCount: number;
+}): CurrentDecision {
+  const [leader, challenger] = options.candidates;
+  if (options.eligibleCandidateCount === 0) {
+    const noAssessments = options.assessedCandidateCount === 0;
+    return {
+      state: noAssessments ? "insufficient_evidence" : "no_eligible_option",
+      recommendationLevel: "none",
+      leadingCandidateListingId: null,
+      alternativeCandidateListingId: null,
+      headline: noAssessments
+        ? "I don’t have enough evidence to recommend yet"
+        : "None of these options clears your purchase boundaries",
+      explanation: noAssessments
+        ? "Product research has not produced grounded current assessments yet."
+        : "Every researched option conflicts with a must-have or an absolute purchase ceiling, so no product is recommended.",
+      keyReasons: [],
+      keyTradeoff: null,
+      blockingGap: null,
+      whatCouldChangeDecision: options.decisionGaps[0] ?? null,
+      alternativeReason: null,
+      recommendationBasis: noAssessments
+        ? "insufficient_grounded_evidence"
+        : "no_eligible_candidate",
+    };
+  }
+  if (leader === undefined) {
+    return {
+      state: "insufficient_evidence",
+      recommendationLevel: "none",
+      leadingCandidateListingId: null,
+      alternativeCandidateListingId: null,
+      headline: "I don’t have enough evidence to recommend yet",
+      explanation:
+        "The available product rows have not produced enough grounded evidence for a decision.",
+      keyReasons: [],
+      keyTradeoff: null,
+      blockingGap: null,
+      whatCouldChangeDecision: options.decisionGaps[0] ?? null,
+      alternativeReason: null,
+      recommendationBasis: "insufficient_grounded_evidence",
+    };
+  }
+
+  const leaderAssessments = options.assessments.filter(
+    ({ candidateListingId }) => candidateListingId === leader.listing.id,
+  );
+  const tradeoffItem = options.items.find((item) => {
+    const assessment = assessmentForCriterion(
+      leaderAssessments,
+      item.criterionId,
+    );
+    return (
+      (item.strength !== "hard" && assessment?.status === "conflicts") ||
+      assessment?.relation === "inside_conditional_stretch"
+    );
+  });
+  const tradeoffAssessment =
+    tradeoffItem === undefined
+      ? undefined
+      : assessmentForCriterion(leaderAssessments, tradeoffItem.criterionId);
+  const keyTradeoff =
+    tradeoffItem === undefined || tradeoffAssessment === undefined
+      ? null
+      : decisionReason(tradeoffItem, tradeoffAssessment);
+  const differences =
+    challenger === undefined
+      ? []
+      : criterionDifferences({
+          items: options.items,
+          assessments: options.assessments,
+          leaderId: leader.listing.id,
+          challengerId: challenger.listing.id,
+        });
+  const leaderAdvantages = differences.filter(
+    ({ favours }) => favours === "leader",
+  );
+  const materialLeaderAdvantages = leaderAdvantages.filter(
+    ({ item }) => !isPopularitySignal(item),
+  );
+  const separatingCriterionIds = new Set(
+    materialLeaderAdvantages.map(({ item }) => item.criterionId),
+  );
+  const supportedReasons = [...options.items]
+    .sort(
+      (left, right) =>
+        Number(!separatingCriterionIds.has(left.criterionId)) -
+          Number(!separatingCriterionIds.has(right.criterionId)) ||
+        decisionStrengthOrder[left.strength] -
+          decisionStrengthOrder[right.strength],
+    )
+    .flatMap((item) => {
+      const assessment = assessmentForCriterion(
+        leaderAssessments,
+        item.criterionId,
+      );
+      return assessment?.status === "meets"
+        ? [decisionReason(item, assessment)]
+        : [];
+    })
+    .slice(0, 3);
+  const challengerAdvantage = differences.find(
+    ({ favours, challengerAssessment }) =>
+      favours === "challenger" && challengerAssessment?.status === "meets",
+  );
+  const soleEligible = options.eligibleCandidateCount === 1;
+  const hasNonPopularitySupport = options.items.some((item) => {
+    const assessment = assessmentForCriterion(
+      leaderAssessments,
+      item.criterionId,
+    );
+    return assessment?.status === "meets" && !isPopularitySignal(item);
+  });
+  const meaningfulSeparation =
+    (soleEligible && hasNonPopularitySupport) ||
+    materialLeaderAdvantages.length > 0;
+  const hasGroundedSupport = supportedReasons.length > 0;
+  const blockingGap =
+    leader.unresolvedMustHaves.length === 0
+      ? null
+      : (options.decisionGaps.find(
+          ({ strength, candidateListingIds }) =>
+            strength === "hard" &&
+            candidateListingIds.includes(leader.listing.id),
+        ) ?? null);
+  const whatCouldChangeDecision = primaryDecisionGap({
+    gaps: options.decisionGaps,
+    leaderId: meaningfulSeparation ? leader.listing.id : null,
+    challengerId: challenger?.listing.id ?? null,
+  });
+  const alternativeCandidateListingId =
+    challengerAdvantage === undefined || challenger === undefined
+      ? null
+      : challenger.listing.id;
+  const alternativeReason =
+    challengerAdvantage?.challengerAssessment === undefined ||
+    challenger === undefined
+      ? null
+      : `Choose ${challenger.listing.title} instead if ${challengerAdvantage.item.conceptLabel.toLocaleLowerCase("en-GB")} matters more: ${challengerAdvantage.challengerAssessment.explanation}`;
+
+  if (options.researchStatus === "researching") {
+    return {
+      state: "researching",
+      recommendationLevel: meaningfulSeparation ? "provisional" : "none",
+      leadingCandidateListingId:
+        meaningfulSeparation && hasGroundedSupport ? leader.listing.id : null,
+      alternativeCandidateListingId,
+      headline:
+        meaningfulSeparation && hasGroundedSupport
+          ? `${leader.listing.title} leads while research continues`
+          : "Research is still building the decision",
+      explanation:
+        meaningfulSeparation && hasGroundedSupport
+          ? "Current evidence separates this option, but the remaining saved research could still change the conclusion."
+          : "Early evidence does not yet separate the leading options enough to recommend one.",
+      keyReasons: supportedReasons,
+      keyTradeoff,
+      blockingGap,
+      whatCouldChangeDecision,
+      alternativeReason,
+      recommendationBasis: "evidence_still_developing",
+    };
+  }
+
+  if (!hasGroundedSupport) {
+    return {
+      state: "insufficient_evidence",
+      recommendationLevel: "none",
+      leadingCandidateListingId: null,
+      alternativeCandidateListingId: null,
+      headline: "I don’t have enough evidence to recommend yet",
+      explanation:
+        "The checked products still lack grounded support against the current brief.",
+      keyReasons: [],
+      keyTradeoff: null,
+      blockingGap,
+      whatCouldChangeDecision,
+      alternativeReason: null,
+      recommendationBasis: "insufficient_grounded_evidence",
+    };
+  }
+
+  if (!meaningfulSeparation) {
+    const popularityOnly =
+      leaderAdvantages.length > 0 && materialLeaderAdvantages.length === 0;
+    return {
+      state: "no_clear_winner",
+      recommendationLevel: "none",
+      leadingCandidateListingId: null,
+      alternativeCandidateListingId: null,
+      headline: "I wouldn’t choose between these yet",
+      explanation: popularityOnly
+        ? "The apparent lead comes only from review or popularity evidence, not a meaningful product difference for this brief."
+        : "The leading options have effectively equivalent evidence on what matters, so their listing order is not treated as a decision.",
+      keyReasons: [],
+      keyTradeoff: null,
+      blockingGap: null,
+      whatCouldChangeDecision,
+      alternativeReason: null,
+      recommendationBasis: "equivalent_evidence",
+    };
+  }
+
+  if (leader.readiness === "needs_verification") {
+    return {
+      state: "leader_needs_verification",
+      recommendationLevel: "provisional",
+      leadingCandidateListingId: leader.listing.id,
+      alternativeCandidateListingId,
+      headline: `${leader.listing.title} leads, but verify one must-have`,
+      explanation:
+        blockingGap === null
+          ? "This option has the strongest current evidence, but a hard requirement remains unresolved."
+          : `${blockingGap.label} still prevents an honest buy recommendation.`,
+      keyReasons: supportedReasons,
+      keyTradeoff,
+      blockingGap,
+      whatCouldChangeDecision: blockingGap ?? whatCouldChangeDecision,
+      alternativeReason,
+      recommendationBasis: "unresolved_hard_requirement",
+    };
+  }
+
+  if (leader.readiness === "trade_off" || keyTradeoff !== null) {
+    return {
+      state: "leader_with_tradeoff",
+      recommendationLevel: "ready",
+      leadingCandidateListingId: leader.listing.id,
+      alternativeCandidateListingId,
+      headline: `I’d choose ${leader.listing.title}—with one trade-off`,
+      explanation:
+        keyTradeoff === null
+          ? "It has meaningful separation and clears the must-haves, with a softer compromise to consider."
+          : keyTradeoff.explanation,
+      keyReasons: supportedReasons,
+      keyTradeoff,
+      blockingGap: null,
+      whatCouldChangeDecision,
+      alternativeReason,
+      recommendationBasis: soleEligible
+        ? "sole_eligible_option"
+        : "meaningful_criterion_separation",
+    };
+  }
+
+  return {
+    state: "ready_to_choose",
+    recommendationLevel: "ready",
+    leadingCandidateListingId: leader.listing.id,
+    alternativeCandidateListingId,
+    headline: `I’d choose ${leader.listing.title}`,
+    explanation:
+      "It clears the current must-haves and has meaningful evidence separation on what matters most in this brief.",
+    keyReasons: supportedReasons,
+    keyTradeoff: null,
+    blockingGap: null,
+    whatCouldChangeDecision,
+    alternativeReason,
+    recommendationBasis: soleEligible
+      ? "sole_eligible_option"
+      : "meaningful_criterion_separation",
+  };
+}
+
 function assessmentsForCandidate(
   assessments: readonly CriterionAssessmentV1[],
   candidateListingId: string,
@@ -243,6 +646,7 @@ function readinessForCandidate(options: {
   }
   if (
     options.assessments.some((assessment) => {
+      if (assessment.relation === "inside_conditional_stretch") return true;
       if (assessment.status !== "conflicts") return false;
       return (
         options.items.find(
@@ -764,33 +1168,35 @@ export function buildDecisionSupport(options: {
   rejectedListingIds?: ReadonlySet<string>;
 }) {
   const rejectedListingIds = options.rejectedListingIds ?? new Set<string>();
-  const assessmentCandidateIds = new Set(
-    options.support.assessments.map(
-      ({ candidateListingId }) => candidateListingId,
-    ),
+  const currentAssessments = options.support.assessments.filter(
+    ({ taskId, taskRevision }) =>
+      taskId === options.support.brief.taskId &&
+      taskRevision === options.support.brief.revision,
   );
-  const assessedCandidates = options.support.candidates.filter(
+  const support = { ...options.support, assessments: currentAssessments };
+  const assessmentCandidateIds = new Set(
+    currentAssessments.map(({ candidateListingId }) => candidateListingId),
+  );
+  const assessedCandidates = support.candidates.filter(
     ({ id }) => assessmentCandidateIds.has(id) && !rejectedListingIds.has(id),
   );
   const ordered = orderCandidatesByAssessments({
-    brief: options.support.brief,
+    brief: support.brief,
     candidates: assessedCandidates,
-    assessments: options.support.assessments,
+    assessments: currentAssessments,
   });
-  const savedCandidates = (
-    options.savedListings ?? options.support.candidates
-  ).filter(
+  const savedCandidates = (options.savedListings ?? support.candidates).filter(
     ({ id }) => options.savedListingIds.has(id) && !rejectedListingIds.has(id),
   );
   if (savedCandidates.length > 4) {
     throw new Error("Saved-listing comparison limit invariant was violated");
   }
   const assessedSavedCandidates = orderCandidatesByAssessments({
-    brief: options.support.brief,
+    brief: support.brief,
     candidates: savedCandidates.filter(({ id }) =>
       assessmentCandidateIds.has(id),
     ),
-    assessments: options.support.assessments,
+    assessments: currentAssessments,
   });
   const assessedSavedIds = new Set(assessedSavedCandidates.map(({ id }) => id));
   const orderedSavedCandidates = [
@@ -800,15 +1206,13 @@ export function buildDecisionSupport(options: {
   const viable = groupExactOffers(ordered).filter(
     (listing) =>
       !purchaseExclusion(
-        options.support.brief.items,
-        assessmentsForCandidate(options.support.assessments, listing.id),
+        support.brief.items,
+        assessmentsForCandidate(currentAssessments, listing.id),
       ),
   );
   const conflictFree = viable.filter(
     (listing) =>
-      !hasConflict(
-        assessmentsForCandidate(options.support.assessments, listing.id),
-      ),
+      !hasConflict(assessmentsForCandidate(currentAssessments, listing.id)),
   );
   // A preference conflict can still be a useful trade-off when the market is
   // sparse. Put every conflict-free option first; only then add the least-bad
@@ -827,32 +1231,30 @@ export function buildDecisionSupport(options: {
       ? Math.min(5, Math.max(3, conflictFree.length))
       : 5;
   const observationMap = new Map(
-    options.support.observations.map((entry) => [entry.id, entry]),
+    support.observations.map((entry) => [entry.id, entry]),
   );
-  const sourceMap = new Map(
-    options.support.sources.map((entry) => [entry.id, entry]),
-  );
+  const sourceMap = new Map(support.sources.map((entry) => [entry.id, entry]));
   const topOptions = recommendationPool
     .slice(0, recommendationLimit)
     .map((listing) => {
       const assessments = assessmentsForCandidate(
-        options.support.assessments,
+        currentAssessments,
         listing.id,
       );
       return candidateDecision({
         listing,
-        items: options.support.brief.items,
+        items: support.brief.items,
         assessments,
         observationMap,
         sourceMap,
         strongestSupported: false,
         researchState: candidateResearchState({
           candidateListingId: listing.id,
-          items: options.support.brief.items,
+          items: support.brief.items,
           assessments,
-          coverage: options.support.deepResearchCoverage,
+          coverage: support.deepResearchCoverage,
         }),
-        coverage: options.support.deepResearchCoverage,
+        coverage: support.deepResearchCoverage,
       });
     });
   const hasHardResolvedOption = topOptions.some(
@@ -860,12 +1262,12 @@ export function buildDecisionSupport(options: {
   );
   const firstTwoHaveDifferentAssessmentStates =
     topOptions.length < 2 ||
-    options.support.brief.items.some((item) => {
+    support.brief.items.some((item) => {
       const first = assessmentForCriterion(
         topOptions[0] === undefined
           ? []
           : assessmentsForCandidate(
-              options.support.assessments,
+              currentAssessments,
               topOptions[0].listing.id,
             ),
         item.criterionId,
@@ -874,7 +1276,7 @@ export function buildDecisionSupport(options: {
         topOptions[1] === undefined
           ? []
           : assessmentsForCandidate(
-              options.support.assessments,
+              currentAssessments,
               topOptions[1].listing.id,
             ),
         item.criterionId,
@@ -890,19 +1292,22 @@ export function buildDecisionSupport(options: {
       option.readiness !== "needs_verification" &&
       option.whyItFits.length > 0,
   }));
+  const decisionEligibleOptions = finalizedTopOptions.filter(
+    ({ readiness }) => readiness !== "ineligible",
+  );
   const currentGaps = decisionGaps({
-    items: options.support.brief.items,
+    items: support.brief.items,
     candidates: finalizedTopOptions.map(({ listing }) => listing).slice(0, 3),
-    assessments: options.support.assessments,
+    assessments: currentAssessments,
   });
-  const firstPassRuns = options.support.researchRuns.filter(
+  const firstPassRuns = support.researchRuns.filter(
     ({ phase }) => phase === "first_pass" || phase === undefined,
   );
-  const deepeningRuns = options.support.researchRuns.filter(
+  const deepeningRuns = support.researchRuns.filter(
     ({ phase }) => phase === "deepening",
   );
   const assessmentRunIds = new Set(
-    options.support.assessments
+    currentAssessments
       .filter(({ observationIds }) => observationIds.length > 0)
       .map(({ researchRunId }) => researchRunId),
   );
@@ -950,15 +1355,13 @@ export function buildDecisionSupport(options: {
         (total, run) => total + run.plannedSearchCount,
         0,
       ),
-      productUnderstandingCalls: options.support.researchRuns.reduce(
+      productUnderstandingCalls: support.researchRuns.reduce(
         (total, run) => total + run.selectedCandidateCount,
         0,
       ),
     },
     researchedCandidateCount: new Set(
-      options.support.assessments.map(
-        ({ candidateListingId }) => candidateListingId,
-      ),
+      currentAssessments.map(({ candidateListingId }) => candidateListingId),
     ).size,
     sectionMode: hasHardResolvedOption
       ? ("qualified_options" as const)
@@ -966,8 +1369,17 @@ export function buildDecisionSupport(options: {
     excludedCandidateCount: ordered.length - viable.length,
     decisionGaps: currentGaps,
     topOptions: finalizedTopOptions,
+    currentDecision: synthesizeCurrentDecision({
+      items: support.brief.items,
+      candidates: decisionEligibleOptions,
+      assessments: currentAssessments,
+      decisionGaps: currentGaps,
+      researchStatus,
+      assessedCandidateCount: ordered.length,
+      eligibleCandidateCount: decisionEligibleOptions.length,
+    }),
     comparison: buildComparison({
-      support: options.support,
+      support,
       savedCandidates: orderedSavedCandidates,
       observationMap,
       sourceMap,
