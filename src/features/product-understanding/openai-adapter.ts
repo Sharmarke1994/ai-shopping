@@ -1,4 +1,8 @@
-import OpenAI, { APIConnectionTimeoutError, APIUserAbortError } from "openai";
+import OpenAI, {
+  APIConnectionError,
+  APIConnectionTimeoutError,
+  APIUserAbortError,
+} from "openai";
 import { zodTextFormat } from "openai/helpers/zod";
 import type { Response } from "openai/resources/responses/responses";
 import { parseOpenAIResponse } from "@/features/context-acquisition/openai-adapter";
@@ -36,6 +40,50 @@ type ResponseLike = Pick<
   "id" | "model" | "output" | "status" | "usage"
 >;
 
+function boundedProviderRequestId(value: unknown) {
+  if (typeof value !== "string") return null;
+  const requestId = value.trim();
+  return requestId.length >= 1 && requestId.length <= 240 ? requestId : null;
+}
+
+function providerRequestIdFromError(error: unknown) {
+  if (typeof error !== "object" || error === null) return null;
+  const requestId =
+    "requestID" in error
+      ? error.requestID
+      : "request_id" in error
+        ? error.request_id
+        : null;
+  return boundedProviderRequestId(requestId);
+}
+
+function isProviderTimeout(error: unknown) {
+  return (
+    error instanceof APIUserAbortError ||
+    error instanceof APIConnectionTimeoutError ||
+    (error instanceof Error &&
+      (error.name === "AbortError" || error.name === "TimeoutError"))
+  );
+}
+
+function sanitizedProviderErrorCode(error: unknown) {
+  if (error instanceof APIConnectionError) return "provider_connection_failed";
+  if (typeof error !== "object" || error === null)
+    return "provider_request_failed";
+  const status = "status" in error ? error.status : undefined;
+  const code = "code" in error ? error.code : undefined;
+  if (status === 429 && code === "insufficient_quota")
+    return "provider_quota_exhausted";
+  if (status === 429) return "provider_rate_limited";
+  if (status === 401) return "provider_authentication_failed";
+  if (status === 403) return "provider_permission_denied";
+  if (status === 400 || status === 404 || status === 422)
+    return "provider_request_rejected";
+  if (typeof status === "number" && status >= 500 && status <= 599)
+    return "provider_unavailable";
+  return "provider_request_failed";
+}
+
 export function createOpenAIProductUnderstandingModel(options: {
   apiKey: string;
   client?: OpenAI;
@@ -54,12 +102,14 @@ export function createOpenAIProductUnderstandingModel(options: {
         },
       );
       const startedAt = performance.now();
-      const metadata = (): ModelCallMetadata => ({
+      const metadata = (
+        providerRequestId: string | null = null,
+      ): ModelCallMetadata => ({
         provider: "openai",
         model: config.model,
         promptVersion: PRODUCT_UNDERSTANDING_PROMPT_VERSION,
         providerSchemaVersion: PRODUCT_UNDERSTANDING_PROVIDER_SCHEMA_VERSION,
-        providerRequestId: null,
+        providerRequestId,
         durationMs: Math.max(0, Math.round(performance.now() - startedAt)),
         inputTokens: null,
         outputTokens: null,
@@ -112,24 +162,31 @@ export function createOpenAIProductUnderstandingModel(options: {
             maxRetries: 0,
           },
         );
-        return parseOpenAIResponse({
+        const result = parseOpenAIResponse({
           response,
           schema: providerSchema,
           fallbackMetadata: metadata(),
           validationErrorCode: productUnderstandingValidationErrorCode,
         });
+        return {
+          ...result,
+          metadata: {
+            ...result.metadata,
+            providerRequestId: boundedProviderRequestId(
+              result.metadata.providerRequestId,
+            ),
+          },
+        };
       } catch (error) {
-        const timedOut =
-          error instanceof APIUserAbortError ||
-          error instanceof APIConnectionTimeoutError ||
-          (error instanceof Error &&
-            ["AbortError", "TimeoutError"].includes(error.name));
+        const timedOut = isProviderTimeout(error);
         return {
           status: timedOut
             ? ("timed_out" as const)
             : ("provider_failed" as const),
-          errorCode: timedOut ? "provider_timeout" : "provider_request_failed",
-          metadata: metadata(),
+          errorCode: timedOut
+            ? "provider_timeout"
+            : sanitizedProviderErrorCode(error),
+          metadata: metadata(providerRequestIdFromError(error)),
         };
       }
     },

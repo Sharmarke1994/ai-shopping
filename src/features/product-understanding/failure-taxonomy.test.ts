@@ -87,6 +87,38 @@ const metadata = {
 } as const;
 
 describe("product-understanding failure taxonomy", () => {
+  it.each([
+    "provider_timeout",
+    "provider_connection_failed",
+    "provider_authentication_failed",
+    "provider_permission_denied",
+    "provider_quota_exhausted",
+    "provider_rate_limited",
+    "provider_request_rejected",
+    "provider_unavailable",
+    "provider_request_failed",
+  ] as const)("classifies %s as provider transport", (errorCode) => {
+    expect(
+      diagnoseProductUnderstandingFailure({
+        result: {
+          status:
+            errorCode === "provider_timeout" ? "timed_out" : "provider_failed",
+          errorCode,
+          metadata,
+        },
+        input: broadInput(),
+        policy: { requireCriterionBinding: false },
+        candidateListingId: "1759d960-3918-48ed-a0a7-3dd11cfb92af",
+        researchPhase: "first_pass",
+      }),
+    ).toMatchObject({
+      failureCode: "model_failed",
+      category: "provider_transport",
+      rule: errorCode,
+      providerRequestId: "req_sanitized",
+    });
+  });
+
   it("classifies provider JSON and exact broad assessment coverage failures", () => {
     expect(
       classifyProductUnderstandingValidationError(new SyntaxError("bad json")),

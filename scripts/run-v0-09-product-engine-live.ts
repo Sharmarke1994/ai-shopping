@@ -71,6 +71,10 @@ const freshPreflightOutput = new URL(
   "../docs/evals/v0-09-product-engine-preflight-fresh.json",
   import.meta.url,
 );
+const checkpointTwoPreflightOutput = new URL(
+  "../docs/evals/v0-09-product-engine-preflight-checkpoint-2.json",
+  import.meta.url,
+);
 const proofMarkerOutput = new URL(
   "../docs/evals/v0-09-product-engine-proof-marker.json",
   import.meta.url,
@@ -85,10 +89,12 @@ const proofMarkdownOutput = new URL(
 );
 const cases = V0_09_PRODUCT_ENGINE_CASES;
 
-const preflightSchema = z.strictObject({
-  schemaVersion: z.literal(1),
+const checkpointTwoPreflightSchema = z.strictObject({
+  schemaVersion: z.literal(2),
   preflightId: z.uuid(),
   kind: z.literal("development_product_engine_preflight"),
+  checkpointNumber: z.literal(2),
+  checkpointName: z.literal("product_engine_preflight_checkpoint_2"),
   startedAt: z.iso.datetime(),
   finishedAt: z.iso.datetime(),
   gitHead: z.string().regex(/^[a-f0-9]{40}$/),
@@ -109,6 +115,7 @@ const preflightSchema = z.strictObject({
     openai: z.strictObject({
       status: z.enum(["available", "blocked"]),
       failureCode: z.string().min(1).max(120).nullable(),
+      providerRequestId: z.string().min(1).max(240).nullable(),
     }),
     serper: z.strictObject({
       status: z.enum(["available", "blocked"]),
@@ -190,8 +197,11 @@ function blockedProvider(error: unknown) {
 }
 
 async function preflight() {
-  if (await exists(freshPreflightOutput)) {
-    throw new Error("fresh_preflight_already_exists");
+  if (!(await exists(freshPreflightOutput))) {
+    throw new Error("checkpoint_2_requires_preserved_checkpoint_1");
+  }
+  if (await exists(checkpointTwoPreflightOutput)) {
+    throw new Error("checkpoint_2_preflight_already_exists");
   }
   const preflightId = randomUUID();
   const startedAt = new Date().toISOString();
@@ -199,11 +209,15 @@ async function preflight() {
   if ((await dirtyCodePaths()).length > 0) {
     throw new Error("preflight_requires_clean_code_tree");
   }
-  let openai: { status: "available" | "blocked"; failureCode: string | null } =
-    {
-      status: "blocked",
-      failureCode: "not_run",
-    };
+  let openai: {
+    status: "available" | "blocked";
+    failureCode: string | null;
+    providerRequestId: string | null;
+  } = {
+    status: "blocked",
+    failureCode: "not_run",
+    providerRequestId: null,
+  };
   let serper: {
     status: "available" | "blocked";
     failureCode: string | null;
@@ -220,7 +234,7 @@ async function preflight() {
     const key = await secret("OPENAI_API_KEY", "ai-shopping-openai");
     const model = createOpenAIProductUnderstandingModel({
       apiKey: key,
-      config: { timeoutMs: 10_000, maxOutputTokens: 256 },
+      config: { maxOutputTokens: 256 },
     });
     const input: ProductUnderstandingInputV1 = {
       schemaVersion: 1,
@@ -260,13 +274,20 @@ async function preflight() {
       requireCriterionBinding: false,
     });
     if (response.status !== "completed") {
-      throw Object.assign(new Error("openai_adapter_blocked"), {
-        code: response.errorCode,
-      });
+      openai = {
+        status: "blocked",
+        failureCode: response.errorCode,
+        providerRequestId: response.metadata.providerRequestId,
+      };
+    } else {
+      openai = {
+        status: "available",
+        failureCode: null,
+        providerRequestId: response.metadata.providerRequestId,
+      };
     }
-    openai = { status: "available", failureCode: null };
   } catch (error) {
-    openai = blockedProvider(error);
+    openai = { ...blockedProvider(error), providerRequestId: null };
   }
 
   try {
@@ -311,10 +332,12 @@ async function preflight() {
     };
   }
 
-  const result = preflightSchema.parse({
-    schemaVersion: 1,
+  const result = checkpointTwoPreflightSchema.parse({
+    schemaVersion: 2,
     preflightId,
     kind: "development_product_engine_preflight",
+    checkpointNumber: 2,
+    checkpointName: "product_engine_preflight_checkpoint_2",
     startedAt,
     finishedAt: new Date().toISOString(),
     gitHead: head,
@@ -334,7 +357,7 @@ async function preflight() {
     providers: { openai, serper },
   });
   await writeFile(
-    freshPreflightOutput,
+    checkpointTwoPreflightOutput,
     `${JSON.stringify(result, null, 2)}\n`,
     {
       encoding: "utf8",
@@ -346,7 +369,7 @@ async function preflight() {
       preflightId,
       gitHead: head,
       providers: result.providers,
-      artifact: "docs/evals/v0-09-product-engine-preflight-fresh.json",
+      artifact: "docs/evals/v0-09-product-engine-preflight-checkpoint-2.json",
     }),
   );
   if (openai.status !== "available" || serper.status !== "available") {
@@ -576,8 +599,8 @@ async function proof() {
   if ((await exists(proofOutput)) || (await exists(proofMarkdownOutput))) {
     throw new Error("proof_result_already_exists");
   }
-  const preflight = preflightSchema.parse(
-    JSON.parse(await readFile(freshPreflightOutput, "utf8")),
+  const preflight = checkpointTwoPreflightSchema.parse(
+    JSON.parse(await readFile(checkpointTwoPreflightOutput, "utf8")),
   );
   if (
     preflight.gitHead !== head ||
@@ -597,6 +620,8 @@ async function proof() {
       {
         schemaVersion: 1,
         proofId,
+        preflightId: preflight.preflightId,
+        preflightCheckpoint: preflight.checkpointNumber,
         startedAt,
         gitHead: head,
         kind: "development_product_engine_proof",

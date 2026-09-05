@@ -96,6 +96,47 @@ function completedResponse(
   };
 }
 
+function sdkError(options: {
+  status: number;
+  code: string;
+  requestId?: string;
+}) {
+  return OpenAI.APIError.generate(
+    options.status,
+    {
+      error: {
+        code: options.code,
+        message: "SENSITIVE_PROVIDER_MESSAGE",
+        detail: "SENSITIVE_PROVIDER_BODY",
+      },
+    },
+    undefined,
+    new Headers({
+      "x-request-id": options.requestId ?? "req_safe_diagnostic",
+    }),
+  );
+}
+
+function modelRejecting(error: unknown) {
+  let calls = 0;
+  const client = {
+    responses: {
+      create: () => {
+        calls += 1;
+        return Promise.reject(error);
+      },
+    },
+  } as unknown as OpenAI;
+  return {
+    model: createOpenAIProductUnderstandingModel({
+      apiKey: "test",
+      client,
+      config: { model: "test-model", timeoutMs: 1_000 },
+    }),
+    calls: () => calls,
+  };
+}
+
 function requestedSchema(request: Record<string, unknown> | undefined) {
   const text = request?.text as
     | {
@@ -156,6 +197,9 @@ describe("OpenAI product-understanding adapter", () => {
     });
 
     expect(result.status).toBe("completed");
+    expect(result.metadata.providerRequestId).toBe(
+      "resp_product_understanding",
+    );
     expect(request).toMatchObject({
       model: "test-model",
       store: false,
@@ -441,5 +485,100 @@ describe("OpenAI product-understanding adapter", () => {
       errorCode: "provider_timeout",
     });
     expect(calls).toBe(1);
+  });
+
+  it.each([
+    {
+      label: "HTTP 400",
+      error: sdkError({ status: 400, code: "invalid_request_error" }),
+      expected: "provider_request_rejected",
+    },
+    {
+      label: "HTTP 422",
+      error: sdkError({ status: 422, code: "unprocessable_entity" }),
+      expected: "provider_request_rejected",
+    },
+    {
+      label: "authentication",
+      error: sdkError({ status: 401, code: "invalid_api_key" }),
+      expected: "provider_authentication_failed",
+    },
+    {
+      label: "permission",
+      error: sdkError({ status: 403, code: "model_not_allowed" }),
+      expected: "provider_permission_denied",
+    },
+    {
+      label: "quota exhaustion",
+      error: sdkError({ status: 429, code: "insufficient_quota" }),
+      expected: "provider_quota_exhausted",
+    },
+    {
+      label: "rate limit",
+      error: sdkError({ status: 429, code: "rate_limit_exceeded" }),
+      expected: "provider_rate_limited",
+    },
+    {
+      label: "provider 5xx",
+      error: sdkError({ status: 503, code: "service_unavailable" }),
+      expected: "provider_unavailable",
+    },
+    {
+      label: "connection",
+      error: new OpenAI.APIConnectionError({
+        cause: new Error("SENSITIVE_CONNECTION_CAUSE"),
+      }),
+      expected: "provider_connection_failed",
+    },
+    {
+      label: "unknown",
+      error: new Error("SENSITIVE_UNKNOWN_FAILURE"),
+      expected: "provider_request_failed",
+    },
+  ])(
+    "classifies $label without retrying or leaking provider content",
+    async ({ error, expected }) => {
+      const harness = modelRejecting(error);
+      const result = await harness.model.understand(input, {
+        requireCriterionBinding: false,
+      });
+
+      expect(result).toMatchObject({
+        status: "provider_failed",
+        errorCode: expected,
+      });
+      expect(harness.calls()).toBe(1);
+      expect(JSON.stringify(result)).not.toContain("SENSITIVE_");
+    },
+  );
+
+  it("retains only a bounded SDK request ID on provider failure", async () => {
+    const withRequestId = modelRejecting(
+      sdkError({
+        status: 503,
+        code: "service_unavailable",
+        requestId: "req_failure_diagnostic",
+      }),
+    );
+    await expect(
+      withRequestId.model.understand(input, {
+        requireCriterionBinding: false,
+      }),
+    ).resolves.toMatchObject({
+      metadata: { providerRequestId: "req_failure_diagnostic" },
+    });
+
+    const overlongRequestId = modelRejecting(
+      sdkError({
+        status: 503,
+        code: "service_unavailable",
+        requestId: `req_${"x".repeat(241)}`,
+      }),
+    );
+    await expect(
+      overlongRequestId.model.understand(input, {
+        requireCriterionBinding: false,
+      }),
+    ).resolves.toMatchObject({ metadata: { providerRequestId: null } });
   });
 });

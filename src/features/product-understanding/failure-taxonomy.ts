@@ -27,6 +27,13 @@ export const productUnderstandingFailureRuleSchema = z.enum([
   "provider_response_incomplete",
   "provider_response_malformed",
   "provider_timeout",
+  "provider_connection_failed",
+  "provider_authentication_failed",
+  "provider_permission_denied",
+  "provider_quota_exhausted",
+  "provider_rate_limited",
+  "provider_request_rejected",
+  "provider_unavailable",
   "provider_request_failed",
   "model_threw",
 ]);
