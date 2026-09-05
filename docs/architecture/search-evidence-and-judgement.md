@@ -162,6 +162,21 @@ Do not deeply inspect hundreds of pages. Spend expensive intelligence on promisi
 
 ## Evaluation and security
 
+### Revision-grounded decision evolution
+
+Decision Evolution derives before/after authority from persisted state-change
+history and reuses the existing deterministic decision synthesis. A narrow
+immutable refinement basis records exact prior assessment/source IDs and
+rejections before interpretation, because rejection undo and later assessment
+generations otherwise prevent honest historical reconstruction. It stores no
+prose. Missing bases produce brief-only change explanations, not invented past
+leaders. Prior and current assessment revisions remain separate; evidence may
+survive revision but suitability never does. Exact listing IDs are the only
+identity boundary. See [Decision Evolution](../plans/v0-09-decision-evolution.md)
+for capture guards, causal limits and the unresolved mouse comfort-policy gap.
+
+### Existing evaluation requirements
+
 - Retrieval eval asks whether a labelled target entered the pool, which query found it, and whether normalisation removed it.
 - Observation eval uses fixed evidence independently of ranking.
 - Judgement eval uses fixed observations independently of retrieval.

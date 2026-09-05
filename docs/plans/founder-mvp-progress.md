@@ -385,6 +385,27 @@ branch recorded above. The durable execution contract is
 
 ### Isolated decision-first product-completion lane
 
+The next product-only checkpoint adds persisted-truth-grounded Decision
+Evolution from `8e7b04fbe68d656ee98e5f0c55f86b8221fd0c18`. A compact What changed
+surface explains authority deltas, historical/current decisions where grounded,
+exact-listing continuity and reused versus new evidence. Migration 0018 stores
+only an immutable refinement basis, needed because rejection undo and later
+assessment generations cannot otherwise reconstruct prior decisions. Pending
+refinement pauses the old recommendation; refresh reconstructs server-side.
+
+Deterministic verification: 453 unit/component tests, eight fixture browser
+tests, production build and schema drift check passed; full PostgreSQL suite
+has 163 passes and only the previously accepted local 17.11 versus pinned 17.6
+version assertion. Twelve production fixture screenshots include desktop and
+390px Decision Evolution. Provider calls remain zero and proof remains
+unconsumed. These are implementation checks, not independent acceptance.
+
+Important product gap: the controlled mouse projection proves tie to ready
+Mouse A, but the actual guarded persisted mouse remains tied because existing
+long-workday comfort assessment requires personal-fit verification. Review-
+quality prose also remains conservatively unadmitted. Neither policy was
+weakened. See [Decision Evolution evidence](v0-09-decision-evolution.md).
+
 The separate `codex/v0-09-product-completion` worktree preserves the existing
 provider-proof artifacts while product work continues deterministically from
 `dab4e03b6eacd54c7d66d8f7439ed02ea0b0cd41`. Decision-first implementation,

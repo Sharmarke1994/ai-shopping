@@ -85,6 +85,16 @@ test("automatically investigates, supports exact rejection, comparison, refineme
   await expect(
     page.getByText("Strong preference: Water resistance: yes", { exact: true }),
   ).toBeVisible();
+  const evolution = page.getByRole("region", {
+    name: "What changed",
+    exact: true,
+  });
+  await expect(evolution).toBeVisible();
+  await expect(evolution).toContainText("Water resistance");
+  await evolution.getByText("See the change in context").click();
+  await expect(evolution).toContainText(
+    "Your other priorities stayed the same",
+  );
   const comparison = page.getByRole("region", {
     name: "What separates your saved options",
   });
@@ -96,6 +106,9 @@ test("automatically investigates, supports exact rejection, comparison, refineme
   const restoredUrl = page.url();
   expect(restoredUrl).toContain("session=");
   await page.reload();
+  await expect(
+    page.getByRole("region", { name: "What changed", exact: true }),
+  ).toContainText("Water resistance");
   await expect(
     page
       .getByRole("complementary", { name: "What matters for this search" })

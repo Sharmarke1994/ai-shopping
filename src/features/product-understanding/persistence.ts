@@ -1768,10 +1768,15 @@ function currentAssessmentsFromValidatedLineages(
 export async function loadCurrentDecisionSupportInTransaction(options: {
   tx: ShoppingTransaction;
   taskId: unknown;
+  revision?: bigint;
+  assessmentIds?: readonly string[];
 }): Promise<CurrentDecisionSupport> {
   const taskId = shoppingTaskIdSchema.parse(options.taskId);
   const tx = options.tx;
-  const state = await loadCurrentShoppingState(tx, taskId);
+  const state =
+    options.revision === undefined
+      ? await loadCurrentShoppingState(tx, taskId)
+      : await loadShoppingStateAtRevision(tx, taskId, options.revision);
   const brief = projectShoppingBrief(state);
   const rows = await tx
     .select({
@@ -1835,11 +1840,22 @@ export async function loadCurrentDecisionSupportInTransaction(options: {
       observationMap.set(observation.id, observation);
     }
   }
-  const currentAssessments = currentAssessmentsFromValidatedLineages(
-    snapshots
-      .flatMap(({ assessments }) => assessments)
-      .filter(({ taskRevision }) => taskRevision === brief.revision),
-  );
+  const allAssessments = snapshots
+    .flatMap(({ assessments }) => assessments)
+    .filter(({ taskRevision }) => taskRevision === brief.revision);
+  const latestAssessments =
+    currentAssessmentsFromValidatedLineages(allAssessments);
+  const currentAssessments =
+    options.assessmentIds === undefined
+      ? latestAssessments
+      : allAssessments.filter(({ id }) => options.assessmentIds!.includes(id));
+  if (
+    options.assessmentIds !== undefined &&
+    (new Set(options.assessmentIds).size !== options.assessmentIds.length ||
+      currentAssessments.length !== options.assessmentIds.length)
+  ) {
+    throw new Error("Historical decision assessment basis is incomplete");
+  }
   return {
     brief,
     researchRuns: snapshots.map(({ run }) => run),

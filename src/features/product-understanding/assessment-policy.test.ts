@@ -27,6 +27,51 @@ const ids = {
   observation: randomUUID(),
 };
 
+describe("review-quality evidence boundary audit", () => {
+  it("preserves explicit review quality while text-only methodology remains unestablished under the current guard", () => {
+    const criterion = item({
+      label: "Review quality",
+      strength: "strong_preference",
+      targetSemantics: "qualitative",
+      semanticValue: {
+        schemaVersion: 1,
+        kind: "qualitative",
+        mode: "text",
+        text: "Detailed independent reviews matter a lot",
+      },
+    });
+    const sourced = evidence({
+      propertyLabel: "Review quality",
+      claim: "The review describes its hands-on methodology.",
+      value: {
+        schemaVersion: 1,
+        kind: "text",
+        text: "Hands-on review methodology",
+      },
+      conceptId: criterion.conceptId,
+      role: "independent_review",
+      sourceKind: "fetched_page",
+    });
+    const result = guardCriterionAssessment({
+      item: criterion,
+      listing,
+      observations: [sourced],
+      proposal: {
+        status: "meets",
+        relation: "source_support",
+        explanation: "Review methodology is described.",
+        observations: [sourced],
+      },
+    });
+    expect(criterion.strength).toBe("strong_preference");
+    expect(result).toMatchObject({
+      status: "uncertain",
+      relation: "insufficient_relevant_evidence",
+    });
+    expect(result.observationIds).toContain(sourced.observation.id);
+  });
+});
+
 const listing = persistedCandidateListingSchema.parse({
   id: ids.listing,
   queryExecutionId: ids.execution,

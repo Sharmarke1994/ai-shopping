@@ -5,6 +5,7 @@ export { contextActions, contextQuestionOptions } from "./context-actions";
 export { contextAcquisitionAttempts } from "./context-acquisition-attempts";
 export { criterionSources } from "./criterion-sources";
 export { decisionCriteria } from "./decision-criteria";
+export { decisionRefinementBases } from "./decision-refinement-bases";
 export { criterionAssessmentObservations } from "./criterion-assessment-observations";
 export { criterionAssessments } from "./criterion-assessments";
 export { evidenceAcquisitionAttempts } from "./evidence-acquisition-attempts";

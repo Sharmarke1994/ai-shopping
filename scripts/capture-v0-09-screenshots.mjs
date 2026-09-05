@@ -358,6 +358,33 @@ try {
   await screenshot(mobilePage, "fixture-mobile-reject-undo.png", false);
   await rejected.getByRole("button", { name: "Undo" }).click();
   await rejected.waitFor({ state: "detached" });
+  await desktopPage
+    .getByLabel("Refine what you’re looking for")
+    .fill("A breathable cap for running in hot weather");
+  await desktopPage
+    .getByRole("button", { name: "Update my priorities" })
+    .click();
+  const evolution = desktopPage.getByRole("region", {
+    name: "What changed",
+    exact: true,
+  });
+  await evolution.waitFor({ timeout: 30000 });
+  await waitForTerminalDecision(desktopPage);
+  await evolution.scrollIntoViewIfNeeded();
+  await screenshot(
+    desktopPage,
+    "fixture-desktop-decision-evolution.png",
+    false,
+  );
+  await mobilePage.goto(desktopPage.url());
+  const mobileEvolution = mobilePage.getByRole("region", {
+    name: "What changed",
+    exact: true,
+  });
+  await mobileEvolution.scrollIntoViewIfNeeded();
+  await screenshot(mobilePage, "fixture-mobile-decision-evolution.png", false);
+  await mobilePage.reload();
+  await mobileEvolution.waitFor();
   await mobile.close();
   await desktop.close();
 
@@ -415,5 +442,5 @@ try {
 }
 
 process.stdout.write(
-  "Captured ten V0-09 production fixture states with horizontal-overflow and no-dev-runtime assertions.\n",
+  "Captured twelve V0-09 production fixture states with horizontal-overflow and no-dev-runtime assertions.\n",
 );

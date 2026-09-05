@@ -127,6 +127,13 @@
       "when": 1788122829339,
       "tag": "0017_shallow_jetstream",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1788632267023,
+      "tag": "0018_curious_electro",
+      "breakpoints": true
     }
   ]
 }

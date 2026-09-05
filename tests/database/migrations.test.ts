@@ -39,6 +39,7 @@ describe("shopping architecture migration shape", () => {
       "criterion_assessments",
       "criterion_sources",
       "decision_criteria",
+      "decision_refinement_bases",
       "evidence_acquisition_attempts",
       "evidence_attempt_target_criteria",
       "evidence_page_fetch_targets",
@@ -76,7 +77,7 @@ describe("shopping architecture migration shape", () => {
       'select count(*)::integer as count from "drizzle"."migrations"',
     );
     const after = afterRows[0]?.count;
-    expect(before).toBe(18);
+    expect(before).toBe(19);
     expect(after).toBe(before);
   });
 

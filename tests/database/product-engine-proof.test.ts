@@ -26,11 +26,16 @@ import {
 import { persistContextAction } from "../../src/features/context-acquisition/persistence/context-actions";
 import { saveCandidateListing } from "../../src/features/live-shopping/saved-listings";
 import {
+  captureDecisionRefinementBasis,
+  loadDecisionTransitionInTransaction,
+} from "../../src/features/live-shopping/decision-history";
+import {
   deepenLiveShoppingResearch,
   loadLiveShoppingSession,
   researchLiveShopping,
   resolveLivePurchaseDestinations,
   setLiveListingSaved,
+  setLiveListingRejected,
   type LiveShoppingDependencies,
 } from "../../src/features/live-shopping/application";
 import {
@@ -39,7 +44,10 @@ import {
   FakeProductUnderstandingModel,
 } from "../../src/features/product-understanding/fakes";
 import { executeOrResumeEvidenceResearch } from "../../src/features/product-understanding/research-orchestrator";
-import { loadCurrentDecisionSupport } from "../../src/features/product-understanding/persistence";
+import {
+  loadCurrentDecisionSupport,
+  loadCurrentDecisionSupportInTransaction,
+} from "../../src/features/product-understanding/persistence";
 import { buildDecisionSupport } from "../../src/features/product-understanding/decision-support";
 import { executeOrResumeMerchantDestinationResolution } from "../../src/features/purchase-destinations/orchestrator";
 import {
@@ -487,6 +495,19 @@ describe("development-only V0-09 product engine proof", () => {
         body: cases[0]!.refinement!.request,
       },
     });
+    await captureDecisionRefinementBasis({
+      db: connection.db,
+      taskId: seeded.task.id,
+      sourceTaskInputId: refinement.input.id,
+    });
+    await captureDecisionRefinementBasis({
+      db: connection.db,
+      taskId: seeded.task.id,
+      sourceTaskInputId: refinement.input.id,
+    });
+    await expect(
+      connection.client`UPDATE shopping_private.decision_refinement_bases SET task_revision = 99 WHERE source_task_input_id = ${refinement.input.id}`,
+    ).rejects.toThrow("immutable");
     await applyStatePatch(connection.db, {
       ...buildMouseRevisionTwoPatch(
         cases[0]!,
@@ -530,6 +551,41 @@ describe("development-only V0-09 product engine proof", () => {
       },
     });
     expect(comfort?.strength).not.toBe("hard");
+    const loadTransition = () =>
+      connection.db.transaction(
+        async (tx) => {
+          const support = await loadCurrentDecisionSupportInTransaction({
+            tx,
+            taskId: seeded.task.id,
+          });
+          return loadDecisionTransitionInTransaction({
+            tx,
+            support,
+            rejectedIds: new Set(),
+          });
+        },
+        { isolationLevel: "repeatable read", accessMode: "read only" },
+      );
+    const pendingTransition = await loadTransition();
+    expect(pendingTransition).toMatchObject({
+      movement: "reassessing",
+      previous: { state: "no_clear_winner" },
+      current: { leaderId: null },
+    });
+    expect(pendingTransition?.changes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          label: "Reviews",
+          kind: "strength_changed",
+          before: "Strong preference",
+          after: "Preference",
+        }),
+        expect.objectContaining({
+          label: "Comfort for long workdays",
+          kind: "added",
+        }),
+      ]),
+    );
     for (const [label, before] of preservedBefore) {
       const current = afterState.activeCriteria.find(
         ({ criterion }) => afterLabel(criterion.conceptId) === label,
@@ -551,6 +607,36 @@ describe("development-only V0-09 product engine proof", () => {
       taskId: seeded.task.id,
     });
     expect(after.brief.revision).toBe(2n);
+    const evolution = await loadTransition();
+    expect(evolution?.previous).toEqual(pendingTransition?.previous);
+    expect(evolution?.evidence).toBe("reused");
+    expect(evolution?.current.state).toBe("no_clear_winner");
+    expect(evolution?.candidateContinuity).toBe("same_listings");
+    expect(await loadTransition()).toEqual(evolution);
+    const evolutionSession = randomUUID();
+    await connection.db.insert(founderLiveSessions).values({
+      id: evolutionSession,
+      taskId: seeded.task.id,
+      initialTurnId: randomUUID(),
+      initialRequestFingerprint: createHash("sha256")
+        .update(cases[0]!.request)
+        .digest("hex"),
+      currentContextActionId: seeded.action.id,
+      pendingTaskInputId: null,
+    });
+    const appView = await loadLiveShoppingSession({
+      db: connection.db,
+      sessionId: evolutionSession,
+    });
+    expect(appView.decisionSupport?.transition).toEqual(evolution);
+    expect(
+      (
+        await loadLiveShoppingSession({
+          db: connection.db,
+          sessionId: evolutionSession,
+        })
+      ).decisionSupport?.transition,
+    ).toEqual(evolution);
     expect(after.assessments.length).toBeGreaterThan(0);
     expect(
       after.assessments.every(({ taskRevision }) => taskRevision === 2n),
@@ -690,6 +776,28 @@ describe("development-only V0-09 product engine proof", () => {
     expect(
       currentComparison.comparison?.candidates.map(({ id }) => id).sort(),
     ).toEqual([...candidateIds].sort());
+    const rejectedView = await setLiveListingRejected({
+      dependencies: { db: connection.db },
+      input: {
+        operation: "reject_listing",
+        sessionId: evolutionSession,
+        candidateListingId: candidateIds[0],
+      },
+    });
+    expect(rejectedView.decisionSupport?.transition).toMatchObject({
+      cause: "candidate_rejection",
+      causalCriterionIds: [],
+      previous: evolution?.previous,
+    });
+    const undoView = await setLiveListingRejected({
+      dependencies: { db: connection.db },
+      input: {
+        operation: "undo_reject_listing",
+        sessionId: evolutionSession,
+        candidateListingId: candidateIds[0],
+      },
+    });
+    expect(undoView.decisionSupport?.transition).toEqual(evolution);
   });
 
   it("projects a faithfully seeded product task through the real live application operations", async () => {

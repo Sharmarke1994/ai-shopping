@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { decisionTransitionSchema } from "@/features/product-understanding/decision-transition";
 import {
   candidateListingIdSchema,
   criterionIdSchema,
@@ -305,6 +306,7 @@ const currentDecisionSchema = z.strictObject({
 });
 
 const liveDecisionSupportSchema = z.strictObject({
+  transition: decisionTransitionSchema.nullable().default(null),
   researchStatus: z.enum([
     "not_started",
     "researching",

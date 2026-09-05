@@ -1,0 +1,4738 @@
+{
+  "id": "270c4777-5e43-4caf-9618-0205256a6936",
+  "prevId": "7c042856-f1a4-4c08-9ade-32af71164831",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "shopping_private.candidate_listings": {
+      "name": "candidate_listings",
+      "schema": "shopping_private",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "task_id": {
+          "name": "task_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "run_id": {
+          "name": "run_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "query_id": {
+          "name": "query_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "query_execution_id": {
+          "name": "query_execution_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider": {
+          "name": "provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider_result_id": {
+          "name": "provider_result_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_rank": {
+          "name": "source_rank",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "surface": {
+          "name": "surface",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "url": {
+          "name": "url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "canonical_url": {
+          "name": "canonical_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "merchant_destination_url": {
+          "name": "merchant_destination_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "merchant_destination_source": {
+          "name": "merchant_destination_source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "merchant": {
+          "name": "merchant",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "price_amount_minor": {
+          "name": "price_amount_minor",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "price_currency_code": {
+          "name": "price_currency_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "price_text": {
+          "name": "price_text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "image_url": {
+          "name": "image_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "delivery_text": {
+          "name": "delivery_text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "availability_text": {
+          "name": "availability_text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "review_rating_hundredths": {
+          "name": "review_rating_hundredths",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "review_count": {
+          "name": "review_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "review_evidence_source_url": {
+          "name": "review_evidence_source_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "retrieved_at": {
+          "name": "retrieved_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "candidate_listings_task_fk": {
+          "name": "candidate_listings_task_fk",
+          "tableFrom": "candidate_listings",
+          "tableTo": "shopping_tasks",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "candidate_listings_run_fk": {
+          "name": "candidate_listings_run_fk",
+          "tableFrom": "candidate_listings",
+          "tableTo": "search_runs",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id", "run_id"],
+          "columnsTo": ["task_id", "id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "candidate_listings_query_fk": {
+          "name": "candidate_listings_query_fk",
+          "tableFrom": "candidate_listings",
+          "tableTo": "search_queries",
+          "schemaTo": "shopping_private",
+          "columnsFrom": [
+            "task_id",
+            "run_id",
+            "query_id",
+            "provider",
+            "surface"
+          ],
+          "columnsTo": ["task_id", "run_id", "id", "provider", "surface"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "candidate_listings_query_execution_fk": {
+          "name": "candidate_listings_query_execution_fk",
+          "tableFrom": "candidate_listings",
+          "tableTo": "search_query_executions",
+          "schemaTo": "shopping_private",
+          "columnsFrom": [
+            "task_id",
+            "run_id",
+            "query_id",
+            "query_execution_id"
+          ],
+          "columnsTo": ["task_id", "run_id", "query_id", "id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "candidate_listings_task_id_id_unique": {
+          "name": "candidate_listings_task_id_id_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "id"]
+        },
+        "candidate_listings_task_run_id_unique": {
+          "name": "candidate_listings_task_run_id_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "run_id", "id"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "candidate_listings_provider_identity_shape": {
+          "name": "candidate_listings_provider_identity_shape",
+          "value": "\"shopping_private\".\"candidate_listings\".\"provider\" in ('serper', 'fixture') and char_length(btrim(\"shopping_private\".\"candidate_listings\".\"provider_result_id\")) between 1 and 500"
+        },
+        "candidate_listings_rank_positive": {
+          "name": "candidate_listings_rank_positive",
+          "value": "\"shopping_private\".\"candidate_listings\".\"source_rank\" > 0"
+        },
+        "candidate_listings_surface_allowed": {
+          "name": "candidate_listings_surface_allowed",
+          "value": "\"shopping_private\".\"candidate_listings\".\"surface\" = 'shopping'"
+        },
+        "candidate_listings_title_bounds": {
+          "name": "candidate_listings_title_bounds",
+          "value": "char_length(btrim(\"shopping_private\".\"candidate_listings\".\"title\")) between 1 and 1000"
+        },
+        "candidate_listings_url_shape": {
+          "name": "candidate_listings_url_shape",
+          "value": "char_length(\"shopping_private\".\"candidate_listings\".\"url\") between 1 and 4000 and \"shopping_private\".\"candidate_listings\".\"url\" ~ '^https?://' and char_length(\"shopping_private\".\"candidate_listings\".\"canonical_url\") between 1 and 4000 and \"shopping_private\".\"candidate_listings\".\"canonical_url\" ~ '^https?://' and (\"shopping_private\".\"candidate_listings\".\"merchant_destination_url\" is null or (char_length(\"shopping_private\".\"candidate_listings\".\"merchant_destination_url\") between 1 and 4000 and \"shopping_private\".\"candidate_listings\".\"merchant_destination_url\" ~ '^https?://'))"
+        },
+        "candidate_listings_destination_provenance_shape": {
+          "name": "candidate_listings_destination_provenance_shape",
+          "value": "(\"shopping_private\".\"candidate_listings\".\"merchant_destination_url\" is null and \"shopping_private\".\"candidate_listings\".\"merchant_destination_source\" is null) or (\"shopping_private\".\"candidate_listings\".\"merchant_destination_url\" is not null and \"shopping_private\".\"candidate_listings\".\"merchant_destination_source\" is not null and \"shopping_private\".\"candidate_listings\".\"merchant_destination_source\" in ('shopping_result', 'verified_organic'))"
+        },
+        "candidate_listings_optional_text_bounds": {
+          "name": "candidate_listings_optional_text_bounds",
+          "value": "(\"shopping_private\".\"candidate_listings\".\"merchant\" is null or char_length(btrim(\"shopping_private\".\"candidate_listings\".\"merchant\")) between 1 and 500) and (\"shopping_private\".\"candidate_listings\".\"price_text\" is null or char_length(btrim(\"shopping_private\".\"candidate_listings\".\"price_text\")) between 1 and 120) and (\"shopping_private\".\"candidate_listings\".\"delivery_text\" is null or char_length(btrim(\"shopping_private\".\"candidate_listings\".\"delivery_text\")) between 1 and 500) and (\"shopping_private\".\"candidate_listings\".\"availability_text\" is null or char_length(btrim(\"shopping_private\".\"candidate_listings\".\"availability_text\")) between 1 and 500)"
+        },
+        "candidate_listings_price_shape": {
+          "name": "candidate_listings_price_shape",
+          "value": "(\"shopping_private\".\"candidate_listings\".\"price_amount_minor\" is null and \"shopping_private\".\"candidate_listings\".\"price_currency_code\" is null) or (\"shopping_private\".\"candidate_listings\".\"price_amount_minor\" is not null and \"shopping_private\".\"candidate_listings\".\"price_amount_minor\" >= 0 and \"shopping_private\".\"candidate_listings\".\"price_currency_code\" is not null and \"shopping_private\".\"candidate_listings\".\"price_currency_code\" ~ '^[A-Z]{3}$')"
+        },
+        "candidate_listings_image_url_shape": {
+          "name": "candidate_listings_image_url_shape",
+          "value": "\"shopping_private\".\"candidate_listings\".\"image_url\" is null or (char_length(\"shopping_private\".\"candidate_listings\".\"image_url\") between 1 and 4000 and \"shopping_private\".\"candidate_listings\".\"image_url\" ~ '^https?://')"
+        },
+        "candidate_listings_review_evidence_shape": {
+          "name": "candidate_listings_review_evidence_shape",
+          "value": "(\"shopping_private\".\"candidate_listings\".\"review_rating_hundredths\" is null and \"shopping_private\".\"candidate_listings\".\"review_count\" is null and \"shopping_private\".\"candidate_listings\".\"review_evidence_source_url\" is null) or (\"shopping_private\".\"candidate_listings\".\"review_rating_hundredths\" is not null and \"shopping_private\".\"candidate_listings\".\"review_count\" is not null and \"shopping_private\".\"candidate_listings\".\"review_evidence_source_url\" is not null and \"shopping_private\".\"candidate_listings\".\"review_rating_hundredths\" between 0 and 500 and \"shopping_private\".\"candidate_listings\".\"review_count\" > 0 and \"shopping_private\".\"candidate_listings\".\"merchant_destination_url\" is not null and \"shopping_private\".\"candidate_listings\".\"merchant_destination_source\" is not null and \"shopping_private\".\"candidate_listings\".\"review_evidence_source_url\" = \"shopping_private\".\"candidate_listings\".\"merchant_destination_url\" and \"shopping_private\".\"candidate_listings\".\"merchant_destination_source\" = 'verified_organic')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "shopping_private.concept_definitions": {
+      "name": "concept_definitions",
+      "schema": "shopping_private",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "task_id": {
+          "name": "task_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "label": {
+          "name": "label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "definition": {
+          "name": "definition",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value_family": {
+          "name": "value_family",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "canonical_unit": {
+          "name": "canonical_unit",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_revision": {
+          "name": "created_revision",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "concept_definitions_task_fk": {
+          "name": "concept_definitions_task_fk",
+          "tableFrom": "concept_definitions",
+          "tableTo": "shopping_tasks",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "concept_definitions_task_id_id_unique": {
+          "name": "concept_definitions_task_id_id_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "id"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "concept_definitions_label_shape": {
+          "name": "concept_definitions_label_shape",
+          "value": "char_length(btrim(\"shopping_private\".\"concept_definitions\".\"label\")) between 1 and 120"
+        },
+        "concept_definitions_definition_shape": {
+          "name": "concept_definitions_definition_shape",
+          "value": "char_length(btrim(\"shopping_private\".\"concept_definitions\".\"definition\")) between 1 and 500"
+        },
+        "concept_definitions_family_allowed": {
+          "name": "concept_definitions_family_allowed",
+          "value": "\"shopping_private\".\"concept_definitions\".\"value_family\" in ('boolean', 'qualitative', 'measurement', 'money', 'categorical')"
+        },
+        "concept_definitions_unit_shape": {
+          "name": "concept_definitions_unit_shape",
+          "value": "(\"shopping_private\".\"concept_definitions\".\"value_family\" = 'measurement' and \"shopping_private\".\"concept_definitions\".\"canonical_unit\" is not null and \"shopping_private\".\"concept_definitions\".\"canonical_unit\" in ('mm', 'cm', 'm', 'g', 'kg')) or (\"shopping_private\".\"concept_definitions\".\"value_family\" <> 'measurement' and \"shopping_private\".\"concept_definitions\".\"canonical_unit\" is null)"
+        },
+        "concept_definitions_revision_nonnegative": {
+          "name": "concept_definitions_revision_nonnegative",
+          "value": "\"shopping_private\".\"concept_definitions\".\"created_revision\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "shopping_private.context_acquisition_attempts": {
+      "name": "context_acquisition_attempts",
+      "schema": "shopping_private",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "orchestration_run_id": {
+          "name": "orchestration_run_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "task_id": {
+          "name": "task_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_task_input_id": {
+          "name": "source_task_input_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "snapshot_revision": {
+          "name": "snapshot_revision",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "stage": {
+          "name": "stage",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "attempt_ordinal": {
+          "name": "attempt_ordinal",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider": {
+          "name": "provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "model": {
+          "name": "model",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "prompt_version": {
+          "name": "prompt_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider_schema_version": {
+          "name": "provider_schema_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider_request_id": {
+          "name": "provider_request_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "duration_ms": {
+          "name": "duration_ms",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "input_tokens": {
+          "name": "input_tokens",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "output_tokens": {
+          "name": "output_tokens",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "interpretation_proposal": {
+          "name": "interpretation_proposal",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "context_action_proposal": {
+          "name": "context_action_proposal",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "error_code": {
+          "name": "error_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "state_change_application_id": {
+          "name": "state_change_application_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "context_action_id": {
+          "name": "context_action_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "context_acquisition_attempts_input_fk": {
+          "name": "context_acquisition_attempts_input_fk",
+          "tableFrom": "context_acquisition_attempts",
+          "tableTo": "task_inputs",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id", "source_task_input_id"],
+          "columnsTo": ["task_id", "id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "context_acquisition_attempts_application_fk": {
+          "name": "context_acquisition_attempts_application_fk",
+          "tableFrom": "context_acquisition_attempts",
+          "tableTo": "state_change_applications",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id", "state_change_application_id"],
+          "columnsTo": ["task_id", "id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "context_acquisition_attempts_action_fk": {
+          "name": "context_acquisition_attempts_action_fk",
+          "tableFrom": "context_acquisition_attempts",
+          "tableTo": "context_actions",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id", "context_action_id"],
+          "columnsTo": ["task_id", "id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "context_acquisition_attempts_run_stage_ordinal_unique": {
+          "name": "context_acquisition_attempts_run_stage_ordinal_unique",
+          "nullsNotDistinct": false,
+          "columns": ["orchestration_run_id", "stage", "attempt_ordinal"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "context_acquisition_attempts_stage_allowed": {
+          "name": "context_acquisition_attempts_stage_allowed",
+          "value": "\"shopping_private\".\"context_acquisition_attempts\".\"stage\" in ('interpretation', 'context_action')"
+        },
+        "context_acquisition_attempts_status_allowed": {
+          "name": "context_acquisition_attempts_status_allowed",
+          "value": "\"shopping_private\".\"context_acquisition_attempts\".\"status\" in ('completed', 'refused', 'incomplete', 'malformed', 'timed_out', 'provider_failed', 'input_too_large', 'invalid_patch', 'stale', 'superseded_by_winner')"
+        },
+        "context_acquisition_attempts_numbers_nonnegative": {
+          "name": "context_acquisition_attempts_numbers_nonnegative",
+          "value": "\"shopping_private\".\"context_acquisition_attempts\".\"snapshot_revision\" >= 0 and \"shopping_private\".\"context_acquisition_attempts\".\"attempt_ordinal\" > 0 and \"shopping_private\".\"context_acquisition_attempts\".\"duration_ms\" >= 0 and (\"shopping_private\".\"context_acquisition_attempts\".\"input_tokens\" is null or \"shopping_private\".\"context_acquisition_attempts\".\"input_tokens\" >= 0) and (\"shopping_private\".\"context_acquisition_attempts\".\"output_tokens\" is null or \"shopping_private\".\"context_acquisition_attempts\".\"output_tokens\" >= 0)"
+        },
+        "context_acquisition_attempts_schema_positive": {
+          "name": "context_acquisition_attempts_schema_positive",
+          "value": "\"shopping_private\".\"context_acquisition_attempts\".\"provider_schema_version\" > 0"
+        },
+        "context_acquisition_attempts_proposal_objects": {
+          "name": "context_acquisition_attempts_proposal_objects",
+          "value": "(\"shopping_private\".\"context_acquisition_attempts\".\"interpretation_proposal\" is null or jsonb_typeof(\"shopping_private\".\"context_acquisition_attempts\".\"interpretation_proposal\") = 'object') and (\"shopping_private\".\"context_acquisition_attempts\".\"context_action_proposal\" is null or jsonb_typeof(\"shopping_private\".\"context_acquisition_attempts\".\"context_action_proposal\") = 'object')"
+        },
+        "context_acquisition_attempts_stage_proposal": {
+          "name": "context_acquisition_attempts_stage_proposal",
+          "value": "not (\"shopping_private\".\"context_acquisition_attempts\".\"interpretation_proposal\" is not null and \"shopping_private\".\"context_acquisition_attempts\".\"context_action_proposal\" is not null) and (\"shopping_private\".\"context_acquisition_attempts\".\"stage\" = 'interpretation' or \"shopping_private\".\"context_acquisition_attempts\".\"interpretation_proposal\" is null) and (\"shopping_private\".\"context_acquisition_attempts\".\"stage\" = 'context_action' or \"shopping_private\".\"context_acquisition_attempts\".\"context_action_proposal\" is null)"
+        },
+        "context_acquisition_attempts_text_bounds": {
+          "name": "context_acquisition_attempts_text_bounds",
+          "value": "char_length(\"shopping_private\".\"context_acquisition_attempts\".\"prompt_version\") between 1 and 120 and (\"shopping_private\".\"context_acquisition_attempts\".\"provider\" is null or char_length(\"shopping_private\".\"context_acquisition_attempts\".\"provider\") between 1 and 120) and (\"shopping_private\".\"context_acquisition_attempts\".\"model\" is null or char_length(\"shopping_private\".\"context_acquisition_attempts\".\"model\") between 1 and 160) and (\"shopping_private\".\"context_acquisition_attempts\".\"provider_request_id\" is null or char_length(\"shopping_private\".\"context_acquisition_attempts\".\"provider_request_id\") between 1 and 240) and (\"shopping_private\".\"context_acquisition_attempts\".\"error_code\" is null or \"shopping_private\".\"context_acquisition_attempts\".\"error_code\" ~ '^[a-z0-9_:-]{1,120}$')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "shopping_private.context_action_answers": {
+      "name": "context_action_answers",
+      "schema": "shopping_private",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "task_id": {
+          "name": "task_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "context_action_id": {
+          "name": "context_action_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "answer_task_input_id": {
+          "name": "answer_task_input_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "context_action_answers_action_fk": {
+          "name": "context_action_answers_action_fk",
+          "tableFrom": "context_action_answers",
+          "tableTo": "context_actions",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id", "context_action_id"],
+          "columnsTo": ["task_id", "id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "context_action_answers_input_fk": {
+          "name": "context_action_answers_input_fk",
+          "tableFrom": "context_action_answers",
+          "tableTo": "task_inputs",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id", "answer_task_input_id"],
+          "columnsTo": ["task_id", "id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "context_action_answers_task_action_unique": {
+          "name": "context_action_answers_task_action_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "context_action_id"]
+        },
+        "context_action_answers_task_input_unique": {
+          "name": "context_action_answers_task_input_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "answer_task_input_id"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "shopping_private.context_actions": {
+      "name": "context_actions",
+      "schema": "shopping_private",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "task_id": {
+          "name": "task_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "state_change_application_id": {
+          "name": "state_change_application_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "selected_at_revision": {
+          "name": "selected_at_revision",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "action_schema_version": {
+          "name": "action_schema_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "action_kind": {
+          "name": "action_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "prompt_schema_version": {
+          "name": "prompt_schema_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "question_prompt": {
+          "name": "question_prompt",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "response_mode": {
+          "name": "response_mode",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "expected_impact": {
+          "name": "expected_impact",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "why_now": {
+          "name": "why_now",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "can_search_without_answer": {
+          "name": "can_search_without_answer",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rationale": {
+          "name": "rationale",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "provider": {
+          "name": "provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "model": {
+          "name": "model",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "prompt_version": {
+          "name": "prompt_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider_schema_version": {
+          "name": "provider_schema_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "context_actions_task_fk": {
+          "name": "context_actions_task_fk",
+          "tableFrom": "context_actions",
+          "tableTo": "shopping_tasks",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "context_actions_application_fk": {
+          "name": "context_actions_application_fk",
+          "tableFrom": "context_actions",
+          "tableTo": "state_change_applications",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id", "state_change_application_id"],
+          "columnsTo": ["task_id", "id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "context_actions_task_id_id_unique": {
+          "name": "context_actions_task_id_id_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "id"]
+        },
+        "context_actions_task_application_unique": {
+          "name": "context_actions_task_application_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "state_change_application_id"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "context_actions_kind_allowed": {
+          "name": "context_actions_kind_allowed",
+          "value": "\"shopping_private\".\"context_actions\".\"action_kind\" in ('ask', 'search', 'show_refine')"
+        },
+        "context_actions_versions_positive": {
+          "name": "context_actions_versions_positive",
+          "value": "\"shopping_private\".\"context_actions\".\"action_schema_version\" > 0 and \"shopping_private\".\"context_actions\".\"provider_schema_version\" > 0 and (\"shopping_private\".\"context_actions\".\"prompt_schema_version\" is null or \"shopping_private\".\"context_actions\".\"prompt_schema_version\" > 0)"
+        },
+        "context_actions_revision_nonnegative": {
+          "name": "context_actions_revision_nonnegative",
+          "value": "\"shopping_private\".\"context_actions\".\"selected_at_revision\" >= 0"
+        },
+        "context_actions_config_text": {
+          "name": "context_actions_config_text",
+          "value": "char_length(\"shopping_private\".\"context_actions\".\"provider\") between 1 and 120 and char_length(\"shopping_private\".\"context_actions\".\"model\") between 1 and 160 and char_length(\"shopping_private\".\"context_actions\".\"prompt_version\") between 1 and 120"
+        },
+        "context_actions_branch_shape": {
+          "name": "context_actions_branch_shape",
+          "value": "(\n        \"shopping_private\".\"context_actions\".\"action_kind\" = 'ask'\n        and \"shopping_private\".\"context_actions\".\"prompt_schema_version\" is not null\n        and \"shopping_private\".\"context_actions\".\"question_prompt\" is not null\n        and \"shopping_private\".\"context_actions\".\"response_mode\" in ('open_text', 'single_select')\n        and \"shopping_private\".\"context_actions\".\"expected_impact\" in ('retrieval', 'eligibility', 'judgement')\n        and \"shopping_private\".\"context_actions\".\"why_now\" is not null\n        and \"shopping_private\".\"context_actions\".\"can_search_without_answer\" is not null\n        and \"shopping_private\".\"context_actions\".\"rationale\" is null\n      ) or (\n        \"shopping_private\".\"context_actions\".\"action_kind\" in ('search', 'show_refine')\n        and \"shopping_private\".\"context_actions\".\"prompt_schema_version\" is null\n        and \"shopping_private\".\"context_actions\".\"question_prompt\" is null\n        and \"shopping_private\".\"context_actions\".\"response_mode\" is null\n        and \"shopping_private\".\"context_actions\".\"expected_impact\" is null\n        and \"shopping_private\".\"context_actions\".\"why_now\" is null\n        and \"shopping_private\".\"context_actions\".\"can_search_without_answer\" is null\n        and \"shopping_private\".\"context_actions\".\"rationale\" is not null\n      )"
+        },
+        "context_actions_text_bounds": {
+          "name": "context_actions_text_bounds",
+          "value": "(\n        (\"shopping_private\".\"context_actions\".\"question_prompt\" is null or char_length(btrim(\"shopping_private\".\"context_actions\".\"question_prompt\")) between 1 and 500)\n        and (\"shopping_private\".\"context_actions\".\"why_now\" is null or char_length(btrim(\"shopping_private\".\"context_actions\".\"why_now\")) between 1 and 500)\n        and (\"shopping_private\".\"context_actions\".\"rationale\" is null or char_length(btrim(\"shopping_private\".\"context_actions\".\"rationale\")) between 1 and 500)\n      )"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "shopping_private.context_question_options": {
+      "name": "context_question_options",
+      "schema": "shopping_private",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "task_id": {
+          "name": "task_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "context_action_id": {
+          "name": "context_action_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ordinal": {
+          "name": "ordinal",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "label": {
+          "name": "label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "context_question_options_action_fk": {
+          "name": "context_question_options_action_fk",
+          "tableFrom": "context_question_options",
+          "tableTo": "context_actions",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id", "context_action_id"],
+          "columnsTo": ["task_id", "id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "context_question_options_task_id_id_unique": {
+          "name": "context_question_options_task_id_id_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "id"]
+        },
+        "context_question_options_action_ordinal_unique": {
+          "name": "context_question_options_action_ordinal_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "context_action_id", "ordinal"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "context_question_options_ordinal_nonnegative": {
+          "name": "context_question_options_ordinal_nonnegative",
+          "value": "\"shopping_private\".\"context_question_options\".\"ordinal\" >= 0"
+        },
+        "context_question_options_label_bounds": {
+          "name": "context_question_options_label_bounds",
+          "value": "char_length(btrim(\"shopping_private\".\"context_question_options\".\"label\")) between 1 and 160"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "shopping_private.criterion_assessment_observations": {
+      "name": "criterion_assessment_observations",
+      "schema": "shopping_private",
+      "columns": {
+        "task_id": {
+          "name": "task_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "candidate_run_id": {
+          "name": "candidate_run_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "candidate_listing_id": {
+          "name": "candidate_listing_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "assessment_id": {
+          "name": "assessment_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "observation_id": {
+          "name": "observation_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "criterion_assessment_observations_assessment_fk": {
+          "name": "criterion_assessment_observations_assessment_fk",
+          "tableFrom": "criterion_assessment_observations",
+          "tableTo": "criterion_assessments",
+          "schemaTo": "shopping_private",
+          "columnsFrom": [
+            "task_id",
+            "candidate_run_id",
+            "candidate_listing_id",
+            "assessment_id"
+          ],
+          "columnsTo": [
+            "task_id",
+            "candidate_run_id",
+            "candidate_listing_id",
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "criterion_assessment_observations_observation_fk": {
+          "name": "criterion_assessment_observations_observation_fk",
+          "tableFrom": "criterion_assessment_observations",
+          "tableTo": "product_observations",
+          "schemaTo": "shopping_private",
+          "columnsFrom": [
+            "task_id",
+            "candidate_run_id",
+            "candidate_listing_id",
+            "observation_id"
+          ],
+          "columnsTo": [
+            "task_id",
+            "candidate_run_id",
+            "candidate_listing_id",
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "criterion_assessment_observations_pk": {
+          "name": "criterion_assessment_observations_pk",
+          "columns": ["task_id", "assessment_id", "observation_id"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "shopping_private.criterion_assessments": {
+      "name": "criterion_assessments",
+      "schema": "shopping_private",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "task_id": {
+          "name": "task_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "research_run_id": {
+          "name": "research_run_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "task_revision": {
+          "name": "task_revision",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "candidate_run_id": {
+          "name": "candidate_run_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "candidate_listing_id": {
+          "name": "candidate_listing_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "criterion_id": {
+          "name": "criterion_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "generation": {
+          "name": "generation",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "supersedes_assessment_id": {
+          "name": "supersedes_assessment_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "superseded_at": {
+          "name": "superseded_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "relation": {
+          "name": "relation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "explanation": {
+          "name": "explanation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "method": {
+          "name": "method",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "model": {
+          "name": "model",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "prompt_version": {
+          "name": "prompt_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "criterion_assessments_current_unique": {
+          "name": "criterion_assessments_current_unique",
+          "columns": [
+            {
+              "expression": "task_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "task_revision",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "candidate_run_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "candidate_listing_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "criterion_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"shopping_private\".\"criterion_assessments\".\"superseded_at\" is null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "criterion_assessments_task_fk": {
+          "name": "criterion_assessments_task_fk",
+          "tableFrom": "criterion_assessments",
+          "tableTo": "shopping_tasks",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "criterion_assessments_supersedes_fk": {
+          "name": "criterion_assessments_supersedes_fk",
+          "tableFrom": "criterion_assessments",
+          "tableTo": "criterion_assessments",
+          "schemaTo": "shopping_private",
+          "columnsFrom": [
+            "task_id",
+            "task_revision",
+            "candidate_run_id",
+            "candidate_listing_id",
+            "criterion_id",
+            "supersedes_assessment_id"
+          ],
+          "columnsTo": [
+            "task_id",
+            "task_revision",
+            "candidate_run_id",
+            "candidate_listing_id",
+            "criterion_id",
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "criterion_assessments_research_run_fk": {
+          "name": "criterion_assessments_research_run_fk",
+          "tableFrom": "criterion_assessments",
+          "tableTo": "evidence_research_runs",
+          "schemaTo": "shopping_private",
+          "columnsFrom": [
+            "task_id",
+            "research_run_id",
+            "candidate_run_id",
+            "task_revision"
+          ],
+          "columnsTo": ["task_id", "id", "search_run_id", "task_revision"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "criterion_assessments_candidate_fk": {
+          "name": "criterion_assessments_candidate_fk",
+          "tableFrom": "criterion_assessments",
+          "tableTo": "candidate_listings",
+          "schemaTo": "shopping_private",
+          "columnsFrom": [
+            "task_id",
+            "candidate_run_id",
+            "candidate_listing_id"
+          ],
+          "columnsTo": ["task_id", "run_id", "id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "criterion_assessments_criterion_fk": {
+          "name": "criterion_assessments_criterion_fk",
+          "tableFrom": "criterion_assessments",
+          "tableTo": "decision_criteria",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id", "criterion_id"],
+          "columnsTo": ["task_id", "id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "criterion_assessments_task_id_id_unique": {
+          "name": "criterion_assessments_task_id_id_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "id"]
+        },
+        "criterion_assessments_generation_unique": {
+          "name": "criterion_assessments_generation_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "task_id",
+            "task_revision",
+            "candidate_run_id",
+            "candidate_listing_id",
+            "criterion_id",
+            "generation"
+          ]
+        },
+        "criterion_assessments_lineage_id_unique": {
+          "name": "criterion_assessments_lineage_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "task_id",
+            "task_revision",
+            "candidate_run_id",
+            "candidate_listing_id",
+            "criterion_id",
+            "id"
+          ]
+        },
+        "criterion_assessments_candidate_id_unique": {
+          "name": "criterion_assessments_candidate_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "task_id",
+            "research_run_id",
+            "candidate_run_id",
+            "candidate_listing_id",
+            "id"
+          ]
+        },
+        "criterion_assessments_reusable_candidate_id_unique": {
+          "name": "criterion_assessments_reusable_candidate_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "task_id",
+            "candidate_run_id",
+            "candidate_listing_id",
+            "id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "criterion_assessments_revision_nonnegative": {
+          "name": "criterion_assessments_revision_nonnegative",
+          "value": "\"shopping_private\".\"criterion_assessments\".\"task_revision\" >= 0"
+        },
+        "criterion_assessments_generation_shape": {
+          "name": "criterion_assessments_generation_shape",
+          "value": "(\"shopping_private\".\"criterion_assessments\".\"generation\" = 1 and \"shopping_private\".\"criterion_assessments\".\"supersedes_assessment_id\" is null) or (\"shopping_private\".\"criterion_assessments\".\"generation\" > 1 and \"shopping_private\".\"criterion_assessments\".\"supersedes_assessment_id\" is not null)"
+        },
+        "criterion_assessments_superseded_time_shape": {
+          "name": "criterion_assessments_superseded_time_shape",
+          "value": "\"shopping_private\".\"criterion_assessments\".\"superseded_at\" is null or \"shopping_private\".\"criterion_assessments\".\"superseded_at\" >= \"shopping_private\".\"criterion_assessments\".\"created_at\""
+        },
+        "criterion_assessments_status_allowed": {
+          "name": "criterion_assessments_status_allowed",
+          "value": "\"shopping_private\".\"criterion_assessments\".\"status\" in ('meets', 'conflicts', 'uncertain', 'not_applicable')"
+        },
+        "criterion_assessments_method_allowed": {
+          "name": "criterion_assessments_method_allowed",
+          "value": "\"shopping_private\".\"criterion_assessments\".\"method\" in ('deterministic', 'model', 'guarded_model')"
+        },
+        "criterion_assessments_method_shape": {
+          "name": "criterion_assessments_method_shape",
+          "value": "(\"shopping_private\".\"criterion_assessments\".\"method\" = 'deterministic' and \"shopping_private\".\"criterion_assessments\".\"model\" is null and \"shopping_private\".\"criterion_assessments\".\"prompt_version\" is null) or (\"shopping_private\".\"criterion_assessments\".\"method\" in ('model', 'guarded_model') and \"shopping_private\".\"criterion_assessments\".\"model\" is not null and \"shopping_private\".\"criterion_assessments\".\"prompt_version\" is not null)"
+        },
+        "criterion_assessments_text_bounds": {
+          "name": "criterion_assessments_text_bounds",
+          "value": "char_length(btrim(\"shopping_private\".\"criterion_assessments\".\"relation\")) between 1 and 120 and char_length(btrim(\"shopping_private\".\"criterion_assessments\".\"explanation\")) between 1 and 500 and (\"shopping_private\".\"criterion_assessments\".\"model\" is null or char_length(btrim(\"shopping_private\".\"criterion_assessments\".\"model\")) between 1 and 160) and (\"shopping_private\".\"criterion_assessments\".\"prompt_version\" is null or char_length(btrim(\"shopping_private\".\"criterion_assessments\".\"prompt_version\")) between 1 and 120)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "shopping_private.criterion_sources": {
+      "name": "criterion_sources",
+      "schema": "shopping_private",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "task_id": {
+          "name": "task_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "criterion_id": {
+          "name": "criterion_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_role": {
+          "name": "source_role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_kind": {
+          "name": "source_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "task_input_id": {
+          "name": "task_input_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "message_id": {
+          "name": "message_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "criterion_sources_task_fk": {
+          "name": "criterion_sources_task_fk",
+          "tableFrom": "criterion_sources",
+          "tableTo": "shopping_tasks",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "criterion_sources_criterion_fk": {
+          "name": "criterion_sources_criterion_fk",
+          "tableFrom": "criterion_sources",
+          "tableTo": "decision_criteria",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id", "criterion_id"],
+          "columnsTo": ["task_id", "id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "criterion_sources_input_fk": {
+          "name": "criterion_sources_input_fk",
+          "tableFrom": "criterion_sources",
+          "tableTo": "task_inputs",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id", "task_input_id"],
+          "columnsTo": ["task_id", "id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "criterion_sources_exact_message_fk": {
+          "name": "criterion_sources_exact_message_fk",
+          "tableFrom": "criterion_sources",
+          "tableTo": "user_messages",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id", "task_input_id", "message_id"],
+          "columnsTo": ["task_id", "task_input_id", "id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "criterion_sources_task_id_id_unique": {
+          "name": "criterion_sources_task_id_id_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "id"]
+        },
+        "criterion_sources_role_input_unique": {
+          "name": "criterion_sources_role_input_unique",
+          "nullsNotDistinct": false,
+          "columns": ["criterion_id", "source_role", "task_input_id"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "criterion_sources_role_allowed": {
+          "name": "criterion_sources_role_allowed",
+          "value": "\"shopping_private\".\"criterion_sources\".\"source_role\" in ('origin', 'confirmation', 'change')"
+        },
+        "criterion_sources_kind_allowed": {
+          "name": "criterion_sources_kind_allowed",
+          "value": "\"shopping_private\".\"criterion_sources\".\"source_kind\" in ('message', 'question_answer', 'direct_brief_action')"
+        },
+        "criterion_sources_message_shape": {
+          "name": "criterion_sources_message_shape",
+          "value": "(\"shopping_private\".\"criterion_sources\".\"source_kind\" = 'message' and \"shopping_private\".\"criterion_sources\".\"message_id\" is not null) or (\"shopping_private\".\"criterion_sources\".\"source_kind\" <> 'message' and \"shopping_private\".\"criterion_sources\".\"message_id\" is null)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "shopping_private.decision_criteria": {
+      "name": "decision_criteria",
+      "schema": "shopping_private",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "task_id": {
+          "name": "task_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "lineage_id": {
+          "name": "lineage_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "concept_id": {
+          "name": "concept_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "authority": {
+          "name": "authority",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "strength": {
+          "name": "strength",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "target_semantics": {
+          "name": "target_semantics",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value_schema_version": {
+          "name": "value_schema_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value_kind": {
+          "name": "value_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "semantic_value": {
+          "name": "semantic_value",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "lifecycle": {
+          "name": "lifecycle",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_revision": {
+          "name": "created_revision",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ended_revision": {
+          "name": "ended_revision",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "superseded_by_id": {
+          "name": "superseded_by_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "decision_criteria_one_active_lineage": {
+          "name": "decision_criteria_one_active_lineage",
+          "columns": [
+            {
+              "expression": "task_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "lineage_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"shopping_private\".\"decision_criteria\".\"lifecycle\" = 'active'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "decision_criteria_task_fk": {
+          "name": "decision_criteria_task_fk",
+          "tableFrom": "decision_criteria",
+          "tableTo": "shopping_tasks",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "decision_criteria_concept_fk": {
+          "name": "decision_criteria_concept_fk",
+          "tableFrom": "decision_criteria",
+          "tableTo": "concept_definitions",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id", "concept_id"],
+          "columnsTo": ["task_id", "id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "decision_criteria_task_id_id_unique": {
+          "name": "decision_criteria_task_id_id_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "id"]
+        },
+        "decision_criteria_successor_identity_unique": {
+          "name": "decision_criteria_successor_identity_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "lineage_id", "concept_id", "id"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "decision_criteria_authority_allowed": {
+          "name": "decision_criteria_authority_allowed",
+          "value": "\"shopping_private\".\"decision_criteria\".\"authority\" in ('user_explicit', 'user_confirmed')"
+        },
+        "decision_criteria_strength_allowed": {
+          "name": "decision_criteria_strength_allowed",
+          "value": "\"shopping_private\".\"decision_criteria\".\"strength\" is null or \"shopping_private\".\"decision_criteria\".\"strength\" in ('hard', 'strong_preference', 'preference')"
+        },
+        "decision_criteria_target_allowed": {
+          "name": "decision_criteria_target_allowed",
+          "value": "\"shopping_private\".\"decision_criteria\".\"target_semantics\" in ('exact', 'range', 'around', 'stretch', 'categorical', 'qualitative', 'comparative', 'indifferent')"
+        },
+        "decision_criteria_value_version_positive": {
+          "name": "decision_criteria_value_version_positive",
+          "value": "\"shopping_private\".\"decision_criteria\".\"value_schema_version\" > 0"
+        },
+        "decision_criteria_value_kind_allowed": {
+          "name": "decision_criteria_value_kind_allowed",
+          "value": "\"shopping_private\".\"decision_criteria\".\"value_kind\" in ('boolean', 'qualitative', 'measurement', 'measurement_range', 'money', 'money_stretch', 'categorical', 'indifferent')"
+        },
+        "decision_criteria_value_object": {
+          "name": "decision_criteria_value_object",
+          "value": "jsonb_typeof(\"shopping_private\".\"decision_criteria\".\"semantic_value\") is not distinct from 'object'"
+        },
+        "decision_criteria_value_discriminators_match": {
+          "name": "decision_criteria_value_discriminators_match",
+          "value": "(\"shopping_private\".\"decision_criteria\".\"semantic_value\" ->> 'kind') is not distinct from \"shopping_private\".\"decision_criteria\".\"value_kind\" and coalesce(\"shopping_private\".\"decision_criteria\".\"semantic_value\" ->> 'schemaVersion', '') ~ '^[1-9][0-9]*$' and (\"shopping_private\".\"decision_criteria\".\"semantic_value\" ->> 'schemaVersion')::integer = \"shopping_private\".\"decision_criteria\".\"value_schema_version\""
+        },
+        "decision_criteria_indifference_shape": {
+          "name": "decision_criteria_indifference_shape",
+          "value": "(\"shopping_private\".\"decision_criteria\".\"value_kind\" = 'indifferent' and \"shopping_private\".\"decision_criteria\".\"target_semantics\" = 'indifferent' and \"shopping_private\".\"decision_criteria\".\"strength\" is null) or (\"shopping_private\".\"decision_criteria\".\"value_kind\" <> 'indifferent' and \"shopping_private\".\"decision_criteria\".\"target_semantics\" <> 'indifferent' and \"shopping_private\".\"decision_criteria\".\"strength\" is not null)"
+        },
+        "decision_criteria_lifecycle_allowed": {
+          "name": "decision_criteria_lifecycle_allowed",
+          "value": "\"shopping_private\".\"decision_criteria\".\"lifecycle\" in ('active', 'superseded', 'removed')"
+        },
+        "decision_criteria_lifecycle_shape": {
+          "name": "decision_criteria_lifecycle_shape",
+          "value": "(\"shopping_private\".\"decision_criteria\".\"lifecycle\" = 'active' and \"shopping_private\".\"decision_criteria\".\"ended_revision\" is null and \"shopping_private\".\"decision_criteria\".\"superseded_by_id\" is null) or (\"shopping_private\".\"decision_criteria\".\"lifecycle\" = 'superseded' and \"shopping_private\".\"decision_criteria\".\"ended_revision\" is not null and \"shopping_private\".\"decision_criteria\".\"superseded_by_id\" is not null and \"shopping_private\".\"decision_criteria\".\"superseded_by_id\" <> \"shopping_private\".\"decision_criteria\".\"id\") or (\"shopping_private\".\"decision_criteria\".\"lifecycle\" = 'removed' and \"shopping_private\".\"decision_criteria\".\"ended_revision\" is not null and \"shopping_private\".\"decision_criteria\".\"superseded_by_id\" is null)"
+        },
+        "decision_criteria_revision_shape": {
+          "name": "decision_criteria_revision_shape",
+          "value": "\"shopping_private\".\"decision_criteria\".\"created_revision\" >= 0 and (\"shopping_private\".\"decision_criteria\".\"ended_revision\" is null or \"shopping_private\".\"decision_criteria\".\"ended_revision\" >= \"shopping_private\".\"decision_criteria\".\"created_revision\")"
+        },
+        "decision_criteria_timestamp_order": {
+          "name": "decision_criteria_timestamp_order",
+          "value": "\"shopping_private\".\"decision_criteria\".\"updated_at\" >= \"shopping_private\".\"decision_criteria\".\"created_at\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "shopping_private.decision_refinement_bases": {
+      "name": "decision_refinement_bases",
+      "schema": "shopping_private",
+      "columns": {
+        "source_task_input_id": {
+          "name": "source_task_input_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "task_id": {
+          "name": "task_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "task_revision": {
+          "name": "task_revision",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "assessment_ids": {
+          "name": "assessment_ids",
+          "type": "uuid[]",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_ids": {
+          "name": "source_ids",
+          "type": "uuid[]",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rejected_listing_ids": {
+          "name": "rejected_listing_ids",
+          "type": "uuid[]",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "captured_at": {
+          "name": "captured_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "decision_refinement_bases_input_fk": {
+          "name": "decision_refinement_bases_input_fk",
+          "tableFrom": "decision_refinement_bases",
+          "tableTo": "task_inputs",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id", "source_task_input_id"],
+          "columnsTo": ["task_id", "id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "decision_refinement_bases_sources": {
+          "name": "decision_refinement_bases_sources",
+          "value": "cardinality(\"shopping_private\".\"decision_refinement_bases\".\"source_ids\") <= 10000 and array_position(\"shopping_private\".\"decision_refinement_bases\".\"source_ids\", null) is null"
+        },
+        "decision_refinement_bases_revision": {
+          "name": "decision_refinement_bases_revision",
+          "value": "\"shopping_private\".\"decision_refinement_bases\".\"task_revision\" >= 1"
+        },
+        "decision_refinement_bases_arrays": {
+          "name": "decision_refinement_bases_arrays",
+          "value": "cardinality(\"shopping_private\".\"decision_refinement_bases\".\"assessment_ids\") between 1 and 10000 and array_position(\"shopping_private\".\"decision_refinement_bases\".\"assessment_ids\", null) is null and cardinality(\"shopping_private\".\"decision_refinement_bases\".\"rejected_listing_ids\") <= 10000 and array_position(\"shopping_private\".\"decision_refinement_bases\".\"rejected_listing_ids\", null) is null"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "shopping_private.evidence_acquisition_attempts": {
+      "name": "evidence_acquisition_attempts",
+      "schema": "shopping_private",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "task_id": {
+          "name": "task_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "research_run_id": {
+          "name": "research_run_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "candidate_run_id": {
+          "name": "candidate_run_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "candidate_listing_id": {
+          "name": "candidate_listing_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "stage": {
+          "name": "stage",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "purpose": {
+          "name": "purpose",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "plan_key": {
+          "name": "plan_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "query": {
+          "name": "query",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider": {
+          "name": "provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "model": {
+          "name": "model",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "prompt_version": {
+          "name": "prompt_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "provider_request_id": {
+          "name": "provider_request_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "received_result_count": {
+          "name": "received_result_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "failure_code": {
+          "name": "failure_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "finished_at": {
+          "name": "finished_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "evidence_acquisition_attempts_research_run_fk": {
+          "name": "evidence_acquisition_attempts_research_run_fk",
+          "tableFrom": "evidence_acquisition_attempts",
+          "tableTo": "evidence_research_runs",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id", "research_run_id", "candidate_run_id"],
+          "columnsTo": ["task_id", "id", "search_run_id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "evidence_acquisition_attempts_candidate_fk": {
+          "name": "evidence_acquisition_attempts_candidate_fk",
+          "tableFrom": "evidence_acquisition_attempts",
+          "tableTo": "candidate_listings",
+          "schemaTo": "shopping_private",
+          "columnsFrom": [
+            "task_id",
+            "candidate_run_id",
+            "candidate_listing_id"
+          ],
+          "columnsTo": ["task_id", "run_id", "id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "evidence_acquisition_attempts_task_id_id_unique": {
+          "name": "evidence_acquisition_attempts_task_id_id_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "id"]
+        },
+        "evidence_acquisition_attempts_candidate_id_unique": {
+          "name": "evidence_acquisition_attempts_candidate_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "task_id",
+            "research_run_id",
+            "candidate_run_id",
+            "candidate_listing_id",
+            "id"
+          ]
+        },
+        "evidence_acquisition_attempts_candidate_stage_id_unique": {
+          "name": "evidence_acquisition_attempts_candidate_stage_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "task_id",
+            "research_run_id",
+            "candidate_run_id",
+            "candidate_listing_id",
+            "id",
+            "stage"
+          ]
+        },
+        "evidence_acquisition_attempts_plan_unique": {
+          "name": "evidence_acquisition_attempts_plan_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "task_id",
+            "research_run_id",
+            "candidate_listing_id",
+            "plan_key"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "evidence_acquisition_attempts_stage_allowed": {
+          "name": "evidence_acquisition_attempts_stage_allowed",
+          "value": "\"shopping_private\".\"evidence_acquisition_attempts\".\"stage\" in ('organic_search', 'page_fetch', 'observation_extraction', 'criterion_assessment')"
+        },
+        "evidence_acquisition_attempts_purpose_allowed": {
+          "name": "evidence_acquisition_attempts_purpose_allowed",
+          "value": "\"shopping_private\".\"evidence_acquisition_attempts\".\"purpose\" in ('specifications', 'experience', 'source_depth', 'first_pass', 'decision_gap', 'combined', 'current_brief')"
+        },
+        "evidence_acquisition_attempts_text_bounds": {
+          "name": "evidence_acquisition_attempts_text_bounds",
+          "value": "char_length(btrim(\"shopping_private\".\"evidence_acquisition_attempts\".\"plan_key\")) between 1 and 180 and char_length(btrim(\"shopping_private\".\"evidence_acquisition_attempts\".\"provider\")) between 1 and 120 and (\"shopping_private\".\"evidence_acquisition_attempts\".\"query\" is null or char_length(btrim(\"shopping_private\".\"evidence_acquisition_attempts\".\"query\")) between 1 and 500) and (\"shopping_private\".\"evidence_acquisition_attempts\".\"model\" is null or char_length(btrim(\"shopping_private\".\"evidence_acquisition_attempts\".\"model\")) between 1 and 160) and (\"shopping_private\".\"evidence_acquisition_attempts\".\"prompt_version\" is null or char_length(btrim(\"shopping_private\".\"evidence_acquisition_attempts\".\"prompt_version\")) between 1 and 120) and (\"shopping_private\".\"evidence_acquisition_attempts\".\"provider_request_id\" is null or char_length(btrim(\"shopping_private\".\"evidence_acquisition_attempts\".\"provider_request_id\")) between 1 and 240)"
+        },
+        "evidence_acquisition_attempts_stage_shape": {
+          "name": "evidence_acquisition_attempts_stage_shape",
+          "value": "(\"shopping_private\".\"evidence_acquisition_attempts\".\"stage\" = 'organic_search' and \"shopping_private\".\"evidence_acquisition_attempts\".\"query\" is not null and \"shopping_private\".\"evidence_acquisition_attempts\".\"provider\" in ('serper', 'fixture') and \"shopping_private\".\"evidence_acquisition_attempts\".\"model\" is null and \"shopping_private\".\"evidence_acquisition_attempts\".\"prompt_version\" is null) or (\"shopping_private\".\"evidence_acquisition_attempts\".\"stage\" = 'page_fetch' and \"shopping_private\".\"evidence_acquisition_attempts\".\"query\" is null and \"shopping_private\".\"evidence_acquisition_attempts\".\"provider\" in ('server_http', 'fixture') and \"shopping_private\".\"evidence_acquisition_attempts\".\"model\" is null and \"shopping_private\".\"evidence_acquisition_attempts\".\"prompt_version\" is null) or (\"shopping_private\".\"evidence_acquisition_attempts\".\"stage\" in ('observation_extraction', 'criterion_assessment') and \"shopping_private\".\"evidence_acquisition_attempts\".\"query\" is null and \"shopping_private\".\"evidence_acquisition_attempts\".\"provider\" in ('openai', 'fixture') and \"shopping_private\".\"evidence_acquisition_attempts\".\"model\" is not null and \"shopping_private\".\"evidence_acquisition_attempts\".\"prompt_version\" is not null)"
+        },
+        "evidence_acquisition_attempts_status_allowed": {
+          "name": "evidence_acquisition_attempts_status_allowed",
+          "value": "\"shopping_private\".\"evidence_acquisition_attempts\".\"status\" in ('planned', 'succeeded', 'failed')"
+        },
+        "evidence_acquisition_attempts_terminal_shape": {
+          "name": "evidence_acquisition_attempts_terminal_shape",
+          "value": "(\"shopping_private\".\"evidence_acquisition_attempts\".\"status\" = 'planned' and \"shopping_private\".\"evidence_acquisition_attempts\".\"started_at\" is null and \"shopping_private\".\"evidence_acquisition_attempts\".\"finished_at\" is null and \"shopping_private\".\"evidence_acquisition_attempts\".\"received_result_count\" is null and \"shopping_private\".\"evidence_acquisition_attempts\".\"failure_code\" is null) or (\"shopping_private\".\"evidence_acquisition_attempts\".\"status\" = 'succeeded' and \"shopping_private\".\"evidence_acquisition_attempts\".\"started_at\" is not null and \"shopping_private\".\"evidence_acquisition_attempts\".\"finished_at\" is not null and \"shopping_private\".\"evidence_acquisition_attempts\".\"finished_at\" >= \"shopping_private\".\"evidence_acquisition_attempts\".\"started_at\" and \"shopping_private\".\"evidence_acquisition_attempts\".\"received_result_count\" is not null and \"shopping_private\".\"evidence_acquisition_attempts\".\"received_result_count\" >= 0 and \"shopping_private\".\"evidence_acquisition_attempts\".\"failure_code\" is null) or (\"shopping_private\".\"evidence_acquisition_attempts\".\"status\" = 'failed' and \"shopping_private\".\"evidence_acquisition_attempts\".\"started_at\" is not null and \"shopping_private\".\"evidence_acquisition_attempts\".\"finished_at\" is not null and \"shopping_private\".\"evidence_acquisition_attempts\".\"finished_at\" >= \"shopping_private\".\"evidence_acquisition_attempts\".\"started_at\" and \"shopping_private\".\"evidence_acquisition_attempts\".\"received_result_count\" is null and \"shopping_private\".\"evidence_acquisition_attempts\".\"failure_code\" is not null and \"shopping_private\".\"evidence_acquisition_attempts\".\"failure_code\" in ('provider_failed', 'invalid_provider_result', 'unsafe_url', 'dns_failed', 'network_failed', 'timeout', 'redirect_invalid', 'redirect_limit', 'http_status', 'unsupported_content_type', 'unsupported_content_encoding', 'response_too_large', 'invalid_text', 'invalid_extraction', 'identity_mismatch', 'model_failed', 'invalid_model_output'))"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "shopping_private.evidence_attempt_target_criteria": {
+      "name": "evidence_attempt_target_criteria",
+      "schema": "shopping_private",
+      "columns": {
+        "task_id": {
+          "name": "task_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "research_run_id": {
+          "name": "research_run_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "candidate_run_id": {
+          "name": "candidate_run_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "candidate_listing_id": {
+          "name": "candidate_listing_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "attempt_id": {
+          "name": "attempt_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "criterion_id": {
+          "name": "criterion_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "evidence_attempt_target_criteria_attempt_fk": {
+          "name": "evidence_attempt_target_criteria_attempt_fk",
+          "tableFrom": "evidence_attempt_target_criteria",
+          "tableTo": "evidence_acquisition_attempts",
+          "schemaTo": "shopping_private",
+          "columnsFrom": [
+            "task_id",
+            "research_run_id",
+            "candidate_run_id",
+            "candidate_listing_id",
+            "attempt_id"
+          ],
+          "columnsTo": [
+            "task_id",
+            "research_run_id",
+            "candidate_run_id",
+            "candidate_listing_id",
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "evidence_attempt_target_criteria_criterion_fk": {
+          "name": "evidence_attempt_target_criteria_criterion_fk",
+          "tableFrom": "evidence_attempt_target_criteria",
+          "tableTo": "decision_criteria",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id", "criterion_id"],
+          "columnsTo": ["task_id", "id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "evidence_attempt_target_criteria_pk": {
+          "name": "evidence_attempt_target_criteria_pk",
+          "columns": ["task_id", "attempt_id", "criterion_id"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "shopping_private.evidence_page_fetch_targets": {
+      "name": "evidence_page_fetch_targets",
+      "schema": "shopping_private",
+      "columns": {
+        "task_id": {
+          "name": "task_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "research_run_id": {
+          "name": "research_run_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "candidate_run_id": {
+          "name": "candidate_run_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "candidate_listing_id": {
+          "name": "candidate_listing_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "attempt_id": {
+          "name": "attempt_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "attempt_stage": {
+          "name": "attempt_stage",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'page_fetch'"
+        },
+        "discovered_source_id": {
+          "name": "discovered_source_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "discovered_source_kind": {
+          "name": "discovered_source_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'organic_result'"
+        },
+        "requested_url": {
+          "name": "requested_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "policy_version": {
+          "name": "policy_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "evidence_page_fetch_targets_attempt_fk": {
+          "name": "evidence_page_fetch_targets_attempt_fk",
+          "tableFrom": "evidence_page_fetch_targets",
+          "tableTo": "evidence_acquisition_attempts",
+          "schemaTo": "shopping_private",
+          "columnsFrom": [
+            "task_id",
+            "research_run_id",
+            "candidate_run_id",
+            "candidate_listing_id",
+            "attempt_id",
+            "attempt_stage"
+          ],
+          "columnsTo": [
+            "task_id",
+            "research_run_id",
+            "candidate_run_id",
+            "candidate_listing_id",
+            "id",
+            "stage"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "evidence_page_fetch_targets_source_fk": {
+          "name": "evidence_page_fetch_targets_source_fk",
+          "tableFrom": "evidence_page_fetch_targets",
+          "tableTo": "evidence_sources",
+          "schemaTo": "shopping_private",
+          "columnsFrom": [
+            "task_id",
+            "candidate_run_id",
+            "candidate_listing_id",
+            "discovered_source_id",
+            "discovered_source_kind"
+          ],
+          "columnsTo": [
+            "task_id",
+            "candidate_run_id",
+            "candidate_listing_id",
+            "id",
+            "source_kind"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "evidence_page_fetch_targets_task_attempt_unique": {
+          "name": "evidence_page_fetch_targets_task_attempt_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "attempt_id"]
+        },
+        "evidence_page_fetch_targets_document_scope_unique": {
+          "name": "evidence_page_fetch_targets_document_scope_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "task_id",
+            "research_run_id",
+            "candidate_run_id",
+            "candidate_listing_id",
+            "attempt_id",
+            "discovered_source_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "evidence_page_fetch_targets_shape": {
+          "name": "evidence_page_fetch_targets_shape",
+          "value": "\"shopping_private\".\"evidence_page_fetch_targets\".\"attempt_stage\" = 'page_fetch' and \"shopping_private\".\"evidence_page_fetch_targets\".\"discovered_source_kind\" = 'organic_result' and char_length(\"shopping_private\".\"evidence_page_fetch_targets\".\"requested_url\") between 1 and 4000 and \"shopping_private\".\"evidence_page_fetch_targets\".\"requested_url\" ~ '^https?://' and char_length(btrim(\"shopping_private\".\"evidence_page_fetch_targets\".\"policy_version\")) between 1 and 120"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "shopping_private.evidence_research_runs": {
+      "name": "evidence_research_runs",
+      "schema": "shopping_private",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "task_id": {
+          "name": "task_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "search_run_id": {
+          "name": "search_run_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "task_revision": {
+          "name": "task_revision",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "policy_version": {
+          "name": "policy_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "phase": {
+          "name": "phase",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'first_pass'"
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "selected_candidate_count": {
+          "name": "selected_candidate_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "planned_search_count": {
+          "name": "planned_search_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "lease_token": {
+          "name": "lease_token",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lease_expires_at": {
+          "name": "lease_expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "finished_at": {
+          "name": "finished_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "evidence_research_runs_task_fk": {
+          "name": "evidence_research_runs_task_fk",
+          "tableFrom": "evidence_research_runs",
+          "tableTo": "shopping_tasks",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "evidence_research_runs_search_run_fk": {
+          "name": "evidence_research_runs_search_run_fk",
+          "tableFrom": "evidence_research_runs",
+          "tableTo": "search_runs",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id", "search_run_id"],
+          "columnsTo": ["task_id", "id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "evidence_research_runs_task_id_id_unique": {
+          "name": "evidence_research_runs_task_id_id_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "id"]
+        },
+        "evidence_research_runs_candidate_scope_unique": {
+          "name": "evidence_research_runs_candidate_scope_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "id", "search_run_id"]
+        },
+        "evidence_research_runs_assessment_scope_unique": {
+          "name": "evidence_research_runs_assessment_scope_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "id", "search_run_id", "task_revision"]
+        },
+        "evidence_research_runs_scope_unique": {
+          "name": "evidence_research_runs_scope_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "task_id",
+            "search_run_id",
+            "task_revision",
+            "policy_version"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "evidence_research_runs_revision_nonnegative": {
+          "name": "evidence_research_runs_revision_nonnegative",
+          "value": "\"shopping_private\".\"evidence_research_runs\".\"task_revision\" >= 0"
+        },
+        "evidence_research_runs_policy_bounds": {
+          "name": "evidence_research_runs_policy_bounds",
+          "value": "char_length(btrim(\"shopping_private\".\"evidence_research_runs\".\"policy_version\")) between 1 and 120"
+        },
+        "evidence_research_runs_status_allowed": {
+          "name": "evidence_research_runs_status_allowed",
+          "value": "\"shopping_private\".\"evidence_research_runs\".\"status\" in ('running', 'succeeded', 'partial', 'failed')"
+        },
+        "evidence_research_runs_phase_allowed": {
+          "name": "evidence_research_runs_phase_allowed",
+          "value": "\"shopping_private\".\"evidence_research_runs\".\"phase\" in ('first_pass', 'deepening', 'reassessment')"
+        },
+        "evidence_research_runs_budget_shape": {
+          "name": "evidence_research_runs_budget_shape",
+          "value": "\"shopping_private\".\"evidence_research_runs\".\"selected_candidate_count\" between 1 and 8 and \"shopping_private\".\"evidence_research_runs\".\"planned_search_count\" between 0 and (\"shopping_private\".\"evidence_research_runs\".\"selected_candidate_count\" * 2)"
+        },
+        "evidence_research_runs_status_time_shape": {
+          "name": "evidence_research_runs_status_time_shape",
+          "value": "(\"shopping_private\".\"evidence_research_runs\".\"status\" = 'running' and \"shopping_private\".\"evidence_research_runs\".\"finished_at\" is null) or (\"shopping_private\".\"evidence_research_runs\".\"status\" in ('succeeded', 'partial', 'failed') and \"shopping_private\".\"evidence_research_runs\".\"finished_at\" is not null and \"shopping_private\".\"evidence_research_runs\".\"finished_at\" >= \"shopping_private\".\"evidence_research_runs\".\"started_at\")"
+        },
+        "evidence_research_runs_lease_shape": {
+          "name": "evidence_research_runs_lease_shape",
+          "value": "(\"shopping_private\".\"evidence_research_runs\".\"lease_token\" is null and \"shopping_private\".\"evidence_research_runs\".\"lease_expires_at\" is null) or (\"shopping_private\".\"evidence_research_runs\".\"status\" = 'running' and \"shopping_private\".\"evidence_research_runs\".\"lease_token\" is not null and \"shopping_private\".\"evidence_research_runs\".\"lease_expires_at\" is not null)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "shopping_private.evidence_sources": {
+      "name": "evidence_sources",
+      "schema": "shopping_private",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "task_id": {
+          "name": "task_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "research_run_id": {
+          "name": "research_run_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "candidate_run_id": {
+          "name": "candidate_run_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "candidate_listing_id": {
+          "name": "candidate_listing_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "acquisition_attempt_id": {
+          "name": "acquisition_attempt_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_role": {
+          "name": "source_role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_kind": {
+          "name": "source_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_url": {
+          "name": "source_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_title": {
+          "name": "source_title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "excerpt": {
+          "name": "excerpt",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "provider": {
+          "name": "provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider_result_id": {
+          "name": "provider_result_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "observed_at": {
+          "name": "observed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fingerprint": {
+          "name": "fingerprint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "evidence_sources_research_run_fk": {
+          "name": "evidence_sources_research_run_fk",
+          "tableFrom": "evidence_sources",
+          "tableTo": "evidence_research_runs",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id", "research_run_id", "candidate_run_id"],
+          "columnsTo": ["task_id", "id", "search_run_id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "evidence_sources_candidate_fk": {
+          "name": "evidence_sources_candidate_fk",
+          "tableFrom": "evidence_sources",
+          "tableTo": "candidate_listings",
+          "schemaTo": "shopping_private",
+          "columnsFrom": [
+            "task_id",
+            "candidate_run_id",
+            "candidate_listing_id"
+          ],
+          "columnsTo": ["task_id", "run_id", "id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "evidence_sources_attempt_fk": {
+          "name": "evidence_sources_attempt_fk",
+          "tableFrom": "evidence_sources",
+          "tableTo": "evidence_acquisition_attempts",
+          "schemaTo": "shopping_private",
+          "columnsFrom": [
+            "task_id",
+            "research_run_id",
+            "candidate_run_id",
+            "candidate_listing_id",
+            "acquisition_attempt_id"
+          ],
+          "columnsTo": [
+            "task_id",
+            "research_run_id",
+            "candidate_run_id",
+            "candidate_listing_id",
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "evidence_sources_task_id_id_unique": {
+          "name": "evidence_sources_task_id_id_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "id"]
+        },
+        "evidence_sources_candidate_id_unique": {
+          "name": "evidence_sources_candidate_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "task_id",
+            "research_run_id",
+            "candidate_run_id",
+            "candidate_listing_id",
+            "id"
+          ]
+        },
+        "evidence_sources_candidate_kind_id_unique": {
+          "name": "evidence_sources_candidate_kind_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "task_id",
+            "candidate_run_id",
+            "candidate_listing_id",
+            "id",
+            "source_kind"
+          ]
+        },
+        "evidence_sources_attempt_kind_id_unique": {
+          "name": "evidence_sources_attempt_kind_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "task_id",
+            "research_run_id",
+            "candidate_run_id",
+            "candidate_listing_id",
+            "acquisition_attempt_id",
+            "id",
+            "source_kind"
+          ]
+        },
+        "evidence_sources_fingerprint_unique": {
+          "name": "evidence_sources_fingerprint_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "task_id",
+            "candidate_run_id",
+            "candidate_listing_id",
+            "fingerprint"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "evidence_sources_role_allowed": {
+          "name": "evidence_sources_role_allowed",
+          "value": "\"shopping_private\".\"evidence_sources\".\"source_role\" in ('listing', 'retailer', 'manufacturer', 'independent_review', 'retailer_review_aggregate', 'visual', 'other')"
+        },
+        "evidence_sources_kind_allowed": {
+          "name": "evidence_sources_kind_allowed",
+          "value": "\"shopping_private\".\"evidence_sources\".\"source_kind\" in ('listing_field', 'organic_result', 'fetched_page', 'listing_image')"
+        },
+        "evidence_sources_kind_role_shape": {
+          "name": "evidence_sources_kind_role_shape",
+          "value": "(\"shopping_private\".\"evidence_sources\".\"source_kind\" = 'listing_field' and \"shopping_private\".\"evidence_sources\".\"source_role\" in ('listing', 'retailer_review_aggregate')) or (\"shopping_private\".\"evidence_sources\".\"source_kind\" = 'organic_result' and \"shopping_private\".\"evidence_sources\".\"source_role\" in ('retailer', 'manufacturer', 'independent_review', 'retailer_review_aggregate', 'other')) or (\"shopping_private\".\"evidence_sources\".\"source_kind\" = 'fetched_page' and \"shopping_private\".\"evidence_sources\".\"source_role\" in ('retailer', 'manufacturer', 'independent_review', 'retailer_review_aggregate') and \"shopping_private\".\"evidence_sources\".\"acquisition_attempt_id\" is not null) or (\"shopping_private\".\"evidence_sources\".\"source_kind\" = 'listing_image' and \"shopping_private\".\"evidence_sources\".\"source_role\" = 'visual')"
+        },
+        "evidence_sources_url_shape": {
+          "name": "evidence_sources_url_shape",
+          "value": "char_length(\"shopping_private\".\"evidence_sources\".\"source_url\") between 1 and 4000 and \"shopping_private\".\"evidence_sources\".\"source_url\" ~ '^https?://'"
+        },
+        "evidence_sources_text_bounds": {
+          "name": "evidence_sources_text_bounds",
+          "value": "char_length(btrim(\"shopping_private\".\"evidence_sources\".\"source_title\")) between 1 and 500 and (\"shopping_private\".\"evidence_sources\".\"excerpt\" is null or char_length(btrim(\"shopping_private\".\"evidence_sources\".\"excerpt\")) between 1 and 1000) and (\"shopping_private\".\"evidence_sources\".\"provider_result_id\" is null or char_length(btrim(\"shopping_private\".\"evidence_sources\".\"provider_result_id\")) between 1 and 500)"
+        },
+        "evidence_sources_provider_allowed": {
+          "name": "evidence_sources_provider_allowed",
+          "value": "\"shopping_private\".\"evidence_sources\".\"provider\" in ('listing', 'serper', 'page_fetch', 'fixture')"
+        },
+        "evidence_sources_fingerprint_shape": {
+          "name": "evidence_sources_fingerprint_shape",
+          "value": "\"shopping_private\".\"evidence_sources\".\"fingerprint\" ~ '^[a-f0-9]{64}$'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "shopping_private.fetched_evidence_documents": {
+      "name": "fetched_evidence_documents",
+      "schema": "shopping_private",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "task_id": {
+          "name": "task_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "research_run_id": {
+          "name": "research_run_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "candidate_run_id": {
+          "name": "candidate_run_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "candidate_listing_id": {
+          "name": "candidate_listing_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "attempt_id": {
+          "name": "attempt_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "attempt_stage": {
+          "name": "attempt_stage",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'page_fetch'"
+        },
+        "discovered_source_id": {
+          "name": "discovered_source_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "evidence_source_id": {
+          "name": "evidence_source_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "evidence_source_kind": {
+          "name": "evidence_source_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'fetched_page'"
+        },
+        "requested_url": {
+          "name": "requested_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "final_url": {
+          "name": "final_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "canonical_url": {
+          "name": "canonical_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "content_type": {
+          "name": "content_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "encoded_bytes": {
+          "name": "encoded_bytes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "decoded_bytes": {
+          "name": "decoded_bytes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "response_hash": {
+          "name": "response_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "document_hash": {
+          "name": "document_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "extraction_version": {
+          "name": "extraction_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "document": {
+          "name": "document",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "admission": {
+          "name": "admission",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fetched_at": {
+          "name": "fetched_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "fetched_evidence_documents_attempt_fk": {
+          "name": "fetched_evidence_documents_attempt_fk",
+          "tableFrom": "fetched_evidence_documents",
+          "tableTo": "evidence_acquisition_attempts",
+          "schemaTo": "shopping_private",
+          "columnsFrom": [
+            "task_id",
+            "research_run_id",
+            "candidate_run_id",
+            "candidate_listing_id",
+            "attempt_id",
+            "attempt_stage"
+          ],
+          "columnsTo": [
+            "task_id",
+            "research_run_id",
+            "candidate_run_id",
+            "candidate_listing_id",
+            "id",
+            "stage"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "fetched_evidence_documents_target_fk": {
+          "name": "fetched_evidence_documents_target_fk",
+          "tableFrom": "fetched_evidence_documents",
+          "tableTo": "evidence_page_fetch_targets",
+          "schemaTo": "shopping_private",
+          "columnsFrom": [
+            "task_id",
+            "research_run_id",
+            "candidate_run_id",
+            "candidate_listing_id",
+            "attempt_id",
+            "discovered_source_id"
+          ],
+          "columnsTo": [
+            "task_id",
+            "research_run_id",
+            "candidate_run_id",
+            "candidate_listing_id",
+            "attempt_id",
+            "discovered_source_id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "fetched_evidence_documents_source_fk": {
+          "name": "fetched_evidence_documents_source_fk",
+          "tableFrom": "fetched_evidence_documents",
+          "tableTo": "evidence_sources",
+          "schemaTo": "shopping_private",
+          "columnsFrom": [
+            "task_id",
+            "research_run_id",
+            "candidate_run_id",
+            "candidate_listing_id",
+            "attempt_id",
+            "evidence_source_id",
+            "evidence_source_kind"
+          ],
+          "columnsTo": [
+            "task_id",
+            "research_run_id",
+            "candidate_run_id",
+            "candidate_listing_id",
+            "acquisition_attempt_id",
+            "id",
+            "source_kind"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "fetched_evidence_documents_task_id_id_unique": {
+          "name": "fetched_evidence_documents_task_id_id_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "id"]
+        },
+        "fetched_evidence_documents_attempt_unique": {
+          "name": "fetched_evidence_documents_attempt_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "research_run_id", "attempt_id"]
+        },
+        "fetched_evidence_documents_source_unique": {
+          "name": "fetched_evidence_documents_source_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "evidence_source_id"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "fetched_evidence_documents_scope_shape": {
+          "name": "fetched_evidence_documents_scope_shape",
+          "value": "\"shopping_private\".\"fetched_evidence_documents\".\"attempt_stage\" = 'page_fetch' and \"shopping_private\".\"fetched_evidence_documents\".\"evidence_source_kind\" = 'fetched_page'"
+        },
+        "fetched_evidence_documents_url_shape": {
+          "name": "fetched_evidence_documents_url_shape",
+          "value": "char_length(\"shopping_private\".\"fetched_evidence_documents\".\"requested_url\") between 1 and 4000 and \"shopping_private\".\"fetched_evidence_documents\".\"requested_url\" ~ '^https?://' and char_length(\"shopping_private\".\"fetched_evidence_documents\".\"final_url\") between 1 and 4000 and \"shopping_private\".\"fetched_evidence_documents\".\"final_url\" ~ '^https?://' and (\"shopping_private\".\"fetched_evidence_documents\".\"canonical_url\" is null or (char_length(\"shopping_private\".\"fetched_evidence_documents\".\"canonical_url\") between 1 and 4000 and \"shopping_private\".\"fetched_evidence_documents\".\"canonical_url\" ~ '^https?://'))"
+        },
+        "fetched_evidence_documents_content_shape": {
+          "name": "fetched_evidence_documents_content_shape",
+          "value": "\"shopping_private\".\"fetched_evidence_documents\".\"content_type\" in ('text/html', 'application/xhtml+xml', 'text/plain') and \"shopping_private\".\"fetched_evidence_documents\".\"encoded_bytes\" between 1 and 2500000 and \"shopping_private\".\"fetched_evidence_documents\".\"decoded_bytes\" between 1 and 2500000 and \"shopping_private\".\"fetched_evidence_documents\".\"response_hash\" ~ '^[a-f0-9]{64}$' and \"shopping_private\".\"fetched_evidence_documents\".\"document_hash\" ~ '^[a-f0-9]{64}$' and char_length(btrim(\"shopping_private\".\"fetched_evidence_documents\".\"extraction_version\")) between 1 and 120 and jsonb_typeof(\"shopping_private\".\"fetched_evidence_documents\".\"document\") = 'object' and octet_length(\"shopping_private\".\"fetched_evidence_documents\".\"document\"::text) between 2 and 40000 and jsonb_typeof(\"shopping_private\".\"fetched_evidence_documents\".\"admission\") = 'object' and octet_length(\"shopping_private\".\"fetched_evidence_documents\".\"admission\"::text) between 2 and 8000"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "shopping_private.founder_live_sessions": {
+      "name": "founder_live_sessions",
+      "schema": "shopping_private",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "task_id": {
+          "name": "task_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "initial_turn_id": {
+          "name": "initial_turn_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "initial_request_fingerprint": {
+          "name": "initial_request_fingerprint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "current_context_action_id": {
+          "name": "current_context_action_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pending_task_input_id": {
+          "name": "pending_task_input_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "founder_live_sessions_task_fk": {
+          "name": "founder_live_sessions_task_fk",
+          "tableFrom": "founder_live_sessions",
+          "tableTo": "shopping_tasks",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "founder_live_sessions_current_action_fk": {
+          "name": "founder_live_sessions_current_action_fk",
+          "tableFrom": "founder_live_sessions",
+          "tableTo": "context_actions",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id", "current_context_action_id"],
+          "columnsTo": ["task_id", "id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "founder_live_sessions_pending_input_fk": {
+          "name": "founder_live_sessions_pending_input_fk",
+          "tableFrom": "founder_live_sessions",
+          "tableTo": "task_inputs",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id", "pending_task_input_id"],
+          "columnsTo": ["task_id", "id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "founder_live_sessions_task_unique": {
+          "name": "founder_live_sessions_task_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "founder_live_sessions_fingerprint_shape": {
+          "name": "founder_live_sessions_fingerprint_shape",
+          "value": "\"shopping_private\".\"founder_live_sessions\".\"initial_request_fingerprint\" ~ '^[a-f0-9]{64}$'"
+        },
+        "founder_live_sessions_timestamp_order": {
+          "name": "founder_live_sessions_timestamp_order",
+          "value": "\"shopping_private\".\"founder_live_sessions\".\"updated_at\" >= \"shopping_private\".\"founder_live_sessions\".\"created_at\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "shopping_private.merchant_destination_resolutions": {
+      "name": "merchant_destination_resolutions",
+      "schema": "shopping_private",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "task_id": {
+          "name": "task_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "search_run_id": {
+          "name": "search_run_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "candidate_listing_id": {
+          "name": "candidate_listing_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "policy_version": {
+          "name": "policy_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider": {
+          "name": "provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "query_text": {
+          "name": "query_text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "destination_url": {
+          "name": "destination_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "accepted_result_title": {
+          "name": "accepted_result_title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "observed_result_url": {
+          "name": "observed_result_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "outcome_code": {
+          "name": "outcome_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "considered_result_count": {
+          "name": "considered_result_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lease_token": {
+          "name": "lease_token",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lease_expires_at": {
+          "name": "lease_expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "finished_at": {
+          "name": "finished_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "merchant_destination_resolutions_candidate_fk": {
+          "name": "merchant_destination_resolutions_candidate_fk",
+          "tableFrom": "merchant_destination_resolutions",
+          "tableTo": "candidate_listings",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id", "search_run_id", "candidate_listing_id"],
+          "columnsTo": ["task_id", "run_id", "id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "merchant_destination_resolutions_task_id_id_unique": {
+          "name": "merchant_destination_resolutions_task_id_id_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "id"]
+        },
+        "merchant_destination_resolutions_scope_unique": {
+          "name": "merchant_destination_resolutions_scope_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "task_id",
+            "search_run_id",
+            "candidate_listing_id",
+            "policy_version"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "merchant_destination_resolutions_policy_bounds": {
+          "name": "merchant_destination_resolutions_policy_bounds",
+          "value": "char_length(btrim(\"shopping_private\".\"merchant_destination_resolutions\".\"policy_version\")) between 1 and 120"
+        },
+        "merchant_destination_resolutions_provider_allowed": {
+          "name": "merchant_destination_resolutions_provider_allowed",
+          "value": "\"shopping_private\".\"merchant_destination_resolutions\".\"provider\" in ('serper', 'fixture')"
+        },
+        "merchant_destination_resolutions_query_bounds": {
+          "name": "merchant_destination_resolutions_query_bounds",
+          "value": "char_length(btrim(\"shopping_private\".\"merchant_destination_resolutions\".\"query_text\")) between 1 and 500"
+        },
+        "merchant_destination_resolutions_status_allowed": {
+          "name": "merchant_destination_resolutions_status_allowed",
+          "value": "\"shopping_private\".\"merchant_destination_resolutions\".\"status\" in ('running', 'resolved', 'rejected', 'failed')"
+        },
+        "merchant_destination_resolutions_destination_shape": {
+          "name": "merchant_destination_resolutions_destination_shape",
+          "value": "\"shopping_private\".\"merchant_destination_resolutions\".\"destination_url\" is null or (char_length(\"shopping_private\".\"merchant_destination_resolutions\".\"destination_url\") between 1 and 4000 and \"shopping_private\".\"merchant_destination_resolutions\".\"destination_url\" ~ '^https://')"
+        },
+        "merchant_destination_resolutions_accepted_title_shape": {
+          "name": "merchant_destination_resolutions_accepted_title_shape",
+          "value": "\"shopping_private\".\"merchant_destination_resolutions\".\"accepted_result_title\" is null or char_length(btrim(\"shopping_private\".\"merchant_destination_resolutions\".\"accepted_result_title\")) between 1 and 1000"
+        },
+        "merchant_destination_resolutions_observed_url_shape": {
+          "name": "merchant_destination_resolutions_observed_url_shape",
+          "value": "\"shopping_private\".\"merchant_destination_resolutions\".\"observed_result_url\" is null or (char_length(\"shopping_private\".\"merchant_destination_resolutions\".\"observed_result_url\") between 1 and 4000 and \"shopping_private\".\"merchant_destination_resolutions\".\"observed_result_url\" ~ '^https://' and \"shopping_private\".\"merchant_destination_resolutions\".\"observed_result_url\" <> \"shopping_private\".\"merchant_destination_resolutions\".\"destination_url\")"
+        },
+        "merchant_destination_resolutions_outcome_allowed": {
+          "name": "merchant_destination_resolutions_outcome_allowed",
+          "value": "\"shopping_private\".\"merchant_destination_resolutions\".\"outcome_code\" is null or \"shopping_private\".\"merchant_destination_resolutions\".\"outcome_code\" in ('no_results', 'invalid_result', 'unsafe_url', 'intermediary', 'comparison_or_content', 'merchant_mismatch', 'merchant_brand_ambiguity', 'non_product_page', 'ambiguous_identity', 'title_mismatch', 'variant_mismatch', 'provider_failed', 'invalid_provider_result')"
+        },
+        "merchant_destination_resolutions_count_nonnegative": {
+          "name": "merchant_destination_resolutions_count_nonnegative",
+          "value": "\"shopping_private\".\"merchant_destination_resolutions\".\"considered_result_count\" is null or \"shopping_private\".\"merchant_destination_resolutions\".\"considered_result_count\" >= 0"
+        },
+        "merchant_destination_resolutions_lifecycle_shape": {
+          "name": "merchant_destination_resolutions_lifecycle_shape",
+          "value": "(\"shopping_private\".\"merchant_destination_resolutions\".\"status\" = 'running' and \"shopping_private\".\"merchant_destination_resolutions\".\"destination_url\" is null and \"shopping_private\".\"merchant_destination_resolutions\".\"accepted_result_title\" is null and \"shopping_private\".\"merchant_destination_resolutions\".\"observed_result_url\" is null and \"shopping_private\".\"merchant_destination_resolutions\".\"outcome_code\" is null and \"shopping_private\".\"merchant_destination_resolutions\".\"considered_result_count\" is null and \"shopping_private\".\"merchant_destination_resolutions\".\"finished_at\" is null and \"shopping_private\".\"merchant_destination_resolutions\".\"lease_token\" is not null and \"shopping_private\".\"merchant_destination_resolutions\".\"lease_expires_at\" is not null and \"shopping_private\".\"merchant_destination_resolutions\".\"lease_expires_at\" > \"shopping_private\".\"merchant_destination_resolutions\".\"started_at\") or (\"shopping_private\".\"merchant_destination_resolutions\".\"status\" = 'resolved' and \"shopping_private\".\"merchant_destination_resolutions\".\"destination_url\" is not null and \"shopping_private\".\"merchant_destination_resolutions\".\"accepted_result_title\" is not null and \"shopping_private\".\"merchant_destination_resolutions\".\"outcome_code\" is null and \"shopping_private\".\"merchant_destination_resolutions\".\"considered_result_count\" is not null and \"shopping_private\".\"merchant_destination_resolutions\".\"considered_result_count\" > 0 and \"shopping_private\".\"merchant_destination_resolutions\".\"finished_at\" is not null and \"shopping_private\".\"merchant_destination_resolutions\".\"finished_at\" >= \"shopping_private\".\"merchant_destination_resolutions\".\"started_at\" and \"shopping_private\".\"merchant_destination_resolutions\".\"lease_token\" is null and \"shopping_private\".\"merchant_destination_resolutions\".\"lease_expires_at\" is null) or (\"shopping_private\".\"merchant_destination_resolutions\".\"status\" = 'rejected' and \"shopping_private\".\"merchant_destination_resolutions\".\"destination_url\" is null and \"shopping_private\".\"merchant_destination_resolutions\".\"accepted_result_title\" is null and \"shopping_private\".\"merchant_destination_resolutions\".\"observed_result_url\" is null and \"shopping_private\".\"merchant_destination_resolutions\".\"outcome_code\" is not null and \"shopping_private\".\"merchant_destination_resolutions\".\"outcome_code\" in ('no_results', 'invalid_result', 'unsafe_url', 'intermediary', 'comparison_or_content', 'merchant_mismatch', 'merchant_brand_ambiguity', 'non_product_page', 'ambiguous_identity', 'title_mismatch', 'variant_mismatch') and \"shopping_private\".\"merchant_destination_resolutions\".\"considered_result_count\" is not null and \"shopping_private\".\"merchant_destination_resolutions\".\"considered_result_count\" >= 0 and \"shopping_private\".\"merchant_destination_resolutions\".\"finished_at\" is not null and \"shopping_private\".\"merchant_destination_resolutions\".\"finished_at\" >= \"shopping_private\".\"merchant_destination_resolutions\".\"started_at\" and \"shopping_private\".\"merchant_destination_resolutions\".\"lease_token\" is null and \"shopping_private\".\"merchant_destination_resolutions\".\"lease_expires_at\" is null) or (\"shopping_private\".\"merchant_destination_resolutions\".\"status\" = 'failed' and \"shopping_private\".\"merchant_destination_resolutions\".\"destination_url\" is null and \"shopping_private\".\"merchant_destination_resolutions\".\"accepted_result_title\" is null and \"shopping_private\".\"merchant_destination_resolutions\".\"observed_result_url\" is null and \"shopping_private\".\"merchant_destination_resolutions\".\"outcome_code\" is not null and \"shopping_private\".\"merchant_destination_resolutions\".\"outcome_code\" in ('provider_failed', 'invalid_provider_result') and \"shopping_private\".\"merchant_destination_resolutions\".\"considered_result_count\" is null and \"shopping_private\".\"merchant_destination_resolutions\".\"finished_at\" is not null and \"shopping_private\".\"merchant_destination_resolutions\".\"finished_at\" >= \"shopping_private\".\"merchant_destination_resolutions\".\"started_at\" and \"shopping_private\".\"merchant_destination_resolutions\".\"lease_token\" is null and \"shopping_private\".\"merchant_destination_resolutions\".\"lease_expires_at\" is null)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "shopping_private.product_observations": {
+      "name": "product_observations",
+      "schema": "shopping_private",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "task_id": {
+          "name": "task_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "research_run_id": {
+          "name": "research_run_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "candidate_run_id": {
+          "name": "candidate_run_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "candidate_listing_id": {
+          "name": "candidate_listing_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "evidence_source_id": {
+          "name": "evidence_source_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "concept_id": {
+          "name": "concept_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "support": {
+          "name": "support",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "observation_kind": {
+          "name": "observation_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "property_label": {
+          "name": "property_label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "claim": {
+          "name": "claim",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value": {
+          "name": "value",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "derivation": {
+          "name": "derivation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "model": {
+          "name": "model",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "prompt_version": {
+          "name": "prompt_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "observed_at": {
+          "name": "observed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fingerprint": {
+          "name": "fingerprint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "product_observations_source_fk": {
+          "name": "product_observations_source_fk",
+          "tableFrom": "product_observations",
+          "tableTo": "evidence_sources",
+          "schemaTo": "shopping_private",
+          "columnsFrom": [
+            "task_id",
+            "research_run_id",
+            "candidate_run_id",
+            "candidate_listing_id",
+            "evidence_source_id"
+          ],
+          "columnsTo": [
+            "task_id",
+            "research_run_id",
+            "candidate_run_id",
+            "candidate_listing_id",
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "product_observations_concept_fk": {
+          "name": "product_observations_concept_fk",
+          "tableFrom": "product_observations",
+          "tableTo": "concept_definitions",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id", "concept_id"],
+          "columnsTo": ["task_id", "id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "product_observations_task_id_id_unique": {
+          "name": "product_observations_task_id_id_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "id"]
+        },
+        "product_observations_candidate_id_unique": {
+          "name": "product_observations_candidate_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "task_id",
+            "research_run_id",
+            "candidate_run_id",
+            "candidate_listing_id",
+            "id"
+          ]
+        },
+        "product_observations_reusable_candidate_id_unique": {
+          "name": "product_observations_reusable_candidate_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "task_id",
+            "candidate_run_id",
+            "candidate_listing_id",
+            "id"
+          ]
+        },
+        "product_observations_fingerprint_unique": {
+          "name": "product_observations_fingerprint_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "task_id",
+            "candidate_run_id",
+            "candidate_listing_id",
+            "evidence_source_id",
+            "fingerprint"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "product_observations_support_allowed": {
+          "name": "product_observations_support_allowed",
+          "value": "\"shopping_private\".\"product_observations\".\"support\" in ('supported', 'ambiguous')"
+        },
+        "product_observations_kind_allowed": {
+          "name": "product_observations_kind_allowed",
+          "value": "\"shopping_private\".\"product_observations\".\"observation_kind\" in ('structured_field', 'source_assertion', 'visual_inference')"
+        },
+        "product_observations_derivation_allowed": {
+          "name": "product_observations_derivation_allowed",
+          "value": "\"shopping_private\".\"product_observations\".\"derivation\" in ('deterministic', 'model_text', 'model_visual')"
+        },
+        "product_observations_derivation_shape": {
+          "name": "product_observations_derivation_shape",
+          "value": "(\"shopping_private\".\"product_observations\".\"derivation\" = 'deterministic' and \"shopping_private\".\"product_observations\".\"model\" is null and \"shopping_private\".\"product_observations\".\"prompt_version\" is null) or (\"shopping_private\".\"product_observations\".\"derivation\" in ('model_text', 'model_visual') and \"shopping_private\".\"product_observations\".\"model\" is not null and \"shopping_private\".\"product_observations\".\"prompt_version\" is not null)"
+        },
+        "product_observations_text_bounds": {
+          "name": "product_observations_text_bounds",
+          "value": "char_length(btrim(\"shopping_private\".\"product_observations\".\"property_label\")) between 1 and 120 and char_length(btrim(\"shopping_private\".\"product_observations\".\"claim\")) between 1 and 500 and (\"shopping_private\".\"product_observations\".\"model\" is null or char_length(btrim(\"shopping_private\".\"product_observations\".\"model\")) between 1 and 160) and (\"shopping_private\".\"product_observations\".\"prompt_version\" is null or char_length(btrim(\"shopping_private\".\"product_observations\".\"prompt_version\")) between 1 and 120)"
+        },
+        "product_observations_value_object": {
+          "name": "product_observations_value_object",
+          "value": "jsonb_typeof(\"shopping_private\".\"product_observations\".\"value\") is not distinct from 'object' and (\"shopping_private\".\"product_observations\".\"value\" ->> 'schemaVersion') = '1' and (\"shopping_private\".\"product_observations\".\"value\" ->> 'kind') in ('boolean', 'money', 'quantity', 'rating_aggregate', 'categorical', 'text')"
+        },
+        "product_observations_fingerprint_shape": {
+          "name": "product_observations_fingerprint_shape",
+          "value": "\"shopping_private\".\"product_observations\".\"fingerprint\" ~ '^[a-f0-9]{64}$'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "shopping_private.rejected_candidate_listings": {
+      "name": "rejected_candidate_listings",
+      "schema": "shopping_private",
+      "columns": {
+        "task_id": {
+          "name": "task_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "candidate_listing_id": {
+          "name": "candidate_listing_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rejected_at": {
+          "name": "rejected_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "rejected_candidate_listings_candidate_fk": {
+          "name": "rejected_candidate_listings_candidate_fk",
+          "tableFrom": "rejected_candidate_listings",
+          "tableTo": "candidate_listings",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id", "candidate_listing_id"],
+          "columnsTo": ["task_id", "id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "rejected_candidate_listings_pk": {
+          "name": "rejected_candidate_listings_pk",
+          "columns": ["task_id", "candidate_listing_id"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "shopping_private.saved_candidate_listings": {
+      "name": "saved_candidate_listings",
+      "schema": "shopping_private",
+      "columns": {
+        "task_id": {
+          "name": "task_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "candidate_listing_id": {
+          "name": "candidate_listing_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "saved_at": {
+          "name": "saved_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "saved_candidate_listings_candidate_fk": {
+          "name": "saved_candidate_listings_candidate_fk",
+          "tableFrom": "saved_candidate_listings",
+          "tableTo": "candidate_listings",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id", "candidate_listing_id"],
+          "columnsTo": ["task_id", "id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "saved_candidate_listings_pk": {
+          "name": "saved_candidate_listings_pk",
+          "columns": ["task_id", "candidate_listing_id"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "shopping_private.search_hypotheses": {
+      "name": "search_hypotheses",
+      "schema": "shopping_private",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "task_id": {
+          "name": "task_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "run_id": {
+          "name": "run_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ordinal": {
+          "name": "ordinal",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rationale": {
+          "name": "rationale",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_text_is_basis": {
+          "name": "source_text_is_basis",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "search_hypotheses_run_fk": {
+          "name": "search_hypotheses_run_fk",
+          "tableFrom": "search_hypotheses",
+          "tableTo": "search_runs",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id", "run_id"],
+          "columnsTo": ["task_id", "id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "search_hypotheses_task_id_id_unique": {
+          "name": "search_hypotheses_task_id_id_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "id"]
+        },
+        "search_hypotheses_task_run_id_unique": {
+          "name": "search_hypotheses_task_run_id_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "run_id", "id"]
+        },
+        "search_hypotheses_run_ordinal_unique": {
+          "name": "search_hypotheses_run_ordinal_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "run_id", "ordinal"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "search_hypotheses_ordinal_bounds": {
+          "name": "search_hypotheses_ordinal_bounds",
+          "value": "\"shopping_private\".\"search_hypotheses\".\"ordinal\" between 0 and 2"
+        },
+        "search_hypotheses_kind_allowed": {
+          "name": "search_hypotheses_kind_allowed",
+          "value": "\"shopping_private\".\"search_hypotheses\".\"kind\" in ('literal', 'brief_expansion', 'market_vocabulary')"
+        },
+        "search_hypotheses_rationale_bounds": {
+          "name": "search_hypotheses_rationale_bounds",
+          "value": "char_length(btrim(\"shopping_private\".\"search_hypotheses\".\"rationale\")) between 1 and 500"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "shopping_private.search_hypothesis_basis_criteria": {
+      "name": "search_hypothesis_basis_criteria",
+      "schema": "shopping_private",
+      "columns": {
+        "task_id": {
+          "name": "task_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "run_id": {
+          "name": "run_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "hypothesis_id": {
+          "name": "hypothesis_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "criterion_id": {
+          "name": "criterion_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ordinal": {
+          "name": "ordinal",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "search_hypothesis_basis_criteria_hypothesis_fk": {
+          "name": "search_hypothesis_basis_criteria_hypothesis_fk",
+          "tableFrom": "search_hypothesis_basis_criteria",
+          "tableTo": "search_hypotheses",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id", "run_id", "hypothesis_id"],
+          "columnsTo": ["task_id", "run_id", "id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "search_hypothesis_basis_criteria_criterion_fk": {
+          "name": "search_hypothesis_basis_criteria_criterion_fk",
+          "tableFrom": "search_hypothesis_basis_criteria",
+          "tableTo": "decision_criteria",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id", "criterion_id"],
+          "columnsTo": ["task_id", "id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "search_hypothesis_basis_criteria_pk": {
+          "name": "search_hypothesis_basis_criteria_pk",
+          "columns": ["task_id", "run_id", "hypothesis_id", "criterion_id"]
+        }
+      },
+      "uniqueConstraints": {
+        "search_hypothesis_basis_criteria_ordinal_unique": {
+          "name": "search_hypothesis_basis_criteria_ordinal_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "run_id", "hypothesis_id", "ordinal"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "search_hypothesis_basis_criteria_ordinal_bounds": {
+          "name": "search_hypothesis_basis_criteria_ordinal_bounds",
+          "value": "\"shopping_private\".\"search_hypothesis_basis_criteria\".\"ordinal\" between 0 and 19"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "shopping_private.search_queries": {
+      "name": "search_queries",
+      "schema": "shopping_private",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "task_id": {
+          "name": "task_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "run_id": {
+          "name": "run_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "hypothesis_id": {
+          "name": "hypothesis_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ordinal": {
+          "name": "ordinal",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "purpose": {
+          "name": "purpose",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "query_text": {
+          "name": "query_text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "surface": {
+          "name": "surface",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "candidate_limit": {
+          "name": "candidate_limit",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider": {
+          "name": "provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "search_queries_run_provider_fk": {
+          "name": "search_queries_run_provider_fk",
+          "tableFrom": "search_queries",
+          "tableTo": "search_runs",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id", "run_id", "provider"],
+          "columnsTo": ["task_id", "id", "provider"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "search_queries_hypothesis_fk": {
+          "name": "search_queries_hypothesis_fk",
+          "tableFrom": "search_queries",
+          "tableTo": "search_hypotheses",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id", "run_id", "hypothesis_id"],
+          "columnsTo": ["task_id", "run_id", "id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "search_queries_task_id_id_unique": {
+          "name": "search_queries_task_id_id_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "id"]
+        },
+        "search_queries_task_run_id_unique": {
+          "name": "search_queries_task_run_id_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "run_id", "id"]
+        },
+        "search_queries_exact_provider_surface_unique": {
+          "name": "search_queries_exact_provider_surface_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "run_id", "id", "provider", "surface"]
+        },
+        "search_queries_run_ordinal_unique": {
+          "name": "search_queries_run_ordinal_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "run_id", "ordinal"]
+        },
+        "search_queries_hypothesis_unique": {
+          "name": "search_queries_hypothesis_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "run_id", "hypothesis_id"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "search_queries_ordinal_bounds": {
+          "name": "search_queries_ordinal_bounds",
+          "value": "\"shopping_private\".\"search_queries\".\"ordinal\" between 0 and 2"
+        },
+        "search_queries_purpose_allowed": {
+          "name": "search_queries_purpose_allowed",
+          "value": "\"shopping_private\".\"search_queries\".\"purpose\" in ('literal_precision', 'brief_recall', 'market_language')"
+        },
+        "search_queries_text_bounds": {
+          "name": "search_queries_text_bounds",
+          "value": "char_length(btrim(\"shopping_private\".\"search_queries\".\"query_text\")) between 1 and 240"
+        },
+        "search_queries_surface_allowed": {
+          "name": "search_queries_surface_allowed",
+          "value": "\"shopping_private\".\"search_queries\".\"surface\" = 'shopping'"
+        },
+        "search_queries_candidate_limit_bounds": {
+          "name": "search_queries_candidate_limit_bounds",
+          "value": "\"shopping_private\".\"search_queries\".\"candidate_limit\" between 1 and 20"
+        },
+        "search_queries_provider_allowed": {
+          "name": "search_queries_provider_allowed",
+          "value": "\"shopping_private\".\"search_queries\".\"provider\" in ('serper', 'fixture')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "shopping_private.search_query_executions": {
+      "name": "search_query_executions",
+      "schema": "shopping_private",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "task_id": {
+          "name": "task_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "run_id": {
+          "name": "run_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "query_id": {
+          "name": "query_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "received_result_count": {
+          "name": "received_result_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rejected_result_count": {
+          "name": "rejected_result_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "provider_request_id": {
+          "name": "provider_request_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "failure_code": {
+          "name": "failure_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "finished_at": {
+          "name": "finished_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "search_query_executions_run_fk": {
+          "name": "search_query_executions_run_fk",
+          "tableFrom": "search_query_executions",
+          "tableTo": "search_runs",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id", "run_id"],
+          "columnsTo": ["task_id", "id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "search_query_executions_query_fk": {
+          "name": "search_query_executions_query_fk",
+          "tableFrom": "search_query_executions",
+          "tableTo": "search_queries",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id", "run_id", "query_id"],
+          "columnsTo": ["task_id", "run_id", "id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "search_query_executions_task_id_id_unique": {
+          "name": "search_query_executions_task_id_id_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "id"]
+        },
+        "search_query_executions_query_unique": {
+          "name": "search_query_executions_query_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "run_id", "query_id"]
+        },
+        "search_query_executions_exact_query_id_unique": {
+          "name": "search_query_executions_exact_query_id_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "run_id", "query_id", "id"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "search_query_executions_status_allowed": {
+          "name": "search_query_executions_status_allowed",
+          "value": "\"shopping_private\".\"search_query_executions\".\"status\" in ('succeeded', 'failed')"
+        },
+        "search_query_executions_count_shape": {
+          "name": "search_query_executions_count_shape",
+          "value": "(\"shopping_private\".\"search_query_executions\".\"received_result_count\" is null or \"shopping_private\".\"search_query_executions\".\"received_result_count\" >= 0) and (\"shopping_private\".\"search_query_executions\".\"rejected_result_count\" is null or \"shopping_private\".\"search_query_executions\".\"rejected_result_count\" >= 0) and (\"shopping_private\".\"search_query_executions\".\"received_result_count\" is null or \"shopping_private\".\"search_query_executions\".\"rejected_result_count\" is null or \"shopping_private\".\"search_query_executions\".\"rejected_result_count\" <= \"shopping_private\".\"search_query_executions\".\"received_result_count\")"
+        },
+        "search_query_executions_terminal_shape": {
+          "name": "search_query_executions_terminal_shape",
+          "value": "(\"shopping_private\".\"search_query_executions\".\"status\" = 'succeeded' and \"shopping_private\".\"search_query_executions\".\"received_result_count\" is not null and \"shopping_private\".\"search_query_executions\".\"rejected_result_count\" is not null and \"shopping_private\".\"search_query_executions\".\"failure_code\" is null) or (\"shopping_private\".\"search_query_executions\".\"status\" = 'failed' and \"shopping_private\".\"search_query_executions\".\"received_result_count\" is null and \"shopping_private\".\"search_query_executions\".\"rejected_result_count\" is null and \"shopping_private\".\"search_query_executions\".\"failure_code\" is not null and \"shopping_private\".\"search_query_executions\".\"failure_code\" in ('provider_failed', 'invalid_provider_result'))"
+        },
+        "search_query_executions_diagnostic_text_bounds": {
+          "name": "search_query_executions_diagnostic_text_bounds",
+          "value": "(\"shopping_private\".\"search_query_executions\".\"provider_request_id\" is null or char_length(btrim(\"shopping_private\".\"search_query_executions\".\"provider_request_id\")) between 1 and 240) and (\"shopping_private\".\"search_query_executions\".\"failure_code\" is null or \"shopping_private\".\"search_query_executions\".\"failure_code\" in ('provider_failed', 'invalid_provider_result'))"
+        },
+        "search_query_executions_timestamp_order": {
+          "name": "search_query_executions_timestamp_order",
+          "value": "\"shopping_private\".\"search_query_executions\".\"finished_at\" >= \"shopping_private\".\"search_query_executions\".\"started_at\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "shopping_private.search_runs": {
+      "name": "search_runs",
+      "schema": "shopping_private",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "task_id": {
+          "name": "task_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "context_action_id": {
+          "name": "context_action_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "task_revision": {
+          "name": "task_revision",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "market_country": {
+          "name": "market_country",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "language_tag": {
+          "name": "language_tag",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "currency_code": {
+          "name": "currency_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider": {
+          "name": "provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "query_strategy_version": {
+          "name": "query_strategy_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "lease_token": {
+          "name": "lease_token",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lease_expires_at": {
+          "name": "lease_expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "finished_at": {
+          "name": "finished_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "search_runs_task_fk": {
+          "name": "search_runs_task_fk",
+          "tableFrom": "search_runs",
+          "tableTo": "shopping_tasks",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "search_runs_context_action_fk": {
+          "name": "search_runs_context_action_fk",
+          "tableFrom": "search_runs",
+          "tableTo": "context_actions",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id", "context_action_id"],
+          "columnsTo": ["task_id", "id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "search_runs_task_id_id_unique": {
+          "name": "search_runs_task_id_id_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "id"]
+        },
+        "search_runs_task_id_id_provider_unique": {
+          "name": "search_runs_task_id_id_provider_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "id", "provider"]
+        },
+        "search_runs_task_context_action_unique": {
+          "name": "search_runs_task_context_action_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "context_action_id"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "search_runs_revision_nonnegative": {
+          "name": "search_runs_revision_nonnegative",
+          "value": "\"shopping_private\".\"search_runs\".\"task_revision\" >= 0"
+        },
+        "search_runs_market_country_shape": {
+          "name": "search_runs_market_country_shape",
+          "value": "\"shopping_private\".\"search_runs\".\"market_country\" ~ '^[A-Z]{2}$'"
+        },
+        "search_runs_language_tag_shape": {
+          "name": "search_runs_language_tag_shape",
+          "value": "\"shopping_private\".\"search_runs\".\"language_tag\" ~ '^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$'"
+        },
+        "search_runs_currency_code_shape": {
+          "name": "search_runs_currency_code_shape",
+          "value": "\"shopping_private\".\"search_runs\".\"currency_code\" ~ '^[A-Z]{3}$'"
+        },
+        "search_runs_config_text_bounds": {
+          "name": "search_runs_config_text_bounds",
+          "value": "char_length(btrim(\"shopping_private\".\"search_runs\".\"provider\")) between 1 and 120 and char_length(btrim(\"shopping_private\".\"search_runs\".\"query_strategy_version\")) between 1 and 120"
+        },
+        "search_runs_provider_allowed": {
+          "name": "search_runs_provider_allowed",
+          "value": "\"shopping_private\".\"search_runs\".\"provider\" in ('serper', 'fixture')"
+        },
+        "search_runs_status_allowed": {
+          "name": "search_runs_status_allowed",
+          "value": "\"shopping_private\".\"search_runs\".\"status\" in ('running', 'succeeded', 'partial', 'failed')"
+        },
+        "search_runs_status_time_shape": {
+          "name": "search_runs_status_time_shape",
+          "value": "(\"shopping_private\".\"search_runs\".\"status\" = 'running' and \"shopping_private\".\"search_runs\".\"finished_at\" is null) or (\"shopping_private\".\"search_runs\".\"status\" in ('succeeded', 'partial', 'failed') and \"shopping_private\".\"search_runs\".\"finished_at\" is not null and \"shopping_private\".\"search_runs\".\"finished_at\" >= \"shopping_private\".\"search_runs\".\"started_at\")"
+        },
+        "search_runs_lease_shape": {
+          "name": "search_runs_lease_shape",
+          "value": "(\"shopping_private\".\"search_runs\".\"lease_token\" is null and \"shopping_private\".\"search_runs\".\"lease_expires_at\" is null) or (\"shopping_private\".\"search_runs\".\"status\" = 'running' and \"shopping_private\".\"search_runs\".\"lease_token\" is not null and \"shopping_private\".\"search_runs\".\"lease_expires_at\" is not null)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "shopping_private.shopping_task_subjects": {
+      "name": "shopping_task_subjects",
+      "schema": "shopping_private",
+      "columns": {
+        "task_id": {
+          "name": "task_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "task_input_id": {
+          "name": "task_input_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_message_id": {
+          "name": "user_message_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "shopping_task_subjects_exact_message_fk": {
+          "name": "shopping_task_subjects_exact_message_fk",
+          "tableFrom": "shopping_task_subjects",
+          "tableTo": "user_messages",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id", "task_input_id", "user_message_id"],
+          "columnsTo": ["task_id", "task_input_id", "id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "shopping_private.shopping_tasks": {
+      "name": "shopping_tasks",
+      "schema": "shopping_private",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "current_revision": {
+          "name": "current_revision",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "0"
+        },
+        "market_country": {
+          "name": "market_country",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "language_tag": {
+          "name": "language_tag",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "currency_code": {
+          "name": "currency_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "shopping_tasks_revision_nonnegative": {
+          "name": "shopping_tasks_revision_nonnegative",
+          "value": "\"shopping_private\".\"shopping_tasks\".\"current_revision\" >= 0"
+        },
+        "shopping_tasks_market_country_shape": {
+          "name": "shopping_tasks_market_country_shape",
+          "value": "\"shopping_private\".\"shopping_tasks\".\"market_country\" ~ '^[A-Z]{2}$'"
+        },
+        "shopping_tasks_language_tag_shape": {
+          "name": "shopping_tasks_language_tag_shape",
+          "value": "\"shopping_private\".\"shopping_tasks\".\"language_tag\" ~ '^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$'"
+        },
+        "shopping_tasks_currency_code_shape": {
+          "name": "shopping_tasks_currency_code_shape",
+          "value": "\"shopping_private\".\"shopping_tasks\".\"currency_code\" ~ '^[A-Z]{3}$'"
+        },
+        "shopping_tasks_timestamp_order": {
+          "name": "shopping_tasks_timestamp_order",
+          "value": "\"shopping_private\".\"shopping_tasks\".\"updated_at\" >= \"shopping_private\".\"shopping_tasks\".\"created_at\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "shopping_private.state_change_applications": {
+      "name": "state_change_applications",
+      "schema": "shopping_private",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "task_id": {
+          "name": "task_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_task_input_id": {
+          "name": "source_task_input_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "application_kind": {
+          "name": "application_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "request_schema_version": {
+          "name": "request_schema_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fingerprint_version": {
+          "name": "fingerprint_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "request_fingerprint": {
+          "name": "request_fingerprint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "base_revision": {
+          "name": "base_revision",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "resulting_revision": {
+          "name": "resulting_revision",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "outcome": {
+          "name": "outcome",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "delta_schema_version": {
+          "name": "delta_schema_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "applied_delta": {
+          "name": "applied_delta",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "undoes_application_id": {
+          "name": "undoes_application_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "state_change_applications_one_undo_per_target": {
+          "name": "state_change_applications_one_undo_per_target",
+          "columns": [
+            {
+              "expression": "task_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "undoes_application_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"shopping_private\".\"state_change_applications\".\"undoes_application_id\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "state_change_applications_task_fk": {
+          "name": "state_change_applications_task_fk",
+          "tableFrom": "state_change_applications",
+          "tableTo": "shopping_tasks",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "state_change_applications_source_input_fk": {
+          "name": "state_change_applications_source_input_fk",
+          "tableFrom": "state_change_applications",
+          "tableTo": "task_inputs",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id", "source_task_input_id"],
+          "columnsTo": ["task_id", "id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "state_change_applications_task_id_id_unique": {
+          "name": "state_change_applications_task_id_id_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "id"]
+        },
+        "state_change_applications_task_source_unique": {
+          "name": "state_change_applications_task_source_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "source_task_input_id"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "state_change_applications_kind_allowed": {
+          "name": "state_change_applications_kind_allowed",
+          "value": "\"shopping_private\".\"state_change_applications\".\"application_kind\" in ('patch', 'undo')"
+        },
+        "state_change_applications_outcome_allowed": {
+          "name": "state_change_applications_outcome_allowed",
+          "value": "\"shopping_private\".\"state_change_applications\".\"outcome\" in ('applied', 'no_change')"
+        },
+        "state_change_applications_versions_positive": {
+          "name": "state_change_applications_versions_positive",
+          "value": "\"shopping_private\".\"state_change_applications\".\"request_schema_version\" > 0 and \"shopping_private\".\"state_change_applications\".\"fingerprint_version\" > 0 and \"shopping_private\".\"state_change_applications\".\"delta_schema_version\" > 0"
+        },
+        "state_change_applications_fingerprint_shape": {
+          "name": "state_change_applications_fingerprint_shape",
+          "value": "\"shopping_private\".\"state_change_applications\".\"request_fingerprint\" ~ '^[a-f0-9]{64}$'"
+        },
+        "state_change_applications_revision_shape": {
+          "name": "state_change_applications_revision_shape",
+          "value": "\"shopping_private\".\"state_change_applications\".\"base_revision\" >= 0 and ((\"shopping_private\".\"state_change_applications\".\"outcome\" = 'no_change' and \"shopping_private\".\"state_change_applications\".\"resulting_revision\" = \"shopping_private\".\"state_change_applications\".\"base_revision\") or (\"shopping_private\".\"state_change_applications\".\"outcome\" = 'applied' and \"shopping_private\".\"state_change_applications\".\"resulting_revision\" = \"shopping_private\".\"state_change_applications\".\"base_revision\" + 1))"
+        },
+        "state_change_applications_undo_shape": {
+          "name": "state_change_applications_undo_shape",
+          "value": "(\"shopping_private\".\"state_change_applications\".\"application_kind\" = 'patch' and \"shopping_private\".\"state_change_applications\".\"undoes_application_id\" is null) or (\"shopping_private\".\"state_change_applications\".\"application_kind\" = 'undo' and \"shopping_private\".\"state_change_applications\".\"undoes_application_id\" is not null and \"shopping_private\".\"state_change_applications\".\"outcome\" = 'applied')"
+        },
+        "state_change_applications_delta_object": {
+          "name": "state_change_applications_delta_object",
+          "value": "jsonb_typeof(\"shopping_private\".\"state_change_applications\".\"applied_delta\") is not distinct from 'object'"
+        },
+        "state_change_applications_delta_shape": {
+          "name": "state_change_applications_delta_shape",
+          "value": "coalesce(\"shopping_private\".\"state_change_applications\".\"applied_delta\" ->> 'schemaVersion', '') ~ '^[1-9][0-9]*$' and (\"shopping_private\".\"state_change_applications\".\"applied_delta\" ->> 'schemaVersion')::integer = \"shopping_private\".\"state_change_applications\".\"delta_schema_version\" and jsonb_typeof(\"shopping_private\".\"state_change_applications\".\"applied_delta\" -> 'entries') is not distinct from 'array'"
+        },
+        "state_change_applications_delta_outcome": {
+          "name": "state_change_applications_delta_outcome",
+          "value": "(\"shopping_private\".\"state_change_applications\".\"outcome\" = 'no_change' and jsonb_array_length(\"shopping_private\".\"state_change_applications\".\"applied_delta\" -> 'entries') = 0) or (\"shopping_private\".\"state_change_applications\".\"outcome\" = 'applied' and jsonb_array_length(\"shopping_private\".\"state_change_applications\".\"applied_delta\" -> 'entries') > 0)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "shopping_private.task_inputs": {
+      "name": "task_inputs",
+      "schema": "shopping_private",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "task_id": {
+          "name": "task_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "client_action_id": {
+          "name": "client_action_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "input_kind": {
+          "name": "input_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "input_schema_version": {
+          "name": "input_schema_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "input_payload": {
+          "name": "input_payload",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fingerprint_version": {
+          "name": "fingerprint_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "request_fingerprint": {
+          "name": "request_fingerprint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expected_revision": {
+          "name": "expected_revision",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "received_at": {
+          "name": "received_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "task_inputs_task_fk": {
+          "name": "task_inputs_task_fk",
+          "tableFrom": "task_inputs",
+          "tableTo": "shopping_tasks",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "task_inputs_task_id_id_unique": {
+          "name": "task_inputs_task_id_id_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "id"]
+        },
+        "task_inputs_task_client_action_unique": {
+          "name": "task_inputs_task_client_action_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "client_action_id"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "task_inputs_client_action_shape": {
+          "name": "task_inputs_client_action_shape",
+          "value": "char_length(\"shopping_private\".\"task_inputs\".\"client_action_id\") between 1 and 160 and \"shopping_private\".\"task_inputs\".\"client_action_id\" ~ '^[A-Za-z0-9][A-Za-z0-9._:-]*$'"
+        },
+        "task_inputs_kind_allowed": {
+          "name": "task_inputs_kind_allowed",
+          "value": "\"shopping_private\".\"task_inputs\".\"input_kind\" in ('message', 'question_answer', 'direct_brief_action')"
+        },
+        "task_inputs_schema_version_positive": {
+          "name": "task_inputs_schema_version_positive",
+          "value": "\"shopping_private\".\"task_inputs\".\"input_schema_version\" > 0"
+        },
+        "task_inputs_payload_object": {
+          "name": "task_inputs_payload_object",
+          "value": "jsonb_typeof(\"shopping_private\".\"task_inputs\".\"input_payload\") is not distinct from 'object'"
+        },
+        "task_inputs_payload_discriminators_match": {
+          "name": "task_inputs_payload_discriminators_match",
+          "value": "(\"shopping_private\".\"task_inputs\".\"input_payload\" ->> 'kind') is not distinct from \"shopping_private\".\"task_inputs\".\"input_kind\" and coalesce(\"shopping_private\".\"task_inputs\".\"input_payload\" ->> 'schemaVersion', '') ~ '^[1-9][0-9]*$' and (\"shopping_private\".\"task_inputs\".\"input_payload\" ->> 'schemaVersion')::integer = \"shopping_private\".\"task_inputs\".\"input_schema_version\""
+        },
+        "task_inputs_fingerprint_version_positive": {
+          "name": "task_inputs_fingerprint_version_positive",
+          "value": "\"shopping_private\".\"task_inputs\".\"fingerprint_version\" > 0"
+        },
+        "task_inputs_fingerprint_shape": {
+          "name": "task_inputs_fingerprint_shape",
+          "value": "\"shopping_private\".\"task_inputs\".\"request_fingerprint\" ~ '^[a-f0-9]{64}$'"
+        },
+        "task_inputs_expected_revision_nonnegative": {
+          "name": "task_inputs_expected_revision_nonnegative",
+          "value": "\"shopping_private\".\"task_inputs\".\"expected_revision\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "shopping_private.user_messages": {
+      "name": "user_messages",
+      "schema": "shopping_private",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "task_id": {
+          "name": "task_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "task_input_id": {
+          "name": "task_input_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "body": {
+          "name": "body",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "received_at_revision": {
+          "name": "received_at_revision",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "user_messages_task_fk": {
+          "name": "user_messages_task_fk",
+          "tableFrom": "user_messages",
+          "tableTo": "shopping_tasks",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "user_messages_input_fk": {
+          "name": "user_messages_input_fk",
+          "tableFrom": "user_messages",
+          "tableTo": "task_inputs",
+          "schemaTo": "shopping_private",
+          "columnsFrom": ["task_id", "task_input_id"],
+          "columnsTo": ["task_id", "id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "user_messages_task_id_id_unique": {
+          "name": "user_messages_task_id_id_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "id"]
+        },
+        "user_messages_task_input_unique": {
+          "name": "user_messages_task_input_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "task_input_id"]
+        },
+        "user_messages_exact_source_unique": {
+          "name": "user_messages_exact_source_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id", "task_input_id", "id"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "user_messages_body_shape": {
+          "name": "user_messages_body_shape",
+          "value": "char_length(\"shopping_private\".\"user_messages\".\"body\") between 1 and 10000 and \"shopping_private\".\"user_messages\".\"body\" ~ '[^[:space:]]'"
+        },
+        "user_messages_revision_nonnegative": {
+          "name": "user_messages_revision_nonnegative",
+          "value": "\"shopping_private\".\"user_messages\".\"received_at_revision\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {
+    "shopping_private": "shopping_private"
+  },
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

@@ -70,6 +70,7 @@ function view(options?: {
     savedListings: [],
     rejectedListings: rejected ? [{ ...listing, rejected: true }] : [],
     decisionSupport: {
+      transition: null,
       researchStatus: options?.researchStatus ?? "ready",
       deepResearchStatus: options?.deepResearchStatus ?? "not_needed",
       researchActivity: {
@@ -732,6 +733,10 @@ describe("founder live shopping decision loop", () => {
     const delayedBackground = new Promise<Response>((resolve) => {
       resolveBackground = resolve;
     });
+    let resolveRefinement!: (response: Response) => void;
+    const delayedRefinement = new Promise<Response>((resolve) => {
+      resolveRefinement = resolve;
+    });
     const operations: string[] = [];
     vi.stubGlobal(
       "fetch",
@@ -741,7 +746,7 @@ describe("founder live shopping decision loop", () => {
         operations.push(body.operation);
         return body.operation === "deepen_research"
           ? delayedBackground
-          : jsonResponse(refined);
+          : delayedRefinement;
       }),
     );
 
@@ -754,6 +759,10 @@ describe("founder live shopping decision loop", () => {
       screen.getByRole("button", { name: "Update my priorities" }),
     );
     await waitFor(() => expect(operations).toContain("refine"));
+    expect(
+      screen.getByText("Checking your change before recommending"),
+    ).toBeVisible();
+    await act(async () => resolveRefinement(jsonResponse(refined)));
     expect(
       await screen.findByText("Water resistance", { exact: true }),
     ).toBeVisible();

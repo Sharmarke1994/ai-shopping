@@ -29,6 +29,10 @@ import {
   loadCurrentDecisionSupportInTransaction,
 } from "@/features/product-understanding/persistence";
 import { buildDecisionSupport } from "@/features/product-understanding/decision-support";
+import {
+  captureDecisionRefinementBasis,
+  loadDecisionTransitionInTransaction,
+} from "./decision-history";
 import { loadPersistedSearchRunByTrigger } from "@/features/retrieval-spike/persistence/search-runs";
 import {
   loadShoppingSubjectInTransaction,
@@ -565,6 +569,11 @@ export async function refineLiveShopping(options: {
       }
     }
   }
+  await captureDecisionRefinementBasis({
+    db: options.dependencies.db,
+    taskId: current.session.taskId,
+    sourceTaskInputId: recorded.input.id,
+  });
   await markPendingInput({
     db: options.dependencies.db,
     sessionId: current.session.id,
@@ -1242,6 +1251,11 @@ export async function loadLiveShoppingSession(options: {
         tx,
         taskId: session.taskId,
       });
+      const transition = await loadDecisionTransitionInTransaction({
+        tx,
+        support,
+        rejectedIds: new Set(rejected.map(({ listing }) => listing.id)),
+      });
       return {
         action,
         answeredAskInputId,
@@ -1249,6 +1263,7 @@ export async function loadLiveShoppingSession(options: {
         session,
         subject,
         support,
+        transition,
         saved,
         rejected,
       };
@@ -1316,6 +1331,7 @@ export async function loadLiveShoppingSession(options: {
     leader: decisionLeader,
   });
   const decisionSupport = {
+    transition: snapshot.transition,
     researchStatus: decision.researchStatus,
     deepResearchStatus: decision.deepResearchStatus,
     researchActivity: decision.researchActivity,
