@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 2,
+  "preflightId": "49bf0070-79fa-4b26-beac-bde6fb6ed036",
+  "kind": "development_product_engine_preflight",
+  "checkpointNumber": 2,
+  "checkpointName": "product_engine_preflight_checkpoint_2",
+  "startedAt": "2026-09-05T13:16:29.648Z",
+  "finishedAt": "2026-09-05T13:16:35.617Z",
+  "gitHead": "b5dc455c02251ff49be305a27bac5d2ffe9bd09e",
+  "contextBypassed": true,
+  "releaseAccepted": false,
+  "rc5": false,
+  "adapters": {
+    "shopping": "SerperShoppingAdapter",
+    "evidence": "SerperEvidenceSearchAdapter",
+    "productUnderstanding": "OpenAIProductUnderstandingModel"
+  },
+  "model": {
+    "provider": "openai",
+    "identity": "gpt-5.6-terra",
+    "promptVersion": "product-understanding-v3"
+  },
+  "providers": {
+    "openai": {
+      "status": "blocked",
+      "failureCode": "provider_rate_limited",
+      "providerRequestId": "req_019e82535cb74ccabd95eae0c1ea9f8c"
+    },
+    "serper": {
+      "status": "available",
+      "failureCode": null,
+      "shoppingListingCount": 2,
+      "evidenceResultCount": 5
+    }
+  }
+}
