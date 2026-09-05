@@ -6,7 +6,17 @@
  * createShoppingTask -> recordInitialShoppingSubject -> applyStatePatch.
  * This file is product-engine evidence, never release acceptance evidence.
  */
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { createHash, randomUUID } from "node:crypto";
+import { eq, inArray } from "drizzle-orm";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import {
   buildMouseRevisionTwoPatch,
   buildProductEngineInitialPatch,
@@ -15,6 +25,14 @@ import {
 } from "../../scripts/support/v0-09-product-engine-cases";
 import { persistContextAction } from "../../src/features/context-acquisition/persistence/context-actions";
 import { saveCandidateListing } from "../../src/features/live-shopping/saved-listings";
+import {
+  deepenLiveShoppingResearch,
+  loadLiveShoppingSession,
+  researchLiveShopping,
+  resolveLivePurchaseDestinations,
+  setLiveListingSaved,
+  type LiveShoppingDependencies,
+} from "../../src/features/live-shopping/application";
 import {
   FakeEvidencePageFetcher,
   FakeEvidenceSearchProvider,
@@ -36,6 +54,16 @@ import { createShoppingTask } from "../../src/features/shopping-state/persistenc
 import { recordTaskInput } from "../../src/features/shopping-state/persistence/inputs-and-messages";
 import { applyStatePatch } from "../../src/features/shopping-state/persistence/state-transitions";
 import { loadCurrentShoppingState } from "../../src/features/shopping-state/persistence/state-loaders";
+import {
+  criterionAssessmentObservations,
+  criterionAssessments,
+  evidenceAcquisitionAttempts,
+  evidenceSources,
+  fetchedEvidenceDocuments,
+  founderLiveSessions,
+  productObservations,
+  savedCandidateListings,
+} from "../../src/infrastructure/database/schema";
 import {
   createTestDatabaseConnection,
   resetShoppingState,
@@ -360,11 +388,14 @@ describe("development-only V0-09 product engine proof", () => {
       contextActionId: seeded.action.id,
       provider: productProvider(),
     });
+    const evidenceProvider = new FakeEvidenceSearchProvider();
+    const pageFetcher = new FakeEvidencePageFetcher();
+    const understanding = new FakeProductUnderstandingModel();
     const fakeDeps = {
       db: connection.db,
-      evidenceProvider: new FakeEvidenceSearchProvider(),
-      pageFetcher: new FakeEvidencePageFetcher(),
-      model: new FakeProductUnderstandingModel(),
+      evidenceProvider,
+      pageFetcher,
+      model: understanding,
       modelIdentity: {
         provider: "fixture" as const,
         model: "product-proof-understanding",
@@ -381,7 +412,8 @@ describe("development-only V0-09 product engine proof", () => {
       db: connection.db,
       taskId: seeded.task.id,
     });
-    const candidateId = before.candidates[0]?.id;
+    const candidateIds = before.candidates.slice(0, 2).map(({ id }) => id);
+    const candidateId = candidateIds[0];
     const stateBeforeRefinement = await loadCurrentShoppingState(
       connection.db,
       seeded.task.id,
@@ -392,6 +424,7 @@ describe("development-only V0-09 product engine proof", () => {
       ({ criterion }) => conceptLabel(criterion.conceptId) === "Reviews",
     )?.criterion;
     expect(candidateId).toBeDefined();
+    expect(candidateIds).toHaveLength(2);
     expect(reviews).toBeDefined();
     expect(reviews?.strength).toBe("strong_preference");
     const preservedBefore = new Map(
@@ -406,11 +439,43 @@ describe("development-only V0-09 product engine proof", () => {
           },
         ]),
     );
-    await saveCandidateListing({
-      db: connection.db,
-      taskId: seeded.task.id,
-      candidateListingId: candidateId!,
-    });
+    for (const candidateListingId of candidateIds) {
+      await saveCandidateListing({
+        db: connection.db,
+        taskId: seeded.task.id,
+        candidateListingId,
+      });
+    }
+    const beforeSavedRows = await connection.db
+      .select()
+      .from(savedCandidateListings)
+      .where(eq(savedCandidateListings.taskId, seeded.task.id));
+    const beforeObservations = await connection.db
+      .select()
+      .from(productObservations)
+      .where(inArray(productObservations.candidateListingId, [candidateId!]));
+    const beforeSources = await connection.db
+      .select()
+      .from(evidenceSources)
+      .where(inArray(evidenceSources.candidateListingId, [candidateId!]));
+    const beforeDocuments = await connection.db
+      .select()
+      .from(fetchedEvidenceDocuments)
+      .where(
+        inArray(fetchedEvidenceDocuments.candidateListingId, [candidateId!]),
+      );
+    const beforeAssessments = await connection.db
+      .select()
+      .from(criterionAssessments)
+      .where(inArray(criterionAssessments.candidateListingId, [candidateId!]));
+    const callsBeforeRefinement = {
+      evidenceSearch: evidenceProvider.calls.length,
+      pageFetch: pageFetcher.calls.length,
+      model: understanding.calls.length,
+      modelCriterionTargets: understanding.calls.map((call) =>
+        call.criteria.map(({ label }) => label),
+      ),
+    };
     const refinement = await recordTaskInput({
       db: connection.db,
       taskId: seeded.task.id,
@@ -479,15 +544,286 @@ describe("development-only V0-09 product engine proof", () => {
       taskId: seeded.task.id,
       searchRunId: retrieval.run.portfolio.run.id,
       mode: "reassessment",
-      savedCandidateListingIds: [candidateId!],
+      savedCandidateListingIds: candidateIds,
     });
     const after = await loadCurrentDecisionSupport({
       db: connection.db,
       taskId: seeded.task.id,
     });
     expect(after.brief.revision).toBe(2n);
+    expect(after.assessments.length).toBeGreaterThan(0);
     expect(
-      after.assessments.some(({ taskRevision }) => taskRevision === 2n),
+      after.assessments.every(({ taskRevision }) => taskRevision === 2n),
     ).toBe(true);
+    expect(
+      after.assessments.some(({ criterionId }) => criterionId === comfort?.id),
+    ).toBe(true);
+    expect(
+      after.assessments.some(
+        ({ criterionId }) => criterionId === afterReviews?.id,
+      ),
+    ).toBe(true);
+
+    const afterSavedRows = await connection.db
+      .select()
+      .from(savedCandidateListings)
+      .where(eq(savedCandidateListings.taskId, seeded.task.id));
+    const afterObservations = await connection.db
+      .select()
+      .from(productObservations)
+      .where(inArray(productObservations.candidateListingId, [candidateId!]));
+    const afterSources = await connection.db
+      .select()
+      .from(evidenceSources)
+      .where(inArray(evidenceSources.candidateListingId, [candidateId!]));
+    const afterDocuments = await connection.db
+      .select()
+      .from(fetchedEvidenceDocuments)
+      .where(
+        inArray(fetchedEvidenceDocuments.candidateListingId, [candidateId!]),
+      );
+    const allAssessments = await connection.db
+      .select()
+      .from(criterionAssessments)
+      .where(inArray(criterionAssessments.candidateListingId, [candidateId!]));
+    expect(
+      afterSavedRows.map(({ candidateListingId }) => candidateListingId),
+    ).toEqual(
+      beforeSavedRows.map(({ candidateListingId }) => candidateListingId),
+    );
+    expect(
+      afterSavedRows.map(({ candidateListingId }) => candidateListingId).sort(),
+    ).toEqual([...candidateIds].sort());
+    const afterObservationIds = new Set(afterObservations.map(({ id }) => id));
+    expect(
+      beforeObservations.every(({ id }) => afterObservationIds.has(id)),
+    ).toBe(true);
+    expect(
+      afterObservations.every(
+        ({ candidateListingId }) => candidateListingId === candidateId,
+      ),
+    ).toBe(true);
+    expect(
+      new Set(afterObservations.map(({ fingerprint }) => fingerprint)).size,
+    ).toBe(afterObservations.length);
+    expect(afterSources.map(({ id }) => id).sort()).toEqual(
+      beforeSources.map(({ id }) => id).sort(),
+    );
+    expect(afterDocuments.map(({ id }) => id).sort()).toEqual(
+      beforeDocuments.map(({ id }) => id).sort(),
+    );
+    expect(
+      afterDocuments.map(({ evidenceSourceId }) => evidenceSourceId).sort(),
+    ).toEqual(
+      beforeDocuments.map(({ evidenceSourceId }) => evidenceSourceId).sort(),
+    );
+    expect(evidenceProvider.calls).toHaveLength(
+      callsBeforeRefinement.evidenceSearch,
+    );
+    expect(pageFetcher.calls).toHaveLength(callsBeforeRefinement.pageFetch);
+    expect(understanding.calls.length).toBeGreaterThan(
+      callsBeforeRefinement.model,
+    );
+    expect(
+      understanding.calls
+        .slice(callsBeforeRefinement.model)
+        .flatMap((call) => call.criteria.map(({ label }) => label)),
+    ).toEqual(expect.arrayContaining(["Reviews", "Comfort for long workdays"]));
+    expect(
+      callsBeforeRefinement.modelCriterionTargets.every(
+        (batch) => batch.length <= 2,
+      ),
+    ).toBe(true);
+    expect(
+      new Set(allAssessments.map(({ taskRevision }) => taskRevision)).size,
+    ).toBe(2);
+    expect(allAssessments.some(({ taskRevision }) => taskRevision === 1n)).toBe(
+      true,
+    );
+    expect(allAssessments.some(({ taskRevision }) => taskRevision === 2n)).toBe(
+      true,
+    );
+    expect(
+      beforeAssessments.every(({ taskRevision }) => taskRevision === 1n),
+    ).toBe(true);
+
+    const pageSourceIds = new Set(
+      afterSources
+        .filter(({ sourceKind }) => sourceKind === "fetched_page")
+        .map(({ id }) => id),
+    );
+    const pageObservationIds = new Set(
+      afterObservations
+        .filter(({ evidenceSourceId }) => pageSourceIds.has(evidenceSourceId))
+        .map(({ id }) => id),
+    );
+    const currentPageAssessment = after.assessments.find(({ observationIds }) =>
+      observationIds.some((id) => pageObservationIds.has(id)),
+    );
+    expect(beforeDocuments.length).toBeGreaterThan(0);
+    expect(pageObservationIds.size).toBeGreaterThan(0);
+    expect(currentPageAssessment).toBeDefined();
+    expect(currentPageAssessment?.taskRevision).toBe(2n);
+    const linked = await connection.db
+      .select()
+      .from(criterionAssessmentObservations)
+      .where(
+        inArray(criterionAssessmentObservations.assessmentId, [
+          currentPageAssessment!.id,
+        ]),
+      );
+    expect(
+      linked.some(({ observationId }) => pageObservationIds.has(observationId)),
+    ).toBe(true);
+    const currentComparison = buildDecisionSupport({
+      support: after,
+      savedListingIds: new Set(candidateIds),
+      savedListings: after.candidates.filter(({ id }) =>
+        candidateIds.includes(id),
+      ),
+    });
+    expect(
+      currentComparison.topOptions.some(
+        ({ listing }) => listing.id === candidateId,
+      ),
+    ).toBe(true);
+    expect(
+      currentComparison.comparison?.candidates.map(({ id }) => id).sort(),
+    ).toEqual([...candidateIds].sort());
+  });
+
+  it("projects a faithfully seeded product task through the real live application operations", async () => {
+    const seeded = await seedFixture(connection.db, cases[0]!);
+    const retrievalProvider = productProvider();
+    await executeOrResumeRetrieval({
+      db: connection.db,
+      taskId: seeded.task.id,
+      contextActionId: seeded.action.id,
+      provider: retrievalProvider,
+    });
+    const sessionId = randomUUID();
+    await connection.db.insert(founderLiveSessions).values({
+      id: sessionId,
+      taskId: seeded.task.id,
+      initialTurnId: randomUUID(),
+      initialRequestFingerprint: createHash("sha256")
+        .update(cases[0]!.request)
+        .digest("hex"),
+      currentContextActionId: seeded.action.id,
+      pendingTaskInputId: null,
+    });
+    const evidenceProvider = new FakeEvidenceSearchProvider();
+    const pageFetcher = new FakeEvidencePageFetcher();
+    const understanding = new FakeProductUnderstandingModel();
+    let destinationCalls = 0;
+    const dependencies = {
+      db: connection.db,
+      model: {
+        interpret: vi.fn(() => {
+          throw new Error("seeded application proof must not acquire context");
+        }),
+        selectAction: vi.fn(() => {
+          throw new Error("seeded application proof must not acquire context");
+        }),
+      },
+      provider: retrievalProvider,
+      research: {
+        evidenceProvider,
+        pageFetcher,
+        model: understanding,
+        modelIdentity: {
+          provider: "fixture" as const,
+          model: "product-proof-understanding",
+          promptVersion: "product-proof-v1",
+        },
+      },
+      destinationResolver: {
+        provider: "fixture" as const,
+        maxRequestDurationMs: 0,
+        resolve: async (request: {
+          candidateListingId: string;
+          title: string;
+        }) => {
+          destinationCalls += 1;
+          return destinationCalls === 1
+            ? {
+                outcome: "resolved" as const,
+                destinationUrl: `https://fixtureoutfitters.co.uk/products/${request.candidateListingId}`,
+                acceptedResultTitle: request.title,
+                observedResultUrl: null,
+                consideredResultCount: 1,
+              }
+            : {
+                outcome: "rejected" as const,
+                rejectionCode: "no_results" as const,
+                consideredResultCount: 0,
+              };
+        },
+      },
+    } satisfies LiveShoppingDependencies;
+
+    const initial = await loadLiveShoppingSession({
+      db: connection.db,
+      sessionId,
+    });
+    expect(initial.action.kind).toBe("search");
+    if (initial.action.kind !== "search" || initial.action.search === null) {
+      throw new Error("Expected seeded live search projection");
+    }
+    expect(initial.action.search.listings.length).toBeGreaterThanOrEqual(2);
+    expect(initial.decisionSupport?.researchStatus).toBe("not_started");
+
+    const researched = await researchLiveShopping({
+      dependencies,
+      input: { operation: "research", sessionId },
+    });
+    expect(
+      researched.decisionSupport?.topOptions.length,
+    ).toBeGreaterThanOrEqual(2);
+    const candidateIds = researched
+      .decisionSupport!.topOptions.slice(0, 2)
+      .map(({ listing }) => listing.candidateListingId);
+    for (const candidateListingId of candidateIds) {
+      await setLiveListingSaved({
+        dependencies,
+        input: { operation: "save_listing", sessionId, candidateListingId },
+      });
+    }
+    const compared = await loadLiveShoppingSession({
+      db: connection.db,
+      sessionId,
+    });
+    expect(compared.decisionSupport?.comparison?.candidates).toHaveLength(2);
+    const deepened = await deepenLiveShoppingResearch({
+      dependencies,
+      input: { operation: "deepen_research", sessionId },
+    });
+    expect(deepened.decisionSupport?.researchStatus).toBe("ready");
+    const withDestinations = await resolveLivePurchaseDestinations({
+      dependencies,
+      input: { operation: "resolve_destinations", sessionId },
+    });
+    expect(
+      withDestinations.decisionSupport?.topOptions.some(
+        ({ listing }) => listing.purchaseState === "direct",
+      ),
+    ).toBe(true);
+    expect(
+      withDestinations.decisionSupport?.topOptions.some(
+        ({ listing }) => listing.purchaseState === "fallback",
+      ),
+    ).toBe(true);
+    const refreshed = await loadLiveShoppingSession({
+      db: connection.db,
+      sessionId,
+    });
+    expect(refreshed).toEqual(withDestinations);
+    expect(evidenceProvider.calls.length).toBeGreaterThan(0);
+    expect(pageFetcher.calls.length).toBeGreaterThan(0);
+    expect(understanding.calls.length).toBeGreaterThan(0);
+    expect(destinationCalls).toBe(2);
+    expect(
+      await connection.db.select().from(evidenceAcquisitionAttempts),
+    ).not.toEqual([]);
   });
 });

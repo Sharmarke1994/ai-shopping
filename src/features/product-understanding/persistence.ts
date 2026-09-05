@@ -715,11 +715,10 @@ async function loadResearchSnapshotInTransaction(options: {
   const candidateIds = new Set(
     attemptRows.map(({ candidateListingId }) => candidateListingId),
   );
-  const relevantSources = sourceRows.filter(
-    (row) =>
-      candidateIds.has(row.candidateListingId) &&
-      (row.sourceKind !== "fetched_page" ||
-        row.researchRunId === options.researchRunId),
+  // Evidence describes the exact candidate, not the shopper revision. Reuse an
+  // already admitted fetched page during reassessment instead of refetching it.
+  const relevantSources = sourceRows.filter((row) =>
+    candidateIds.has(row.candidateListingId),
   );
   const relevantSourceIds = new Set(relevantSources.map(({ id }) => id));
   const relevantObservations = observationRows.filter(
@@ -797,6 +796,64 @@ async function loadResearchSnapshotInTransaction(options: {
     sourceRows,
     documentRows: fetchedDocumentRows,
   });
+  const reusablePageOwnerIds = [
+    ...new Set(
+      relevantSources.flatMap((row) =>
+        row.sourceKind === "fetched_page" &&
+        row.researchRunId !== options.researchRunId
+          ? [row.researchRunId]
+          : [],
+      ),
+    ),
+  ];
+  for (const ownerResearchRunId of reusablePageOwnerIds) {
+    const [ownerRunRow, ownerAttemptRows] = await Promise.all([
+      options.tx
+        .select()
+        .from(evidenceResearchRuns)
+        .where(
+          and(
+            eq(evidenceResearchRuns.taskId, options.taskId),
+            eq(evidenceResearchRuns.id, ownerResearchRunId),
+          ),
+        )
+        .limit(1),
+      options.tx
+        .select()
+        .from(evidenceAcquisitionAttempts)
+        .where(
+          and(
+            eq(evidenceAcquisitionAttempts.taskId, options.taskId),
+            eq(evidenceAcquisitionAttempts.researchRunId, ownerResearchRunId),
+          ),
+        )
+        .orderBy(asc(evidenceAcquisitionAttempts.createdAt)),
+    ]);
+    if (ownerRunRow[0] === undefined) {
+      failPersisted(
+        "EvidenceSource",
+        ownerResearchRunId,
+        new Error("Reusable fetched-page owner is missing"),
+      );
+    }
+    const ownerAttempts = ownerAttemptRows.map((row) =>
+      mapAttemptRow(
+        row,
+        targetRows
+          .filter(({ attemptId }) => attemptId === row.id)
+          .map(({ criterionId }) => criterionId),
+      ),
+    );
+    await validateSnapshotFetchedPageChildren({
+      tx: options.tx,
+      taskId: options.taskId,
+      researchRunId: evidenceResearchRunIdSchema.parse(ownerResearchRunId),
+      runRow: ownerRunRow[0]!,
+      attempts: ownerAttempts,
+      sourceRows,
+      documentRows: fetchedDocumentRows,
+    });
+  }
   const sources = relevantSources.map((row) =>
     parsePersisted({
       recordType: "EvidenceSource",
@@ -2688,7 +2745,11 @@ async function loadOwnedPageAttemptContext(options: {
       "Fetched-page candidate is unavailable",
     );
   }
-  const state = await loadCurrentShoppingState(options.tx, options.taskId);
+  const state = await loadShoppingStateAtRevision(
+    options.tx,
+    options.taskId,
+    options.run.taskRevision,
+  );
   const brief = projectShoppingBrief(state);
   const pageTargetIds = new Set(attempt.targetCriterionIds);
   const targetCriteria = brief.items.filter(({ criterionId }) =>
@@ -2696,7 +2757,7 @@ async function loadOwnedPageAttemptContext(options: {
   );
   if (targetCriteria.length !== pageTargetIds.size) {
     throw new EvidenceResearchAuthorityError(
-      "Fetched-page criteria are not current",
+      "Fetched-page criteria are not authoritative at the owning revision",
     );
   }
   return {
