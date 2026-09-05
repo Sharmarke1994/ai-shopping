@@ -1,6 +1,6 @@
 # Founder MVP progress
 
-**Updated:** 2026-08-30 Europe/London
+**Updated:** 2026-09-05 Europe/London
 **Durable goal:** Deliver a polished founder-usable AI shopping MVP whose live
 understanding, market retrieval, evidence-aware evaluation, refinement, saving,
 and comparison are meaningfully better than beginning with Google.
@@ -382,6 +382,22 @@ V0-05 PR #9, V0-06 PR #10 and V0-07 PR #11 remain unmodified and unmerged.
 V0-09 is active from the exact accepted V0-08 head in the isolated worktree and
 branch recorded above. The durable execution contract is
 `docs/plans/v0-09.md`.
+
+### Isolated decision-first product-completion lane
+
+The separate `codex/v0-09-product-completion` worktree preserves the existing
+provider-proof artifacts while product work continues deterministically from
+`dab4e03b6eacd54c7d66d8f7439ed02ea0b0cd41`. Decision-first implementation,
+tests and refreshed product-review screenshots are checkpointed at
+`510d734247a3745f46ae74c04721b5c7b8ee85a4`. The lane adds a first-class Current
+Decision projection and primary `/live` synthesis surface over already accepted
+brief, assessment, comparison, research-gap and purchase-path data. The
+projection does not call a provider or model, does not add scalar scoring, and
+never treats provider order or review popularity as shopper-relative evidence.
+Hard conflicts are ineligible, hard unknowns block a ready choice, meaningful
+ties remain ties, and stale-revision assessments cannot influence the current
+decision. Checkpoints 1 and 2 remain immutable; Checkpoint 3, the proof marker
+and the product-proof result remain absent and the one-shot proof is unconsumed.
 
 - Implemented a no-crawler, server-owned fetch boundary for at most two
   already-discovered exact product pages. DNS pinning, redirect revalidation,
