@@ -607,6 +607,16 @@ describe("development-only V0-09 product engine proof", () => {
       taskId: seeded.task.id,
     });
     expect(after.brief.revision).toBe(2n);
+    const comfortAssessments = after.assessments.filter(
+      ({ criterionId }) => criterionId === comfort?.id,
+    );
+    expect(comfortAssessments).toHaveLength(2);
+    expect(
+      comfortAssessments.map(({ status, relation }) => ({ status, relation })),
+    ).toEqual([
+      { status: "meets", relation: "extended_use_evidence" },
+      { status: "meets", relation: "extended_use_evidence" },
+    ]);
     const evolution = await loadTransition();
     expect(evolution?.previous).toEqual(pendingTransition?.previous);
     expect(evolution?.evidence).toBe("reused");

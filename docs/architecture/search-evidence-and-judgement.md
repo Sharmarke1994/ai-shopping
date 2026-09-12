@@ -107,6 +107,26 @@ Assessment is task-revision-specific suitability interpretation, never reusable 
 
 Hard exclusion requires an explicit hard criterion, a direct comparable contradiction, and an admissible evidence kind. Unknown information is neither pass nor failure.
 
+### Bounded long-session comfort evidence
+
+Soft long-session comfort can be supported by a concept-bound source assertion
+from an exact fetched independent review or experiential retailer-review
+aggregate. Both the observation and its source excerpt must retain explicit
+extended-use experience. Generic ergonomic shape, marketing, snippets and
+images cannot establish it. The guard admits a matching proposed positive or
+negative assessment, not a new conclusion inferred from provider rank. Credible
+opposing experiential observations remain source disagreement even when the
+proposal cites only the positive source. Hard personal comfort remains
+unresolved, and every admitted soft conclusion retains an individual-fit caveat.
+Other comfort and experiential policies are unchanged. No migration is required.
+
+The deterministic extractor now preserves the supplied source wording instead
+of replacing it with a generic shape sentence. The existing persisted mouse
+corpus supplies the same extended-use review to both candidates: both now have
+supported comfort and still tie. This is not the requested tie-to-recommendation
+acceptance result. A genuinely differentiating evidence corpus is needed;
+candidate-specific assessment or ranking exceptions are not permitted.
+
 ## Comparative judgement
 
 Rank from criterion assessments rather than raw observations. Allow ties and evidence-limited candidates. Consumer groupings may include:

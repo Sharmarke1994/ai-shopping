@@ -158,7 +158,12 @@ function sourceForCriterion(input: ProductUnderstandingInputV1, label: string) {
     return input.sources.find(({ kind }) => kind === "listing_image");
   }
   if (/comfort|ergonom|support|review|brand|reputation/i.test(label)) {
-    return input.sources.find(({ role }) => role === "independent_review");
+    return (
+      input.sources.find(
+        ({ role, kind }) =>
+          role === "independent_review" && kind === "fetched_page",
+      ) ?? input.sources.find(({ role }) => role === "independent_review")
+    );
   }
   return input.sources.find(({ role }) => role === "manufacturer");
 }
@@ -185,9 +190,7 @@ export class FakeProductUnderstandingModel implements ProductUnderstandingModel 
           propertyLabel: propertyForCriterion(criterion.label),
           claim: visual
             ? "The supplied product image visibly shows a sculpted side profile."
-            : source.excerpt?.includes("18 months")
-              ? "The supplied manufacturer result says up to 18 months battery life."
-              : "The supplied independent review reports a supportive sculpted shape.",
+            : (source.excerpt?.slice(0, 500) ?? "No source excerpt supplied."),
           value: visual
             ? ({
                 schemaVersion: 1 as const,

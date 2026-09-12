@@ -3,6 +3,7 @@ import type {
   ShoppingBriefV1,
 } from "@/domain/shopping-state/brief";
 import { normalizeMeasurementAmount } from "@/domain/shopping-state/semantic-value";
+import { experientialComfortAssessment } from "./experiential-comfort";
 import type { PersistedCandidateListing } from "@/features/retrieval-spike/persistence/contracts";
 import type {
   CriterionAssessmentV1,
@@ -808,6 +809,8 @@ export function guardCriterionAssessment(options: {
   const guardedOptions = { ...options, observations, proposal };
   const money = moneyAssessment(guardedOptions);
   if (money !== null) return money;
+  const comfort = experientialComfortAssessment(guardedOptions);
+  if (comfort !== null) return comfort;
   const directBoolean = explicitBooleanAssessment(guardedOptions);
   if (directBoolean !== null) return directBoolean;
   const directTitle = explicitTitleSoftAssessment(guardedOptions);
@@ -849,6 +852,7 @@ export function guardCriterionAssessment(options: {
       ),
     };
   }
+  // Other personal/fit criteria retain their existing conservative boundary.
   if (
     conceptMatches(options.item, /comfort|long session|long workday/) &&
     proposal.status === "meets"

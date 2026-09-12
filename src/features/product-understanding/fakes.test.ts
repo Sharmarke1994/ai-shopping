@@ -2,7 +2,10 @@ import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { FakeShoppingProvider } from "@/features/retrieval-spike/fake-shopping-provider";
 import { searchQuerySchema } from "@/features/retrieval-spike/contracts";
-import { FakeEvidencePageFetcher } from "./fakes";
+import {
+  FakeEvidencePageFetcher,
+  FakeProductUnderstandingModel,
+} from "./fakes";
 
 function query() {
   return searchQuerySchema.parse({
@@ -28,6 +31,51 @@ const pageInput = {
 };
 
 describe("visual-review fixture controls", () => {
+  it("preserves extended-use source wording without a title or rank-dependent outcome", async () => {
+    const model = new FakeProductUnderstandingModel();
+    const excerpt =
+      "After several full workdays the reviewer found the product comfortable with no wrist fatigue.";
+    const input = {
+      schemaVersion: 1 as const,
+      market: {
+        country: "GB" as const,
+        language: "en-GB" as const,
+        currency: "GBP" as const,
+      },
+      candidate: {
+        title: "First arbitrary product",
+        merchant: null,
+        observedPriceText: null,
+      },
+      criteria: [
+        {
+          ordinal: 0,
+          label: "Comfort for long workdays",
+          definition: "Extended-use comfort",
+          strength: "strong_preference" as const,
+          targetSemantics: "qualitative" as const,
+          value: {},
+        },
+      ],
+      sources: [
+        {
+          ordinal: 0,
+          role: "independent_review" as const,
+          kind: "fetched_page" as const,
+          title: "Exact review",
+          url: "https://example.test/review",
+          excerpt,
+        },
+      ],
+    };
+    const first = await model.understand(input);
+    const second = await model.understand({
+      ...input,
+      candidate: { ...input.candidate, title: "Completely different product" },
+    });
+    expect(first.value).toEqual(second.value);
+    expect(first.value.observations[0]?.claim).toBe(excerpt);
+  });
   it("can preserve one direct path and one honest Google Shopping fallback", async () => {
     const provider = new FakeShoppingProvider(() => new Date(), {
       purchasePaths: "mixed",

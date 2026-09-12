@@ -199,6 +199,176 @@ function evidence(options: {
 }
 
 describe("criterion assessment guard", () => {
+  it.each([
+    [
+      "independent_review",
+      "fetched_page",
+      "After several full workdays the reviewer found the mouse comfortable with no wrist fatigue.",
+      "meets",
+    ],
+    [
+      "retailer_review_aggregate",
+      "fetched_page",
+      "Reviewers remained comfortable after multiple hours of use.",
+      "meets",
+    ],
+    [
+      "manufacturer",
+      "fetched_page",
+      "Designed for all-day comfort.",
+      "uncertain",
+    ],
+    [
+      "retailer",
+      "fetched_page",
+      "After several full workdays the reviewer found it comfortable.",
+      "uncertain",
+    ],
+    [
+      "other",
+      "fetched_page",
+      "After several full workdays the reviewer found it comfortable.",
+      "uncertain",
+    ],
+    [
+      "independent_review",
+      "fetched_page",
+      "The mouse has a sculpted ergonomic body.",
+      "uncertain",
+    ],
+    [
+      "independent_review",
+      "organic_result",
+      "The reviewer remained comfortable after multiple hours.",
+      "uncertain",
+    ],
+    [
+      "visual",
+      "listing_image",
+      "A supportive sculpted profile is visible.",
+      "uncertain",
+    ],
+    [
+      "independent_review",
+      "fetched_page",
+      "After two hours the reviewer experienced wrist fatigue.",
+      "conflicts",
+    ],
+  ] as const)(
+    "bounds extended-use comfort: %s / %s / %s",
+    (role, sourceKind, claim, expected) => {
+      const criterion = item({
+        label: "Comfort for long workdays",
+        strength: "strong_preference",
+        targetSemantics: "qualitative",
+        semanticValue: {
+          schemaVersion: 1,
+          kind: "qualitative",
+          mode: "text",
+          text: "long-session comfort",
+        },
+      });
+      const sourced = evidence({
+        conceptId: criterion.conceptId,
+        propertyLabel: "Long-session comfort",
+        claim,
+        value: { schemaVersion: 1, kind: "text", text: claim },
+        role,
+        sourceKind,
+      });
+      const assess = (entries = [sourced], hard = false) =>
+        guardCriterionAssessment({
+          item: { ...criterion, strength: hard ? "hard" : criterion.strength },
+          listing,
+          observations: entries,
+          proposal: {
+            status: expected === "conflicts" ? "conflicts" : "meets",
+            relation: "source_support",
+            explanation: claim,
+            observations: [sourced],
+          },
+        });
+      expect(assess().status).toBe(expected);
+      if (expected === "meets") {
+        expect(assess().explanation).toContain("Individual fit can still vary");
+        expect(assess([sourced], true)).toMatchObject({
+          status: "uncertain",
+          relation: "personal_fit_unresolved",
+        });
+        const negative = evidence({
+          conceptId: criterion.conceptId,
+          propertyLabel: "Wrist fatigue",
+          claim: "After two hours the reviewer experienced wrist fatigue.",
+          value: { schemaVersion: 1, kind: "text", text: "fatigue" },
+          role: "independent_review",
+          sourceKind: "fetched_page",
+          sourceId: randomUUID(),
+          observationId: randomUUID(),
+        });
+        expect(assess([sourced, negative])).toMatchObject({
+          status: "uncertain",
+          relation: "source_disagreement",
+        });
+        expect(
+          assess([
+            {
+              ...sourced,
+              observation: productObservationV1Schema.parse({
+                ...sourced.observation,
+                conceptId: randomUUID(),
+              }),
+            },
+          ]).status,
+        ).toBe("uncertain");
+        expect(
+          assess([
+            {
+              ...sourced,
+              source: { ...sourced.source, excerpt: "Ergonomic design." },
+            },
+          ]).status,
+        ).toBe("uncertain");
+      }
+    },
+  );
+
+  it("admits office-chair working-day experience but never guarantees personal back fit", () => {
+    const criterion = item({
+      label: "Comfort for long working sessions",
+      strength: "strong_preference",
+      targetSemantics: "qualitative",
+      semanticValue: {
+        schemaVersion: 1,
+        kind: "qualitative",
+        mode: "text",
+        text: "comfortable for long working sessions",
+      },
+    });
+    const claim =
+      "The reviewer remained comfortable with sustained lumbar support through full working days.";
+    const sourced = evidence({
+      conceptId: criterion.conceptId,
+      propertyLabel: "Working-day comfort",
+      claim,
+      value: { schemaVersion: 1, kind: "text", text: claim },
+      role: "independent_review",
+      sourceKind: "fetched_page",
+    });
+    for (const strength of ["strong_preference", "hard"] as const)
+      expect(
+        guardCriterionAssessment({
+          item: { ...criterion, strength },
+          listing: { ...listing, title: "Office chair" },
+          observations: [sourced],
+          proposal: {
+            status: "meets",
+            relation: "source_support",
+            explanation: claim,
+            observations: [sourced],
+          },
+        }).status,
+      ).toBe(strength === "hard" ? "uncertain" : "meets");
+  });
   it("recognises only monetary purchase targets as purchase-price criteria", () => {
     expect(
       isPurchasePriceCriterion(
@@ -1550,7 +1720,7 @@ describe("criterion assessment guard", () => {
     expect(assessment.explanation).toContain("4.3/5 from 52,629 reviews");
   });
 
-  it("keeps long-workday comfort uncertain even with a useful independent report", () => {
+  it("keeps generic palm support insufficient for long-workday comfort", () => {
     const longWorkdayComfort = item({
       label: "Comfort for long workdays",
       strength: "strong_preference",
@@ -1587,9 +1757,9 @@ describe("criterion assessment guard", () => {
     });
     expect(assessment).toMatchObject({
       status: "uncertain",
-      relation: "personal_fit_unresolved",
+      relation: "insufficient_relevant_evidence",
     });
-    expect(assessment.explanation).toContain("strong palm support");
+    expect(assessment.explanation).toContain("design claims alone");
   });
 
   it("does not use unsourced brand familiarity as reputation evidence", () => {
