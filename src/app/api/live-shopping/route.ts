@@ -1,4 +1,5 @@
 import { ZodError } from "zod";
+import { StaleTaskRevisionError } from "@/domain/shopping-state/errors";
 import { StaleRetrievalSearchActionError } from "@/features/retrieval-spike/context-from-persisted-state";
 import { StaleSearchRunAuthorityError } from "@/features/retrieval-spike/retrieval-orchestrator";
 import {
@@ -103,14 +104,15 @@ function safeError(error: unknown) {
   }
   if (
     error instanceof StaleRetrievalSearchActionError ||
-    error instanceof StaleSearchRunAuthorityError
+    error instanceof StaleSearchRunAuthorityError ||
+    error instanceof StaleTaskRevisionError
   ) {
     return response(
       {
         error: {
           code: "stale_authority",
           message:
-            "The shopping brief changed before this search could continue. Start a fresh task.",
+            "Your priorities changed before this operation finished. Refresh to continue with your current brief; your saved products are preserved.",
         },
       },
       409,

@@ -468,6 +468,18 @@ export function synthesizeCurrentDecision(options: {
     };
   }
 
+  const excludedBoundary = soleEligible
+    ? options.items.find(
+        (item) =>
+          item.strength === "hard" &&
+          options.assessments.some(
+            (assessment) =>
+              assessment.candidateListingId !== leader.listing.id &&
+              assessment.criterionId === item.criterionId &&
+              assessment.status === "conflicts",
+          ),
+      )
+    : undefined;
   return {
     state: "ready_to_choose",
     recommendationLevel: "ready",
@@ -475,7 +487,9 @@ export function synthesizeCurrentDecision(options: {
     alternativeCandidateListingId,
     headline: `I’d choose ${leader.listing.title}`,
     explanation:
-      "It clears the current must-haves and has meaningful evidence separation on what matters most in this brief.",
+      excludedBoundary !== undefined
+        ? `It clears your must-haves. Other researched options are excluded by purchase boundaries, including ${excludedBoundary.conceptLabel.toLocaleLowerCase("en-GB")}.`
+        : "It clears the current must-haves and has meaningful evidence separation on what matters most in this brief.",
     keyReasons: supportedReasons,
     keyTradeoff: null,
     blockingGap: null,

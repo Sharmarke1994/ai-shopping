@@ -21,6 +21,9 @@ transport with those application functions over PostgreSQL; the exact refinement
 is a labelled V0-04 seeding seam, not a test of natural-language interpretation.
 Existing browser tests separately cover normal fixture-backed API transport.
 
+The first coherent source-grounded milestone is `42af6d6`; subsequent
+presentation/error-classification changes do not alter the corpus or authority.
+
 ## Flagship mouse
 
 FLAGSHIP DETERMINISTIC MOUSE LOOP CLOSED
@@ -73,6 +76,13 @@ stability, plus a two-listing comparison (including a deliberately excluded row
 where useful). Bounded missing evidence remains missing; source content is not
 assumed to have been assessed merely because it exists in the fixture page.
 
+Actual current-decision projections have `alternativeCandidateListingId: null`
+in all four journeys. Mouse B and Chair A remain factual eligible comparators;
+they are not promoted as recommendation alternatives. In particular, Chair A's
+within-target price is visible in comparison, but does not currently become an
+explicit budget-versus-benefit alternative in the decision summary. This is a
+bounded product follow-up, not evidence that a second recommendation was shown.
+
 ## General defects corrected
 
 - Supported conditional stretch lost its trade-off in decision synthesis. Both
@@ -90,6 +100,11 @@ assumed to have been assessed merely because it exists in the fixture page.
   failure. `StaleTaskRevisionError` now returns sanitized `409 stale_authority`
   with refresh guidance, not an instruction to abandon the saved task. A focused
   route regression protects that classification; it does not permit stale writes.
+- Ready purchase actions were below a lengthy evidence panel. They now follow
+  the decision explanation, with the stretch trade-off still visible before
+  the click. Provisional decisions still have no primary buy action. A sole
+  eligible decision names an evidenced excluded hard boundary where available,
+  rather than relying only on generic separation wording.
 
 ## Browser review and limitations
 
@@ -99,7 +114,52 @@ purchase semantics, comparison and refresh. Screenshots live in
 bounded check: “Checked · still unresolved” is truthful and prevents duplicate
 research. It does not claim that the missing hard fact was resolved.
 
+Screenshot inspection confirms clear ready/trade-off/provisional state labels,
+visible budget premium, readable 390px layout, and no horizontal overflow. The
+request remains collapsible; comparison stays below the current decision. Missing
+product images remain honestly labelled rather than fabricated. The long source
+and comparison sections still need shopper usability validation, not a redesign
+in this run.
+
 This demonstrates deterministic product breadth, not live-provider extraction
 quality or real merchant purchase success. Fictional destinations are never
-opened. Full gate results and remaining review items are recorded below when
-verification finishes.
+opened.
+
+## Verification
+
+- Focused source-backed persisted journeys: 10/10 (symmetric and differentiated
+  mouse, three existing founder paths, live application composition, and three
+  new differentiated category paths).
+- Full PostgreSQL suite: 167/168; only the allowed local PostgreSQL
+  `17.11 (Homebrew)` versus pinned `17.6` version assertion fails. Disposable
+  database setup applies all migrations from empty, including 0018; all other
+  migration and structural tests pass. No migration was changed.
+- Focused final decision/component/route regression: 37/37.
+- Final `pnpm check`: 472/472 tests in 51 files, formatting, lint, typecheck and
+  production build pass. Final Playwright against the production fixture server:
+  12/12, including all four new persisted journeys and refreshed screenshots.
+  The three differentiated category DB tests also pass after the final wording
+  change (3/3).
+- `db:generate`: no schema changes. Diff audit and added-line secret/private-path
+  scans clean. Source-corpus/decision guard review found no actionable correctness
+  risks. Tests initially interrupted by long host execution gaps were rerun;
+  timeout values and acceptance assertions were not weakened.
+- The pnpm launcher emits a Node 24.19.0 engine-range warning; the actual shell
+  and `pnpm exec node` both report Node 22.18.0 at `/usr/local/bin/node`.
+- Checkpoint 1 SHA256:
+  `0e2d4ddbbf9eac649646b99454ac8962c9159e3d615b6a87c2a67967e4261272`.
+  Checkpoint 2 SHA256:
+  `8a4001a01ddac452e896829cf50b7cf046d3caf07ecdaa8d28bd78910c25347d`.
+  Both unchanged. No Checkpoint 3, proof marker or proof result created.
+
+## Verdict and next product move
+
+Flagship deterministic mouse loop: CLOSED. Cross-category founder engine:
+ACCEPT WITH BOUNDED FOLLOW-UP. Overall product-experience lane: ACCEPT WITH
+BOUNDED FOLLOW-UP. These are implementation self-assessments for independent
+review, not release acceptance.
+
+The next single product move is an explicit evidence-backed budget-versus-benefit
+alternative in the decision summary, beginning with the chair: make the £245
+within-target option's trade against the £330 supported stretch understandable
+without arbitrary cheaper-is-better scoring. Do not implement it in this run.

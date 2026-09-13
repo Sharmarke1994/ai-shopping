@@ -350,6 +350,39 @@ function CurrentDecisionSummary({
           {decision.explanation}
         </p>
 
+        {decision.purchase !== null ? (
+          <div className={styles.decisionPurchase}>
+            <a
+              href={decision.purchase.destinationUrl}
+              target="_blank"
+              rel="noreferrer"
+              className={
+                decision.purchase.state === "direct"
+                  ? styles.decisionBuyButton
+                  : styles.decisionOffersButton
+              }
+            >
+              <span>
+                {decision.purchase.label}
+                {decision.purchase.priceText !== null
+                  ? " · " + decision.purchase.priceText
+                  : ""}
+              </span>
+              <span aria-hidden="true">↗</span>
+            </a>
+            {decision.purchase.state === "direct" ? (
+              <p>Verified same-merchant product destination.</p>
+            ) : decision.purchase.state === "checking" ? (
+              <p>
+                Checking for the exact retailer page. Google Shopping remains
+                available.
+              </p>
+            ) : (
+              <p>Fallback shopping result · verify the seller and offer.</p>
+            )}
+          </div>
+        ) : null}
+
         {leader !== undefined || watch !== null ? (
           <div className={styles.decisionSummaryGrid}>
             {leader !== undefined ? (
@@ -430,39 +463,6 @@ function CurrentDecisionSummary({
               <span className={styles.decisionCheckState}>
                 Checked · still unresolved
               </span>
-            )}
-          </div>
-        ) : null}
-
-        {decision.purchase !== null ? (
-          <div className={styles.decisionPurchase}>
-            <a
-              href={decision.purchase.destinationUrl}
-              target="_blank"
-              rel="noreferrer"
-              className={
-                decision.purchase.state === "direct"
-                  ? styles.decisionBuyButton
-                  : styles.decisionOffersButton
-              }
-            >
-              <span>
-                {decision.purchase.label}
-                {decision.purchase.priceText !== null
-                  ? " · " + decision.purchase.priceText
-                  : ""}
-              </span>
-              <span aria-hidden="true">↗</span>
-            </a>
-            {decision.purchase.state === "direct" ? (
-              <p>Verified same-merchant product destination.</p>
-            ) : decision.purchase.state === "checking" ? (
-              <p>
-                Checking for the exact retailer page. Google Shopping remains
-                available.
-              </p>
-            ) : (
-              <p>Fallback shopping result · verify the seller and offer.</p>
             )}
           </div>
         ) : null}

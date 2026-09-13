@@ -923,5 +923,8 @@ describe("founder-category Current Decision journeys", () => {
       leadingCandidateListingId: compact.id,
     });
     expect(result.currentDecision.leadingCandidateListingId).not.toBe(wide.id);
+    expect(result.currentDecision.explanation).toContain(
+      `including ${widthLabel.toLocaleLowerCase("en-GB")}`,
+    );
   });
 });

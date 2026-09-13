@@ -400,11 +400,32 @@ version assertion. Twelve production fixture screenshots include desktop and
 390px Decision Evolution. Provider calls remain zero and proof remains
 unconsumed. These are implementation checks, not independent acceptance.
 
-Important product gap: the controlled mouse projection proves tie to ready
-Mouse A, but the actual guarded persisted mouse remains tied because existing
-long-workday comfort assessment requires personal-fit verification. Review-
-quality prose also remains conservatively unadmitted. Neither policy was
-weakened. See [Decision Evolution evidence](v0-09-decision-evolution.md).
+The earlier controlled-only mouse gap is superseded by the source-grounded
+founder journeys below. The generic symmetric corpus correctly remains tied;
+the differentiated corpus now breaks the tie through actual persisted evidence
+and guarded soft-comfort assessment. Hard personal-fit conservatism remains.
+See [Decision Evolution evidence](v0-09-decision-evolution.md) for the earlier
+checkpoint rather than treating its former gap as current status.
+
+#### Four-category deterministic founder journeys
+
+Product continuation from `7c66942465c2f0a74f27dc64042bf071e49e74c5`, with the
+source-grounded milestone committed at `42af6d6`. FLAGSHIP DETERMINISTIC MOUSE
+LOOP CLOSED: symmetric evidence stays tied; differentiated fetched evidence plus
+the exact Reviews/Comfort refinement yields ready Mouse A, reused evidence and
+grounded tie-broken Decision Evolution. The mouse corpus is frozen.
+
+The same real PostgreSQL/source-page/assessment/application path now gives chair
+`leader_with_tradeoff`, vacuum `leader_needs_verification`, and coffee
+`ready_to_choose` with the oversize candidate excluded. No final assessments are
+seeded. Corrections preserve supported stretch-price visibility, current
+reassessment readiness and explicit untested-comfort uncertainty. Browser-backed
+save/comparison/refinement/reject/undo and desktop/mobile evidence are recorded in
+[the founder journey matrix](v0-09-founder-journeys.md).
+
+These remain deterministic implementation checks, not independent acceptance or
+live-provider proof. Zero external provider calls; checkpoints 1/2 unchanged;
+Checkpoint 3, the product proof marker and result remain absent.
 
 The separate `codex/v0-09-product-completion` worktree preserves the existing
 provider-proof artifacts while product work continues deterministically from
