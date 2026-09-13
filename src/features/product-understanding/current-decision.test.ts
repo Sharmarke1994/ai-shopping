@@ -813,52 +813,55 @@ describe("founder-category Current Decision journeys", () => {
     ).not.toContain("Reviews");
   });
 
-  it("marks an office chair in the conditional stretch as an explicit trade-off", () => {
-    const brief = briefFromFounderFixture({
-      fixture: founderCase("office-chair"),
-    });
-    const stretch = listing(brief, "£330 long-session chair");
-    const cheaper = listing(brief, "£250 chair", 2);
-    const stretchStatuses = Object.fromEntries(
-      brief.items.map(({ conceptLabel }) => [conceptLabel, "meets" as const]),
-    );
-    const cheaperStatuses = Object.fromEntries(
-      brief.items.map(({ conceptLabel }) => [
-        conceptLabel,
-        "uncertain" as const,
-      ]),
-    );
-    const result = project({
-      brief,
-      candidates: [cheaper, stretch],
-      assessments: [
-        ...profile({
-          brief,
-          listingId: stretch.id,
-          statuses: {
-            ...stretchStatuses,
-            Price: {
-              status: "meets",
-              relation: "inside_conditional_stretch",
+  it.each(["inside_conditional_stretch", "conditional_stretch_supported"])(
+    "keeps the chair price trade-off visible: %s",
+    (relation) => {
+      const brief = briefFromFounderFixture({
+        fixture: founderCase("office-chair"),
+      });
+      const stretch = listing(brief, "£330 long-session chair");
+      const cheaper = listing(brief, "£250 chair", 2);
+      const stretchStatuses = Object.fromEntries(
+        brief.items.map(({ conceptLabel }) => [conceptLabel, "meets" as const]),
+      );
+      const cheaperStatuses = Object.fromEntries(
+        brief.items.map(({ conceptLabel }) => [
+          conceptLabel,
+          "uncertain" as const,
+        ]),
+      );
+      const result = project({
+        brief,
+        candidates: [cheaper, stretch],
+        assessments: [
+          ...profile({
+            brief,
+            listingId: stretch.id,
+            statuses: {
+              ...stretchStatuses,
+              Price: {
+                status: "meets",
+                relation,
+              },
             },
-          },
-        }),
-        ...profile({
-          brief,
-          listingId: cheaper.id,
-          statuses: cheaperStatuses,
-        }),
-      ],
-    });
-    expect(result.currentDecision).toMatchObject({
-      state: "leader_with_tradeoff",
-      leadingCandidateListingId: stretch.id,
-      keyTradeoff: expect.objectContaining({ label: "Price" }),
-    });
-    expect(
-      result.currentDecision.keyReasons.map(({ label }) => label),
-    ).toContain("Lower-back support");
-  });
+          }),
+          ...profile({
+            brief,
+            listingId: cheaper.id,
+            statuses: cheaperStatuses,
+          }),
+        ],
+      });
+      expect(result.currentDecision).toMatchObject({
+        state: "leader_with_tradeoff",
+        leadingCandidateListingId: stretch.id,
+        keyTradeoff: expect.objectContaining({ label: "Price" }),
+      });
+      expect(
+        result.currentDecision.keyReasons.map(({ label }) => label),
+      ).toContain("Lower-back support");
+    },
+  );
 
   it("keeps a cordless vacuum provisional while the hard noise requirement is unknown", () => {
     const brief = briefFromFounderFixture({

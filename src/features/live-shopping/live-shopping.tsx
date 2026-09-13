@@ -603,8 +603,10 @@ function ProductCard({
                       : "sources"}
                   </summary>
                   <ul>
-                    {decision.evidenceSources.map((source) => (
-                      <li key={source.url}>
+                    {decision.evidenceSources.map((source, index) => (
+                      <li
+                        key={`${source.url}:${source.depth}:${source.role}:${index}`}
+                      >
                         <a href={source.url} target="_blank" rel="noreferrer">
                           {source.title}
                         </a>
@@ -1326,10 +1328,10 @@ function SavedComparison({
                             {cell.sources.length}{" "}
                             {cell.sources.length === 1 ? "source" : "sources"}
                           </summary>
-                          {cell.sources.map((source) => (
+                          {cell.sources.map((source, index) => (
                             <span
                               className={styles.comparisonSource}
-                              key={source.url}
+                              key={`${source.url}:${source.depth}:${source.role}:${index}`}
                             >
                               <a
                                 href={source.url}

@@ -34,7 +34,7 @@ function experience(text: string): "positive" | "negative" | null {
     );
     // Do not reinterpret hedged or complex negation as positive experience.
     if (
-      /\b(?:no evidence|never|neither|did not|didn't|wasn't|isn't|not necessarily)\b/.test(
+      /\b(?:no evidence|never|neither|did not|didn't|wasn't|isn't|not necessarily|does not evaluate|not evaluated|not tested|not assessed)\b/.test(
         withoutFatigue,
       )
     )

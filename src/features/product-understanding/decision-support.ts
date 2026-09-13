@@ -276,7 +276,8 @@ export function synthesizeCurrentDecision(options: {
     );
     return (
       (item.strength !== "hard" && assessment?.status === "conflicts") ||
-      assessment?.relation === "inside_conditional_stretch"
+      assessment?.relation === "inside_conditional_stretch" ||
+      assessment?.relation === "conditional_stretch_supported"
     );
   });
   const tradeoffAssessment =
@@ -646,7 +647,13 @@ function readinessForCandidate(options: {
   }
   if (
     options.assessments.some((assessment) => {
-      if (assessment.relation === "inside_conditional_stretch") return true;
+      if (
+        [
+          "inside_conditional_stretch",
+          "conditional_stretch_supported",
+        ].includes(assessment.relation)
+      )
+        return true;
       if (assessment.status !== "conflicts") return false;
       return (
         options.items.find(
@@ -807,7 +814,11 @@ function candidateDecision(options: {
     options.assessments
       .filter(
         ({ status, relation }) =>
-          status === "conflicts" || relation === "inside_conditional_stretch",
+          status === "conflicts" ||
+          [
+            "inside_conditional_stretch",
+            "conditional_stretch_supported",
+          ].includes(relation),
       )
       .map(({ explanation }) => explanation),
     3,
@@ -1301,7 +1312,10 @@ export function buildDecisionSupport(options: {
     assessments: currentAssessments,
   });
   const firstPassRuns = support.researchRuns.filter(
-    ({ phase }) => phase === "first_pass" || phase === undefined,
+    // Reassessment is the current revision's initial assessment pass over
+    // retained evidence; it must not be presented as research never started.
+    ({ phase }) =>
+      phase === "first_pass" || phase === "reassessment" || phase === undefined,
   );
   const deepeningRuns = support.researchRuns.filter(
     ({ phase }) => phase === "deepening",

@@ -7,6 +7,10 @@
  * This file is product-engine evidence, never release acceptance evidence.
  */
 import { createHash, randomUUID } from "node:crypto";
+import {
+  founderCorpus,
+  mouseCorpus,
+} from "../support/founder-product-evidence";
 import { eq, inArray } from "drizzle-orm";
 import {
   afterAll,
@@ -388,427 +392,506 @@ describe("development-only V0-09 product engine proof", () => {
     },
   );
 
-  it("switches the mouse authority to a refined revision while retaining exact saved candidates", async () => {
-    const seeded = await seedFixture(connection.db, cases[0]!);
-    const retrieval = await executeOrResumeRetrieval({
-      db: connection.db,
-      taskId: seeded.task.id,
-      contextActionId: seeded.action.id,
-      provider: productProvider(),
-    });
-    const evidenceProvider = new FakeEvidenceSearchProvider();
-    const pageFetcher = new FakeEvidencePageFetcher();
-    const understanding = new FakeProductUnderstandingModel();
-    const fakeDeps = {
-      db: connection.db,
-      evidenceProvider,
-      pageFetcher,
-      model: understanding,
-      modelIdentity: {
-        provider: "fixture" as const,
-        model: "product-proof-understanding",
-        promptVersion: "product-proof-v1",
-      },
-    };
-    await executeOrResumeEvidenceResearch({
-      dependencies: fakeDeps,
-      taskId: seeded.task.id,
-      searchRunId: retrieval.run.portfolio.run.id,
-      mode: "first_pass",
-    });
-    const before = await loadCurrentDecisionSupport({
-      db: connection.db,
-      taskId: seeded.task.id,
-    });
-    const candidateIds = before.candidates.slice(0, 2).map(({ id }) => id);
-    const candidateId = candidateIds[0];
-    const stateBeforeRefinement = await loadCurrentShoppingState(
-      connection.db,
-      seeded.task.id,
-    );
-    const conceptLabel = (conceptId: string) =>
-      stateBeforeRefinement.concepts.find(({ id }) => id === conceptId)?.label;
-    const reviews = stateBeforeRefinement.activeCriteria.find(
-      ({ criterion }) => conceptLabel(criterion.conceptId) === "Reviews",
-    )?.criterion;
-    expect(candidateId).toBeDefined();
-    expect(candidateIds).toHaveLength(2);
-    expect(reviews).toBeDefined();
-    expect(reviews?.strength).toBe("strong_preference");
-    const preservedBefore = new Map(
-      stateBeforeRefinement.activeCriteria
-        .filter(({ criterion }) => criterion.id !== reviews?.id)
-        .map(({ criterion }) => [
-          conceptLabel(criterion.conceptId),
-          {
-            criterionId: criterion.id,
-            strength: criterion.strength,
-            semanticValue: criterion.semanticValue,
-          },
-        ]),
-    );
-    for (const candidateListingId of candidateIds) {
-      await saveCandidateListing({
+  it.each([false, true])(
+    "switches mouse authority retaining exact saved candidates (differentiated=%s)",
+    async (differentiated) => {
+      const corpus = founderCorpus(mouseCorpus);
+      const seeded = await seedFixture(connection.db, cases[0]!);
+      const retrieval = await executeOrResumeRetrieval({
         db: connection.db,
         taskId: seeded.task.id,
-        candidateListingId,
+        contextActionId: seeded.action.id,
+        provider: differentiated ? corpus.provider : productProvider(),
       });
-    }
-    const beforeSavedRows = await connection.db
-      .select()
-      .from(savedCandidateListings)
-      .where(eq(savedCandidateListings.taskId, seeded.task.id));
-    const beforeObservations = await connection.db
-      .select()
-      .from(productObservations)
-      .where(inArray(productObservations.candidateListingId, [candidateId!]));
-    const beforeSources = await connection.db
-      .select()
-      .from(evidenceSources)
-      .where(inArray(evidenceSources.candidateListingId, [candidateId!]));
-    const beforeDocuments = await connection.db
-      .select()
-      .from(fetchedEvidenceDocuments)
-      .where(
-        inArray(fetchedEvidenceDocuments.candidateListingId, [candidateId!]),
-      );
-    const beforeAssessments = await connection.db
-      .select()
-      .from(criterionAssessments)
-      .where(inArray(criterionAssessments.candidateListingId, [candidateId!]));
-    const callsBeforeRefinement = {
-      evidenceSearch: evidenceProvider.calls.length,
-      pageFetch: pageFetcher.calls.length,
-      model: understanding.calls.length,
-      modelCriterionTargets: understanding.calls.map((call) =>
-        call.criteria.map(({ label }) => label),
-      ),
-    };
-    const refinement = await recordTaskInput({
-      db: connection.db,
-      taskId: seeded.task.id,
-      clientActionId: `product-proof-refine-${seeded.task.id}`,
-      request: {
-        inputSchemaVersion: 1,
-        expectedRevision: 1n,
-        kind: "message",
-        body: cases[0]!.refinement!.request,
-      },
-    });
-    await captureDecisionRefinementBasis({
-      db: connection.db,
-      taskId: seeded.task.id,
-      sourceTaskInputId: refinement.input.id,
-    });
-    await captureDecisionRefinementBasis({
-      db: connection.db,
-      taskId: seeded.task.id,
-      sourceTaskInputId: refinement.input.id,
-    });
-    await expect(
-      connection.client`UPDATE shopping_private.decision_refinement_bases SET task_revision = 99 WHERE source_task_input_id = ${refinement.input.id}`,
-    ).rejects.toThrow("immutable");
-    await applyStatePatch(connection.db, {
-      ...buildMouseRevisionTwoPatch(
-        cases[0]!,
-        seeded.task.id,
-        refinement.input.id,
-        reviews!.id,
-      ),
-    });
-    const afterState = await loadCurrentShoppingState(
-      connection.db,
-      seeded.task.id,
-    );
-    expect(afterState.task.currentRevision).toBe(2n);
-    const afterLabel = (conceptId: string) =>
-      afterState.concepts.find(({ id }) => id === conceptId)?.label;
-    const afterReviews = afterState.activeCriteria.find(
-      ({ criterion }) => afterLabel(criterion.conceptId) === "Reviews",
-    )?.criterion;
-    const comfort = afterState.activeCriteria.find(
-      ({ criterion }) =>
-        afterLabel(criterion.conceptId) === "Comfort for long workdays",
-    )?.criterion;
-    expect(afterReviews).toMatchObject({
-      strength: "preference",
-      targetSemantics: "qualitative",
-      semanticValue: {
-        schemaVersion: 1,
-        kind: "qualitative",
-        mode: "text",
-        text: "reviews matter less now",
-      },
-    });
-    expect(comfort).toMatchObject({
-      strength: "strong_preference",
-      targetSemantics: "qualitative",
-      semanticValue: {
-        schemaVersion: 1,
-        kind: "qualitative",
-        mode: "text",
-        text: "comfort for long workdays matters most",
-      },
-    });
-    expect(comfort?.strength).not.toBe("hard");
-    const loadTransition = () =>
-      connection.db.transaction(
-        async (tx) => {
-          const support = await loadCurrentDecisionSupportInTransaction({
-            tx,
-            taskId: seeded.task.id,
-          });
-          return loadDecisionTransitionInTransaction({
-            tx,
-            support,
-            rejectedIds: new Set(),
+      const evidenceProvider = new FakeEvidenceSearchProvider();
+      const pageFetcher = new FakeEvidencePageFetcher();
+      const genericModel = new FakeProductUnderstandingModel();
+      const understanding = {
+        calls: genericModel.calls,
+        understand: async (
+          input: Parameters<FakeProductUnderstandingModel["understand"]>[0],
+        ) => {
+          if (!differentiated) return genericModel.understand(input);
+          genericModel.calls.push(input);
+          return corpus.model.understand(input, {
+            requireCriterionBinding: true,
           });
         },
-        { isolationLevel: "repeatable read", accessMode: "read only" },
-      );
-    const pendingTransition = await loadTransition();
-    expect(pendingTransition).toMatchObject({
-      movement: "reassessing",
-      previous: { state: "no_clear_winner" },
-      current: { leaderId: null },
-    });
-    expect(pendingTransition?.changes).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          label: "Reviews",
-          kind: "strength_changed",
-          before: "Strong preference",
-          after: "Preference",
-        }),
-        expect.objectContaining({
-          label: "Comfort for long workdays",
-          kind: "added",
-        }),
-      ]),
-    );
-    for (const [label, before] of preservedBefore) {
-      const current = afterState.activeCriteria.find(
-        ({ criterion }) => afterLabel(criterion.conceptId) === label,
-      )?.criterion;
-      expect(current).toMatchObject({
-        strength: before.strength,
-        semanticValue: before.semanticValue,
+      };
+      if (differentiated) {
+        evidenceProvider.search = async (input) => {
+          evidenceProvider.calls.push(input.query);
+          return corpus.evidenceProvider.search(input);
+        };
+        pageFetcher.fetch = async (input) => {
+          pageFetcher.calls.push(input.url);
+          const page = await corpus.pageFetcher.fetch(input);
+          if (page.contentType !== "text/html")
+            throw new Error("Expected fixture HTML");
+          return { ...page, contentType: "text/html" as const };
+        };
+      }
+      const fakeDeps = {
+        db: connection.db,
+        evidenceProvider,
+        pageFetcher,
+        model: understanding,
+        modelIdentity: {
+          provider: "fixture" as const,
+          model: "product-proof-understanding",
+          promptVersion: "product-proof-v1",
+        },
+      };
+      await executeOrResumeEvidenceResearch({
+        dependencies: fakeDeps,
+        taskId: seeded.task.id,
+        searchRunId: retrieval.run.portfolio.run.id,
+        mode: "first_pass",
       });
-    }
-    await executeOrResumeEvidenceResearch({
-      dependencies: fakeDeps,
-      taskId: seeded.task.id,
-      searchRunId: retrieval.run.portfolio.run.id,
-      mode: "reassessment",
-      savedCandidateListingIds: candidateIds,
-    });
-    const after = await loadCurrentDecisionSupport({
-      db: connection.db,
-      taskId: seeded.task.id,
-    });
-    expect(after.brief.revision).toBe(2n);
-    const comfortAssessments = after.assessments.filter(
-      ({ criterionId }) => criterionId === comfort?.id,
-    );
-    expect(comfortAssessments).toHaveLength(2);
-    expect(
-      comfortAssessments.map(({ status, relation }) => ({ status, relation })),
-    ).toEqual([
-      { status: "meets", relation: "extended_use_evidence" },
-      { status: "meets", relation: "extended_use_evidence" },
-    ]);
-    const evolution = await loadTransition();
-    expect(evolution?.previous).toEqual(pendingTransition?.previous);
-    expect(evolution?.evidence).toBe("reused");
-    expect(evolution?.current.state).toBe("no_clear_winner");
-    expect(evolution?.candidateContinuity).toBe("same_listings");
-    expect(await loadTransition()).toEqual(evolution);
-    const evolutionSession = randomUUID();
-    await connection.db.insert(founderLiveSessions).values({
-      id: evolutionSession,
-      taskId: seeded.task.id,
-      initialTurnId: randomUUID(),
-      initialRequestFingerprint: createHash("sha256")
-        .update(cases[0]!.request)
-        .digest("hex"),
-      currentContextActionId: seeded.action.id,
-      pendingTaskInputId: null,
-    });
-    const appView = await loadLiveShoppingSession({
-      db: connection.db,
-      sessionId: evolutionSession,
-    });
-    expect(appView.decisionSupport?.transition).toEqual(evolution);
-    expect(
-      (
-        await loadLiveShoppingSession({
-          db: connection.db,
-          sessionId: evolutionSession,
-        })
-      ).decisionSupport?.transition,
-    ).toEqual(evolution);
-    expect(after.assessments.length).toBeGreaterThan(0);
-    expect(
-      after.assessments.every(({ taskRevision }) => taskRevision === 2n),
-    ).toBe(true);
-    expect(
-      after.assessments.some(({ criterionId }) => criterionId === comfort?.id),
-    ).toBe(true);
-    expect(
-      after.assessments.some(
-        ({ criterionId }) => criterionId === afterReviews?.id,
-      ),
-    ).toBe(true);
-
-    const afterSavedRows = await connection.db
-      .select()
-      .from(savedCandidateListings)
-      .where(eq(savedCandidateListings.taskId, seeded.task.id));
-    const afterObservations = await connection.db
-      .select()
-      .from(productObservations)
-      .where(inArray(productObservations.candidateListingId, [candidateId!]));
-    const afterSources = await connection.db
-      .select()
-      .from(evidenceSources)
-      .where(inArray(evidenceSources.candidateListingId, [candidateId!]));
-    const afterDocuments = await connection.db
-      .select()
-      .from(fetchedEvidenceDocuments)
-      .where(
-        inArray(fetchedEvidenceDocuments.candidateListingId, [candidateId!]),
+      const before = await loadCurrentDecisionSupport({
+        db: connection.db,
+        taskId: seeded.task.id,
+      });
+      const candidateIds = before.candidates.slice(0, 2).map(({ id }) => id);
+      const candidateId = candidateIds[0];
+      const stateBeforeRefinement = await loadCurrentShoppingState(
+        connection.db,
+        seeded.task.id,
       );
-    const allAssessments = await connection.db
-      .select()
-      .from(criterionAssessments)
-      .where(inArray(criterionAssessments.candidateListingId, [candidateId!]));
-    expect(
-      afterSavedRows.map(({ candidateListingId }) => candidateListingId),
-    ).toEqual(
-      beforeSavedRows.map(({ candidateListingId }) => candidateListingId),
-    );
-    expect(
-      afterSavedRows.map(({ candidateListingId }) => candidateListingId).sort(),
-    ).toEqual([...candidateIds].sort());
-    const afterObservationIds = new Set(afterObservations.map(({ id }) => id));
-    expect(
-      beforeObservations.every(({ id }) => afterObservationIds.has(id)),
-    ).toBe(true);
-    expect(
-      afterObservations.every(
-        ({ candidateListingId }) => candidateListingId === candidateId,
-      ),
-    ).toBe(true);
-    expect(
-      new Set(afterObservations.map(({ fingerprint }) => fingerprint)).size,
-    ).toBe(afterObservations.length);
-    expect(afterSources.map(({ id }) => id).sort()).toEqual(
-      beforeSources.map(({ id }) => id).sort(),
-    );
-    expect(afterDocuments.map(({ id }) => id).sort()).toEqual(
-      beforeDocuments.map(({ id }) => id).sort(),
-    );
-    expect(
-      afterDocuments.map(({ evidenceSourceId }) => evidenceSourceId).sort(),
-    ).toEqual(
-      beforeDocuments.map(({ evidenceSourceId }) => evidenceSourceId).sort(),
-    );
-    expect(evidenceProvider.calls).toHaveLength(
-      callsBeforeRefinement.evidenceSearch,
-    );
-    expect(pageFetcher.calls).toHaveLength(callsBeforeRefinement.pageFetch);
-    expect(understanding.calls.length).toBeGreaterThan(
-      callsBeforeRefinement.model,
-    );
-    expect(
-      understanding.calls
-        .slice(callsBeforeRefinement.model)
-        .flatMap((call) => call.criteria.map(({ label }) => label)),
-    ).toEqual(expect.arrayContaining(["Reviews", "Comfort for long workdays"]));
-    expect(
-      callsBeforeRefinement.modelCriterionTargets.every(
-        (batch) => batch.length <= 2,
-      ),
-    ).toBe(true);
-    expect(
-      new Set(allAssessments.map(({ taskRevision }) => taskRevision)).size,
-    ).toBe(2);
-    expect(allAssessments.some(({ taskRevision }) => taskRevision === 1n)).toBe(
-      true,
-    );
-    expect(allAssessments.some(({ taskRevision }) => taskRevision === 2n)).toBe(
-      true,
-    );
-    expect(
-      beforeAssessments.every(({ taskRevision }) => taskRevision === 1n),
-    ).toBe(true);
-
-    const pageSourceIds = new Set(
-      afterSources
-        .filter(({ sourceKind }) => sourceKind === "fetched_page")
-        .map(({ id }) => id),
-    );
-    const pageObservationIds = new Set(
-      afterObservations
-        .filter(({ evidenceSourceId }) => pageSourceIds.has(evidenceSourceId))
-        .map(({ id }) => id),
-    );
-    const currentPageAssessment = after.assessments.find(({ observationIds }) =>
-      observationIds.some((id) => pageObservationIds.has(id)),
-    );
-    expect(beforeDocuments.length).toBeGreaterThan(0);
-    expect(pageObservationIds.size).toBeGreaterThan(0);
-    expect(currentPageAssessment).toBeDefined();
-    expect(currentPageAssessment?.taskRevision).toBe(2n);
-    const linked = await connection.db
-      .select()
-      .from(criterionAssessmentObservations)
-      .where(
-        inArray(criterionAssessmentObservations.assessmentId, [
-          currentPageAssessment!.id,
+      const conceptLabel = (conceptId: string) =>
+        stateBeforeRefinement.concepts.find(({ id }) => id === conceptId)
+          ?.label;
+      const reviews = stateBeforeRefinement.activeCriteria.find(
+        ({ criterion }) => conceptLabel(criterion.conceptId) === "Reviews",
+      )?.criterion;
+      expect(candidateId).toBeDefined();
+      expect(candidateIds).toHaveLength(2);
+      expect(reviews).toBeDefined();
+      expect(reviews?.strength).toBe("strong_preference");
+      const preservedBefore = new Map(
+        stateBeforeRefinement.activeCriteria
+          .filter(({ criterion }) => criterion.id !== reviews?.id)
+          .map(({ criterion }) => [
+            conceptLabel(criterion.conceptId),
+            {
+              criterionId: criterion.id,
+              strength: criterion.strength,
+              semanticValue: criterion.semanticValue,
+            },
+          ]),
+      );
+      for (const candidateListingId of candidateIds) {
+        await saveCandidateListing({
+          db: connection.db,
+          taskId: seeded.task.id,
+          candidateListingId,
+        });
+      }
+      const beforeSavedRows = await connection.db
+        .select()
+        .from(savedCandidateListings)
+        .where(eq(savedCandidateListings.taskId, seeded.task.id));
+      const beforeObservations = await connection.db
+        .select()
+        .from(productObservations)
+        .where(inArray(productObservations.candidateListingId, [candidateId!]));
+      const beforeSources = await connection.db
+        .select()
+        .from(evidenceSources)
+        .where(inArray(evidenceSources.candidateListingId, [candidateId!]));
+      const beforeDocuments = await connection.db
+        .select()
+        .from(fetchedEvidenceDocuments)
+        .where(
+          inArray(fetchedEvidenceDocuments.candidateListingId, [candidateId!]),
+        );
+      const beforeAssessments = await connection.db
+        .select()
+        .from(criterionAssessments)
+        .where(
+          inArray(criterionAssessments.candidateListingId, [candidateId!]),
+        );
+      const callsBeforeRefinement = {
+        evidenceSearch: evidenceProvider.calls.length,
+        pageFetch: pageFetcher.calls.length,
+        model: understanding.calls.length,
+        modelCriterionTargets: understanding.calls.map((call) =>
+          call.criteria.map(({ label }) => label),
+        ),
+      };
+      const refinement = await recordTaskInput({
+        db: connection.db,
+        taskId: seeded.task.id,
+        clientActionId: `product-proof-refine-${seeded.task.id}`,
+        request: {
+          inputSchemaVersion: 1,
+          expectedRevision: 1n,
+          kind: "message",
+          body: cases[0]!.refinement!.request,
+        },
+      });
+      await captureDecisionRefinementBasis({
+        db: connection.db,
+        taskId: seeded.task.id,
+        sourceTaskInputId: refinement.input.id,
+      });
+      await captureDecisionRefinementBasis({
+        db: connection.db,
+        taskId: seeded.task.id,
+        sourceTaskInputId: refinement.input.id,
+      });
+      await expect(
+        connection.client`UPDATE shopping_private.decision_refinement_bases SET task_revision = 99 WHERE source_task_input_id = ${refinement.input.id}`,
+      ).rejects.toThrow("immutable");
+      await applyStatePatch(connection.db, {
+        ...buildMouseRevisionTwoPatch(
+          cases[0]!,
+          seeded.task.id,
+          refinement.input.id,
+          reviews!.id,
+        ),
+      });
+      const afterState = await loadCurrentShoppingState(
+        connection.db,
+        seeded.task.id,
+      );
+      expect(afterState.task.currentRevision).toBe(2n);
+      const afterLabel = (conceptId: string) =>
+        afterState.concepts.find(({ id }) => id === conceptId)?.label;
+      const afterReviews = afterState.activeCriteria.find(
+        ({ criterion }) => afterLabel(criterion.conceptId) === "Reviews",
+      )?.criterion;
+      const comfort = afterState.activeCriteria.find(
+        ({ criterion }) =>
+          afterLabel(criterion.conceptId) === "Comfort for long workdays",
+      )?.criterion;
+      expect(afterReviews).toMatchObject({
+        strength: "preference",
+        targetSemantics: "qualitative",
+        semanticValue: {
+          schemaVersion: 1,
+          kind: "qualitative",
+          mode: "text",
+          text: "reviews matter less now",
+        },
+      });
+      expect(comfort).toMatchObject({
+        strength: "strong_preference",
+        targetSemantics: "qualitative",
+        semanticValue: {
+          schemaVersion: 1,
+          kind: "qualitative",
+          mode: "text",
+          text: "comfort for long workdays matters most",
+        },
+      });
+      expect(comfort?.strength).not.toBe("hard");
+      const loadTransition = () =>
+        connection.db.transaction(
+          async (tx) => {
+            const support = await loadCurrentDecisionSupportInTransaction({
+              tx,
+              taskId: seeded.task.id,
+            });
+            return loadDecisionTransitionInTransaction({
+              tx,
+              support,
+              rejectedIds: new Set(),
+            });
+          },
+          { isolationLevel: "repeatable read", accessMode: "read only" },
+        );
+      const pendingTransition = await loadTransition();
+      expect(pendingTransition).toMatchObject({
+        movement: "reassessing",
+        previous: { state: "no_clear_winner" },
+        current: { leaderId: null },
+      });
+      expect(pendingTransition?.changes).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            label: "Reviews",
+            kind: "strength_changed",
+            before: "Strong preference",
+            after: "Preference",
+          }),
+          expect.objectContaining({
+            label: "Comfort for long workdays",
+            kind: "added",
+          }),
         ]),
       );
-    expect(
-      linked.some(({ observationId }) => pageObservationIds.has(observationId)),
-    ).toBe(true);
-    const currentComparison = buildDecisionSupport({
-      support: after,
-      savedListingIds: new Set(candidateIds),
-      savedListings: after.candidates.filter(({ id }) =>
-        candidateIds.includes(id),
-      ),
-    });
-    expect(
-      currentComparison.topOptions.some(
-        ({ listing }) => listing.id === candidateId,
-      ),
-    ).toBe(true);
-    expect(
-      currentComparison.comparison?.candidates.map(({ id }) => id).sort(),
-    ).toEqual([...candidateIds].sort());
-    const rejectedView = await setLiveListingRejected({
-      dependencies: { db: connection.db },
-      input: {
-        operation: "reject_listing",
+      for (const [label, before] of preservedBefore) {
+        const current = afterState.activeCriteria.find(
+          ({ criterion }) => afterLabel(criterion.conceptId) === label,
+        )?.criterion;
+        expect(current).toMatchObject({
+          strength: before.strength,
+          semanticValue: before.semanticValue,
+        });
+      }
+      await executeOrResumeEvidenceResearch({
+        dependencies: fakeDeps,
+        taskId: seeded.task.id,
+        searchRunId: retrieval.run.portfolio.run.id,
+        mode: "reassessment",
+        savedCandidateListingIds: candidateIds,
+      });
+      const after = await loadCurrentDecisionSupport({
+        db: connection.db,
+        taskId: seeded.task.id,
+      });
+      expect(after.brief.revision).toBe(2n);
+      const comfortAssessments = after.assessments.filter(
+        ({ criterionId }) => criterionId === comfort?.id,
+      );
+      expect(comfortAssessments).toHaveLength(2);
+      if (!differentiated)
+        expect(
+          comfortAssessments.map(({ status, relation }) => ({
+            status,
+            relation,
+          })),
+        ).toEqual([
+          { status: "meets", relation: "extended_use_evidence" },
+          { status: "meets", relation: "extended_use_evidence" },
+        ]);
+      const evolution = await loadTransition();
+      expect(evolution?.previous).toEqual(pendingTransition?.previous);
+      expect(evolution?.evidence).toBe("reused");
+      expect(evolution?.current.state).toBe(
+        differentiated ? "ready_to_choose" : "no_clear_winner",
+      );
+      if (differentiated) {
+        const mouseA = after.candidates.find(
+          ({ title }) => title === mouseCorpus[0]!.title,
+        )!;
+        expect(
+          comfortAssessments.find(
+            ({ candidateListingId }) => candidateListingId === mouseA.id,
+          ),
+        ).toMatchObject({ status: "meets", relation: "extended_use_evidence" });
+        expect(
+          comfortAssessments.find(
+            ({ candidateListingId }) => candidateListingId !== mouseA.id,
+          )?.status,
+        ).toBe("uncertain");
+        expect(evolution).toMatchObject({
+          movement: "tie_broken",
+          cause: "brief_refinement",
+          current: { leaderId: mouseA.id },
+          causalCriterionIds: [comfort!.id],
+        });
+      }
+      expect(evolution?.candidateContinuity).toBe("same_listings");
+      expect(await loadTransition()).toEqual(evolution);
+      const evolutionSession = randomUUID();
+      await connection.db.insert(founderLiveSessions).values({
+        id: evolutionSession,
+        taskId: seeded.task.id,
+        initialTurnId: randomUUID(),
+        initialRequestFingerprint: createHash("sha256")
+          .update(cases[0]!.request)
+          .digest("hex"),
+        currentContextActionId: seeded.action.id,
+        pendingTaskInputId: null,
+      });
+      const appView = await loadLiveShoppingSession({
+        db: connection.db,
         sessionId: evolutionSession,
-        candidateListingId: candidateIds[0],
-      },
-    });
-    expect(rejectedView.decisionSupport?.transition).toMatchObject({
-      cause: "candidate_rejection",
-      causalCriterionIds: [],
-      previous: evolution?.previous,
-    });
-    const undoView = await setLiveListingRejected({
-      dependencies: { db: connection.db },
-      input: {
-        operation: "undo_reject_listing",
-        sessionId: evolutionSession,
-        candidateListingId: candidateIds[0],
-      },
-    });
-    expect(undoView.decisionSupport?.transition).toEqual(evolution);
-  });
+      });
+      expect(appView.decisionSupport?.transition).toEqual(evolution);
+      expect(appView.decisionSupport?.researchStatus).not.toBe("not_started");
+      expect(
+        (
+          await loadLiveShoppingSession({
+            db: connection.db,
+            sessionId: evolutionSession,
+          })
+        ).decisionSupport?.transition,
+      ).toEqual(evolution);
+      expect(after.assessments.length).toBeGreaterThan(0);
+      expect(
+        after.assessments.every(({ taskRevision }) => taskRevision === 2n),
+      ).toBe(true);
+      expect(
+        after.assessments.some(
+          ({ criterionId }) => criterionId === comfort?.id,
+        ),
+      ).toBe(true);
+      expect(
+        after.assessments.some(
+          ({ criterionId }) => criterionId === afterReviews?.id,
+        ),
+      ).toBe(true);
+
+      const afterSavedRows = await connection.db
+        .select()
+        .from(savedCandidateListings)
+        .where(eq(savedCandidateListings.taskId, seeded.task.id));
+      const afterObservations = await connection.db
+        .select()
+        .from(productObservations)
+        .where(inArray(productObservations.candidateListingId, [candidateId!]));
+      const afterSources = await connection.db
+        .select()
+        .from(evidenceSources)
+        .where(inArray(evidenceSources.candidateListingId, [candidateId!]));
+      const afterDocuments = await connection.db
+        .select()
+        .from(fetchedEvidenceDocuments)
+        .where(
+          inArray(fetchedEvidenceDocuments.candidateListingId, [candidateId!]),
+        );
+      const allAssessments = await connection.db
+        .select()
+        .from(criterionAssessments)
+        .where(
+          inArray(criterionAssessments.candidateListingId, [candidateId!]),
+        );
+      expect(
+        afterSavedRows.map(({ candidateListingId }) => candidateListingId),
+      ).toEqual(
+        beforeSavedRows.map(({ candidateListingId }) => candidateListingId),
+      );
+      expect(
+        afterSavedRows
+          .map(({ candidateListingId }) => candidateListingId)
+          .sort(),
+      ).toEqual([...candidateIds].sort());
+      const afterObservationIds = new Set(
+        afterObservations.map(({ id }) => id),
+      );
+      expect(
+        beforeObservations.every(({ id }) => afterObservationIds.has(id)),
+      ).toBe(true);
+      expect(
+        afterObservations.every(
+          ({ candidateListingId }) => candidateListingId === candidateId,
+        ),
+      ).toBe(true);
+      expect(
+        new Set(afterObservations.map(({ fingerprint }) => fingerprint)).size,
+      ).toBe(afterObservations.length);
+      expect(afterSources.map(({ id }) => id).sort()).toEqual(
+        beforeSources.map(({ id }) => id).sort(),
+      );
+      expect(afterDocuments.map(({ id }) => id).sort()).toEqual(
+        beforeDocuments.map(({ id }) => id).sort(),
+      );
+      expect(
+        afterDocuments.map(({ evidenceSourceId }) => evidenceSourceId).sort(),
+      ).toEqual(
+        beforeDocuments.map(({ evidenceSourceId }) => evidenceSourceId).sort(),
+      );
+      expect(evidenceProvider.calls).toHaveLength(
+        callsBeforeRefinement.evidenceSearch,
+      );
+      expect(pageFetcher.calls).toHaveLength(callsBeforeRefinement.pageFetch);
+      expect(understanding.calls.length).toBeGreaterThan(
+        callsBeforeRefinement.model,
+      );
+      expect(
+        understanding.calls
+          .slice(callsBeforeRefinement.model)
+          .flatMap((call) => call.criteria.map(({ label }) => label)),
+      ).toEqual(
+        expect.arrayContaining(["Reviews", "Comfort for long workdays"]),
+      );
+      expect(
+        callsBeforeRefinement.modelCriterionTargets.every(
+          (batch) => batch.length <= 2,
+        ),
+      ).toBe(true);
+      expect(
+        new Set(allAssessments.map(({ taskRevision }) => taskRevision)).size,
+      ).toBe(2);
+      expect(
+        allAssessments.some(({ taskRevision }) => taskRevision === 1n),
+      ).toBe(true);
+      expect(
+        allAssessments.some(({ taskRevision }) => taskRevision === 2n),
+      ).toBe(true);
+      expect(
+        beforeAssessments.every(({ taskRevision }) => taskRevision === 1n),
+      ).toBe(true);
+
+      const pageSourceIds = new Set(
+        afterSources
+          .filter(({ sourceKind }) => sourceKind === "fetched_page")
+          .map(({ id }) => id),
+      );
+      const pageObservationIds = new Set(
+        afterObservations
+          .filter(({ evidenceSourceId }) => pageSourceIds.has(evidenceSourceId))
+          .map(({ id }) => id),
+      );
+      const currentPageAssessment = after.assessments.find(
+        ({ observationIds }) =>
+          observationIds.some((id) => pageObservationIds.has(id)),
+      );
+      expect(beforeDocuments.length).toBeGreaterThan(0);
+      expect(pageObservationIds.size).toBeGreaterThan(0);
+      expect(currentPageAssessment).toBeDefined();
+      expect(currentPageAssessment?.taskRevision).toBe(2n);
+      const linked = await connection.db
+        .select()
+        .from(criterionAssessmentObservations)
+        .where(
+          inArray(criterionAssessmentObservations.assessmentId, [
+            currentPageAssessment!.id,
+          ]),
+        );
+      expect(
+        linked.some(({ observationId }) =>
+          pageObservationIds.has(observationId),
+        ),
+      ).toBe(true);
+      const currentComparison = buildDecisionSupport({
+        support: after,
+        savedListingIds: new Set(candidateIds),
+        savedListings: after.candidates.filter(({ id }) =>
+          candidateIds.includes(id),
+        ),
+      });
+      expect(
+        currentComparison.topOptions.some(
+          ({ listing }) => listing.id === candidateId,
+        ),
+      ).toBe(true);
+      expect(
+        currentComparison.comparison?.candidates.map(({ id }) => id).sort(),
+      ).toEqual([...candidateIds].sort());
+      const rejectedCandidateId = differentiated
+        ? currentComparison.currentDecision.leadingCandidateListingId!
+        : candidateIds[0]!;
+      const rejectedView = await setLiveListingRejected({
+        dependencies: { db: connection.db },
+        input: {
+          operation: "reject_listing",
+          sessionId: evolutionSession,
+          candidateListingId: rejectedCandidateId,
+        },
+      });
+      expect(rejectedView.decisionSupport?.transition).toMatchObject({
+        cause: "candidate_rejection",
+        causalCriterionIds: [],
+        previous: evolution?.previous,
+      });
+      expect(
+        rejectedView.decisionSupport?.currentDecision.leadingCandidateListingId,
+      ).not.toBe(rejectedCandidateId);
+      const undoView = await setLiveListingRejected({
+        dependencies: { db: connection.db },
+        input: {
+          operation: "undo_reject_listing",
+          sessionId: evolutionSession,
+          candidateListingId: rejectedCandidateId,
+        },
+      });
+      expect(undoView.decisionSupport?.transition).toEqual(evolution);
+    },
+  );
 
   it("projects a faithfully seeded product task through the real live application operations", async () => {
     const seeded = await seedFixture(connection.db, cases[0]!);

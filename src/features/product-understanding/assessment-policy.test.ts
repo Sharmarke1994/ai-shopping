@@ -238,6 +238,12 @@ describe("criterion assessment guard", () => {
     ],
     [
       "independent_review",
+      "fetched_page",
+      "The review does not evaluate comfort over extended sessions.",
+      "uncertain",
+    ],
+    [
+      "independent_review",
       "organic_result",
       "The reviewer remained comfortable after multiple hours.",
       "uncertain",

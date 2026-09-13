@@ -424,7 +424,7 @@ function moneyAssessment(options: {
       return {
         status: "meets",
         relation: "conditional_stretch_supported",
-        explanation: `${formatMoney(observed.amountMinor, observed.currency)} is inside the stretch ceiling, and the cited evidence directly addresses the condition: ${value.condition}.`,
+        explanation: `${formatMoney(observed.amountMinor, observed.currency)} is ${formatMoney(observed.amountMinor - value.targetMinor, observed.currency)} above your ${formatMoney(value.targetMinor, value.currency)} target, inside the stretch ceiling. The cited evidence directly addresses the condition: ${value.condition}.`,
         method: "guarded_model",
         observationIds: [
           ...observed.observationIds,
