@@ -58,6 +58,10 @@ describe("shopping architecture migration shape", () => {
       "search_runs",
       "shopping_task_subjects",
       "shopping_tasks",
+      "space_assets",
+      "space_revision_assets",
+      "space_revisions",
+      "spaces",
       "state_change_applications",
       "task_inputs",
       "user_messages",
@@ -77,7 +81,7 @@ describe("shopping architecture migration shape", () => {
       'select count(*)::integer as count from "drizzle"."migrations"',
     );
     const after = afterRows[0]?.count;
-    expect(before).toBe(19);
+    expect(before).toBe(20);
     expect(after).toBe(before);
   });
 
