@@ -427,6 +427,28 @@ These remain deterministic implementation checks, not independent acceptance or
 live-provider proof. Zero external provider calls; checkpoints 1/2 unchanged;
 Checkpoint 3, the product proof marker and result remain absent.
 
+#### Decision Frontier — rational alternatives
+
+From `62639ba`, the implementation checkpoint `36b4a91` adds one optional
+server-derived alternative without changing recommendation states or ranking.
+The real persisted chair remains led by B at £330; A at £245 is the target-budget
+alternative, £5 below the £250 target and £85 less than B, with weaker lumbar
+support evidence. Both sides retain current assessment/observation references.
+Mouse has no meaningful opposing advantage; vacuum and coffee challengers remain
+hard-excluded. Their frontiers are null, not empty second-place recommendations.
+
+The `/live` hierarchy now connects the recommendation, its rational alternative
+and saved comparison. A keyboard-accessible refinement link only focuses the
+existing input; it does not submit, prefill or alter authority. Priority-change
+unit coverage verifies that the alternative can become leader through ordinary
+assessment semantics and Decision Evolution reports that change.
+
+See [Decision Frontier](v0-09-decision-frontier.md) for the market-informed
+refinement audit, screenshots and exact deterministic gates. No new category,
+fixture evidence rule, provider call or migration. The next separate product
+move is one provenance-backed market-learning direction with explicit shopper
+confirmation and a measured effect on subsequent search; not implemented here.
+
 The separate `codex/v0-09-product-completion` worktree preserves the existing
 provider-proof artifacts while product work continues deterministically from
 `dab4e03b6eacd54c7d66d8f7439ed02ea0b0cd41`. Decision-first implementation,

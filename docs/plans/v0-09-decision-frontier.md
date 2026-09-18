@@ -72,7 +72,7 @@ trace whether the shopper's confirmation changes queries and useful candidates.
 That is the next product move, not another category or a duplicate summary.
 It is not implemented in this run.
 
-## Verification in progress
+## Founder outcomes and verification
 
 The persisted chair proves £330 supported leader / £245 alternative, £85 saved,
 £5 below the authoritative £250 target, exact assessment/observation references,
@@ -88,3 +88,59 @@ now admits the full listing title, prose does not repeat unbounded titles, and
 invalid optional enrichment fails closed rather than hiding the main decision.
 The mouse corpus, assessment policy and ordinary recommendation states remain
 unchanged.
+
+Implementation checkpoint: `36b4a91`. This replaces the prior “no explicit chair
+alternative” follow-up; the source corpus itself has not changed.
+
+| Journey | Current Decision | Frontier | Reason |
+| --- | --- | --- | --- |
+| Mouse rev2 | `ready_to_choose`, Mouse A | null | B has no positive criterion advantage; existence/rank is not a reason |
+| Chair | `leader_with_tradeoff`, Chair B | Chair A, eligible alternative | £85 saved, £5 below the £250 target, giving up stronger lower-back/long-session support evidence |
+| Vacuum | `leader_needs_verification`, Vacuum A | null | B violates hard noise requirement; A still needs noise verified |
+| Coffee | `ready_to_choose`, Machine A | null | B violates hard25cm width and remains factual comparison only |
+
+The UI displays one “A sensible alternative” section with “You give up”, not a
+second primary buy action. Purchase remains attached to the recommendation.
+When both options are saved, the frontier links to the full comparison, which
+also explains its relationship to the recommendation. Null frontiers render no
+section. Keyboard checks verify focus and unchanged authority/empty draft when
+following the refinement bridge. No duplicate live announcement is introduced.
+
+Product QA used the real persisted application composition with fixture ports
+and intercepted API transport, plus the existing normal fixture API browser
+tests. It does not claim live provider execution. Both dedicated chair screenshots
+were visually inspected at desktop and 390px mobile; reading order is decision,
+leader reasons/trade-off, secondary frontier, then decision-changing check.
+There is no horizontal overflow. The product explains **why B wins and when A
+is rational**, rather than just announcing B.
+
+- [Chair desktop](../screenshots/v0-09-frontier/chair-desktop.png)
+- [Chair 390px mobile](../screenshots/v0-09-frontier/chair-mobile.png)
+- Other founder controls refreshed under `docs/screenshots/v0-09-founder/`.
+
+Deterministic gates:
+
+- `pnpm check`: 487/487 tests in 51 files; format, lint, typecheck and production
+  build pass. Decision/frontier semantic tests: 36/36, including the long-title
+  regression; decision-evolution and component tests are included in the full gate.
+- Focused persisted founder/product-engine journeys: 10/10, including the real
+  symmetric/differentiated mouse paths and three differentiated founder categories.
+- Production-server Playwright: 12/12, including all four persisted founder
+  journeys, keyboard bridge, comparison navigation and null-frontier controls.
+- Full PostgreSQL suite: 167/168 pass. The only failure is the permitted local
+  `17.11 (Homebrew)` versus pinned `17.6` version assertion. Disposable databases
+  migrate from empty through 0018; all other migration/structural tests pass.
+  `db:generate`: no schema drift or new migration.
+- Diff audit and added-line secret/private-path scans clean. Read-only review's
+  title-boundary finding was corrected and re-reviewed as resolved.
+
+Provider boundary: zero external OpenAI, Terra, Serper or context-provider calls;
+no credentials, preflight, Checkpoint 3, proof marker or proof result. The one-shot
+product proof is unconsumed. Protected checkpoint SHA256 hashes remain:
+
+- Checkpoint1: `0e2d4ddbbf9eac649646b99454ac8962c9159e3d615b6a87c2a67967e4261272`
+- Checkpoint2: `8a4001a01ddac452e896829cf50b7cf046d3caf07ecdaa8d28bd78910c25347d`
+
+Implementation verdict: Decision Frontier ACCEPT; overall deterministic product
+experience ACCEPT WITH BOUNDED FOLLOW-UP for the distinct market-learning gap
+above. These verdicts are for independent review, not live release acceptance.
