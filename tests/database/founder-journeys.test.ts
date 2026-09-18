@@ -7,7 +7,10 @@ import {
   coffeeCorpus,
 } from "../support/founder-product-evidence";
 import { loadCurrentDecisionSupport } from "@/features/product-understanding/persistence";
-import { setLiveListingSaved } from "@/features/live-shopping/application";
+import {
+  setLiveListingSaved,
+  setLiveListingRejected,
+} from "@/features/live-shopping/application";
 
 let connection: ReturnType<typeof createTestDatabaseConnection>;
 beforeAll(() => {
@@ -38,6 +41,8 @@ it.each([
       db: connection.db,
       taskId: journey.taskId,
     });
+    const beforeSaveFrontier = (await journey.load()).decisionSupport!
+      .currentDecision.frontier;
     for (const candidate of support.candidates)
       await setLiveListingSaved({
         dependencies: journey.dependencies,
@@ -49,23 +54,7 @@ it.each([
       });
     const view = await journey.load();
     const decision = view.decisionSupport!.currentDecision;
-    console.log(
-      JSON.stringify({
-        name,
-        decision,
-        assessments: support.assessments.map((a) => ({
-          candidate: support.candidates.find(
-            (c) => c.id === a.candidateListingId,
-          )?.title,
-          criterion: support.brief.items.find(
-            (i) => i.criterionId === a.criterionId,
-          )?.conceptLabel,
-          status: a.status,
-          relation: a.relation,
-          explanation: a.explanation,
-        })),
-      }),
-    );
+    expect(decision.frontier).toEqual(beforeSaveFrontier);
     expect(journey.corpus.calls.page).toBeGreaterThan(0);
     expect(support.sources.some((s) => s.sourceKind === "fetched_page")).toBe(
       true,
@@ -87,7 +76,74 @@ it.each([
         ),
       ).toBeDefined();
       expect(decision.keyTradeoff).not.toBeNull();
-    }
+      const alternative = support.candidates.find(
+        (c) => c.title === chairCorpus[0]!.title,
+      )!;
+      expect(decision.frontier).toMatchObject({
+        kind: "eligible_alternative",
+        candidateListingId: alternative.id,
+        money: {
+          currency: "GBP",
+          targetMinor: 25000,
+          leaderAmountMinor: 33000,
+          alternativeAmountMinor: 24500,
+          savingMinor: 8500,
+          belowTargetMinor: 500,
+        },
+      });
+      expect(decision.frontier!.summary).toContain("saves £85");
+      expect(decision.frontier!.giveUp).toContain("lower-back support");
+      for (const reason of [
+        ...decision.frontier!.leaderAdvantages,
+        ...decision.frontier!.alternativeAdvantages,
+      ]) {
+        const source = support.assessments.find(
+          (a) => a.id === reason.assessmentId,
+        )!;
+        expect(source.taskRevision).toBe(support.brief.revision);
+        expect(reason.observationIds).toEqual(source.observationIds);
+        expect(reason.explanation).toBe(source.explanation);
+        expect(
+          reason.observationIds.every((id) =>
+            support.observations.some((o) => o.id === id),
+          ),
+        ).toBe(true);
+      }
+      const unsaved = await setLiveListingSaved({
+        dependencies: journey.dependencies,
+        input: {
+          operation: "unsave_listing",
+          sessionId: journey.sessionId,
+          candidateListingId: alternative.id,
+        },
+      });
+      expect(unsaved.decisionSupport!.currentDecision.frontier).toEqual(
+        decision.frontier,
+      );
+      const rejected = await setLiveListingRejected({
+        dependencies: journey.dependencies,
+        input: {
+          operation: "reject_listing",
+          sessionId: journey.sessionId,
+          candidateListingId: alternative.id,
+        },
+      });
+      expect(rejected.decisionSupport!.currentDecision.frontier).toBeNull();
+      expect(
+        rejected.decisionSupport!.currentDecision.leadingCandidateListingId,
+      ).toBe(leader.id);
+      const restored = await setLiveListingRejected({
+        dependencies: journey.dependencies,
+        input: {
+          operation: "undo_reject_listing",
+          sessionId: journey.sessionId,
+          candidateListingId: alternative.id,
+        },
+      });
+      expect(restored.decisionSupport!.currentDecision.frontier).toEqual(
+        decision.frontier,
+      );
+    } else expect(decision.frontier).toBeNull();
     if (name === "cordless-vacuum") {
       expect(decision.blockingGap?.label).toBe("Noise level");
       expect(

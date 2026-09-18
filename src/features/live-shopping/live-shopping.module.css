@@ -1172,7 +1172,6 @@
 
 .decisionReasons,
 .decisionWatch,
-.decisionAlternative,
 .decisionNextCheck {
   border: 1px solid currentColor;
   border-radius: 17px;
@@ -1185,7 +1184,6 @@
 
 .decisionReady .decisionReasons,
 .decisionReady .decisionWatch,
-.decisionReady .decisionAlternative,
 .decisionReady .decisionNextCheck {
   border-color: rgb(255 255 255 / 16%);
   background: rgb(255 255 255 / 7%);
@@ -1193,11 +1191,9 @@
 
 .decisionProvisional .decisionReasons,
 .decisionProvisional .decisionWatch,
-.decisionProvisional .decisionAlternative,
 .decisionProvisional .decisionNextCheck,
 .decisionUnresolved .decisionReasons,
 .decisionUnresolved .decisionWatch,
-.decisionUnresolved .decisionAlternative,
 .decisionUnresolved .decisionNextCheck {
   border-color: rgb(23 26 23 / 11%);
   background: rgb(255 255 255 / 47%);
@@ -1212,7 +1208,6 @@
 
 .decisionSummaryLabel > span,
 .decisionWatch > span,
-.decisionAlternative > span,
 .decisionNextCheck > div > span {
   font-size: 10px;
   font-weight: 850;
@@ -1258,7 +1253,6 @@
 
 .decisionReasons p,
 .decisionWatch p,
-.decisionAlternative p,
 .decisionNextCheck p,
 .decisionQuietCopy {
   margin: 0;
@@ -1284,17 +1278,60 @@
   font-weight: 540;
 }
 
-.decisionAlternative {
+.decisionFrontier {
   display: grid;
-  margin-top: 12px;
-  padding: 17px 18px;
-  grid-template-columns: 110px minmax(160px, 0.65fr) minmax(260px, 1fr);
-  align-items: baseline;
-  gap: 16px;
+  gap: 10px;
+  margin-top: 20px;
+  padding: 20px;
+  border: 1px solid rgb(255 255 255 / 22%);
+  border-radius: 16px;
+  background: rgb(255 255 255 / 5%);
 }
 
-.decisionAlternative > strong {
+.decisionFrontier h3 {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.decisionFrontier > strong {
+  overflow-wrap: anywhere;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 24px;
+  font-weight: 540;
+  line-height: 1.15;
+}
+
+.decisionFrontier p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.decisionFrontier div > span {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.decisionFrontier nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
   font-size: 13px;
+}
+
+.decisionFrontier a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.decisionFrontier small {
+  font-size: 12px;
+  opacity: 0.8;
 }
 
 .decisionNextCheck {
@@ -1881,11 +1918,6 @@
 
   .decisionSummaryGrid {
     grid-template-columns: 1fr;
-  }
-
-  .decisionAlternative {
-    grid-template-columns: 1fr;
-    gap: 6px;
   }
 }
 

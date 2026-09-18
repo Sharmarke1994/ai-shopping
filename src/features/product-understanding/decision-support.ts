@@ -10,6 +10,8 @@ import type {
   ProductObservationV1,
 } from "./contracts";
 import type { CurrentDecisionSupport } from "./persistence";
+import { deriveDecisionFrontier } from "./decision-frontier";
+import type { DecisionFrontier } from "./decision-frontier-contract";
 
 export type DecisionSupportCandidate = Readonly<{
   listing: PersistedCandidateListing;
@@ -91,6 +93,7 @@ export type CurrentDecisionReason = Readonly<{
 }>;
 
 export type CurrentDecision = Readonly<{
+  frontier: DecisionFrontier | null;
   state:
     | "researching"
     | "leader_needs_verification"
@@ -214,7 +217,7 @@ function primaryDecisionGap(options: {
   );
 }
 
-export function synthesizeCurrentDecision(options: {
+function synthesizeBaseDecision(options: {
   items: readonly BriefItemV1[];
   candidates: readonly DecisionSupportCandidate[];
   assessments: readonly CriterionAssessmentV1[];
@@ -223,7 +226,7 @@ export function synthesizeCurrentDecision(options: {
     "not_started" | "researching" | "partial" | "failed" | "ready";
   assessedCandidateCount: number;
   eligibleCandidateCount: number;
-}): CurrentDecision {
+}): Omit<CurrentDecision, "frontier"> {
   const [leader, challenger] = options.candidates;
   if (options.eligibleCandidateCount === 0) {
     const noAssessments = options.assessedCandidateCount === 0;
@@ -498,6 +501,19 @@ export function synthesizeCurrentDecision(options: {
     recommendationBasis: soleEligible
       ? "sole_eligible_option"
       : "meaningful_criterion_separation",
+  };
+}
+
+export function synthesizeCurrentDecision(
+  options: Parameters<typeof synthesizeBaseDecision>[0],
+): CurrentDecision {
+  const decision = synthesizeBaseDecision(options);
+  const frontier = deriveDecisionFrontier({ ...options, decision });
+  return {
+    ...decision,
+    frontier,
+    alternativeCandidateListingId: frontier?.candidateListingId ?? null,
+    alternativeReason: frontier?.summary ?? null,
   };
 }
 

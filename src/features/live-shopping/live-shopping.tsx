@@ -297,6 +297,13 @@ function CurrentDecisionSummary({
     ({ listing }) =>
       listing.candidateListingId === decision.alternativeCandidateListingId,
   );
+  const frontier = decision.frontier;
+  const hasFrontierComparison =
+    frontier !== null &&
+    [decision.leadingCandidateListingId, frontier.candidateListingId].every(
+      (id) =>
+        support.comparison?.candidates.some((c) => c.candidateListingId === id),
+    );
   const nextGap = decision.whatCouldChangeDecision;
   const gapOptions =
     nextGap === null
@@ -423,12 +430,39 @@ function CurrentDecisionSummary({
           </div>
         ) : null}
 
-        {alternative !== undefined && decision.alternativeReason !== null ? (
-          <div className={styles.decisionAlternative}>
-            <span>Best alternative</span>
-            <strong>{alternative.listing.title}</strong>
-            <p>{decision.alternativeReason}</p>
-          </div>
+        {alternative !== undefined && frontier !== null ? (
+          <section
+            className={styles.decisionFrontier}
+            aria-labelledby="decision-frontier-heading"
+          >
+            <h3 id="decision-frontier-heading">A sensible alternative</h3>
+            <strong>
+              {frontier.title}
+              {alternative.listing.priceText !== null
+                ? ` · ${alternative.listing.priceText}`
+                : ""}
+            </strong>
+            <p>{frontier.summary}</p>
+            <div>
+              <span>You give up</span>
+              <p>{frontier.giveUp}</p>
+            </div>
+            <nav aria-label="Explore the decision trade-off">
+              {hasFrontierComparison ? (
+                <a href="#saved-comparison-heading">
+                  Compare the evidence for both
+                </a>
+              ) : (
+                <span>Save both options to compare their full evidence.</span>
+              )}
+              <a href="#refine-request">
+                Explore this trade-off in your priorities
+              </a>
+            </nav>
+            <small>
+              Your priorities change only when you submit a refinement.
+            </small>
+          </section>
         ) : null}
 
         {nextGap !== null ? (
@@ -1142,7 +1176,23 @@ function SavedComparison({
     >
       <div className={styles.comparisonIntro}>
         <p className={styles.eyebrow}>Your saved comparison</p>
-        <h2 id="saved-comparison-heading">What separates your saved options</h2>
+        <h2 id="saved-comparison-heading" tabIndex={-1}>
+          What separates your saved options
+        </h2>
+        {view.decisionSupport?.currentDecision.frontier !== null &&
+        view.decisionSupport?.currentDecision.frontier !== undefined &&
+        [
+          view.decisionSupport.currentDecision.leadingCandidateListingId,
+          view.decisionSupport.currentDecision.frontier.candidateListingId,
+        ].every((id) =>
+          comparison.candidates.some((c) => c.candidateListingId === id),
+        ) ? (
+          <p>
+            The recommendation and its alternative are compared below. The
+            alternative offers a different trade-off, not a second
+            recommendation.
+          </p>
+        ) : null}
         <p>{comparison.judgement}</p>
       </div>
       <div className={styles.comparisonOverview}>

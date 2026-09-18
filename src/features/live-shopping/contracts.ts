@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { decisionFrontierSchema } from "@/features/product-understanding/decision-frontier-contract";
 import { decisionTransitionSchema } from "@/features/product-understanding/decision-transition";
 import {
   candidateListingIdSchema,
@@ -265,6 +266,7 @@ const currentDecisionReasonSchema = z.strictObject({
 });
 
 const currentDecisionSchema = z.strictObject({
+  frontier: decisionFrontierSchema.nullable().default(null),
   state: z.enum([
     "researching",
     "leader_needs_verification",

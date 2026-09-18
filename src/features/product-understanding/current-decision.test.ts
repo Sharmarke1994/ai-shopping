@@ -163,7 +163,7 @@ function assessment(options: {
     method: "deterministic",
     model: null,
     promptVersion: null,
-    observationIds: [],
+    observationIds: [randomUUID()],
     createdAt: new Date("2026-09-01T10:00:01.000Z"),
   });
 }
@@ -225,6 +225,356 @@ function project(options: {
 }
 
 describe("deterministic Current Decision synthesis", () => {
+  function frontierCase() {
+    const brief = briefFromSeeds([
+      { label: "Comfort", strength: "strong_preference" },
+      { label: "Low weight", strength: "preference" },
+      { label: "Wireless", strength: "hard" },
+    ]);
+    const leader = listing(brief, "Comfort option", 1);
+    const alternative = listing(brief, "Light option", 3);
+    const assessments = [
+      ...profile({
+        brief,
+        listingId: leader.id,
+        statuses: {
+          Comfort: "meets",
+          "Low weight": "uncertain",
+          Wireless: "meets",
+        },
+      }),
+      ...profile({
+        brief,
+        listingId: alternative.id,
+        statuses: {
+          Comfort: "uncertain",
+          "Low weight": "meets",
+          Wireless: "meets",
+        },
+      }),
+    ];
+    return {
+      brief,
+      leader,
+      alternative,
+      candidates: [leader, alternative],
+      assessments,
+    };
+  }
+
+  function budgetFrontier(leaderPrice = 33000, alternativePrice = 24500) {
+    const brief = briefFromSeeds([
+      { label: "Comfort", strength: "strong_preference" },
+      { label: "Price", strength: "preference" },
+    ]);
+    const priceItem = brief.items.find((i) => i.conceptLabel === "Price")!;
+    priceItem.semanticValue = {
+      schemaVersion: 1,
+      kind: "money_stretch",
+      currency: "GBP",
+      targetMinor: 25000,
+      stretchCeilingMinor: 35000,
+      condition: "better for long sessions",
+    };
+    priceItem.targetSemantics = "stretch";
+    const leader = {
+      ...listing(brief, "Supported stretch", 1),
+      price: { amountMinor: leaderPrice, currency: "GBP" as const },
+    };
+    const alternative = {
+      ...listing(brief, "Target option", 2),
+      price: { amountMinor: alternativePrice, currency: "GBP" as const },
+    };
+    return {
+      brief,
+      leader,
+      alternative,
+      candidates: [leader, alternative],
+      assessments: [
+        ...profile({
+          brief,
+          listingId: leader.id,
+          statuses: {
+            Comfort: "meets",
+            Price: {
+              status: "meets",
+              relation: "conditional_stretch_supported",
+            },
+          },
+        }),
+        ...profile({
+          brief,
+          listingId: alternative.id,
+          statuses: {
+            Comfort: "uncertain",
+            Price: {
+              status: alternativePrice === 25000 ? "meets" : "uncertain",
+              relation:
+                alternativePrice === 25000
+                  ? "target_exact"
+                  : `target_distance_minor:${alternativePrice - 25000}`,
+            },
+          },
+        }),
+      ],
+    };
+  }
+
+  it.each([
+    [33000, 24500, 8500, 500],
+    [34400, 24900, 9500, 100],
+    [33000, 25000, 8000, 0],
+  ])(
+    "derives conditional-budget differences from actual prices %i / %i",
+    (leaderPrice, alternativePrice, saving, belowTarget) => {
+      const seeded = budgetFrontier(leaderPrice, alternativePrice);
+      const result = project(seeded).currentDecision;
+      expect(result.state).toBe("leader_with_tradeoff");
+      expect(result.frontier).toMatchObject({
+        candidateListingId: seeded.alternative.id,
+        money: {
+          savingMinor: saving,
+          belowTargetMinor: belowTarget,
+          targetMinor: 25000,
+        },
+      });
+      expect(result.frontier!.alternativeAdvantages[0]!.label).toBe("Price");
+    },
+  );
+
+  it("fails closed on missing/cross-currency prices or an unsupported stretch condition", () => {
+    const seeded = budgetFrontier();
+    expect(
+      project({
+        ...seeded,
+        candidates: [seeded.leader, { ...seeded.alternative, price: null }],
+      }).currentDecision.frontier,
+    ).toBeNull();
+    expect(
+      persistedCandidateListingSchema.safeParse({
+        ...seeded.alternative,
+        price: { amountMinor: 24500, currency: "USD" },
+      }).success,
+    ).toBe(false);
+    expect(
+      project({
+        ...seeded,
+        assessments: seeded.assessments.map((a) =>
+          a.candidateListingId === seeded.leader.id &&
+          a.relation === "conditional_stretch_supported"
+            ? {
+                ...a,
+                status: "uncertain" as const,
+                relation: "inside_conditional_stretch",
+              }
+            : a,
+        ),
+      }).currentDecision.frontier,
+    ).toBeNull();
+  });
+
+  it("never promotes a price-ceiling contradiction even when the candidate has a softer advantage", () => {
+    const seeded = frontierCase();
+    const priceItem = {
+      ...seeded.brief.items[1]!,
+      criterionId: crypto.randomUUID(),
+      conceptLabel: "Price",
+      conceptDefinition: "Purchase price",
+      semanticValue: {
+        schemaVersion: 1 as const,
+        kind: "money_stretch" as const,
+        currency: "GBP" as const,
+        targetMinor: 25000,
+        stretchCeilingMinor: 35000,
+        condition: "better comfort",
+      },
+      targetSemantics: "stretch" as const,
+    };
+    const brief = shoppingBriefV1Schema.parse({
+      ...seeded.brief,
+      items: [...seeded.brief.items, priceItem],
+    });
+    const assessments = [
+      ...seeded.assessments,
+      assessment({
+        brief,
+        listingId: seeded.leader.id,
+        label: "Price",
+        status: "meets",
+        relation: "target_exact",
+      }),
+      assessment({
+        brief,
+        listingId: seeded.alternative.id,
+        label: "Price",
+        status: "conflicts",
+        relation: "above_stretch_ceiling",
+      }),
+    ];
+    expect(
+      project({ ...seeded, brief, assessments }).currentDecision.frontier,
+    ).toBeNull();
+  });
+
+  it("projects an asymmetric non-price frontier with exact current assessment provenance", () => {
+    const seeded = frontierCase();
+    const result = project(seeded).currentDecision;
+    expect(result.state).toBe("ready_to_choose");
+    expect(result.frontier).toMatchObject({
+      candidateListingId: seeded.alternative.id,
+      money: null,
+    });
+    expect(result.frontier!.alternativeAdvantages[0]!.label).toBe("Low weight");
+    expect(result.frontier!.leaderAdvantages[0]!.label).toBe("Comfort");
+    for (const reason of [
+      ...result.frontier!.leaderAdvantages,
+      ...result.frontier!.alternativeAdvantages,
+    ]) {
+      const original = seeded.assessments.find(
+        (a) => a.id === reason.assessmentId,
+      )!;
+      expect(reason.observationIds).toEqual(original.observationIds);
+      expect(reason.explanation).toBe(original.explanation);
+    }
+  });
+
+  it("accepts the full listing-title boundary without unbounded repeated-title prose", () => {
+    const seeded = frontierCase();
+    const longAlternative = { ...seeded.alternative, title: "A".repeat(1000) };
+    const result = project({
+      ...seeded,
+      candidates: [seeded.leader, longAlternative],
+    }).currentDecision;
+    expect(result.frontier?.title).toHaveLength(1000);
+    expect(result.frontier!.summary.length).toBeLessThan(500);
+    expect(result.frontier!.giveUp.length).toBeLessThan(500);
+  });
+
+  it.each(["uncertain", "conflicts"] as const)(
+    "never promotes a challenger with hard status %s",
+    (status) => {
+      const seeded = frontierCase();
+      const wireless = seeded.brief.items.find(
+        (i) => i.conceptLabel === "Wireless",
+      )!;
+      const assessments = seeded.assessments.map((a) =>
+        a.candidateListingId === seeded.alternative.id &&
+        a.criterionId === wireless.criterionId
+          ? { ...a, status }
+          : a,
+      );
+      expect(
+        project({ ...seeded, assessments }).currentDecision.frontier,
+      ).toBeNull();
+    },
+  );
+
+  it("does not turn a dominated product or unsourced positive claim into an alternative", () => {
+    const seeded = frontierCase();
+    expect(
+      project({
+        ...seeded,
+        assessments: seeded.assessments.map((a) =>
+          a.candidateListingId === seeded.alternative.id
+            ? { ...a, observationIds: [] }
+            : a,
+        ),
+      }).currentDecision.frontier,
+    ).toBeNull();
+    expect(
+      project({
+        ...seeded,
+        assessments: seeded.assessments.map((a) =>
+          a.candidateListingId === seeded.leader.id
+            ? { ...a, status: "meets" as const }
+            : a,
+        ),
+      }).currentDecision.frontier,
+    ).toBeNull();
+  });
+
+  it("ignores stale advantage assessments and rejected alternatives", () => {
+    const seeded = frontierCase();
+    expect(
+      project({ ...seeded, rejectedIds: [seeded.alternative.id] })
+        .currentDecision.frontier,
+    ).toBeNull();
+    expect(
+      project({
+        ...seeded,
+        assessments: seeded.assessments.map((a) =>
+          a.candidateListingId === seeded.alternative.id
+            ? { ...a, taskRevision: 99n }
+            : a,
+        ),
+      }).currentDecision.frontier,
+    ).toBeNull();
+  });
+
+  it("searches beyond the second option when only a later candidate has a real advantage", () => {
+    const seeded = frontierCase();
+    const dominated = listing(seeded.brief, "Dominated option", 2);
+    const result = project({
+      ...seeded,
+      candidates: [seeded.leader, dominated, seeded.alternative],
+      assessments: [
+        ...seeded.assessments,
+        ...profile({
+          brief: seeded.brief,
+          listingId: dominated.id,
+          statuses: { Wireless: "meets" },
+        }),
+      ],
+    });
+    expect(result.currentDecision.frontier?.candidateListingId).toBe(
+      seeded.alternative.id,
+    );
+  });
+
+  it("does not use duplicate exact offers as a frontier", () => {
+    const seeded = frontierCase();
+    const duplicate = {
+      ...seeded.leader,
+      id: seeded.alternative.id,
+      queryId: seeded.alternative.queryId,
+    };
+    const result = project({
+      ...seeded,
+      candidates: [seeded.leader, duplicate],
+    });
+    expect(result.topOptions).toHaveLength(1);
+    expect(result.currentDecision.frontier).toBeNull();
+  });
+
+  it("does not infer a money frontier just because both offers are under a hard ceiling", () => {
+    const brief = briefFromFounderFixture({
+      fixture: V0_09_PRODUCT_ENGINE_CASES.find(
+        (c) => c.name === "ergonomic-mouse",
+      )!,
+    });
+    const a = listing(brief, "Full support", 1);
+    const b = {
+      ...listing(brief, "Cheaper", 2),
+      price: { amountMinor: 3500, currency: "GBP" as const },
+    };
+    const all = Object.fromEntries(
+      brief.items.map((i) => [i.conceptLabel, "meets" as const]),
+    );
+    expect(
+      project({
+        brief,
+        candidates: [a, b],
+        assessments: [
+          ...profile({ brief, listingId: a.id, statuses: all }),
+          ...profile({
+            brief,
+            listingId: b.id,
+            statuses: { ...all, "Mouse shape": "uncertain" },
+          }),
+        ],
+      }).currentDecision.frontier,
+    ).toBeNull();
+  });
   it("keeps an evidenced lead provisional while research is still running", () => {
     const brief = briefFromSeeds([
       { label: "Comfort", strength: "strong_preference" },

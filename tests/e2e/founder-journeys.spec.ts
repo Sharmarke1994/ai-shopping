@@ -132,6 +132,12 @@ test("persisted differentiated mouse: tie, refinement, ready, refresh and mobile
     expect((await journey.load()).decisionSupport?.currentDecision.state).toBe(
       "ready_to_choose",
     );
+    expect(
+      (await journey.load()).decisionSupport?.currentDecision.frontier,
+    ).toBeNull();
+    await expect(
+      page.getByRole("heading", { name: "A sensible alternative" }),
+    ).toHaveCount(0);
     await page.reload();
     await expect(page.locator("#current-decision-heading")).toContainText(
       /I’d choose Mouse A/i,
@@ -214,8 +220,38 @@ for (const [name, products, expected] of [
         await expect(
           hero.getByRole("link", { name: /Buy from/ }),
         ).toHaveAttribute("href", /^https:\/\/example\.test\//);
-      if (name === "office-chair")
+      if (name === "office-chair") {
         await expect(hero).toContainText("above your £250 target");
+        const frontier = hero.getByRole("region", {
+          name: "A sensible alternative",
+        });
+        await expect(frontier).toContainText("Chair A Workseat 100");
+        await expect(frontier).toContainText("£245.00");
+        await expect(frontier).toContainText("£5 below your £250 target");
+        await expect(frontier).toContainText("saves £85");
+        await expect(frontier).toContainText("lower-back support");
+        const beforeBridge = await journey.load();
+        await frontier
+          .getByRole("link", {
+            name: "Explore this trade-off in your priorities",
+          })
+          .focus();
+        await page.keyboard.press("Enter");
+        await expect(
+          page.getByLabel("Refine what you’re looking for"),
+        ).toBeFocused();
+        await expect(
+          page.getByLabel("Refine what you’re looking for"),
+        ).toHaveValue("");
+        expect((await journey.load()).brief).toEqual(beforeBridge.brief);
+      } else {
+        await expect(
+          hero.getByRole("heading", { name: "A sensible alternative" }),
+        ).toHaveCount(0);
+        expect(
+          (await journey.load()).decisionSupport?.currentDecision.frontier,
+        ).toBeNull();
+      }
       const view = await journey.load();
       if (view.action.kind !== "search" || view.action.search === null)
         throw new Error("Expected persisted founder search results");
@@ -234,6 +270,20 @@ for (const [name, products, expected] of [
           name: "What separates your saved options",
         }),
       ).toBeVisible();
+      if (name === "office-chair") {
+        await hero
+          .getByRole("link", { name: "Compare the evidence for both" })
+          .click();
+        await expect(
+          page.getByRole("heading", {
+            name: "What separates your saved options",
+          }),
+        ).toBeFocused();
+        await mkdir("docs/screenshots/v0-09-frontier", { recursive: true });
+        await hero.screenshot({
+          path: "docs/screenshots/v0-09-frontier/chair-desktop.png",
+        });
+      }
       await mkdir("docs/screenshots/v0-09-founder", { recursive: true });
       await page.locator("#current-decision-heading").scrollIntoViewIfNeeded();
       await page.screenshot({
@@ -241,6 +291,11 @@ for (const [name, products, expected] of [
         fullPage: false,
       });
       await page.setViewportSize({ width: 390, height: 844 });
+      if (name === "office-chair") {
+        await hero.screenshot({
+          path: "docs/screenshots/v0-09-frontier/chair-mobile.png",
+        });
+      }
       expect(
         await page.evaluate(
           () => document.documentElement.scrollWidth <= innerWidth,

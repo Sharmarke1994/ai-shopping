@@ -7,6 +7,7 @@ import { persistedCandidateListingSchema } from "@/features/retrieval-spike/pers
 import { criterionAssessmentV1Schema } from "./contracts";
 import type { CurrentDecisionSupport } from "./persistence";
 import { briefChanges, projectDecisionTransition } from "./decision-transition";
+import { buildDecisionSupport } from "./decision-support";
 
 const taskId = randomUUID();
 const identities = new Map<string, { concept: string; lineage: string }>();
@@ -361,6 +362,32 @@ describe("Decision Evolution authority and movement", () => {
       Comfort: ["meets", "uncertain"],
       Weight: ["uncertain", "meets"],
     } as const;
+    const previousSupport = support(old, {
+      Comfort: [...profiles.Comfort],
+      Weight: [...profiles.Weight],
+    });
+    const currentSupport = support(next, {
+      Comfort: [...profiles.Comfort],
+      Weight: [...profiles.Weight],
+    });
+    expect(
+      buildDecisionSupport({
+        support: previousSupport,
+        savedListingIds: new Set(),
+      }).currentDecision,
+    ).toMatchObject({
+      leadingCandidateListingId: a,
+      frontier: { candidateListingId: b },
+    });
+    expect(
+      buildDecisionSupport({
+        support: currentSupport,
+        savedListingIds: new Set(),
+      }).currentDecision,
+    ).toMatchObject({
+      leadingCandidateListingId: b,
+      frontier: { candidateListingId: a },
+    });
     expect(
       transition(
         old,

@@ -84,6 +84,7 @@ function view(options?: {
       excludedCandidateCount: 0,
       currentDecision: includeDecision
         ? {
+            frontier: null,
             state: "ready_to_choose",
             recommendationLevel: "ready",
             leadingCandidateListingId: candidateListingId,
@@ -114,6 +115,7 @@ function view(options?: {
             },
           }
         : {
+            frontier: null,
             state: "insufficient_evidence",
             recommendationLevel: "none",
             leadingCandidateListingId: null,
@@ -260,6 +262,79 @@ describe("founder live shopping decision loop", () => {
     window.history.replaceState({}, "", "/live");
   });
 
+  it("renders a secondary frontier with a non-mutating keyboard refinement bridge", async () => {
+    localStorage.setItem("consider-live-session-v1", sessionId);
+    const reason = {
+      criterionId,
+      label: "Comfort",
+      strength: "strong_preference" as const,
+      candidateListingId,
+      assessmentId: criterionId,
+      observationIds: [criterionId],
+      explanation: "Sustained comfort is supported by the exact review.",
+    };
+    const ready = decisionView({
+      decision: {
+        alternativeCandidateListingId: secondCandidateListingId,
+        frontier: {
+          kind: "eligible_alternative",
+          candidateListingId: secondCandidateListingId,
+          title: "Budget option",
+          summary:
+            "Budget option saves £85 if stronger comfort evidence is not worth stretching for.",
+          giveUp:
+            "The evidence for sustained comfort is stronger on the leader.",
+          leaderAdvantages: [reason],
+          alternativeAdvantages: [
+            {
+              ...reason,
+              candidateListingId: secondCandidateListingId,
+              criterionId: secondCriterionId,
+              label: "Price",
+            },
+          ],
+          money: {
+            currency: "GBP",
+            targetMinor: 25000,
+            leaderAmountMinor: 33000,
+            alternativeAmountMinor: 24500,
+            savingMinor: 8500,
+            belowTargetMinor: 500,
+          },
+        },
+      },
+    });
+    ready.decisionSupport!.topOptions.push({
+      ...ready.decisionSupport!.topOptions[0]!,
+      listing: {
+        ...listing,
+        candidateListingId: secondCandidateListingId,
+        title: "Budget option",
+        priceText: "£245",
+      },
+    });
+    const fetchMock = vi.fn(() => Promise.resolve(jsonResponse(ready)));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<LiveShopping />);
+    const frontier = await screen.findByRole("region", {
+      name: "A sensible alternative",
+    });
+    expect(within(frontier).getByText(/saves £85/)).toBeVisible();
+    expect(within(frontier).getByText("You give up")).toBeVisible();
+    const link = within(frontier).getByRole("link", {
+      name: "Explore this trade-off in your priorities",
+    });
+    expect(link).toHaveAttribute("href", "#refine-request");
+    fireEvent.click(link);
+    expect(screen.getByLabelText("Refine what you’re looking for")).toHaveValue(
+      "",
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(
+      within(frontier).queryByRole("link", { name: /Buy from/ }),
+    ).not.toBeInTheDocument();
+  });
+
   it("makes a ready, direct Current Decision the first decision surface", async () => {
     localStorage.setItem("consider-live-session-v1", sessionId);
     const ready = decisionView({ decision: {} });
@@ -274,6 +349,9 @@ describe("founder live shopping decision loop", () => {
       name: "I’d choose " + listing.title,
     });
     expect(screen.getByText("Ready to choose")).toBeVisible();
+    expect(
+      screen.queryByRole("heading", { name: "A sensible alternative" }),
+    ).not.toBeInTheDocument();
     expect(screen.getByText("1/1 must-haves verified")).toBeVisible();
     expect(
       screen.getByRole("link", {

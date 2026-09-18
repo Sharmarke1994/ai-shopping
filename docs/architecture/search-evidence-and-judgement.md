@@ -166,6 +166,18 @@ paths.
 
 ## Progressive investigation
 
+### Decision Frontier
+
+A qualified Current Decision may include one meaningful alternative, derived
+server-side from the current criterion assessments. It is not a second-place
+selection: both sides need an evidence-backed advantage. Hard-ineligible and
+hard-unknown candidates are not clean alternatives; rejection, exact-offer
+grouping and revision guards apply before derivation. Supported conditional
+stretch versus an evidenced target/below-target price can describe an explicit
+budget/benefit trade without changing ranking or treating every cheaper offer
+as better. The projection retains assessment/observation references and never
+mutates authority. See [Decision Frontier](../plans/v0-09-decision-frontier.md).
+
 ```text
 Google queries
 → raw results
