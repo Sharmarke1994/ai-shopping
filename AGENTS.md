@@ -23,8 +23,15 @@ bounded exact-source page evidence, post-shortlist same-offer purchase
 resolution and measured retrieval/evidence critical-path reductions. It must
 remain a draft stacked PR and preserve V0-05's separate unresolved formal
 release checkpoint. ProductIdentity, fuzzy deduplication, broad crawling,
-arbitrary URL browsing, auth, deployment and V0-10 have not started. Do not
+arbitrary URL browsing, auth and deployment have not started. Do not
 broaden a task because later work is documented.
+
+V0-10 Persistent Spaces is now explicitly authorised in its own isolated branch,
+based on banked V0-09 Decision Frontier head `d6c2b5999126e077e373a57504473caacaa1ce15`.
+It adds revisioned rooms, local photos, provenance-aware facts, optional measured
+dimensions and editable room designs. See `docs/plans/v0-10-persistent-spaces.md`.
+No live vision provider, room-to-shopping integration, generated redesign or new
+V0-09 provider proof is authorised by that scope.
 
 ## Hard invariants
 

@@ -1,11 +1,34 @@
 # Founder MVP progress
 
-**Updated:** 2026-09-05 Europe/London
+**Updated:** 2026-09-18 Europe/London
 **Durable goal:** Deliver a polished founder-usable AI shopping MVP whose live
 understanding, market retrieval, evidence-aware evaluation, refinement, saving,
 and comparison are meaningfully better than beginning with Google.
 
-## Authoritative checkpoints
+## Current product lane — V0-10 Persistent Spaces
+
+The banked V0-09 Decision Frontier checkpoint remains exactly
+`d6c2b5999126e077e373a57504473caacaa1ce15`. The new isolated branch is
+`codex/v0-10-persistent-spaces`, in the separate `ai-shopping-v0-10-spaces`
+worktree. No merge, rebase, provider proof or Checkpoint 3 is part of this lane.
+
+Implemented: persistent room identities; immutable room revisions and CAS edits;
+secure local JPEG/PNG/WebP storage; proposed versus confirmed facts; optional
+user-measured dimensions; keep/replace inventory; editable goal/add/palette design;
+and consumer `/spaces` pages. Automatic analysis is unavailable in normal runtime.
+Explicit fictional test observations retain their provenance after reload or a
+configuration change. No room fact writes shopping criteria.
+
+See `v0-10-persistent-spaces.md` for the architecture, security boundary, exact
+verification results, screenshots and known limitations. This is an implementation
+checkpoint for independent review, not authorisation for live vision or integration.
+
+The single next product move is a bounded multimodal adapter producing proposals
+for real room photos, with confirmation/correction and no inferred measurements.
+It is not implemented. Later shopping integration must reference an exact room
+revision and keep room evidence separate from shopper criteria.
+
+## Earlier release checkpoints (preserved)
 
 - Repository: `Sharmarke1994/ai-shopping`.
 - Founder-MVP execution brief: `docs/plans/founder-usable-mvp.md`.

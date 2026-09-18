@@ -30,6 +30,12 @@ An observation such as “the crown appears unstructured” is not itself “a s
 
 V0 authoritative criteria and dynamic concepts are owned by a `ShoppingTask`. Session data is transient. Workspace and user-level memory are not writable scopes yet.
 
+V0-10 adds a separately authorised `Space` context, not workspace/user preference
+memory: immutable room revisions, photo assets, proposed visual facts, explicitly
+confirmed facts, user-measured dimensions and a room design. A visual observation
+cannot write a measurement; none of these objects writes shopping criteria. The
+bounded implementation contract is in `../plans/v0-10-persistent-spaces.md`.
+
 The UI may expose one active task in V0. Persistence must support multiple independently identified tasks and must never use a global current-shopping singleton.
 
 ### ConceptDefinition
