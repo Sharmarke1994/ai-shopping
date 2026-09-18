@@ -113,7 +113,7 @@ export function applySpaceOperation(
         ...m,
         id: randomUUID(),
         basis: "user_measured",
-        millimetres: Math.round(m.amount * { mm: 1, cm: 10, m: 1000 }[m.unit]),
+        millimetres: m.amount * { mm: 1, cm: 10, m: 1000 }[m.unit],
       });
       break;
     }

@@ -65,14 +65,12 @@ export const measurementInputSchema = z
 export const measurementSchema = measurementInputSchema
   .extend({
     id: spaceIdSchema,
-    millimetres: z.number().int().positive().max(10000000),
+    millimetres: z.number().finite().positive().max(10000000),
     basis: z.literal("user_measured"),
   })
   .strict()
   .refine(
-    (m) =>
-      m.millimetres ===
-      Math.round(m.amount * { mm: 1, cm: 10, m: 1000 }[m.unit]),
+    (m) => m.millimetres === m.amount * { mm: 1, cm: 10, m: 1000 }[m.unit],
     "Canonical measurement mismatch",
   );
 export const itemSchema = z

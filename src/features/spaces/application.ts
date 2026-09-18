@@ -219,10 +219,10 @@ export async function mutateSpace(
           bytes: await deps.storage.read(a.storageKey),
         })),
       ),
-      confirmedFacts: current.state.facts.filter(
-        (f) => f.status === "confirmed",
+      confirmedFacts: structuredClone(
+        current.state.facts.filter((f) => f.status === "confirmed"),
       ),
-      measurements: current.state.measurements,
+      measurements: structuredClone(current.state.measurements),
     });
     const next = appendVisualProposals(
       current.state,

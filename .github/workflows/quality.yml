@@ -43,6 +43,9 @@ jobs:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ai_shopping_test
       DIRECT_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ai_shopping_test
       LIVE_SHOPPING_TEST_MODE: fixture
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ai_shopping_test
+      CONSIDER_SPACE_ASSET_DIR: ${{ runner.temp }}/consider-space-assets
+      CONSIDER_SPACE_FIXTURE_MODE: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

@@ -28,6 +28,17 @@ afterEach(async () => {
     await rm(root, { recursive: true, force: true });
 });
 describe("bounded immutable room image storage", () => {
+  it("rejects a real two-frame WebP rather than silently treating it as a still", async () => {
+    const animated = await sharp(Buffer.from([255, 0, 0, 0, 0, 255]), {
+      raw: { width: 1, height: 2, channels: 3, pageHeight: 1 },
+    })
+      .webp({ loop: 0, delay: [100, 100] })
+      .toBuffer();
+    expect((await sharp(animated).metadata()).pages).toBe(2);
+    await expect(prepareImage(animated, "image/webp")).rejects.toThrow(
+      /still JPEG/,
+    );
+  });
   it.each(["jpeg", "png", "webp"] as const)(
     "decodes %s and strips EXIF",
     async (format) => {

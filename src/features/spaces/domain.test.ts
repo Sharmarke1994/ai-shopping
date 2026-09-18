@@ -234,4 +234,16 @@ describe("persistent room authority", () => {
     expect(confirmed.items[0]?.label).toBe("Bed");
     expect(confirmed.facts[0]?.value).toBe(value);
   });
+  it("preserves fractional user measurements rather than rounding away fit information", () => {
+    const next = applySpaceOperation(emptyRoomState(), {
+      operation: "add_measurement",
+      expectedRevision: 0,
+      measurement: { label: "Measured clearance", amount: 0.5, unit: "mm" },
+    });
+    expect(next.measurements[0]).toMatchObject({
+      amount: 0.5,
+      millimetres: 0.5,
+      basis: "user_measured",
+    });
+  });
 });

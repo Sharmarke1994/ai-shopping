@@ -366,4 +366,43 @@ describe("persistent spaces PostgreSQL and application", () => {
       reopened.state.unknowns.every((u) => u.origin === "fictional_fixture"),
     ).toBe(true);
   });
+  it("does not let an adapter mutate authoritative truth through its input objects", async () => {
+    let s = await upload((await room()).id, 0);
+    s = await mutateSpace(deps, s.id, {
+      operation: "add_measurement",
+      expectedRevision: s.currentRevision,
+      measurement: { label: "Desk wall width", amount: 214, unit: "cm" },
+    });
+    s = await mutateSpace(deps, s.id, {
+      operation: "add_fact",
+      expectedRevision: s.currentRevision,
+      kind: "existing_item",
+      label: "Bed",
+      value: "Double bed",
+    });
+    const before = s.state;
+    const mutated = await mutateSpace(
+      {
+        ...deps,
+        understanding: {
+          async propose(input) {
+            input.confirmedFacts[0]!.value = "King bed";
+            input.measurements[0]!.amount = 999;
+            input.measurements[0]!.millimetres = 9990;
+            return { facts: [], unknowns: [] };
+          },
+        },
+      },
+      s.id,
+      {
+        operation: "analyse_photos",
+        expectedRevision: s.currentRevision,
+        assetIds: s.assets.map((a) => a.id),
+      },
+    );
+    expect(mutated.state).toEqual(before);
+    expect(
+      (await loadSpaceRevision(deps.db, s.id, s.currentRevision)).state,
+    ).toEqual(before);
+  });
 });
