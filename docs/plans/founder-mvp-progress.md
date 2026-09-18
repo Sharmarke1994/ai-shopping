@@ -20,13 +20,21 @@ Explicit fictional test observations retain their provenance after reload or a
 configuration change. No room fact writes shopping criteria.
 
 See `v0-10-persistent-spaces.md` for the architecture, security boundary, exact
-verification results, screenshots and known limitations. This is an implementation
-checkpoint for independent review, not authorisation for live vision or integration.
+verification results, screenshots and known limitations. Foundation checkpoint:
+`6c70c57c3efddb5dc06fd97e491da3cd61a818a2`.
 
-The single next product move is a bounded multimodal adapter producing proposals
-for real room photos, with confirmation/correction and no inferred measurements.
-It is not implemented. Later shopping integration must reference an exact room
-revision and keep room evidence separate from shopper criteria.
+The founder then explicitly authorised the visual-shopping follow-on: realistic
+concepts of the actual room using selected shopping items, saved for return visits.
+Implemented on this isolated lane: immutable visual-design bases, server-loaded saved
+listing selections/placement, original-versus-concept UI, an opt-in image-editing
+adapter, durable one-attempt generation lifecycle, and safe separate render storage.
+This is a key optional shopping feature, not a replacement for the broader product.
+See `v0-10-visual-designs.md` for evidence and limitations.
+
+The next proof requires actual room photos and an explicit live concept request.
+No live visual-quality result is claimed: fictional upload fixtures are functional
+tests only. Photo-to-fact production vision, measured 3D geometry and fit verification
+remain unimplemented. No generated output writes room truth or shopping criteria.
 
 ## Earlier release checkpoints (preserved)
 

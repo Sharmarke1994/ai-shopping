@@ -1,5 +1,6 @@
 export { conceptDefinitions } from "./concept-definitions";
 export { candidateListings } from "./candidate-listings";
+export { spaceVisualDesigns } from "./space-visual-designs";
 export { contextActionAnswers } from "./context-action-answers";
 export { contextActions, contextQuestionOptions } from "./context-actions";
 export { contextAcquisitionAttempts } from "./context-acquisition-attempts";

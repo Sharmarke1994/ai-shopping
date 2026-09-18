@@ -36,6 +36,13 @@ confirmed facts, user-measured dimensions and a room design. A visual observatio
 cannot write a measurement; none of these objects writes shopping criteria. The
 bounded implementation contract is in `../plans/v0-10-persistent-spaces.md`.
 
+The authorised visual-design follow-on adds a separate immutable design basis:
+exact room revision, selected room photos, copied saved-listing identity/observed
+offer fields and shopper placement instructions. Generation lifecycle/output is
+separate from room truth. A render cannot become a room photograph, measurement,
+ProductObservation, CriterionAssessment or DecisionCriterion. Old room designs
+remain historical after room edits. See `../plans/v0-10-visual-designs.md`.
+
 The UI may expose one active task in V0. Persistence must support multiple independently identified tasks and must never use a global current-shopping singleton.
 
 ### ConceptDefinition

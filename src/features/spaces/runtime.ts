@@ -10,6 +10,8 @@ import {
 import type { SpaceDependencies } from "./application";
 import { SpaceError } from "./domain";
 import { fictionalBedroomUnderstanding } from "./understanding";
+import { createOpenAISpaceRenderer } from "./visual-renderer";
+import type { VisualDependencies } from "./visual-application";
 
 declare global {
   var __considerSpacesDatabase: DatabaseConnection | undefined;
@@ -38,5 +40,20 @@ export function createSpaceDependencies(): SpaceDependencies {
     storage,
     fixtureMode,
     ...(fixtureMode ? { understanding: fictionalBedroomUnderstanding() } : {}),
+  };
+}
+
+export function createVisualDependencies(): VisualDependencies {
+  const deps = createSpaceDependencies();
+  const key = process.env.OPENAI_API_KEY;
+  // Presence of a key alone is not consent to upload room photographs or spend.
+  return {
+    ...deps,
+    ...(process.env.CONSIDER_SPACE_RENDER_ENABLED === "1" &&
+    key &&
+    process.env.LIVE_SHOPPING_TEST_MODE !== "fixture" &&
+    !deps.fixtureMode
+      ? { renderer: createOpenAISpaceRenderer(key) }
+      : {}),
   };
 }

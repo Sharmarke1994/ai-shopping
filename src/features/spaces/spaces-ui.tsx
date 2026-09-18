@@ -82,7 +82,8 @@ function Shell({ children }: { children: ReactNode }) {
       <footer className={styles.footer}>
         A little context, kept for the decisions ahead.
         <span>
-          Local founder preview · Your rooms are not yet connected to shopping.
+          Local founder preview · Room context never silently changes shopping
+          criteria.
         </span>
       </footer>
     </main>
@@ -385,6 +386,16 @@ function SpaceRoom({ spaceId }: { spaceId: string }) {
         accept={accept}
         onError={reportError}
       />
+      <section className={styles.analysis}>
+        <div>
+          <h2>See a different possibility</h2>
+          <p>
+            Keep your room, select saved shopping items and build a visual
+            design you can return to.
+          </p>
+        </div>
+        <Link href={`/spaces/${room.id}/design`}>Explore a room design →</Link>
+      </section>
       <section className={styles.analysis}>
         <div>
           <h2>
