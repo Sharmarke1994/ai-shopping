@@ -38,6 +38,23 @@ function serve(value: unknown) {
   );
 }
 describe("founder spaces interface", () => {
+  it("offers broad space types without domestic-only onboarding", async () => {
+    serve({ spaces: [] });
+    render(<SpacesPage />);
+    await screen.findByLabelText("Space name");
+    expect(screen.getByLabelText(/Space type/)).toBeVisible();
+    for (const name of [
+      "office",
+      "workspace",
+      "warehouse",
+      "hallway",
+      "studio",
+      "workshop",
+      "outdoor",
+    ])
+      expect(screen.getByRole("option", { name })).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Room type/)).not.toBeInTheDocument();
+  });
   it("resets room identity and revision when navigating to a different room", async () => {
     const first = { ...room(), currentRevision: 10 };
     serve(first);
@@ -84,7 +101,7 @@ describe("founder spaces interface", () => {
     expect(
       await screen.findByText(/Automatic photo analysis is not available yet/),
     ).toBeVisible();
-    expect(screen.getByText("Add a room fact")).toBeVisible();
+    expect(screen.getByText("Add a space fact")).toBeVisible();
     expect(screen.getByText("Add a measurement")).toBeVisible();
     expect(
       screen.queryByRole("button", { name: "Load fictional observations" }),
@@ -212,9 +229,9 @@ describe("founder spaces interface", () => {
   it("keeps a failed stale edit visible and offers explicit reload", async () => {
     serve(room());
     render(<SpacePage spaceId={id} />);
-    await screen.findByText("Add a room item");
+    await screen.findByText("Add a space item");
     const user = userEvent.setup();
-    await user.click(screen.getByText("Add a room item"));
+    await user.click(screen.getByText("Add a space item"));
     await user.type(screen.getByLabelText("Item name"), "Lamp");
     fetchMock.mockResolvedValueOnce(
       new Response(
@@ -229,7 +246,7 @@ describe("founder spaces interface", () => {
     );
     await user.click(screen.getByRole("button", { name: "Add item" }));
     expect(
-      await screen.findByRole("button", { name: "Reload latest room" }),
+      await screen.findByRole("button", { name: "Reload latest space" }),
     ).toBeVisible();
     expect(screen.getByLabelText("Item name")).toHaveValue("Lamp");
   });

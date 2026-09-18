@@ -54,6 +54,35 @@ async function upload(id: string, revision: number, bytes = photo) {
   });
 }
 describe("persistent spaces PostgreSQL and application", () => {
+  it.each([
+    "workspace",
+    "warehouse",
+    "hallway",
+    "studio",
+    "workshop",
+    "outdoor",
+  ] as const)(
+    "persists and reloads a %s without treating it as a bedroom",
+    async (roomType) => {
+      const created = await createSpace(deps, {
+        name: "North entrance",
+        roomType,
+      });
+      const reloaded = await loadSpace(deps, created.id);
+      expect(reloaded.roomType).toBe(roomType);
+      expect(reloaded.name).toBe("North entrance");
+      expect(reloaded.state.measurements).toEqual([]);
+      expect(reloaded.state.facts).toEqual([]);
+    },
+  );
+  it("still rejects unsupported raw space types after widening the database constraint", async () => {
+    await expect(
+      connection.client`insert into shopping_private.spaces (name, room_type) values ('Invalid', 'unsupported_type')`,
+    ).rejects.toMatchObject({
+      code: "23514",
+      constraint_name: "spaces_room_type",
+    });
+  });
   it("creates and reloads revision zero without any measurement", async () => {
     const s = await room();
     expect(s.currentRevision).toBe(0);

@@ -101,7 +101,7 @@ describe("spaces request boundary", () => {
   });
   it("returns a distinct recoverable CAS conflict", async () => {
     const response = await spaceHttp(async () => {
-      throw new SpaceError("stale_revision", "Reload the latest room.", 409);
+      throw new SpaceError("stale_revision", "Reload the latest space.", 409);
     });
     expect(response.status).toBe(409);
     expect((await response.json()).error.code).toBe("stale_revision");

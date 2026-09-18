@@ -7,6 +7,12 @@ export const roomTypeSchema = z.enum([
   "office",
   "kitchen",
   "dining_room",
+  "workspace",
+  "warehouse",
+  "hallway",
+  "studio",
+  "workshop",
+  "outdoor",
   "other",
 ]);
 const label = z.string().trim().min(1).max(120);

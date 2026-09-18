@@ -33,6 +33,12 @@ describe("persistent room authority", () => {
     "office",
     "kitchen",
     "dining_room",
+    "workspace",
+    "warehouse",
+    "hallway",
+    "studio",
+    "workshop",
+    "outdoor",
     "other",
     null,
   ])("creates optional type %s without measurements", (roomType) => {

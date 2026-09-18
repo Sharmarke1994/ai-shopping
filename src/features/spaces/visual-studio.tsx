@@ -26,7 +26,7 @@ async function jsonRequest(url: string, body?: unknown) {
     throw new Error(
       typeof value?.error?.message === "string"
         ? value.error.message
-        : "Unable to load this design. Your saved room is unchanged.",
+        : "Unable to load this design. Your saved space is unchanged.",
     );
   return value as unknown;
 }
@@ -79,7 +79,7 @@ function Studio({ spaceId }: { spaceId: string }) {
       })
       .catch(() => {
         if (active)
-          setError("Your room could not be loaded. Reload to try again.");
+          setError("Your space could not be loaded. Reload to try again.");
       });
     return () => {
       active = false;
@@ -130,7 +130,7 @@ function Studio({ spaceId }: { spaceId: string }) {
       setConsent(false);
       await load();
       setNotice(
-        "Design saved with this room version and selected products. No image has been generated yet.",
+        "Design saved with this space version and selected products. No image has been generated yet.",
       );
       pendingSave.current = null;
     } catch (e) {
@@ -161,7 +161,7 @@ function Studio({ spaceId }: { spaceId: string }) {
       setOriginal(false);
       setNotice(
         result.status === "completed"
-          ? "Concept saved. Compare it with your actual room before trusting the design."
+          ? "Concept saved. Compare it with your actual space before trusting the design."
           : (result.failure ??
               "Generation is in progress. Refresh status to check it."),
       );
@@ -177,18 +177,18 @@ function Studio({ spaceId }: { spaceId: string }) {
   return (
     <main className={styles.shell}>
       <nav className={styles.nav}>
-        <Link href={`/spaces/${spaceId}`}>← Your room</Link>
+        <Link href={`/spaces/${spaceId}`}>← {room?.name ?? "Your space"}</Link>
         <Link href="/live">consider / shopping ↗</Link>
       </nav>
       <header className={styles.header}>
         <p>SPACES / VISUAL DESIGNS</p>
         <h1>
-          Your room.
+          See what works
           <br />
-          <em>A different possibility.</em>
+          <em>in your space.</em>
         </h1>
         <p>
-          Keep the room you know. Explore what a few considered changes could
+          Keep the space you know. Explore what a few considered changes could
           do.
         </p>
       </header>
@@ -199,24 +199,24 @@ function Studio({ spaceId }: { spaceId: string }) {
       )}
       <p role="status">{notice}</p>
       {!room || !collection ? (
-        <p>Loading saved room…</p>
+        <p>Loading saved space…</p>
       ) : (
         <>
           <div className={styles.layout}>
-            <section className={styles.stage} aria-label="Room design preview">
+            <section className={styles.stage} aria-label="Space design preview">
               <div className={styles.stageHeader}>
                 <h2>{design?.basis.name ?? room.name}</h2>
                 {design?.imageUrl && (
                   <div
                     className={styles.toggle}
-                    aria-label="Compare room and concept"
+                    aria-label="Compare original and concept"
                   >
                     <button
                       type="button"
                       aria-pressed={original}
                       onClick={() => setOriginal(true)}
                     >
-                      Your room
+                      Original
                     </button>
                     <button
                       type="button"
@@ -242,17 +242,17 @@ function Studio({ spaceId }: { spaceId: string }) {
                 />
               ) : (
                 <div className={styles.empty}>
-                  <h3>Start with your actual room.</h3>
+                  <h3>Start with your actual space.</h3>
                   <p>
                     Add a few photos from different corners. We won’t substitute
-                    a generic room.
+                    a generic space.
                   </p>
-                  <Link href={`/spaces/${spaceId}`}>Add room photos →</Link>
+                  <Link href={`/spaces/${spaceId}`}>Add space photos →</Link>
                 </div>
               )}
               <p className={styles.caption}>
                 {design?.imageUrl && !original
-                  ? "AI concept · Not a measured 3D model. Product appearance and fit are unverified."
+                  ? "AI concept · Not a measured 3D model. Product appearance, fit and clearances are unverified."
                   : "Original uploaded image · Not a generated concept."}
               </p>
               {design && (
@@ -260,8 +260,8 @@ function Studio({ spaceId }: { spaceId: string }) {
                   <p>{design.basis.direction}</p>
                   <p className={styles.caption}>
                     {design.roomRevision !== room.currentRevision
-                      ? "Earlier room version — this design has not been updated to your current room."
-                      : "Saved against the current room version."}
+                      ? "Earlier space version — this design has not been updated to your current space."
+                      : "Saved against the current space version."}
                   </p>
                   {design.basis.roomState.items.some(
                     (i) => i.intent === "keep",
@@ -338,11 +338,11 @@ function Studio({ spaceId }: { spaceId: string }) {
                               checked={consent}
                               onChange={(e) => setConsent(e.target.checked)}
                             />
-                            Send the selected room photos, product references
+                            Send the selected space photos, product references
                             and design to OpenAI for one paid concept render.
                           </label>
                           <p className={styles.caption}>
-                            {design.basis.assetIds.length} selected room
+                            {design.basis.assetIds.length} selected space
                             image(s) and {design.basis.products.length} product
                             reference(s). Nothing is sent until you click
                             Generate.
@@ -362,7 +362,7 @@ function Studio({ spaceId }: { spaceId: string }) {
                       ) : (
                         <p>
                           Rendering is not configured on this instance. Your
-                          room, design and product selections are saved. This
+                          space, design and product selections are saved. This
                           draft has not been sent to an image provider.
                         </p>
                       )}
@@ -411,9 +411,9 @@ function Studio({ spaceId }: { spaceId: string }) {
                   />
                 </label>
                 <p className={styles.caption}>
-                  Saved keep/replace intentions and your room design travel with
-                  this idea. Layout preservation is a request to the model, not
-                  a guarantee.
+                  Saved keep/replace intentions and your space design travel
+                  with this idea. Layout preservation is a request to the model,
+                  not a guarantee.
                 </p>
                 <label>
                   View to redesign
@@ -583,7 +583,8 @@ function Studio({ spaceId }: { spaceId: string }) {
         </>
       )}
       <footer className={styles.footer}>
-        A room is one kind of shopping context. You can always shop without one.
+        A space is one kind of shopping context. You can always shop without
+        one.
       </footer>
     </main>
   );

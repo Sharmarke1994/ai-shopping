@@ -49,7 +49,7 @@ function view(row: typeof spaceVisualDesigns.$inferSelect) {
       : row.failure === "reference_unavailable"
         ? "A selected product image could not be safely loaded. No render was requested."
         : row.failure
-          ? "Generation did not complete. Your room and saved design are unchanged. No automatic retry was made."
+          ? "Generation did not complete. Your space and saved design are unchanged. No automatic retry was made."
           : null,
     createdAt: row.createdAt.toISOString(),
     imageUrl:
@@ -121,7 +121,7 @@ export async function saveVisualDesign(
       .from(spaces)
       .where(eq(spaces.id, spaceId))
       .for("update");
-    if (!space) throw new SpaceError("not_found", "Room not found.", 404);
+    if (!space) throw new SpaceError("not_found", "Space not found.", 404);
     const [existing] = await tx
       .select()
       .from(spaceVisualDesigns)
@@ -149,14 +149,14 @@ export async function saveVisualDesign(
     if (prior.length >= 40)
       throw new SpaceError(
         "asset_limit",
-        "This room has reached the 40-design founder limit.",
+        "This space has reached the 40-design founder limit.",
       );
     const transactionalDeps = { ...deps, db: tx };
     const room = await loadSpace(transactionalDeps, spaceId);
     if (request.assetIds.some((id) => !room.assets.some((a) => a.id === id)))
       throw new SpaceError(
         "not_found",
-        "Choose photos from this room only.",
+        "Choose photos from this space only.",
         404,
       );
     const available = await savedVisualProducts(transactionalDeps);
@@ -167,7 +167,7 @@ export async function saveVisualDesign(
       if (!product)
         throw new SpaceError(
           "not_found",
-          "Save that product in shopping before adding it to a room design.",
+          "Save that product in shopping before adding it to a space design.",
           404,
         );
       if (!product.imageUrl)
@@ -213,7 +213,7 @@ async function getDesign(
         eq(spaceVisualDesigns.id, spaceIdSchema.parse(id)),
       ),
     );
-  if (!row) throw new SpaceError("not_found", "Room design not found.", 404);
+  if (!row) throw new SpaceError("not_found", "Space design not found.", 404);
   visualBasisSchema.parse(row.basis);
   return row;
 }
@@ -229,7 +229,7 @@ export async function renderVisualDesign(
   if (!deps.renderer)
     throw new SpaceError(
       "analysis_unavailable",
-      "Room rendering is not configured. Your design is safely saved.",
+      "Space rendering is not configured. Your design is safely saved.",
       503,
     );
   const claimed = await deps.db.transaction(async (tx) => {
@@ -238,7 +238,7 @@ export async function renderVisualDesign(
       .from(spaces)
       .where(eq(spaces.id, spaceId))
       .for("update");
-    if (!space) throw new SpaceError("not_found", "Room not found.", 404);
+    if (!space) throw new SpaceError("not_found", "Space not found.", 404);
     assertRevision(space.currentRevision, row.roomRevision);
     // Expired attempts are never replayed. A late result can no longer commit.
     await tx
@@ -271,7 +271,7 @@ export async function renderVisualDesign(
     if (running.length)
       throw new SpaceError(
         "invalid_request",
-        "This room already has a generation attempt in progress. Refresh its status; do not start another.",
+        "This space already has a generation attempt in progress. Refresh its status; do not start another.",
         409,
       );
     const [result] = await tx

@@ -24,7 +24,7 @@ export function assertRevision(current: number, expected: number) {
   if (current !== expected)
     throw new SpaceError(
       "stale_revision",
-      "This room changed in another tab. Reload the latest room before saving again.",
+      "This space changed in another tab. Reload the latest space before saving again.",
       409,
     );
 }
@@ -135,7 +135,8 @@ export function applySpaceOperation(
       break;
     case "set_item_intent": {
       const item = state.items.find((i) => i.id === operation.itemId);
-      if (!item) throw new SpaceError("not_found", "Room item not found.", 404);
+      if (!item)
+        throw new SpaceError("not_found", "Space item not found.", 404);
       item.intent = operation.intent;
       break;
     }

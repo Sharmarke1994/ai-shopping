@@ -28,8 +28,10 @@ broaden a task because later work is documented.
 
 V0-10 Persistent Spaces is now explicitly authorised in its own isolated branch,
 based on banked V0-09 Decision Frontier head `d6c2b5999126e077e373a57504473caacaa1ce15`.
-It adds revisioned rooms, local photos, provenance-aware facts, optional measured
-dimensions and editable room designs. See `docs/plans/v0-10-persistent-spaces.md`.
+It adds revisioned spaces, local photos, provenance-aware facts, optional measured
+dimensions and editable designs. Spaces include offices, warehouses, hallways and
+other contexts, not only domestic rooms. Legacy `room*` fields remain compatible.
+See `docs/plans/v0-10-persistent-spaces.md`.
 The subsequent founder instruction authorises saved room visualisations and explicit
 shopping-item selection. See `docs/plans/v0-10-visual-designs.md`. This is an optional
 shopping capability, not a replacement for the shopping product. No new V0-09

@@ -35,7 +35,7 @@ export const spaces = shoppingPrivate.table(
     check("spaces_revision_nonnegative", sql`${t.currentRevision} >= 0`),
     check(
       "spaces_room_type",
-      sql`${t.roomType} is null or ${t.roomType} in ('bedroom','living_room','office','kitchen','dining_room','other')`,
+      sql`${t.roomType} is null or ${t.roomType} in ('bedroom','living_room','office','kitchen','dining_room','workspace','warehouse','hallway','studio','workshop','outdoor','other')`,
     ),
   ],
 );

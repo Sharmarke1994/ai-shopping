@@ -23,7 +23,7 @@ export function createSpaceDependencies(): SpaceDependencies {
   const unavailable = async (): Promise<never> => {
     throw new SpaceError(
       "storage_unavailable",
-      "Photo storage is not configured. Room facts and design are still available.",
+      "Photo storage is not configured. Space facts and design are still available.",
       503,
     );
   };

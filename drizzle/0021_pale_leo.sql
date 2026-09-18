@@ -1,0 +1,2 @@
+ALTER TABLE "shopping_private"."spaces" DROP CONSTRAINT "spaces_room_type";--> statement-breakpoint
+ALTER TABLE "shopping_private"."spaces" ADD CONSTRAINT "spaces_room_type" CHECK ("shopping_private"."spaces"."room_type" is null or "shopping_private"."spaces"."room_type" in ('bedroom','living_room','office','kitchen','dining_room','workspace','warehouse','hallway','studio','workshop','outdoor','other'));

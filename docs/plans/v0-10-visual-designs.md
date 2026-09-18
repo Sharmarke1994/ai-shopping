@@ -1,5 +1,25 @@
 # V0-10 — Saved visual shopping designs
 
+## Broader Spaces wording and types — follow-on
+
+The founder clarified that a Space may be an office, warehouse, hallway, shared
+workspace, studio, workshop or outdoor area as well as a domestic room. UI uses
+the actual space name and "See what works in your space". Optional types now cover
+these contexts; existing types and wire/persistence field names remain compatible.
+Only a new constraint migration is added; no historical migration is rewritten.
+This is context support, not industrial safety/clearance assessment. Rendering
+model, API request and baseline prompt are intentionally unchanged pending real
+fidelity testing; visual suitability for additional space types is not yet proven.
+
+Follow-on verification: `pnpm check` passed (567 tests, lint, types and production
+build); all 19 browser tests passed, including named warehouse desktop and hallway
+mobile flows. Both new screenshots were visually inspected. Database behaviour
+passed 204 tests, including all 24 Spaces tests; the one remaining suite failure is
+the existing PostgreSQL 17.6 version pin against local 17.11, not a behaviour pass.
+The additive migration preserved all existing space rows unchanged in the local
+upgrade check. Schema generation reports no drift (37 tables, 22 migrations).
+No credentials or image-provider calls were used.
+
 The founder explicitly expanded the foundation scope: see real products in a
 recognisable version of their room and retain that design. CONSIDER remains a
 general shopping product; room setup is optional, not shopping onboarding.
@@ -38,7 +58,7 @@ Tests can prove persistence, isolation and failure handling, not render fidelity
 
 ## Local operation
 
-Use `/spaces/{spaceId}/design` from the room's **Explore a room design** link.
+Use `/spaces/{spaceId}/design` from the space's **Explore a space design** link.
 Upload real room photos first. Save product listings in the existing shopping
 experience; products without a reference image cannot be selected for a render.
 The default view shows the actual uploaded photograph, not invented showcase art.

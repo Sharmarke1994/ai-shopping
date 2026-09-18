@@ -119,7 +119,7 @@ it("requires consent, labels approximate render and compares with the original",
   fireEvent.click(generate);
   await screen.findByText(/AI concept · Not a measured 3D model/);
   expect(screen.getByAltText(/Generated concept/)).toBeVisible();
-  fireEvent.click(screen.getByRole("button", { name: "Your room" }));
+  fireEvent.click(screen.getByRole("button", { name: "Original" }));
   expect(screen.getByAltText("Original uploaded view of Office")).toBeVisible();
   expect(
     request.mock.calls.filter(([, init]) => init?.method === "POST"),
@@ -132,7 +132,7 @@ it("marks historical designs and prevents generation against changed room truth"
     generationAvailable: true,
   };
   render(<VisualStudio spaceId={id} />);
-  await screen.findByText(/Earlier room version/);
+  await screen.findByText(/Earlier space version/);
   fireEvent.click(screen.getByRole("checkbox"));
   expect(
     screen.getByRole("button", { name: "Generate this concept" }),
@@ -142,7 +142,7 @@ it("preserves unsaved text on conflict and does not retry a failed save automati
   request.mockImplementation(async (url, options) =>
     options?.method === "POST"
       ? Response.json(
-          { error: { message: "Room changed. Reload latest room." } },
+          { error: { message: "Room changed. Reload latest space." } },
           { status: 409 },
         )
       : Response.json(String(url).endsWith("/visuals") ? data : room),

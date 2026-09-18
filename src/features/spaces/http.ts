@@ -29,7 +29,7 @@ export async function spaceHttp(action: () => Promise<Response>) {
           error: {
             code: "invalid_request",
             message:
-              "That room request is not valid. Check the fields and try again.",
+              "That space request is not valid. Check the fields and try again.",
           },
         },
         400,
@@ -39,7 +39,7 @@ export async function spaceHttp(action: () => Promise<Response>) {
         error: {
           code: "unavailable",
           message:
-            "The room could not be loaded or saved. Your last saved revision is unchanged. Try again.",
+            "The space could not be loaded or saved. Your last saved revision is unchanged. Try again.",
         },
       },
       503,
@@ -53,7 +53,7 @@ export function requireSameOrigin(request: Request) {
   if ((origin && origin !== expected.origin) || site === "cross-site")
     throw new SpaceError(
       "invalid_request",
-      "Cross-site room requests are not allowed.",
+      "Cross-site space requests are not allowed.",
       403,
     );
 }
@@ -119,7 +119,7 @@ export async function boundedJson(request: Request) {
     request.headers.get("content-type")?.split(";")[0]?.trim() !==
     "application/json"
   )
-    throw new SpaceError("invalid_request", "Expected a JSON room request.");
+    throw new SpaceError("invalid_request", "Expected a JSON space request.");
   return JSON.parse(
     (await boundedBody(request, 128 * 1024)).toString("utf8"),
   ) as unknown;

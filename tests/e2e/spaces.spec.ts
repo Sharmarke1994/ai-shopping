@@ -23,7 +23,7 @@ for (const width of [1440, 390]) {
       fullPage: true,
     });
     await page.getByLabel("Space name").fill("Bedroom");
-    await page.getByLabel("Room type").selectOption("bedroom");
+    await page.getByLabel("Space type").selectOption("bedroom");
     await page.getByRole("button", { name: "+ Add a space" }).click();
     await page.waitForURL(/\/spaces\/[a-f0-9-]+$/);
     const url = page.url();
@@ -74,12 +74,12 @@ for (const width of [1440, 390]) {
       await expect(page.getByLabel(`Plan for ${name}`)).toHaveValue("keep");
       await expect(page.getByLabel(`Plan for ${name}`)).toBeEnabled();
     }
-    await page.getByText("Add a room item", { exact: true }).click();
+    await page.getByText("Add a space item", { exact: true }).click();
     await page.getByLabel("Item name").fill("Floor lamp");
     await page.getByRole("button", { name: "Add item", exact: true }).click();
     await page.getByLabel("Plan for Floor lamp").selectOption("replace");
     await expect(page.getByLabel("Plan for Floor lamp")).toBeEnabled();
-    await page.getByText("Edit room design", { exact: true }).click();
+    await page.getByText("Edit space design", { exact: true }).click();
     await page
       .getByLabel("What would you like to change?")
       .fill(
@@ -89,7 +89,7 @@ for (const width of [1440, 390]) {
     await page
       .getByLabel(/^Palette/)
       .fill("Cream\nBeige\nDark brown\nBlack accents");
-    await page.getByRole("button", { name: "Save room design" }).click();
+    await page.getByRole("button", { name: "Save space design" }).click();
     await expect(
       page
         .getByRole("region", { name: "Bedroom design" })
@@ -160,12 +160,12 @@ for (const width of [1440, 390]) {
     ).toBe(true);
     await page.getByRole("button", { name: "Save question" }).click();
     await expect(
-      page.getByRole("button", { name: "Reload latest room" }),
+      page.getByRole("button", { name: "Reload latest space" }),
     ).toBeVisible();
     await expect(
       page.getByLabel("What do you still need to know?"),
     ).toHaveValue("My unsaved question");
-    await page.getByRole("button", { name: "Reload latest room" }).click();
+    await page.getByRole("button", { name: "Reload latest space" }).click();
     await expect(
       page.getByText("Another tab's question", { exact: true }),
     ).toBeVisible();

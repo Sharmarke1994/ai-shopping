@@ -85,6 +85,6 @@ for (const width of [1440, 390]) {
     });
     expect(changed.ok()).toBe(true);
     await page.reload();
-    await expect(page.getByText(/Earlier room version/)).toBeVisible();
+    await expect(page.getByText(/Earlier space version/)).toBeVisible();
   });
 }

@@ -43,6 +43,11 @@ separate from room truth. A render cannot become a room photograph, measurement,
 ProductObservation, CriterionAssessment or DecisionCriterion. Old room designs
 remain historical after room edits. See `../plans/v0-10-visual-designs.md`.
 
+The space-type expansion retains the legacy `roomType`, `roomState` and revision
+field names on the wire/in persistence for compatibility. An additive constraint
+migration widens the allowed optional types; existing identities and snapshots are
+unchanged. These internal names do not limit a Space to a domestic room.
+
 The UI may expose one active task in V0. Persistence must support multiple independently identified tasks and must never use a global current-shopping singleton.
 
 ### ConceptDefinition

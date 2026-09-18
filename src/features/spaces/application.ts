@@ -63,7 +63,7 @@ export async function loadSpaceRevision(
         eq(spaceRevisions.revision, revision),
       ),
     );
-  if (!row) throw new SpaceError("not_found", "Room revision not found.", 404);
+  if (!row) throw new SpaceError("not_found", "Space revision not found.", 404);
   const assets = await db
     .select({ asset: spaceAssets })
     .from(spaceRevisionAssets)
@@ -88,7 +88,7 @@ export async function loadSpaceRevision(
       f.sourceAssetIds.some((id) => !ids.includes(id)),
     )
   )
-    throw new Error("Invalid persisted room provenance");
+    throw new Error("Invalid persisted space provenance");
   return { state, assets: assets.map((a) => a.asset) };
 }
 export async function loadSpace(deps: SpaceDependencies, id: string) {
@@ -195,7 +195,7 @@ export async function mutateSpace(
     if (!deps.understanding)
       throw new SpaceError(
         "analysis_unavailable",
-        "Automatic photo analysis is not configured. You can still add your own room facts and measurements.",
+        "Automatic photo analysis is not configured. You can still add your own space facts and measurements.",
         503,
       );
     const space = await getSpace(deps.db, id);
@@ -206,7 +206,11 @@ export async function mutateSpace(
     const selected = operation.assetIds.map((assetId) => {
       const asset = current.assets.find((a) => a.id === assetId);
       if (!asset)
-        throw new SpaceError("not_found", "Photo not found in this room.", 404);
+        throw new SpaceError(
+          "not_found",
+          "Photo not found in this space.",
+          404,
+        );
       return asset;
     });
     const output = await deps.understanding.propose({
@@ -311,7 +315,7 @@ export async function readSpaceAsset(
   } catch {
     throw new SpaceError(
       "not_found",
-      "Photo is unavailable. Its room record has been preserved.",
+      "Photo is unavailable. Its space record has been preserved.",
       404,
     );
   }

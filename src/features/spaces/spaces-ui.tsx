@@ -39,7 +39,7 @@ async function responseJson(response: Response) {
     throw new RoomRequestError(
       safe.success
         ? safe.data.error.message
-        : "The room could not be saved. Please try again.",
+        : "The space could not be saved. Please try again.",
       safe.success ? safe.data.error.code : "unavailable",
     );
   }
@@ -67,7 +67,7 @@ function readable(value: string) {
 function message(error: unknown) {
   return error instanceof Error
     ? error.message
-    : "Something went wrong. Your saved room is unchanged.";
+    : "Something went wrong. Your saved space is unchanged.";
 }
 function Shell({ children }: { children: ReactNode }) {
   return (
@@ -82,7 +82,7 @@ function Shell({ children }: { children: ReactNode }) {
       <footer className={styles.footer}>
         A little context, kept for the decisions ahead.
         <span>
-          Local founder preview · Room context never silently changes shopping
+          Local founder preview · Space context never silently changes shopping
           criteria.
         </span>
       </footer>
@@ -148,8 +148,8 @@ export function SpacesPage() {
         <p className={styles.eyebrow}>A home for your context</p>
         <h1>Your spaces</h1>
         <p className={styles.lead}>
-          Add the room once. CONSIDER can use it for future furniture and decor
-          decisions.
+          Add your space once. Keep the context for furniture, storage,
+          equipment and the decisions ahead.
         </p>
       </section>
       {error && (
@@ -159,7 +159,7 @@ export function SpacesPage() {
       )}
       <div className={styles.indexGrid}>
         <section className={styles.create}>
-          <span className={styles.number}>01 / Start with a room</span>
+          <span className={styles.number}>01 / Start with a space</span>
           <h2>Add a space</h2>
           <p>No tape measure needed. A name is enough to begin.</p>
           <form onSubmit={create}>
@@ -171,12 +171,12 @@ export function SpacesPage() {
               <input
                 id="space-name"
                 name="name"
-                placeholder="e.g. Bedroom"
+                placeholder="e.g. Main office or upstairs hallway"
                 required
                 maxLength={100}
               />
               <label htmlFor="space-type">
-                Room type <span>(optional)</span>
+                Space type <span>(optional)</span>
               </label>
               <select id="space-type" name="roomType" defaultValue="">
                 <option value="">Choose later</option>
@@ -226,7 +226,7 @@ export function SpacesPage() {
                   <h2>{room.name}</h2>
                   <p>
                     {room.state.design.goal ||
-                      "Your room, ready to take shape."}
+                      "Your space, ready for the next decision."}
                   </p>
                   <small>
                     {
@@ -314,7 +314,7 @@ function SpaceRoom({ spaceId }: { spaceId: string }) {
           expectedRevision: roomRef.current.currentRevision,
         }),
       );
-      setNotice("Saved to your room.");
+      setNotice("Saved to your space.");
       return true;
     } catch (e) {
       reportError(e);
@@ -353,7 +353,7 @@ function SpaceRoom({ spaceId }: { spaceId: string }) {
           <h1>{room.name}</h1>
           <p className={styles.lead}>
             {room.state.design.goal ||
-              "A room you know. A direction you can come back to."}
+              "A space you know. A direction you can come back to."}
           </p>
         </div>
         <p className={styles.updated}>
@@ -366,14 +366,14 @@ function SpaceRoom({ spaceId }: { spaceId: string }) {
               minute: "2-digit",
             })}
           </time>
-          <span>Photos and room details persist when you leave.</span>
+          <span>Photos and space details persist when you leave.</span>
         </p>
       </section>
       {error && (
         <div role="alert" className={styles.error} id="room-error">
           {error}
           {stale && (
-            <button onClick={() => void load()}>Reload latest room</button>
+            <button onClick={() => void load()}>Reload latest space</button>
           )}
         </div>
       )}
@@ -390,11 +390,11 @@ function SpaceRoom({ spaceId }: { spaceId: string }) {
         <div>
           <h2>See a different possibility</h2>
           <p>
-            Keep your room, select saved shopping items and build a visual
+            Keep your space, select saved shopping items and build a visual
             design you can return to.
           </p>
         </div>
-        <Link href={`/spaces/${room.id}/design`}>Explore a room design →</Link>
+        <Link href={`/spaces/${room.id}/design`}>Explore a space design →</Link>
       </section>
       <section className={styles.analysis}>
         <div>
@@ -433,7 +433,7 @@ function SpaceRoom({ spaceId }: { spaceId: string }) {
             {room.state.design.goal ? (
               <p className={styles.designGoal}>{room.state.design.goal}</p>
             ) : (
-              <p>How would you like this room to feel or work?</p>
+              <p>How should this space look, feel or work?</p>
             )}
             <div className={styles.designLists}>
               {(["keep", "replace"] as const).map((intent) => (
@@ -470,7 +470,7 @@ function SpaceRoom({ spaceId }: { spaceId: string }) {
             {room.state.design.notes && <p>{room.state.design.notes}</p>}
             {room.state.design.budget && (
               <p>
-                Optional room budget ·{" "}
+                Optional space budget ·{" "}
                 {new Intl.NumberFormat("en-GB", {
                   style: "currency",
                   currency: "GBP",
@@ -478,7 +478,7 @@ function SpaceRoom({ spaceId }: { spaceId: string }) {
               </p>
             )}
             <details className={styles.details}>
-              <summary>Edit room design</summary>
+              <summary>Edit space design</summary>
               <DesignForm
                 key={JSON.stringify(room.state.design)}
                 room={room}
@@ -488,7 +488,7 @@ function SpaceRoom({ spaceId }: { spaceId: string }) {
             </details>
           </section>
           <section className={styles.panel} aria-labelledby="inventory-heading">
-            <h2 id="inventory-heading">Already in the room</h2>
+            <h2 id="inventory-heading">Already in this space</h2>
             <p>Keep what works. Decide what could change.</p>
             {room.state.items.length ? (
               <ul className={styles.records}>
@@ -524,7 +524,7 @@ function SpaceRoom({ spaceId }: { spaceId: string }) {
               </p>
             )}
             <details className={styles.details}>
-              <summary>Add a room item</summary>
+              <summary>Add a space item</summary>
               <SmallForm
                 busy={busy}
                 onSave={(form) =>
@@ -607,7 +607,7 @@ function SpaceRoom({ spaceId }: { spaceId: string }) {
               </p>
             )}
             <details className={styles.details}>
-              <summary>Add a room fact</summary>
+              <summary>Add a space fact</summary>
               <SmallForm
                 busy={busy}
                 onSave={(form) =>
@@ -651,7 +651,7 @@ function SpaceRoom({ spaceId }: { spaceId: string }) {
             <h2 id="proposals-heading" tabIndex={-1}>
               From photos
             </h2>
-            <p>Proposals are not confirmed room truth or measurements.</p>
+            <p>Proposals are not confirmed space facts or measurements.</p>
             {proposed.length ? (
               <ul className={styles.records}>
                 {proposed.map((fact) => (
@@ -832,7 +832,7 @@ function SpaceRoom({ spaceId }: { spaceId: string }) {
           <section className={styles.panel} aria-labelledby="unknown-heading">
             <h2 id="unknown-heading">Still unknown</h2>
             <p>
-              Only gaps you or a room proposal have named. No questionnaire.
+              Only gaps you or a space proposal have named. No questionnaire.
             </p>
             <ul className={styles.records}>
               {room.state.unknowns.map((u) => (
@@ -977,7 +977,7 @@ function DesignForm({
         maxLength={1600}
         defaultValue={design.goal}
         rows={4}
-        placeholder="Make the room warmer and more put together."
+        placeholder="Improve the layout, storage or atmosphere while keeping what works."
       />
       <label htmlFor="design-add">
         Things to add <span>(one per line)</span>
@@ -1020,7 +1020,7 @@ function DesignForm({
         rows={2}
       />
       <label htmlFor="design-budget">
-        Room budget in £ <span>(optional)</span>
+        Space budget in £ <span>(optional)</span>
       </label>
       <input
         id="design-budget"
@@ -1031,7 +1031,7 @@ function DesignForm({
         step="0.01"
         defaultValue={design.budget ? design.budget.amountMinor / 100 : ""}
       />
-      <button className={styles.primary}>Save room design</button>
+      <button className={styles.primary}>Save space design</button>
     </SmallForm>
   );
 }
@@ -1062,7 +1062,7 @@ function PhotoSection({
   function select(selected: File[]) {
     if (uploadingRef.current) return;
     if (selected.length + room.assets.length > 10) {
-      setError("Choose up to 10 photos total for this room.");
+      setError("Choose up to 10 photos total for this space.");
       return;
     }
     if (
@@ -1122,10 +1122,10 @@ function PhotoSection({
       <div className={styles.sectionHeading}>
         <div>
           <p className={styles.eyebrow}>See the whole space</p>
-          <h2 id="photos-heading">Your room, from a few angles</h2>
+          <h2 id="photos-heading">{room.name}, from a few angles</h2>
           <p>
-            Add a few views so CONSIDER can understand the room. One is a useful
-            start; three to eight gives more context.
+            Add a few views so CONSIDER can understand the space. One is a
+            useful start; three to eight gives more context.
           </p>
         </div>
         <span>{room.assets.length} / 10 photos</span>
@@ -1163,7 +1163,7 @@ function PhotoSection({
           <strong>
             {room.assets.length
               ? "Add another angle"
-              : "Start with a view of your room"}
+              : "Start with a view of your space"}
           </strong>
           <p>
             Drop photos here, or choose files. JPEG, PNG or WebP · up to 12 MB

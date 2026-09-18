@@ -31,7 +31,13 @@ adapter, durable one-attempt generation lifecycle, and safe separate render stor
 This is a key optional shopping feature, not a replacement for the broader product.
 See `v0-10-visual-designs.md` for evidence and limitations.
 
-The next proof requires actual room photos and an explicit live concept request.
+The latest bounded follow-on broadens the feature to named spaces: office, workspace,
+warehouse, hallway, studio, workshop and outdoor areas, alongside the existing room
+types. UI uses "space" or the actual name. Legacy internal field names and stored
+data remain compatible; only the allowed-type CHECK is widened additively. Rendering
+model/request/prompt remain unchanged pending the actual-photo baseline.
+
+The next proof requires actual space photos and an explicit live concept request.
 No live visual-quality result is claimed: fictional upload fixtures are functional
 tests only. Photo-to-fact production vision, measured 3D geometry and fit verification
 remain unimplemented. No generated output writes room truth or shopping criteria.
